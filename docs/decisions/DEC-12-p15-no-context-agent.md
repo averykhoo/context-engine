@@ -5,7 +5,7 @@ title: "FRAMEWORK P15: design for an agent that starts with no context"
 actor: owner
 decided: 2026-10-08
 session: 2026-10-08b
-decision_status: ACCEPTED
+decision_status: BUILT
 tags: [principles, spec]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T18:00:00+08:00 }
 ---

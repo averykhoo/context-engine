@@ -3,14 +3,16 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-08b)
+## Banner (2026-10-08c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
   the first piece. **It uses the framework on itself, by hand, until the engine exists** (DEC-7).
-- **State:** a package skeleton (one test), the framework spec, and a step-0 spike that verified
-  the MCP and hook assumptions (`spike/FINDINGS.md`). No engine code yet.
-- **NOW is CE-1, the engine core.** Order (DEC-10): dogfood here first (CE-8), then other
+- **State:** the engine core is built (CE-1 closed 2026-10-08c): OKF records with a surgical
+  writer, ids under a cross-process lock, the op log, write-time refusal, `lint` (schema,
+  G-D10, G-D11). AC-1 to AC-9 `tested`, each sabotaged red. Library only: no CLI yet.
+  `context.toml` declares this repo's four record kinds; `docs/ledger/ops.jsonl` is the op log.
+- **NOW is CE-2, working state and the CLI.** Order (DEC-10): dogfood here first (CE-8), then other
   repos (CE-15, then the adhoc trial CE-7, whose baseline CE-4 must be measured first).
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **One owner question is open** (ASK-2): raise it at session start, one line.
@@ -25,8 +27,8 @@ None.
 1. `CLAUDE.md` (loads automatically): environment, gate, rules, the routing table.
 2. Raise **ASK-2** in chat, one line, unless answered; record any answer at
    once (a decision with `actor: owner`, then close the question file).
-3. Read the board below, then the NOW item's file: `tasks/CE-1-engine-core.md`, its Traps and
-   its Read first.
+3. Read the board below, then the NOW item's file: `tasks/CE-2-working-state-records.md`, its
+   Traps and its Read first.
 4. Read the rest of this note only if needed, and say which in your ledger entry's `read:` line.
 
 ## Board
@@ -36,8 +38,7 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 
 | pri | id | what | deps |
 |---|---|---|---|
-| NOW | CE-1 | Engine core: OKF records, ids under a lock, op log, write-time refusal (AC-1 to AC-9) | |
-| NEXT | CE-2 | Working state: tasks, questions, batons, pauses, ledger; session ops; `orient`; lint (AC-10 to AC-17) | CE-1 |
+| NOW | CE-2 | Working state: tasks, questions, batons, pauses, ledger; session ops; `orient`; lint (AC-10 to AC-17) | |
 | NEXT | CE-3 | MCP server over the CLI operations; dogfood it here (AC-18, AC-19) | CE-2 |
 | NEXT | CE-4 | Measure adhoc's start and close cost today, before any cutover (read-only) | |
 | NEXT | CE-16 | Coverage map: every FRAMEWORK component, ritual and guard → a task, prose-only, or deferred (G7) | |
@@ -57,6 +58,8 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 
 ## Facts not derivable from the code (dated)
 
+- **2026-10-08, heredocs in the Bash tool here can halve backslashes** (`"\n"` arrived as a
+  newline in two Python heredocs): write probe scripts with the Write tool, as files.
 - **2026-10-08, environment:** env `context-engine` has Python 3.12.15, `mcp` 2.3.0 (SDK 2.x:
   `MCPServer`, not `FastMCP`), `ruamel.yaml` 0.19.1, `pytest` 9.1.1; the package is installed
   editable. Claude Code on this machine is 2.1.280.

@@ -3,13 +3,13 @@ type: Task
 id: CE-2
 title: "Working state: tasks, questions, batons, pauses, ledger; session ops; orient; lint"
 brief: "Session key minted at start under the lock with a kind: open stub; closing never moves a file"
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-1]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
-updated: 2026-10-08a
+moved: 2026-10-08c
+updated: 2026-10-08c
 closed:
 ---
 

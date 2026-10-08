@@ -15,15 +15,15 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-1 | Reading a record and writing it back unchanged is byte-identical, including unknown keys, key order and comments | US-6, US-2 | planned |
-| AC-2 | Unknown frontmatter keys survive every engine write (OKF §4.1) | US-6 | planned |
-| AC-3 | Every record the engine writes has a non-empty `type`; a `.md` in a configured bundle directory without one is a lint failure (G-D11) | US-2 | planned |
-| AC-4 | Ids are allocated by scanning every record of the series, open and closed, and are never reused; two concurrent allocations never return the same id (G-D2) | US-2 | planned |
-| AC-5 | A write that breaks its kind's schema is refused before any byte is written, and the refusal names the remedy (P7) | US-2 | planned |
-| AC-6 | Every write appends an operation-log entry carrying the session key and the actor; `--mechanical` writes are marked as such | US-3 | planned |
-| AC-7 | `body_sha` normalises line endings: one record checked out with LF and with CRLF hashes the same (spike finding) | US-7 | planned |
-| AC-8 | Changing an append-only record's body above `## Amendments` fails lint (G-D10); an `amend` operation passes | US-7 | planned |
-| AC-9 | Two processes writing different records at once both succeed; two writing the same record are serialised by the lock and neither write is lost (P12) | US-2 | planned |
+| AC-1 | Reading a record and writing it back unchanged is byte-identical, including unknown keys, key order and comments | US-6, US-2 | tested |
+| AC-2 | Unknown frontmatter keys survive every engine write (OKF §4.1) | US-6 | tested |
+| AC-3 | Every record the engine writes has a non-empty `type`; a `.md` in a configured bundle directory without one is a lint failure (G-D11) | US-2 | tested |
+| AC-4 | Ids are allocated by scanning every record of the series, open and closed, and are never reused; two concurrent allocations never return the same id (G-D2) | US-2 | tested |
+| AC-5 | A write that breaks its kind's schema is refused before any byte is written, and the refusal names the remedy (P7) | US-2 | tested |
+| AC-6 | Every write appends an operation-log entry carrying the session key and the actor; `--mechanical` writes are marked as such | US-3 | tested |
+| AC-7 | `body_sha` normalises line endings: one record checked out with LF and with CRLF hashes the same (spike finding) | US-7 | tested |
+| AC-8 | Changing an append-only record's body above `## Amendments` fails lint (G-D10); an `amend` operation passes | US-7 | tested |
+| AC-9 | Two processes writing different records at once both succeed; two writing the same record are serialised by the lock and neither write is lost (P12) | US-2 | tested |
 
 ## Working state (CE-2)
 

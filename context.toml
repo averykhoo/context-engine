@@ -1,0 +1,39 @@
+# context-engine's own framework config (FRAMEWORK §8.0). The engine reads this; the record
+# kinds below describe the records this repo already keeps by hand (CLAUDE.md routing table).
+
+[engine]
+oplog = "docs/ledger/ops.jsonl"     # one JSON line per engine write (AC-6)
+lockfile = ".context/engine.lock"   # .context/ ignores itself; never tracked
+bundles = ["docs/decisions", "docs/stories", "tasks"]
+
+[kinds.decision]
+type = "Decision"
+prefix = "DEC"
+dir = "docs/decisions"
+mode = "append-only"
+required = ["title", "actor", "decided", "session", "decision_status"]
+enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
+
+[kinds.story]
+type = "Story"
+prefix = "US"
+dir = "docs/stories"
+mode = "append-only"
+required = ["title", "actor", "date", "story_status", "goals"]
+enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
+
+[kinds.task]
+type = "Task"
+prefix = "CE"
+dir = "tasks"
+mode = "replaced"
+required = ["title", "pri", "state", "created"]
+enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+
+[kinds.question]
+type = "Question"
+prefix = "ASK"
+dir = "tasks"
+mode = "replaced"
+required = ["title", "pri", "state", "created"]
+enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }

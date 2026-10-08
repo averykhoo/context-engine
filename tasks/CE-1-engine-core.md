@@ -3,14 +3,14 @@ type: Task
 id: CE-1
 title: "Engine core: OKF records, ids under a lock, op log, write-time refusal"
 brief: "Round-trip must be byte-identical (ruamel); hash bodies only after normalising line endings"
-pri: NOW
-state: open
+pri: LATER
+state: closed
 deps: []
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08a
-closed:
+updated: 2026-10-08c
+closed: 2026-10-08c
 ---
 
 Build step 1 of the plan: the core every record kind sits on. Claims AC-1 to AC-9
@@ -48,3 +48,8 @@ and change modes), `errors.py` (refusals that name a remedy). Test first; claim 
   `::test_new_ratchets_the_floor_to_the_measured_total_and_never_lowers_it`
 
 ## Log
+
+- 2026-10-08c: built `okf.py`, `store.py`, `lock.py`, `config.py`, `errors.py`; AC-1 to AC-9
+  tested and each sabotaged red (`tools/sabotage_ce1.py`, 13 sabotages). Closed; CE-2 is NOW.
+  The writer is surgical (only changed keys are re-serialised) because ruamel's full re-dump is
+  not byte-identical on 14 of this repo's records (`{ by: x }` becomes `{by: x}`).

@@ -1,0 +1,2 @@
+{"at": "2026-10-08T16:40:13+08:00", "session": "2026-10-08c", "actor": "claude-code/claude-opus-5-5", "op": "set", "id": "CE-1", "path": "tasks/CE-1-engine-core.md", "fields": ["state", "pri", "updated", "closed"], "mechanical": false}
+{"at": "2026-10-08T16:40:13+08:00", "session": "2026-10-08c", "actor": "claude-code/claude-opus-5-5", "op": "set", "id": "CE-2", "path": "tasks/CE-2-working-state-records.md", "fields": ["pri", "moved", "updated"], "mechanical": false}

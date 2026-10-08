@@ -5,7 +5,7 @@ title: "Sabotage rule is an owner mandate: no test or guard is believed until se
 actor: owner
 decided: 2026-10-08
 session: 2026-10-08b
-decision_status: ACCEPTED
+decision_status: BUILT
 tags: [assurance, charter]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T17:30:00+08:00 }
 ---

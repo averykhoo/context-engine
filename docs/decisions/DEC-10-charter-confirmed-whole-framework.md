@@ -5,7 +5,7 @@ title: "Charter confirmed, widened to the whole framework; a managed server is a
 actor: owner
 decided: 2026-10-08
 session: 2026-10-08b
-decision_status: ACCEPTED
+decision_status: BUILT
 tags: [charter, scope, adoption]
 answers: ASK-1
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T17:00:00+08:00 }
