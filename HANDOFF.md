@@ -61,4 +61,7 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 - **2026-10-08, trial repos:** adhoc had a clean tree, 47 commits in 14 days, `CLAUDE.md`
   16,196 B, `HANDOFF.md` 28,407 B, `docs/decisions.md` 52,624 B (D-1 to D-33). intervals had 24
   uncommitted files from a live session and a 2.0.0 release pending (DEC-6).
+- **2026-10-08, Remote Control spawn mode defaults to `same-dir`** (owner screenshot): spawned
+  sessions share the checkout unless `--spawn=worktree` is chosen. This confirms FRAMEWORK §5.5's
+  premise that the shared checkout is the default reality.
 - **OKF spec** read at commit `0b87c52c6ef999286c745e19998fdfcd03d5dbee` (FRAMEWORK §9.3.1).
