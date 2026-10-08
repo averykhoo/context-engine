@@ -41,6 +41,15 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 `src/` or `tests/`, and before every push. Every new record file must parse: a YAML scalar with
 a colon needs quotes (it broke DEC-6 once).
 
+## Sabotage rule (owner mandate, DEC-11)
+
+**No test or guard is believed until it has been seen to fail.** For every new test, guard or
+refusal: break what it protects (edit the code, corrupt the fixture, drop the check), run it and
+watch it go red for the right reason, then restore. Record it in the commit message as
+`Sabotage: <what was broken> -> <test> red`. A criterion moves to `tested` only after its
+claiming test was sabotaged. When G-T5 (mutation per criterion, CE-14) exists, it does this
+mechanically and this hand step becomes its fallback.
+
 ## Rituals (manual mode: FRAMEWORK §6, done by hand)
 
 **Session start:** follow `HANDOFF.md § Next session: start here`. Open batons and pause blocks

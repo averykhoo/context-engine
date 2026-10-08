@@ -6,6 +6,7 @@ pri: NEXT
 state: closed
 blocks: []
 last_asked: 2026-10-08b
+closed: 2026-10-08b
 answered: { on: 2026-10-08, session: 2026-10-08b, decision: DEC-10 }
 source: session 2026-10-08a
 created: 2026-10-08

@@ -21,6 +21,8 @@ and change modes), `errors.py` (refusals that name a remedy). Test first; claim 
 
 ## Traps
 
+- **Sabotage rule (DEC-11):** every test claiming AC-1 to AC-9 is seen red by breaking what it
+  guards before the criterion moves to `tested`; record it in the commit message.
 - **ruamel.yaml round-trip mode** (`YAML()`, default `rt`), not `typ='safe'`: safe drops
   comments and can reorder. Settle `preserve_quotes`, indentation and width so an untouched
   record writes back byte-identical (AC-1).

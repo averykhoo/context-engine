@@ -4,7 +4,8 @@ LIVING. The definition of correct for the engine (FRAMEWORK §3.3). The engine i
 the criteria are properties, checked by pytest. **A test claims a criterion with
 `@pytest.mark.criterion("AC-n")`** (the marker is registered in `pyproject.toml`); once the
 engine exists, G-T2 checks that every `tested` criterion is claimed and every claim resolves.
-Not every test needs to name a criterion.
+Not every test needs to name a criterion. **A criterion becomes `tested` only after its claiming
+test has been sabotaged red** (DEC-11, `CLAUDE.md § Sabotage rule`).
 
 Statuses: `planned` (no test yet) · `tested` (a claiming test exists) · `manual` ·
 `deviates` · `retired` (FRAMEWORK §3.3). Drafted by the agent on 2026-10-08 from the stories;

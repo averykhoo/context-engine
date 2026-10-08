@@ -70,6 +70,11 @@ Proposed by the agent; the owner found it *"not incorrect"* (DEC-10):
 
 ## Owner mandates
 
-None beyond the owner's global `CLAUDE.md` (commit freely when green; push and open PRs only
-with permission; every push gets a CI watcher; Recycle Bin for bulk deletes; never bare
-`python`).
+- **Sabotage every test and guard before believing it** (owner, 2026-10-08, DEC-11: *"i want
+  the test sabotage rule to be in there somewhere"*). Break the thing a test or guard protects,
+  watch it go red, restore it, and record the sabotage. A check that has never failed is not
+  evidence (FRAMEWORK P7; global `CLAUDE.md § Assurance traps`). This holds for the engine's own
+  tests here, and for every guard the system ships to other repos.
+- Otherwise, the owner's global `CLAUDE.md` (commit freely when green; push and open PRs only
+  with permission; every push gets a CI watcher; Recycle Bin for bulk deletes; never bare
+  `python`).
