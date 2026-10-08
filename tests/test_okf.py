@@ -95,3 +95,12 @@ def test_body_hash_sees_a_real_change_and_ignores_amendments():
     base = "\nOriginal words.\n"
     assert okf.body_sha(base) != okf.body_sha("\nOriginal word.\n")
     assert okf.body_sha(base) == okf.body_sha(base + "\n## Amendments\n\n- later note\n")
+
+
+def test_a_section_name_matches_its_whole_heading_never_a_longer_one():
+    """`## Log` is not `## Logs`, and `Read` is not `## Read first` (runbook review, 2026-10-08e)."""
+    body = "x\n\n## Logs\n\nold\n"
+    assert okf.get_section(body, "Log") is None
+    assert okf.append_to_section(body, "Log", "- new") == "x\n\n## Logs\n\nold\n\n## Log\n\n- new\n"
+    assert okf.get_section("## Read first\n\nA\n", "Read") is None
+    assert okf.get_section("## Read first  \n\nA\n", "Read first") == "A"

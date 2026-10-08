@@ -19,6 +19,7 @@ what is next live in `HANDOFF.md`; this file holds only what is durable.
 | Tasks and owner questions | `tasks/CE-n-<slug>.md`, `tasks/ASK-n-<slug>.md` (board size 2) | frontmatter by rule, bodies by hand |
 | Orientation note | `HANDOFF.md` | replaced at clean close |
 | Session ledger | `docs/ledger/session-log.md` | append-only, one entry per session |
+| Runbooks | `docs/runbooks/`; `manual-mode.md` does every engine operation by hand, with its Why (US-11), and is the reference when the engine errors | replaced; AC-21 keeps it in step with the CLI |
 | Evidence | `docs/evidence/<topic>-<date>.md` | ACTIVE-PLAN, then FROZEN |
 | Spike evidence | `spike/` (`FINDINGS.md` is the result; the probes show how) | frozen per run |
 | Scratch | `.scratch/` (gitignored crash bag) | throwaway |

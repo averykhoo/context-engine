@@ -8,8 +8,8 @@ state: open
 deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08d
-updated: 2026-10-08d
+moved: 2026-10-08e
+updated: 2026-10-08e
 closed:
 ---
 
@@ -42,3 +42,4 @@ section, watch the gate go red).
   then lands on records that already run through the engine.
 - 2026-10-08: scope widened by US-11: a manual-mode runbook covering every `ce` operation, with
   a parity guard, comes before the `CLAUDE.md` ritual rewrite.
+- 2026-10-08e (claude-code/claude-opus-5-5): manual-mode runbook written (docs/runbooks/manual-mode.md, US-11): every ce operation by hand, each with its Why; parity guard tests/test_runbook.py (AC-21). Verifying it against the code found okf._section_span prefix-matching headings (## Logs, ## Read first); fixed. Remaining: stamp, lint green, context.toml routing, CLAUDE.md rituals as ce commands with the runbook as fallback; add ce stamp/amend to the CLI (the runbook covers them by hand).

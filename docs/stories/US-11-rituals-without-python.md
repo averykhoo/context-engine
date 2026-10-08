@@ -23,3 +23,15 @@ hand procedure must not be lost in that rewrite. It moves into a manual-mode run
 §7.5) that covers every `ce` operation, and that stays the fallback after cutover. Parity between
 the runbook and the CLI wants a guard, not a promise: every `ce` subcommand has a runbook
 section, and a missing one fails the gate.
+
+## Amendments
+
+- **2026-10-08e (claude-code/claude-opus-5-5):** Owner, verbatim:
+
+  > Yup and the rituals can also include short explanations about why they exist, so if the engine
+  > fails or errors the agent will know what the correct action or answer was and why, and be able
+  > to fix the engine
+
+  AGENT: so each runbook step carries its reason, and the runbook is the engine's reference
+  behaviour: when the engine errors or disagrees with it, the runbook says what the right result
+  was, and the agent fixes the engine to match (or, if the runbook is wrong, records why).

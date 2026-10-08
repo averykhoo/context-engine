@@ -40,7 +40,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", blocks = "list", last_asked = "key" }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key" }
 
 # Batons and pause blocks: one stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
 [kinds.baton]

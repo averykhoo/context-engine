@@ -234,7 +234,7 @@ def body_sha(body: str) -> str:
 
 def _section_span(body: str, name: str) -> tuple[int, int] | None:
     """[start, end) of the content under ``## name``; the end is the next ``## `` heading."""
-    m = re.search(rf"^## {re.escape(name)}[ \t]*\n?", body, re.MULTILINE)
+    m = re.search(rf"^## {re.escape(name)}[ \t]*(?:\n|\Z)", body, re.MULTILINE)  # the whole heading: `Log` is not `Logs`
     if not m:
         return None
     nxt = re.search(r"^## ", body[m.end() :], re.MULTILINE)
