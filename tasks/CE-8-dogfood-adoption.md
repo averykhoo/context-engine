@@ -18,6 +18,11 @@ point it here: stamp `body_sha` on stories and decisions, fix what lint finds, m
 routing table from `CLAUDE.md` into `context.toml`, and rewrite the rituals in `CLAUDE.md` to
 use the engine's operations.
 
+US-11: the hand procedure is kept, not replaced. Before the rewrite, write a manual-mode runbook
+(FRAMEWORK §7.5) giving the by-hand equivalent of every `ce` operation, for repos with no
+Python. Add a guard that every `ce` subcommand has a runbook section (sabotage it: delete a
+section, watch the gate go red).
+
 ## Traps
 
 - Stamping freezes a body (G-D10): stamp only stories and decisions whose text is final; a later change is an `amend`.
@@ -35,3 +40,5 @@ use the engine's operations.
 
 - 2026-10-08c: deps CE-3 -> CE-2. Adopt with the CLI as soon as it exists; the MCP server (CE-3)
   then lands on records that already run through the engine.
+- 2026-10-08: scope widened by US-11: a manual-mode runbook covering every `ce` operation, with
+  a parity guard, comes before the `CLAUDE.md` ritual rewrite.
