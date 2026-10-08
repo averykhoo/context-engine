@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [packaging]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:f935c9e8dc93eb6b6cd7f3dddc0f9a3d71deb620c52c4293a9ed0fcc91867b21
 ---
 
 The agent proposed and the owner approved (*"Yes to all"*): the engine is written in **Python**

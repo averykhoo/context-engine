@@ -8,6 +8,7 @@ session: 2026-10-08b
 decision_status: BUILT
 tags: [principles, spec]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T18:00:00+08:00 }
+body_sha: sha256:8ec4642de82c3d2df0be3c1ebcbaa9a7c475a10656ee4518ab7f8fd3da01bbd6
 ---
 
 The owner asked whether the principle behind tiled, hash-keyed tests (US-10) was *"designing for

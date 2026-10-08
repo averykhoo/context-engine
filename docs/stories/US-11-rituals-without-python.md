@@ -7,6 +7,7 @@ via: Claude Code chat session 2026-10-08 (after 2026-10-08d)
 date: 2026-10-08
 story_status: live
 goals: [G5, G6]
+body_sha: sha256:4522631f69e03b0224567dc38eaf63cf68111af0eef4e1e1a926d09fb2187b18
 ---
 
 ## Owner's words (verbatim)

@@ -7,6 +7,12 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-08f · kind: open
+
+- **opened:** 2026-10-08T20:02:23+08:00 by claude-code/claude-opus-5-5
+
+---
+
 ## 2026-10-08e · kind: close
 
 - **rows:** CE-8 (manual-mode runbook; touched); US-11 (created, amended); AC-21 (tested);

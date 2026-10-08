@@ -217,11 +217,11 @@ class Store:
             return None
         stamped = doc.get("body_sha")
         if not stamped:
-            return ("append-only record has no body_sha", "stamp it once its body is final (`stamp`)")
+            return ("append-only record has no body_sha", "stamp it once its body is final (`ce record stamp`)")
         if stamped != okf.body_sha(doc.body):
             return (
                 "body above `## Amendments` changed since it was stamped",
-                "restore the original text from git (`git log -p` on the file) and record the change with `amend`",
+                "restore the original text from git (`git log -p` on the file) and record the change with `ce record amend`",
             )
         return None
 
@@ -376,7 +376,7 @@ class Store:
         self._check_caller(session, actor)
         owned = [k for k in (*changes, *unset) if k in TOOL_OWNED]
         if owned:
-            raise Refusal(f"`{owned[0]}` is owned by the engine", "use the operation that owns it (`stamp` for body_sha); ids and types never change")
+            raise Refusal(f"`{owned[0]}` is owned by the engine", "use the operation that owns it (`ce record stamp` for body_sha); ids and types never change")
         if not changes and not unset and body is None:
             raise Refusal("nothing to change", "pass at least one field")
         with self._lock():
@@ -385,7 +385,7 @@ class Store:
                 changes = {**changes, **(check(rec) or {})}
             if body is not None:
                 if rec.kind.mode == "append-only":
-                    raise Refusal(f"{record_id} is append-only", "record the change with `amend`")
+                    raise Refusal(f"{record_id} is append-only", "record the change with `ce record amend`")
                 rec.doc.set_body(body(rec.doc.body.replace("\r\n", "\n")))
             for key, value in changes.items():
                 rec.doc.set(key, value)
@@ -404,7 +404,7 @@ class Store:
             if rec.kind.mode != "append-only":
                 raise Refusal(f"{record_id} is a {rec.kind.mode} record", "only append-only records carry body_sha")
             if rec.doc.get("body_sha"):
-                raise Refusal(f"{record_id} is already stamped", "a stamp is never replaced; record changes with `amend`")
+                raise Refusal(f"{record_id} is already stamped", "a stamp is never replaced; record changes with `ce record amend`")
             rec.doc.set("body_sha", okf.body_sha(rec.doc.body))
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
@@ -419,7 +419,7 @@ class Store:
         with self._lock():
             rec = self.get(record_id)
             if rec.kind.mode != "append-only":
-                raise Refusal(f"{record_id} is a {rec.kind.mode} record", "edit its body directly; `amend` is for append-only records")
+                raise Refusal(f"{record_id} is a {rec.kind.mode} record", "edit its body directly; `ce record amend` is for append-only records")
             bp = self.body_problem(rec.kind, rec.doc)
             if bp and rec.doc.get("body_sha"):
                 raise Refusal(f"{record_id} {bp[0]}", bp[1])

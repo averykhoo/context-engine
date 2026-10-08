@@ -51,3 +51,5 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | id | criterion | from | status |
 |---|---|---|---|
 | AC-21 | Every `ce` subcommand has a `### ce <group> <op>` section in `docs/runbooks/manual-mode.md` giving its by-hand steps and a **Why** | US-11 | tested |
+| AC-22 | `ce record stamp` checks every named id before stamping any (all or nothing) and never replaces a stamp; `ce record amend` appends under `## Amendments` and refuses a body that moved since its stamp | US-7, US-11 | tested |
+| AC-23 | This repo's own records pass `ce lint` with no failures: every decision and story stamped and unchanged since, every board item in schema, the working-state guards green | US-7 | tested |

@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [docs]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:766d759b3f7692fee54e230817b6ec31d280cf29c0db065f5686318fd85a4a4f
 ---
 
 `FRAMEWORK.md`, its earlier drafts (v0.1, v0.4), the v0.1 source notes (`A-` to `D-*.md`) and

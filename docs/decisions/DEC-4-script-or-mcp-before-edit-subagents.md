@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [housekeeping]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:12160b68f2d1eb5668195a6f2ecff7c7d71bbb34bac4560ec4021c9fb32e8351
 ---
 
 Owner: *"edit subagents were also a considered option, but if a script (or mcp) might work lets

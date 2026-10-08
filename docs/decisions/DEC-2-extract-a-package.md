@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [packaging]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:454ec559b530b41b2becd2118ce26e296030dcdbe9806f5a8efd29bd92c0c32f
 ---
 
 The engine is a new package, generalised from zanzibar's `scripts/task.py`, not a copy of it.

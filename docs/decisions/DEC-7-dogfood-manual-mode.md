@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [dogfood]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:382a3cf5eed713d9a2d39cd58116a14a128c29ca606a153060a6eb1f1909f9fb
 ---
 
 Owner: *"use the context engine framework for the context engine repo"*. Until the engine

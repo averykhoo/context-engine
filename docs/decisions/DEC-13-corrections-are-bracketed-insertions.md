@@ -9,6 +9,7 @@ decision_status: PROVISIONAL
 tags: [records, append-only]
 answers: ASK-2
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T19:00:00+08:00 }
+body_sha: sha256:ad15d21e43a5a1a421efde73e2e15bff7b74a494d41a6fcdf521d308af765a65
 ---
 
 Owner, answering ASK-2: *"What sort of correction does ask-2 cover? Just typos? Maybe you can

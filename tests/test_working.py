@@ -452,6 +452,33 @@ def test_cli_runs_a_session_end_to_end(eng, capsys):
     assert eng.read_ledger().get(key).kind == "close"
 
 
+def _unstamped(eng, n):
+    d = eng.root / "decisions"
+    d.mkdir(exist_ok=True)
+    path = d / f"DEC-{n}-x.md"
+    path.write_text(f"---\ntype: Decision\nid: DEC-{n}\ntitle: x\nactor: owner\nsession: 2026-10-07a\ndecision_status: BUILT\n---\n\nWords {n}.\n", encoding="utf-8")
+    return path
+
+
+@pytest.mark.criterion("AC-22")
+def test_record_stamp_is_all_or_nothing_and_amend_appends(eng, capsys):
+    a, b = _unstamped(eng, 1), _unstamped(eng, 2)
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    t = task(eng, key)
+    assert main([*base, "record", "stamp", "DEC-1", t.id]) == 2  # a task is not append-only
+    assert "body_sha" not in a.read_text(encoding="utf-8")  # so DEC-1 was not stamped either
+    assert main([*base, "record", "stamp", "DEC-1", "DEC-2"]) == 0
+    assert "stamped 2: DEC-1, DEC-2" in capsys.readouterr().out
+    assert [f for f in eng.lint() if f.guard == "G-D10"] == []
+    assert main([*base, "record", "stamp", "DEC-2"]) == 2  # a stamp is never replaced
+    assert main([*base, "record", "amend", "DEC-1", "the owner widened it"]) == 0
+    assert "## Amendments" in a.read_text(encoding="utf-8")
+    assert [f for f in eng.lint() if f.guard == "G-D10"] == []
+    b.write_text(b.read_text(encoding="utf-8").replace("Words 2.", "Other words."), encoding="utf-8")
+    assert main([*base, "record", "amend", "DEC-2", "x"]) == 2  # the body moved: restore, then amend
+
+
 # -- the other working-state guards (G-W1, G-W2, G-W5, G-W6) -------------------------------
 
 

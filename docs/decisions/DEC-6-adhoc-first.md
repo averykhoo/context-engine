@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: PROVISIONAL
 tags: [adoption]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:91c488f07f364af54dfac3c7c86dcda8184b45bf44184762c0457e9c5fa8a41e
 ---
 
 The owner named two candidates (*"I'm thinking intervals or adhoc first"*); the agent picked

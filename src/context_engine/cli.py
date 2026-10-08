@@ -132,6 +132,13 @@ def build() -> argparse.ArgumentParser:
     pres = pz.add_parser("resume")
     pres.add_argument("id")
 
+    r = groups.add_parser("record", help="append-only records: decisions and stories").add_subparsers(dest="op", required=True)
+    rs = r.add_parser("stamp")
+    rs.add_argument("ids", nargs="+")
+    ra = r.add_parser("amend")
+    ra.add_argument("id")
+    ra.add_argument("text")
+
     bn = groups.add_parser("banner").add_subparsers(dest="op", required=True)
     bn.add_parser("show")
     bs = bn.add_parser("set")
@@ -210,6 +217,11 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
         if op == "open":
             return 0, e.pause_open(args.in_flight, args.resume, evidence=args.evidence, deferred=args.deferred, **kw)
         return 0, e.pause_resume(args.id, **kw)
+
+    if g == "record":
+        if op == "stamp":
+            return 0, e.stamp(_ids(" ".join(args.ids)), **kw)
+        return 0, e.amend(args.id, args.text, **kw)
 
     if g == "banner":
         if op == "show":

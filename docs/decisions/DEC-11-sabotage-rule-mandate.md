@@ -8,6 +8,7 @@ session: 2026-10-08b
 decision_status: BUILT
 tags: [assurance, charter]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T17:30:00+08:00 }
+body_sha: sha256:b5cae4285349211bf12470ddf32dbb229faf5391cf08d08ca99d9ee123fcf7aa
 ---
 
 Owner: *"also i want the test sabotage rule to be in there somewhere"* (said right after

@@ -69,7 +69,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | session start, close, pause | `session.start`, `session.close`, `session.pause` | id = session key, path = the ledger | `["kind"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
-| stamp, amend | `stamp`, `amend` | the record | `["body_sha"]`; `[]` |
+| record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 
 ### Record kinds here (from `context.toml`)
 
@@ -491,20 +491,19 @@ Print the banner's key, its hash (above) and its text. Keep the hash: `banner se
 **Why:** the banner carries exactly one session key, and a later close must not silently erase
 another session's truth (FRAMEWORK §5.5 rule 2, AC-16).
 
-## Append-only records (no `ce` command yet)
+## Append-only records (decisions and stories)
 
-These are in the engine (`store.py::Store.stamp`, `store.py::Store.amend`) but not yet in the CLI.
+### ce record stamp
 
-### stamp
-
-On a decision or story with no `body_sha`, once its body is final: add
+On each named decision or story with no `body_sha`, once its body is final: add
 `body_sha: sha256:<hex>` (the body hash above) as the last frontmatter key. Never replace an
-existing stamp.
+existing stamp. Check every named record first; if any is not append-only or is already
+stamped, stamp none of them.
 
 **Why:** stamping freezes the owner's words (G-D10). Stamping too early freezes a draft, and
 every later fix then has to be an amendment.
 
-### amend
+### ce record amend
 
 The only body change an append-only record takes. If the record is stamped, its hash must match
 first. If there is no `## Amendments` heading, add one at the end. Then append a blank line and

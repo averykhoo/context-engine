@@ -522,6 +522,28 @@ class Engine:
             made.append(f"{r.id}->{task.id}")
         return f"expired {len(made)}: {_one(made)}"
 
+    # -- append-only records (G-D10) ----------------------------------------------------
+
+    def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
+        """Freeze each record's body hash, once; all ids are checked before any is written."""
+        self._check(session, actor)
+        if not ids:
+            raise Refusal("no ids to stamp", "name the decisions or stories whose text is final")
+        for rid in ids:
+            rec = self.store.get(rid)
+            if rec.kind.mode != "append-only":
+                raise Refusal(f"{rid} is a {rec.kind.mode} record", "only append-only records carry body_sha")
+            if rec.doc.get("body_sha"):
+                raise Refusal(f"{rid} is already stamped", "a stamp is never replaced; record changes with `ce record amend`")
+        for rid in ids:
+            self.store.stamp(rid, session=session, actor=actor)
+        return f"stamped {len(ids)}: {_one(ids)}"
+
+    def amend(self, rid: str, text: str, *, session: str, actor: str) -> str:
+        """Append a dated entry under ``## Amendments``; the text above it never changes."""
+        self.store.amend(rid, text, session=session, actor=actor)
+        return f"{rid}: amendment added under ## Amendments"
+
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 
     def banner_set(self, text: str, seen_hash: str, *, session: str, actor: str) -> str:

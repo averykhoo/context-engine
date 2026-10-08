@@ -8,6 +8,7 @@ session: 2026-10-08a
 decision_status: BUILT
 tags: [packaging]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T15:00:00+08:00 }
+body_sha: sha256:1648ed4e00c775129e1edabd668dd0b6f7b994829ad2d9bdc758c4dc84ae423f
 ---
 
 The env has `mcp` 2.3.0, where `FastMCP` was renamed `MCPServer` (`mcp.server.mcpserver`);

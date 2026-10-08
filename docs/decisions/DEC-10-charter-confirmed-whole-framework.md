@@ -9,6 +9,7 @@ decision_status: BUILT
 tags: [charter, scope, adoption]
 answers: ASK-1
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T17:00:00+08:00 }
+body_sha: sha256:f5a19576d9ce6eac52c137fb51180d7078dfbf141765a07c3009f6ae2cdae4b3
 ---
 
 The owner's answer to ASK-1 (verbatim in US-9):
