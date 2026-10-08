@@ -524,6 +524,24 @@ class Engine:
 
     # -- append-only records (G-D10) ----------------------------------------------------
 
+    def record_new(self, kind: str, title: str, body: str, raw: dict[str, str], *, session: str, actor: str) -> Record:
+        """A new decision or story, stamped at birth. A required key the caller left out is filled
+        when it can only mean now: a date-typed key with today, a key-typed one with this session."""
+        self._check(session, actor)
+        k = self.store.config.kind(kind)
+        if k.mode != "append-only":
+            raise Refusal(f"{kind!r} is a {k.mode} kind", "use `task new` for board items; `record new` is for decisions and stories")
+        if not body.strip():
+            raise Refusal("an empty body", "pass the owner's words verbatim (for a story) or the decision and its reason")
+        fields: dict[str, Any] = {"title": title}
+        fields.update({key: coerce(k, key, v) for key, v in raw.items()})
+        for key in k.required:
+            if key not in fields and k.types.get(key) == "date":
+                fields[key] = self.today()
+            elif key not in fields and k.types.get(key) == "key":
+                fields[key] = session
+        return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
+
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""
         self._check(session, actor)
@@ -608,7 +626,28 @@ class Engine:
     # -- working-state guards (FRAMEWORK §8.4) ------------------------------------------
 
     def lint(self) -> list[Failure]:
-        return self.store.lint() + self.lint_working()
+        return self.store.lint() + self.lint_working() + self.lint_routes()
+
+    # -- routing (FRAMEWORK §2) ---------------------------------------------------------
+
+    def routes(self) -> str:
+        """Where each framework component lives and how it may change, one line each."""
+        rs = self.store.config.routes
+        if not rs:
+            return "no [[routes]] in context.toml"
+        lines = []
+        for r in rs:
+            where = f"{r.path.rstrip('/')}/{r.pattern}" if r.pattern else r.path
+            lines.append(f"{r.component}: {where} ({r.mode})" + (f"; {r.note}" if r.note else ""))
+        return "\n".join(lines)
+
+    def lint_routes(self) -> list[Failure]:
+        """G-R1: every routed path exists, so the table never points at a file that moved."""
+        return [
+            Failure("G-R1", "context.toml", f"route {r.component!r} points at {r.path}, which does not exist", "fix the path in [[routes]], or restore the file")
+            for r in self.store.config.routes
+            if not r.optional and not (self.root / r.path).exists()
+        ]
 
     def lint_working(self) -> list[Failure]:
         out: list[Failure] = []

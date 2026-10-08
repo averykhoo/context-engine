@@ -56,6 +56,18 @@ class Working:
 
 
 @dataclass(frozen=True)
+class Route:
+    """``[[routes]]``: where one framework component lives and how it may change (FRAMEWORK §2)."""
+
+    component: str
+    path: str  # repo-relative file or directory; must exist (lint G-R1)
+    mode: str  # free text: "replaced", "append-only: amend, never rewrite", ...
+    pattern: str = ""  # how files under ``path`` are named, e.g. "US-n-<slug>.md"
+    note: str = ""
+    optional: bool = False  # may be absent, e.g. a gitignored directory on a fresh clone
+
+
+@dataclass(frozen=True)
 class Config:
     kinds: dict[str, Kind]
     oplog: str = "docs/ledger/ops.jsonl"
@@ -63,6 +75,7 @@ class Config:
     bundles: tuple[str, ...] = ()
     lock_timeout: float = 30.0
     working: Working = field(default_factory=Working)
+    routes: tuple[Route, ...] = ()
 
     def kind_for_id(self, record_id: str) -> Kind:
         for k in self.kinds.values():
@@ -125,6 +138,15 @@ def from_dict(raw: dict) -> Config:
         **{k: (tuple(v) if k == "board" else v) for k, v in w.items() if k in Working.__dataclass_fields__ and k != "caps"},
         caps={**Working().caps, **w.get("caps", {})},
     )
+    routes = []
+    for n, r in enumerate(raw.get("routes", ()), 1):
+        for key in ("component", "path", "mode"):
+            if not r.get(key):
+                raise Refusal(f"route {n} has no `{key}`", f"add `{key} = ...` to the {n}th [[routes]] entry")
+        extra = set(r) - set(Route.__dataclass_fields__)
+        if extra:
+            raise Refusal(f"route {n} has unknown key {sorted(extra)[0]!r}", f"use only {', '.join(Route.__dataclass_fields__)}")
+        routes.append(Route(**r))
     return Config(
         kinds=kinds,
         oplog=engine.get("oplog", Config.oplog),
@@ -132,6 +154,7 @@ def from_dict(raw: dict) -> Config:
         bundles=tuple(engine.get("bundles", ())),
         lock_timeout=float(engine.get("lock_timeout", Config.lock_timeout)),
         working=working,
+        routes=tuple(routes),
     )
 
 

@@ -59,6 +59,8 @@ def _toml(d, prefix=""):
 
 
 def _val(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
     if isinstance(v, str):
         return f'"{v}"'
     if isinstance(v, list):

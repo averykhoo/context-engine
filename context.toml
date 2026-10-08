@@ -72,3 +72,92 @@ decision = "decision"
 baton = "baton"
 pause = "pause"
 orient_max_bytes = 6000                  # provenance: DEC-14
+
+# Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
+# with `ce routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.
+[[routes]]
+component = "Spec"
+path = "docs/framework/FRAMEWORK.md"
+mode = "replaced; a change gets a row in its §13"
+
+[[routes]]
+component = "Frozen provenance"
+path = "docs/framework"
+pattern = "FRAMEWORK-v0.*.md, A-*.md to D-*.md, review/"
+mode = "never edited"
+
+[[routes]]
+component = "Charter"
+path = "docs/charter.md"
+mode = "replaced, owner-stamped"
+note = "confirmed 2026-10-08, DEC-10"
+
+[[routes]]
+component = "Stories (owner's words)"
+path = "docs/stories"
+pattern = "US-n-<slug>.md"
+mode = "append-only: `ce record amend`, never rewrite"
+
+[[routes]]
+component = "Criteria"
+path = "docs/criteria.md"
+mode = "replaced, ids kept"
+note = "AC-n, claimed by @pytest.mark.criterion(\"AC-n\")"
+
+[[routes]]
+component = "Decisions"
+path = "docs/decisions"
+pattern = "DEC-n-<slug>.md"
+mode = "append-only: `ce record amend`"
+note = "one record each (FRAMEWORK §6.5)"
+
+[[routes]]
+component = "Tasks and owner questions"
+path = "tasks"
+pattern = "CE-n-<slug>.md, ASK-n-<slug>.md"
+mode = "frontmatter through `ce task`/`ce ask`, bodies by hand"
+
+[[routes]]
+component = "Orientation note"
+path = "HANDOFF.md"
+mode = "replaced at clean close; banner through `ce banner set`"
+
+[[routes]]
+component = "Session ledger"
+path = "docs/ledger/session-log.md"
+mode = "append-only, one entry per session, through `ce session`"
+
+[[routes]]
+component = "Operation log"
+path = "docs/ledger/ops.jsonl"
+mode = "append-only, written by the engine"
+
+[[routes]]
+component = "Runbooks"
+path = "docs/runbooks"
+mode = "replaced; AC-21 keeps manual-mode.md in step with the CLI"
+note = "manual-mode.md does every engine operation by hand, with its Why (US-11)"
+
+[[routes]]
+component = "Evidence"
+path = "docs"
+pattern = "evidence/<topic>-<date>.md"
+mode = "ACTIVE-PLAN, then FROZEN"
+
+[[routes]]
+component = "Spike evidence"
+path = "spike"
+mode = "frozen per run"
+note = "FINDINGS.md is the result; the probes show how"
+
+[[routes]]
+component = "Sabotage probes"
+path = "tools"
+pattern = "sabotage_<task>.py"
+mode = "kept as evidence until G-T5 replaces them (CE-14)"
+
+[[routes]]
+component = "Scratch"
+path = ".scratch"
+mode = "throwaway, the gitignored crash bag"
+optional = true  # absent on a fresh clone

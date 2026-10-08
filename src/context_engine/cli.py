@@ -51,6 +51,7 @@ def build() -> argparse.ArgumentParser:
     p.add_argument("--deferred", required=True)
 
     groups.add_parser("orient")
+    groups.add_parser("routes", help="where each framework component lives ([[routes]] in context.toml)")
     lint = groups.add_parser("lint")
     lint.add_argument("--working", action="store_true", help="working-state guards only")
 
@@ -133,6 +134,13 @@ def build() -> argparse.ArgumentParser:
     pres.add_argument("id")
 
     r = groups.add_parser("record", help="append-only records: decisions and stories").add_subparsers(dest="op", required=True)
+    rn = r.add_parser("new")
+    rn.add_argument("kind", help="an append-only kind, e.g. decision or story")
+    rn.add_argument("title")
+    rn.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
+    body = rn.add_mutually_exclusive_group(required=True)
+    body.add_argument("--body")
+    body.add_argument("--file", type=Path, help="read the body from a file (owner words keep their line breaks)")
     rs = r.add_parser("stamp")
     rs.add_argument("ids", nargs="+")
     ra = r.add_parser("amend")
@@ -165,6 +173,8 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
         return 0, e.session_pause(args.session, actor=args.actor, rows=args.rows, deferred=args.deferred)
     if g == "orient":
         return 0, e.orient(args.session).rstrip("\n")
+    if g == "routes":
+        return 0, e.routes()
     if g == "lint":
         failures = e.lint_working() if args.working else e.lint()
         return (1 if failures else 0), "\n".join(map(str, failures)) or "lint: clean"
@@ -219,6 +229,10 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
         return 0, e.pause_resume(args.id, **kw)
 
     if g == "record":
+        if op == "new":
+            text = args.body if args.body is not None else args.file.read_text(encoding="utf-8")
+            rec = e.record_new(args.kind, args.title, text, _fields(args.set), **kw)
+            return 0, f"{rec.id}: created and stamped ({rec.path.relative_to(e.root).as_posix()})"
         if op == "stamp":
             return 0, e.stamp(_ids(" ".join(args.ids)), **kw)
         return 0, e.amend(args.id, args.text, **kw)

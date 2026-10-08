@@ -208,6 +208,15 @@ not fit, cut it at a line and say where the rest is:
 **Why:** one bounded read at session start replaces opening a dozen files (US-1, AC-17). The
 order is the order of urgency: carried work and live sessions come before new work.
 
+### ce routes
+
+Read the `[[routes]]` entries in `context.toml`, in order. Each names a component, its path
+(plus `pattern`, how files under it are named), its change `mode`, and an optional `note`.
+
+**Why:** before writing anything, know where it belongs and whether it may be edited, replaced,
+or only appended to. The table used to sit in `CLAUDE.md`; it lives in config now so the engine
+can check it (G-R1) and every repo can carry its own (FRAMEWORK §2).
+
 ### ce lint
 
 Check every record, then the working state. `--working` does only the second half.
@@ -230,6 +239,9 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`.
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt.
+- **G-R1**: every `[[routes]]` path in `context.toml` exists, unless the route says
+  `optional = true`. *Why: a routing table that points at a moved file sends every reader to
+  nothing.*
 
 **Why:** lint is the at-rest check. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).
@@ -492,6 +504,21 @@ Print the banner's key, its hash (above) and its text. Keep the hash: `banner se
 another session's truth (FRAMEWORK §5.5 rule 2, AC-16).
 
 ## Append-only records (decisions and stories)
+
+### ce record new
+
+1. Take the next free id in the kind's series (as `ce task new`): `DEC-n` in `docs/decisions`,
+   `US-n` in `docs/stories`, file `<id>-<slug>.md`.
+2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
+   were not given is filled only if it can mean nothing but now: a date-typed key (`decided`,
+   `date`) with today, a key-typed one (`session`) with your session key. Everything else
+   required, `actor` above all, must be given; if it is missing, stop.
+3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
+4. Stamp it at once (`ce record stamp`): `body_sha` is the last frontmatter key.
+
+**Why:** owner intent is recorded verbatim, now (§6.2), and a record born stamped can never be
+quietly rewritten. Who decided is never guessed: an `actor: owner` on the agent's own call is
+the worst error this file can hold.
 
 ### ce record stamp
 

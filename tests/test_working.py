@@ -23,7 +23,7 @@ CONFIG = {
     "kinds": {
         "task": {"type": "Task", "prefix": "CE", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
         "question": {"type": "Question", "prefix": "ASK", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
-        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT"]}},
+        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT"]}, "types": {"decided": "date", "session": "key"}},
         "baton": {"type": "Baton", "prefix": "BTN", "dir": "working", "mode": "stamped", "required": ["title", "session", "state"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key"}},
         "pause": {"type": "Pause", "prefix": "PAU", "dir": "working", "mode": "stamped", "required": ["title", "session", "state", "branch", "resume_step"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key", "uncommitted": "list"}},
     },
@@ -456,7 +456,7 @@ def _unstamped(eng, n):
     d = eng.root / "decisions"
     d.mkdir(exist_ok=True)
     path = d / f"DEC-{n}-x.md"
-    path.write_text(f"---\ntype: Decision\nid: DEC-{n}\ntitle: x\nactor: owner\nsession: 2026-10-07a\ndecision_status: BUILT\n---\n\nWords {n}.\n", encoding="utf-8")
+    path.write_text(f"---\ntype: Decision\nid: DEC-{n}\ntitle: x\nactor: owner\ndecided: 2026-10-07\nsession: 2026-10-07a\ndecision_status: BUILT\n---\n\nWords {n}.\n", encoding="utf-8")
     return path
 
 
@@ -477,6 +477,64 @@ def test_record_stamp_is_all_or_nothing_and_amend_appends(eng, capsys):
     assert [f for f in eng.lint() if f.guard == "G-D10"] == []
     b.write_text(b.read_text(encoding="utf-8").replace("Words 2.", "Other words."), encoding="utf-8")
     assert main([*base, "record", "amend", "DEC-2", "x"]) == 2  # the body moved: restore, then amend
+
+
+@pytest.mark.criterion("AC-25")
+def test_record_new_writes_a_stamped_decision_and_fills_only_now_keys(eng, capsys, tmp_path):
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    words = tmp_path / "words.md"
+    words.write_text("Owner: *\"keep it\nin one file\"*.\n", encoding="utf-8")
+    assert main([*base, "record", "new", "decision", "One file", "--file", str(words), "--set", "actor=owner", "--set", "decision_status=BUILT"]) == 0
+    assert "DEC-1: created and stamped" in capsys.readouterr().out
+    rec = eng.store.get("DEC-1")
+    assert (rec.doc.get("decided"), rec.doc.get("session"), rec.doc.get("actor")) == (TODAY, key, "owner")
+    assert "keep it\nin one file" in rec.doc.body
+    assert eng.lint() == []  # stamped at birth
+    assert main([*base, "record", "new", "decision", "No actor", "--body", "x", "--set", "decision_status=BUILT"]) == 2
+    assert "no `actor`" in capsys.readouterr().err  # an actor is never guessed
+    assert main([*base, "record", "new", "task", "Not here", "--body", "x"]) == 2
+    assert "task new" in capsys.readouterr().err
+
+
+# -- routing (G-R1) -----------------------------------------------------------------------
+
+
+ROUTES = [
+    {"component": "Ledger", "path": "ledger.md", "mode": "append-only"},
+    {"component": "Stories", "path": "stories", "pattern": "US-n-<slug>.md", "mode": "append-only", "note": "owner's words"},
+    {"component": "Scratch", "path": ".scratch", "mode": "throwaway", "optional": True},
+]
+
+
+def routed(tmp_path, routes):
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "routes": routes}), encoding="utf-8")
+    (tmp_path / "ledger.md").write_text(LEDGER, encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text(NOTE.format(key="2026-10-07b"), encoding="utf-8")
+    return Engine(tmp_path, today=lambda: TODAY)
+
+
+@pytest.mark.criterion("AC-24")
+def test_routes_print_and_a_missing_routed_path_fails_lint(tmp_path, capsys):
+    eng = routed(tmp_path, ROUTES)
+    (tmp_path / "stories").mkdir()
+    assert main(["--root", str(tmp_path), "routes"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "Ledger: ledger.md (append-only)",
+        "Stories: stories/US-n-<slug>.md (append-only); owner's words",
+        "Scratch: .scratch (throwaway)",
+    ]
+    assert [f for f in eng.lint() if f.guard == "G-R1"] == []  # .scratch is optional
+    (tmp_path / "stories").rmdir()
+    assert [f.message for f in eng.lint() if f.guard == "G-R1"] == ["route 'Stories' points at stories, which does not exist"]
+
+
+@pytest.mark.criterion("AC-24")
+@pytest.mark.parametrize("route, says", [({"component": "X", "path": "x"}, "no `mode`"), ({**ROUTES[0], "dir": "x"}, "unknown key 'dir'")])
+def test_a_malformed_route_is_refused_at_load(tmp_path, route, says):
+    with pytest.raises(Refusal) as e:
+        routed(tmp_path, [route])
+    assert says in e.value.message
 
 
 # -- the other working-state guards (G-W1, G-W2, G-W5, G-W6) -------------------------------
