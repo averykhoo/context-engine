@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "probe": {
+      "command": "${CTX_PY}",
+      "args": ["${CTX_PROBE_SERVER}"],
+      "env": { "CTX_PROBE_LOG": "${CTX_PROBE_LOG}" }
+    }
+  }
+}

@@ -765,8 +765,8 @@ session-start read"*):
 pause blocks, then other sessions'; the other sessions still open; the NEXT tier; overdue owner
 questions; and the top item's brief, Traps and Read first. Step 1 is unchanged, and step 6 is
 still on demand. A **SessionStart hook** could run start-of-session housekeeping (§6.11) and
-inject `orient()`'s output, so orientation costs no tool call (UNVERIFIED: that hook output is
-added to the model's context; check before relying on it).
+inject `orient()`'s output, so orientation costs no tool call (VERIFIED 2026-10-08, headless,
+with a control: hook stdout reaches the model's context; `spike/FINDINGS.md` row 3).
 
 **Resume** (an open pause block of your own, or the owner says "continue"): re-check the tree
 against the block, then continue.
@@ -1233,12 +1233,19 @@ opens in the repo and ends it with the session. There are no ports, and each con
 gets its own process. Claude Code asks once before trusting a server defined by a repo.
 - **The interpreter path is machine-specific** (bare `python` is broken on this laptop; global
   `CLAUDE.md § Python environments`). Use an environment variable in `.mcp.json` rather than a
-  hard-coded path (UNVERIFIED: that `.mcp.json` expands `${VAR}`).
+  hard-coded path. VERIFIED 2026-10-08 with a control: `.mcp.json` expands `${VAR}` in
+  `command`, `args` and `env` (`spike/FINDINGS.md` row 1).
 - **A server process is not a framework session.** The process lives as long as the Claude
-  Code process, and a `/clear` probably leaves it running (UNVERIFIED). So a session begins
+  Code process (VERIFIED for a session exit: the server was gone after `claude -p` ended), and a
+  `/clear` probably leaves it running (UNVERIFIED: not testable headless). So a session begins
   with an explicit `session.start`, never with the process start.
-- **Subagents probably share the parent's server connection** (UNVERIFIED), so the actor is
-  recorded per call, chiefly through the `hk_` prefix, not per process.
+- **Subagents share the parent's server process** (VERIFIED 2026-10-08: main and subagent calls
+  were answered by the same pid, per the server's own log), so the actor is recorded per call,
+  chiefly through the `hk_` prefix, not per process.
+- **The server's working directory is the directory Claude Code started in**, so the engine
+  takes the repo root from its cwd (observed 2026-10-08).
+- **MCP Python SDK 2.x renamed `FastMCP` to `MCPServer`** (`mcp.server.mcpserver`); the
+  engine targets 2.x.
 
 **Design rules for the MCP surface; the goal is context, not convenience:**
 1. **Edits are operations, not text replacement:** set a field, append a comment, replace one
@@ -1615,6 +1622,12 @@ scorers, vendored libraries) still gets ordinary tests** (§3.3.1).
 **To verify before building (UNVERIFIED claims in §6.1 and §8.0.2):** that SessionStart hook
 output is added to the model's context; that `.mcp.json` expands environment variables; whether
 `/clear` restarts a stdio MCP server; whether subagents share the parent's MCP connection.
+*Settled 2026-10-08 by the step-0 spike (`spike/FINDINGS.md`): three verified with controls,
+plus server lifetime; only `/clear` remains UNVERIFIED (not testable headless), and the design
+does not depend on it. All runs were headless; interactive sessions are REASONED to match.*
+
+**Engine design note from the spike:** body hashes (G-D10) must normalise line endings before
+hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 
 ### 12.4 Answered in the third round (owner, 2026-10-08)
 

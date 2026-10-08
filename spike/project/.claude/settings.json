@@ -1,0 +1,8 @@
+{
+  "enabledMcpjsonServers": ["probe"],
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "echo PROBE-WORD: zebra-4471" } ] }
+    ]
+  }
+}
