@@ -5,11 +5,11 @@ title: "Decision records: amend, correct, supersede, why(), generated index, adh
 brief: "Append-only by body_sha; the import keeps every id; the index is built from frontmatter, never parsed prose"
 pri: LATER
 state: open
-deps: [CE-1, ASK-2]
+deps: [CE-1]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08a
+updated: 2026-10-08c
 closed:
 ---
 
@@ -20,7 +20,9 @@ becomes `decision_status: REJECTED`). Test the importer on a copy; the import it
 
 ## Traps
 
-- `decision.correct` waits on the owner (ASK-2).
+- **`correct` is insert-only (DEC-13):** it adds `[text]` after one unique anchor, and a test
+  must show that stripping the added brackets returns the original body byte for byte.
+  It applies to every append-only kind, not only decisions.
 - This repo's `docs/decisions/` are hand-written fixtures in the target shape, without
   `body_sha`; stamping them is CE-8.
 
@@ -30,3 +32,5 @@ becomes `decision_status: REJECTED`). Test the importer on a copy; the import it
 - adhoc `docs/decisions.md` (52,624 B on 2026-10-08)
 
 ## Log
+
+- 2026-10-08c: ASK-2 answered (DEC-13); dep dropped.

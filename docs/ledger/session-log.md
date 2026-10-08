@@ -10,12 +10,13 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 ## 2026-10-08c · kind: close
 
 - **rows:** CE-1 (closed); CE-2 (NOW); AC-1 to AC-9 (tested); DEC-10 to DEC-12 (status ACCEPTED
-  corrected to BUILT, the spec's vocabulary)
+  corrected to BUILT, the spec's vocabulary); ASK-2 (closed); DEC-13 (created); CE-5, CE-8
+  (deps); FRAMEWORK §6.5 and Q-I
 - **receipts:**
   - guards: gate `pytest -q` green, 72 passed (2026-10-08); sabotage `tools/sabotage_ce1.py`
     13 of 13 red; engine `lint` on this repo clean except "no body_sha" (stamping is CE-8)
   - read: CE-1 and its Read first; FRAMEWORK §8.0 to §8.0.2, §8.3, §9.3, §9.3.1
-  - asked: ASK-2 not re-raised (raised this morning, unanswered)
+  - asked: ASK-2 answered by the owner (DEC-13)
 - **summary** (the owner digest):
   - Built the engine core (CE-1): OKF records, ids under a cross-process lock, op log,
     write-time refusal, lint for schema, G-D10 and G-D11. Library only; the CLI is CE-2.
@@ -24,9 +25,10 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
   - Sabotage caught a test that could not fail (AC-7: `parse` normalised before the hash did);
     the test now hashes raw CRLF. The concurrency test caught a mkdir race; fixed.
   - The new schema check caught DEC-10 to DEC-12 using `ACCEPTED`, outside the spec's vocabulary.
+  - ASK-2: corrections are insert-only `[brackets]` (DEC-13). CE-8 now follows CE-2 (CLI first).
+    Pushed `bd22aa1` (owner: push freely while there is no CI; watcher: no runs).
 - **Still owed:**
-  - pushes: commits `0964993` onward are local only (no permission asked)
-  - ASK-2 unanswered (blocks CE-5)
+  - nothing
 
 ---
 

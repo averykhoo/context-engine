@@ -957,9 +957,13 @@ body change), `decision.supersede(old, new)` (sets both directions and derives O
 or `file::symbol`, the decisions that link it. Writing a decision costs only its own text; no
 session opens the log to append to it.
 
-**Typos.** A strict body hash forbids fixing them. `decision.correct(id, ...)` is allowed: it
-updates `body_sha` and logs a `corrected:` line under Amendments, so every edit stays visible
-(agent proposal; open question Q-I).
+**Corrections are bracketed insertions** (owner, 2026-10-08, Q-I answered). A strict body hash
+forbids fixing a typo in place. `correct(id, after, text)` inserts `[text]` right after the one
+place `after` occurs, re-stamps `body_sha`, and logs a `corrected:` line under Amendments. It
+can only insert: removing every bracket it added gives back the original body exactly, so the
+words as typed always survive. The aim is the intent, not a bug-for-bug copy of what was typed;
+verbatim quotes keep the flavour and let a later reader check whether they were misread. A
+change of meaning is an `amend`, never a correction. Applies to every append-only kind.
 
 **Organisation: the by-id versus by-topic choice is gone.** Records are stored by id; topic is
 a tag, and the generated index groups by tag. zanzibar-style topic narratives ("why is it like
@@ -1627,8 +1631,8 @@ scorers, vendored libraries) still gets ordinary tests** (§3.3.1).
 - **Q-H. Ledger storage (v0.5):** one file per entry (no shared append; a generated rollup for
   reading) or the existing single file under the engine lock? *Default: single file under the
   lock until the trial shows append collisions.*
-- **Q-I. `decision.correct`:** allow logged typo fixes to append-only records, or forbid every
-  body change except `amend`? *Default: allow, logged under Amendments (agent proposal).*
+- **Q-I. `decision.correct`:** ANSWERED 2026-10-08 (owner): corrections are bracketed
+  insertions that never delete the typed words (§6.5).
 - **Q-J. A combined read-only view of all decisions** for reading in an editor? *Default: no;
   the generated index plus `grep` covers it, and a combined file would be a second copy.*
 - **Q-K. Housekeeping write budget per run** (G-W10) and the stale-stub window (G-W11): values
@@ -1732,4 +1736,5 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | Guards: G-D6 simplified; new G-D10, G-D11, G-W9, G-W10, G-W11; G-W3, G-W4, G-W7 updated | agent design |
 | Ledger kinds `open` and `abandoned`; ledger written by `session.*`; Q-H fragments vs single file | agent design |
 | Layout, minimum set and add-when-needed updated; trial plan (§8.0.3); open questions Q-H to Q-K and a to-verify list | agent design |
+| Q-I answered: `correct` only inserts `[bracketed]` text, re-stamps and logs; the typed words always survive; meaning changes are amendments (§6.5; context-engine DEC-13) | owner |
 | **P15: design for an agent that starts with no context**; names the principle behind P4, P5, P9, P10, P12 and the run ledger (added 2026-10-08, after v0.5; context-engine DEC-12) | owner |

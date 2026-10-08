@@ -15,8 +15,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **NOW is CE-2, working state and the CLI.** Order (DEC-10): dogfood here first (CE-8), then other
   repos (CE-15, then the adhoc trial CE-7, whose baseline CE-4 must be measured first).
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
-- **One owner question is open** (ASK-2): raise it at session start, one line.
-- Commits `0964993` onward are **local and unpushed**; push only with permission.
+- **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 7).
 
 ## Open batons and pause blocks
 
@@ -25,8 +24,8 @@ None.
 ## Next session: start here
 
 1. `CLAUDE.md` (loads automatically): environment, gate, rules, the routing table.
-2. Raise **ASK-2** in chat, one line, unless answered; record any answer at
-   once (a decision with `actor: owner`, then close the question file).
+2. Raise any open `ASK-n` in chat, one line each (none on 2026-10-08c); record an answer at once
+   (a decision with `actor: owner`, then close the question file).
 3. Read the board below, then the NOW item's file: `tasks/CE-2-working-state-records.md`, its
    Traps and its Read first.
 4. Read the rest of this note only if needed, and say which in your ledger entry's `read:` line.
@@ -42,11 +41,10 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 | NEXT | CE-3 | MCP server over the CLI operations; dogfood it here (AC-18, AC-19) | CE-2 |
 | NEXT | CE-4 | Measure adhoc's start and close cost today, before any cutover (read-only) | |
 | NEXT | CE-16 | Coverage map: every FRAMEWORK component, ritual and guard → a task, prose-only, or deferred (G7) | |
-| NEXT | ASK-2 | Owner: may append-only records take logged typo fixes? | blocks CE-5 |
-| LATER | CE-5 | Decision records, `why()`, generated index, adhoc importer | CE-1, ASK-2 |
+| LATER | CE-5 | Decision records, insert-only `correct`, `why()`, generated index, adhoc importer | |
 | LATER | CE-6 | Tier-0 housekeeping script and the `hk_` operations | CE-2 |
 | LATER | CE-7 | adhoc trial cutover on a worktree branch, scored against CE-4 | CE-3, CE-4, CE-5, CE-8 |
-| LATER | CE-8 | The engine adopts this repo's hand-written records | CE-3 |
+| LATER | CE-8 | The engine adopts this repo's hand-written records (via the CLI) | CE-2 |
 | LATER | CE-9 | Trim FRAMEWORK.md (112 KB) and move its change history out | |
 | LATER | CE-10 | Run the gate in GitHub Actions | |
 | LATER | CE-14 | The guard catalogue (§8.1 to §8.5) as engine lint guards | CE-2 |

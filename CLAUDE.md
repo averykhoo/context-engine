@@ -71,8 +71,10 @@ one line which it became. An answer to an `ASK-n` becomes a decision, then the q
    line; keep NOW at exactly 1 and NEXT at most 5; mirror the board table in HANDOFF.
 5. Durable rules come here; method lessons go into a runbook.
 6. Anything skipped becomes a baton in HANDOFF.
-7. Gate again, then commit by path. Push only with the owner's permission; every push gets a
-   CI watcher (global `CLAUDE.md`).
+7. Gate again, then commit by path. **Push whenever, while the repo has no CI** (owner,
+   2026-10-08: *"if there's no cicd then push whenever for now"*); once CE-10 adds CI, ask
+   again, because the repo is private and its CI minutes are limited. Every push gets a CI
+   watcher (global `CLAUDE.md`).
 8. The digest in chat.
 
 **Pause** (§6.4): owner words recorded, evidence out of `.scratch/`, a three-line ledger entry

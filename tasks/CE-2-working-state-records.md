@@ -20,6 +20,9 @@ later | answer`; `baton add | done`; `pause open | resume`; `banner set`; `lint`
 
 ## Traps
 
+- **CLI arguments are strings.** `--set created=2026-10-08` written as a str comes out quoted
+  (`'2026-10-08'`, seen 2026-10-08c). Coerce by the kind's schema (dates, lists, ints) before
+  writing. New flow maps render as `{a: b}`, not the hand style `{ a: b }`; harmless, but known.
 - **Q-H is an agent call made here** (FRAMEWORK §12.3): the ledger as one file per entry, or one
   file under the lock. Default: one file under the lock. Record the choice as a DEC.
 - The stale-stub window (G-W11) needs a value with provenance (G-D9): measure it, never copy
