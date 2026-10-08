@@ -237,6 +237,21 @@ disjoint. Judgement stays with the session.**
   (zanzibar `CLAUDE.md § Who decides`; `formal/HANDOFF.md § House rules` 1).
 - Changing a criterion is a decision, with an actor.
 
+**P15. Design for an agent that starts with no context** (owner, 2026-10-08: *"yup so any agent
+that starts with no context"*).
+- A context clear, a handoff to the next session, a parallel session and a fresh subagent are
+  the same case: the reader has none of the current session's memory. Design every record for
+  that reader.
+- **Anything a later agent needs lives in the repo, stamped with what it is true for** (a
+  content hash, a date, a session key), so the agent can trust it without re-deriving it and can
+  tell when it has gone stale. "Tests passed" is worth recording only with the hash it passed on.
+- The test for any record: **could an agent with no context act on this correctly, or at least
+  tell that it cannot?**
+- This principle is the reason for P4 (provenance), P5 (generate what is derivable), P9 and P10
+  (never lose what cannot be recovered), and P12 (other sessions are such readers too). The
+  mechanisms that serve it: `orient()` (§6.1), batons and pause records (§5.4), ledger receipts
+  (§7.1), and the run ledger, with tiles keyed on their inputs' hash (G-V1, §8.5; US-10).
+
 ---
 
 ## 2. The components at a glance
@@ -1717,3 +1732,4 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | Guards: G-D6 simplified; new G-D10, G-D11, G-W9, G-W10, G-W11; G-W3, G-W4, G-W7 updated | agent design |
 | Ledger kinds `open` and `abandoned`; ledger written by `session.*`; Q-H fragments vs single file | agent design |
 | Layout, minimum set and add-when-needed updated; trial plan (§8.0.3); open questions Q-H to Q-K and a to-verify list | agent design |
+| **P15: design for an agent that starts with no context**; names the principle behind P4, P5, P9, P10, P12 and the run ledger (added 2026-10-08, after v0.5; context-engine DEC-12) | owner |

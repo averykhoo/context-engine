@@ -9,8 +9,8 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ## 2026-10-08b · kind: close
 
-- **rows:** ASK-1 (closed); US-9, DEC-10, DEC-11, US-10, CE-14, CE-15, CE-16, CE-17 (created); DEC-6 (amended);
-  CE-7 (deps += CE-8)
+- **rows:** ASK-1 (closed); US-9, US-10, DEC-10 to DEC-12, CE-14 to CE-17 (created); DEC-6
+  (amended); CE-7 (deps += CE-8); FRAMEWORK P15 added
 - **receipts:**
   - guards: none exist yet; gate not run (docs and records only, no `src/` or `tests/` change)
   - read: HANDOFF in full; ASK-1, ASK-2, charter; FRAMEWORK §5.5, §8.0, §8.0.1, §10, §11.1,
@@ -25,6 +25,7 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
   - Sabotage rule made an owner mandate (DEC-11): charter, `CLAUDE.md`, criteria statuses.
   - Owner asked for tiled tests keyed on a code hash (US-10): G-V1 has the hash part; tiles,
     per-tile input hashes and showing it at session start are filed as CE-17.
+  - New spec principle P15, design for an agent that starts with no context (DEC-12).
   - Fact: Remote Control spawns default to `same-dir` (owner screenshot), matching §5.5.
 - **Still owed:**
   - pushes: commits `0964993` onward are local only (no permission asked)

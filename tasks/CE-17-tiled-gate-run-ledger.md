@@ -13,7 +13,7 @@ updated: 2026-10-08b
 closed:
 ---
 
-US-10. Two parts:
+US-10; serves FRAMEWORK P15 (an agent that starts with no context knows what is tested). Two parts:
 
 1. **Spec change** (a §13 row): add tiles to G-V1: a long suite is split into named tiles that
    run separately and may run in parallel; each tile's ledger row is keyed on a hash of its
