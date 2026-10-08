@@ -7,7 +7,7 @@ created: 2026-10-08
 
 # Manual mode
 
-Every operation the engine (`ce`, `python -m context_engine`) performs, written as steps a person
+Every operation the engine (`context-engine`, `python -m context_engine`) performs, written as steps a person
 or an agent can follow with a text editor, git and a SHA-256 tool. It exists for two reasons
 (US-11):
 
@@ -17,8 +17,8 @@ or an agent can follow with a text editor, git and a SHA-256 tool. It exists for
    oddly or writes something that looks wrong, this is the statement of what the right result
    was, so the agent can finish the job by hand *and* fix the engine.
 
-A guard keeps it whole: `tests/test_runbook.py` fails the gate if any `ce` subcommand has no
-`### ce <group> <op>` section here, or a section has no **Why** (AC-21).
+A guard keeps it whole: `tests/test_runbook.py` fails the gate if any `context-engine` subcommand has no
+`### context-engine <group> <op>` section here, or a section has no **Why** (AC-21).
 
 ## When the engine and this runbook disagree
 
@@ -112,7 +112,7 @@ By hand: `printf '%s\n' "$text" | sha256sum` (Git Bash), or
 
 ## Sessions
 
-### ce session start
+### context-engine session start
 
 1. Read the newest key in `docs/ledger/session-log.md`. Entries are `## <key> · kind: <kind>`,
    newest first. Also read the banner key in `HANDOFF.md`'s `## Banner (<key>)`.
@@ -140,7 +140,7 @@ the key the moment it is minted, shows the session is live (`orient` lists open 
 leaves evidence if the session dies (G-W11) (FRAMEWORK §5.5 rule 1, AC-10). The banner key
 counts too, because a session may have written the banner before its ledger entry.
 
-### ce session close
+### context-engine session close
 
 1. Your stub must exist and still say `kind: open`. A session closes or pauses once.
 2. You need: `rows` (the items you touched, not empty); a summary of 1 to 7 lines (the owner
@@ -160,7 +160,7 @@ counts too, because a session may have written the banner before its ledger entr
 
    - **rows:** CE-8 (runbook written); US-11 (amended)
    - **receipts:**
-     - guards: gate pytest -q green, N passed; ce lint: ...
+     - guards: gate pytest -q green, N passed; context-engine lint: ...
      - read: ...
      - asked: none open
    - **summary** (the owner digest):
@@ -174,7 +174,7 @@ counts too, because a session may have written the banner before its ledger entr
 what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8,
 AC-11). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
 
-### ce session pause
+### context-engine session pause
 
 1. As for close step 1. You need `rows` and `deferred` (the steps skipped: gate, commit, ...).
 2. Replace the stub with:
@@ -192,7 +192,7 @@ skipped gates and commits pile up.
 
 ## Reading
 
-### ce orient
+### context-engine orient
 
 Read and report, in this order, in under 6000 bytes in total (`orient_max_bytes`). If a part does
 not fit, cut it at a line and say where the rest is:
@@ -201,14 +201,14 @@ not fit, cut it at a line and say where the rest is:
 2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, each pause
    with its resume step and branch;
 3. other sessions with an open stub in the ledger;
-4. board items at NOW and NEXT (as `ce task list`);
+4. board items at NOW and NEXT (as `context-engine task list`);
 5. owner questions to raise now: open at NOW or NEXT, or overdue (see session close step 3);
 6. the NOW item's brief, `## Traps` and `## Read first`.
 
 **Why:** one bounded read at session start replaces opening a dozen files (US-1, AC-17). The
 order is the order of urgency: carried work and live sessions come before new work.
 
-### ce routes
+### context-engine routes
 
 Read the `[[routes]]` entries in `context.toml`, in order. Each names a component, its path
 (plus `pattern`, how files under it are named), its change `mode`, and an optional `note`.
@@ -217,7 +217,7 @@ Read the `[[routes]]` entries in `context.toml`, in order. Each names a componen
 or only appended to. The table used to sit in `CLAUDE.md`; it lives in config now so the engine
 can check it (G-R1) and every repo can carry its own (FRAMEWORK §2).
 
-### ce lint
+### context-engine lint
 
 Check every record, then the working state. `--working` does only the second half.
 
@@ -248,9 +248,9 @@ records that were valid when written but stale now. A non-empty result is a fail
 
 ## The board (tasks and owner questions)
 
-### ce task new
+### context-engine task new
 
-1. Pick the kind: task (`CE-n`) or question (`ASK-n`; prefer `ce ask new`).
+1. Pick the kind: task (`CE-n`) or question (`ASK-n`; prefer `context-engine ask new`).
 2. The brief is at most 120 characters. Every named dep must exist. The tier's cap must have room
    (NOW 1, NEXT 5, counting open items of both kinds). Otherwise, demote something first.
 3. Id: the highest number in the series + 1. Count file names *and* `id:` keys, open and closed.
@@ -280,7 +280,7 @@ records that were valid when written but stale now. A non-empty result is a fail
 **Why:** one file per item, with no renames, so every reference keeps working. The caps keep the
 board a ranking, not a pile (G-W5). The brief is a constraint, not a summary (FRAMEWORK §5.2).
 
-### ce task set
+### context-engine task set
 
 Change any key except the ones operations own. `state`, `status` and `closed` change by
 `close`/`reopen`. `moved` changes by `touch`/`promote`. `pri` by `promote`. `deps` by `dep`.
@@ -293,7 +293,7 @@ comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must loo
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule (DEC-14 item 7).
 
-### ce task promote
+### context-engine task promote
 
 Item open; `pri` a valid tier; the target tier has room, not counting the item itself. Set `pri`,
 `moved: <key>`, `updated: <key>`.
@@ -301,7 +301,7 @@ Item open; `pri` a valid tier; the target tier has room, not counting the item i
 **Why:** re-ranking is progress on the board, so it bumps `moved`, and it is where the caps are
 enforced.
 
-### ce task dep
+### context-engine task dep
 
 Add (every one must exist and must not be the item itself) or remove ids in `deps`. Keep the
 existing order and add new ones at the end.
@@ -309,7 +309,7 @@ existing order and add new ones at the end.
 **Why:** deps decide what an answered question or a closed task unblocks (`ask answer` reports
 it), so a dangling or self dep would mislead.
 
-### ce task comment
+### context-engine task comment
 
 Append to `## Log` (create the heading at the end if missing) one line
 `- <key> (<actor>): <text>`, with further lines indented two spaces (a blank line becomes two
@@ -317,14 +317,14 @@ spaces). The section is written as heading, blank line, entries. Never edit an e
 
 **Why:** the log is the item's history in place. Appending only keeps it trustworthy.
 
-### ce task touch
+### context-engine task touch
 
 Set `moved: <key>` and `updated: <key>`. With `--mechanical`, set only `updated`.
 
 **Why:** `moved` means a person or agent made progress on the item. Housekeeping touches are
 mechanical, so they must not look like progress (FRAMEWORK §5.2).
 
-### ce task close
+### context-engine task close
 
 A message is required, and the item must be open. Set `state: closed`, `status: deprecated`,
 `closed: <key>`, `moved`, `updated`. Append `- <key> (<actor>): closed: <message>` to `## Log`.
@@ -333,14 +333,14 @@ Do not move or rename the file.
 **Why:** closed items stay in place as records, so links never break (US-5, AC-12). `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
 
-### ce task reopen
+### context-engine task reopen
 
 A message is required, and the item must be closed. Set `state: open`, set `closed:` to null,
 delete `status`, and set `moved` and `updated`. Append `- <key> (<actor>): reopened: <message>`.
 
 **Why:** the mirror of close, keeping G-W4 true.
 
-### ce task section
+### context-engine task section
 
 Replace the content under `## <name>` up to the next `## ` heading. Add the section at the end if
 it is missing. Never `## Log`: use `comment`.
@@ -348,7 +348,7 @@ it is missing. Never `## Log`: use `comment`.
 **Why:** Traps and Read first are replaced as they get better. The Log is history, so it is only
 ever appended to.
 
-### ce task list
+### context-engine task list
 
 From frontmatter only: open items by default (`--state closed|all`), optionally filtered by
 `--pri` or `--label`. Sort by tier (NOW, NEXT, LATER, SOMEDAY), then prefix alphabetically (ASK
@@ -358,7 +358,7 @@ before CE), then number. One line each: pri and id each padded to 7 characters, 
 **Why:** the board view comes from the records, never the other way round (board size 2). Reading
 frontmatter only keeps it cheap (AC-13).
 
-### ce task show
+### context-engine task show
 
 Print `id · pri · state · title`, then the brief and deps, then the body with `## Log` cut to its
 5 newest entries, newest first (`--head 0` for all), or just one `--section`.
@@ -368,7 +368,7 @@ that matter.
 
 ## Owner questions
 
-### ce ask new
+### context-engine ask new
 
 As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null) and
 `blocks: [...]` if it blocks items. Default body:
@@ -392,7 +392,7 @@ check them yourself.
 buried in prose (FRAMEWORK §5.3). "Why owner-only" makes the asker check that it really is the
 owner's call (P8).
 
-### ce ask raised
+### context-engine ask raised
 
 After raising questions in chat: each must be a question, and your session must have an open
 stub. Set `last_asked: <key>` (and `updated`) on each. In your stub, delete any `- **asked:**`
@@ -403,7 +403,7 @@ is still open.
 **Why:** the stamp resets the overdue clock. The stub line is the receipt that `session close`
 checks (G-W8).
 
-### ce ask later
+### context-engine ask later
 
 The owner said "later". Set `last_asked: <key>` and append
 `- <key> (<actor>): owner said later; still open`. Do not close it. This writes no `asked:` line
@@ -413,7 +413,7 @@ or demoted to LATER.
 **Why:** "later" is not an answer. The question stays open, and the clock restarts (FRAMEWORK
 §5.3).
 
-### ce ask answer
+### context-engine ask answer
 
 1. The question must be open, and you need the owner's words verbatim.
 2. New decision `DEC-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
@@ -431,7 +431,7 @@ line (FRAMEWORK §6.2).
 
 ## Batons and pauses
 
-### ce baton add
+### context-engine baton add
 
 New `BTN-n` in `docs/working/`: `title` (first line of the step, cut to 100 characters, never
 refused), `session: <key>`, `state: open`, `created: <today>`, `why` (`''` if none given). Body:
@@ -440,14 +440,14 @@ refused), `session: <key>`, `state: open`, `created: <today>`, `why` (`''` if no
 **Why:** a step skipped at close must reach the next session as a record, not as a sentence in a
 note that the next banner overwrites (FRAMEWORK §5.4).
 
-### ce baton done
+### context-engine baton done
 
 Evidence is required: the commit, file or ledger entry that shows the step done. The baton must be
 open. Set `state: done`, `done: <key>`, `evidence: <text>`.
 
 **Why:** without evidence, "done" cannot be checked.
 
-### ce baton expire
+### context-engine baton expire
 
 Housekeeping: actor `process:housekeep` unless the caller gives one. For every open baton or
 pause from a session with 2 or more closes/pauses after it:
@@ -462,7 +462,7 @@ Both writes are `mechanical: true` in the op log.
 **Why:** carried work must not drift for ever, and turning it into a task keeps it without
 blocking orientation (G-W3, AC-15).
 
-### ce pause open
+### context-engine pause open
 
 1. Read the branch (`git rev-parse --abbrev-ref HEAD`) and every uncommitted path, untracked files
    included (`git status --porcelain=v1 --untracked-files=all`; for a rename take the new path),
@@ -478,7 +478,7 @@ blocking orientation (G-W3, AC-15).
 memory. Committing at once keeps another session's close from sweeping it away (FRAMEWORK §5.5
 rule 4, AC-14).
 
-### ce pause resume
+### context-engine pause resume
 
 The pause must be open. Set `state: done`, `resumed: <key>`.
 
@@ -486,13 +486,13 @@ The pause must be open. Set `state: done`, `resumed: <key>`.
 
 ## The banner
 
-### ce banner show
+### context-engine banner show
 
 Print the banner's key, its hash (above) and its text. Keep the hash: `banner set` needs it.
 
 **Why:** reading and hashing together is what makes the later write safe.
 
-### ce banner set
+### context-engine banner set
 
 1. Re-read `HANDOFF.md` and recompute the banner hash. If it differs from the one you saw, stop.
    Another session wrote it: read theirs, merge, and start again.
@@ -505,22 +505,22 @@ another session's truth (FRAMEWORK §5.5 rule 2, AC-16).
 
 ## Append-only records (decisions and stories)
 
-### ce record new
+### context-engine record new
 
-1. Take the next free id in the kind's series (as `ce task new`): `DEC-n` in `docs/decisions`,
+1. Take the next free id in the kind's series (as `context-engine task new`): `DEC-n` in `docs/decisions`,
    `US-n` in `docs/stories`, file `<id>-<slug>.md`.
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if it can mean nothing but now: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else
    required, `actor` above all, must be given; if it is missing, stop.
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
-4. Stamp it at once (`ce record stamp`): `body_sha` is the last frontmatter key.
+4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
 **Why:** owner intent is recorded verbatim, now (§6.2), and a record born stamped can never be
 quietly rewritten. Who decided is never guessed: an `actor: owner` on the agent's own call is
 the worst error this file can hold.
 
-### ce record stamp
+### context-engine record stamp
 
 On each named decision or story with no `body_sha`, once its body is final: add
 `body_sha: sha256:<hex>` (the body hash above) as the last frontmatter key. Never replace an
@@ -530,7 +530,7 @@ stamped, stamp none of them.
 **Why:** stamping freezes the owner's words (G-D10). Stamping too early freezes a draft, and
 every later fix then has to be an amendment.
 
-### ce record amend
+### context-engine record amend
 
 The only body change an append-only record takes. If the record is stamped, its hash must match
 first. If there is no `## Amendments` heading, add one at the end. Then append a blank line and

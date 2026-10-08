@@ -19,11 +19,11 @@ def _subparsers(parser: argparse.ArgumentParser) -> dict[str, argparse.ArgumentP
 
 
 def cli_operations() -> list[str]:
-    """Every `ce <group> [<op>]` the CLI accepts, read from the parser itself."""
+    """Every `context-engine <group> [<op>]` the CLI accepts, read from the parser itself."""
     ops = []
     for group, gp in _subparsers(build()).items():
         subs = _subparsers(gp)
-        ops += [f"ce {group} {op}" for op in subs] if subs else [f"ce {group}"]
+        ops += [f"context-engine {group} {op}" for op in subs] if subs else [f"context-engine {group}"]
     return ops
 
 

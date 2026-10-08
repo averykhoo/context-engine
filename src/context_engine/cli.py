@@ -1,6 +1,6 @@
 """The command line: one subcommand per operation in ``working.Engine`` (FRAMEWORK §8.0.2).
 
-``ce [--root DIR] [--session KEY] [--actor ACTOR] <group> <op> ...``. The session key and the
+``context-engine [--root DIR] [--session KEY] [--actor ACTOR] <group> <op> ...``. The session key and the
 actor may also come from ``CE_SESSION`` and ``CE_ACTOR``. A refusal prints its remedy to stderr
 and exits 2; lint exits 1 when anything fails.
 """
@@ -31,7 +31,7 @@ def _ids(text: str | None) -> list[str]:
 
 
 def build() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="ce", description="context-engine: records and working state for agent-built repos")
+    ap = argparse.ArgumentParser(prog="context-engine", description="context-engine: records and working state for agent-built repos")
     ap.add_argument("--root", default=".", help="the repo root (default: the current directory)")
     ap.add_argument("--session", default=os.environ.get("CE_SESSION"), help="the session key (or CE_SESSION)")
     ap.add_argument("--actor", default=os.environ.get("CE_ACTOR"), help="the OKF actor, e.g. claude-code/<model> (or CE_ACTOR)")

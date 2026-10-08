@@ -431,7 +431,7 @@ def test_orient_never_exceeds_its_cap_and_says_where_the_rest_is(eng):
     key, _ = _busy_repo(eng, traps=huge)
     out = eng.orient(key)
     assert len(out.encode()) <= eng.w.orient_max_bytes
-    assert "[cut at the orient cap; the rest: `ce task show CE-1`]" in out
+    assert "[cut at the orient cap; the rest: `context-engine task show CE-1`]" in out
     for heading in ("## Banner", "## Batons", "## Other open", "## Board", "## Raise", "## Top item"):
         assert heading in out
 
@@ -488,7 +488,7 @@ def test_record_new_writes_a_stamped_decision_and_fills_only_now_keys(eng, capsy
     assert main([*base, "record", "new", "decision", "One file", "--file", str(words), "--set", "actor=owner", "--set", "decision_status=BUILT"]) == 0
     assert "DEC-1: created and stamped" in capsys.readouterr().out
     rec = eng.store.get("DEC-1")
-    assert (rec.doc.get("decided"), rec.doc.get("session"), rec.doc.get("actor")) == (TODAY, key, "owner")
+    assert (rec.doc.get("decided"), rec.doc.get("session"), rec.doc.get("actor")) == (dt.date.today(), key, "owner")  # main() builds its own engine on the real clock
     assert "keep it\nin one file" in rec.doc.body
     assert eng.lint() == []  # stamped at birth
     assert main([*base, "record", "new", "decision", "No actor", "--body", "x", "--set", "decision_status=BUILT"]) == 2

@@ -74,7 +74,7 @@ pause = "pause"
 orient_max_bytes = 6000                  # provenance: DEC-14
 
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
-# with `ce routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.
+# with `context-engine routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.
 [[routes]]
 component = "Spec"
 path = "docs/framework/FRAMEWORK.md"
@@ -96,7 +96,7 @@ note = "confirmed 2026-10-08, DEC-10"
 component = "Stories (owner's words)"
 path = "docs/stories"
 pattern = "US-n-<slug>.md"
-mode = "append-only: `ce record amend`, never rewrite"
+mode = "append-only: `context-engine record amend`, never rewrite"
 
 [[routes]]
 component = "Criteria"
@@ -108,24 +108,24 @@ note = "AC-n, claimed by @pytest.mark.criterion(\"AC-n\")"
 component = "Decisions"
 path = "docs/decisions"
 pattern = "DEC-n-<slug>.md"
-mode = "append-only: `ce record amend`"
+mode = "append-only: `context-engine record amend`"
 note = "one record each (FRAMEWORK §6.5)"
 
 [[routes]]
 component = "Tasks and owner questions"
 path = "tasks"
 pattern = "CE-n-<slug>.md, ASK-n-<slug>.md"
-mode = "frontmatter through `ce task`/`ce ask`, bodies by hand"
+mode = "frontmatter through `context-engine task`/`context-engine ask`, bodies by hand"
 
 [[routes]]
 component = "Orientation note"
 path = "HANDOFF.md"
-mode = "replaced at clean close; banner through `ce banner set`"
+mode = "replaced at clean close; banner through `context-engine banner set`"
 
 [[routes]]
 component = "Session ledger"
 path = "docs/ledger/session-log.md"
-mode = "append-only, one entry per session, through `ce session`"
+mode = "append-only, one entry per session, through `context-engine session`"
 
 [[routes]]
 component = "Operation log"

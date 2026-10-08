@@ -7,6 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-09a · kind: close
+
+- **rows:** CE-3
+- **receipts:**
+  - guards: gate pytest -q green, 121 passed (2026-10-09)
+  - read: CLAUDE.md, ce orient, FRAMEWORK §8.0.2, HANDOFF
+  - asked: none
+- **summary** (the owner digest):
+  - Owner chose one name, context-engine, for the CLI and the MCP server; tool names use underscores
+    (DEC-15, PROVISIONAL)
+  - Renamed ce -> context-engine in pyproject's script entry, cli.py prog, refusal remedies,
+    CLAUDE.md, the runbook, context.toml routes, criteria; older records keep ce
+  - Fixed a clock-dependent assertion in tests/test_working.py (AC-25): main() fills decided from
+    the real clock, so it went red once the date passed 2026-10-08
+  - Sabotage: runbook heading reverted to ce -> test_runbook red; record-new date fill forced to
+    2000-01-01 -> AC-25 test red
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-08f · kind: close
 
 - **rows:** CE-8 (closed); CE-3 (NEXT -> NOW); CE-15 (LATER -> NEXT); DEC-1..13, US-1..11 (stamped);

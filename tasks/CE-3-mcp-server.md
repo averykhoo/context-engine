@@ -9,7 +9,7 @@ deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08f
-updated: 2026-10-08f
+updated: 2026-10-09a
 closed:
 ---
 
@@ -32,3 +32,5 @@ AC-18 and AC-19 (AC-20 arrives with the `hk_` set in CE-6).
 - `spike/FINDINGS.md`, `spike/probe_server.py`, `spike/project/`
 
 ## Log
+
+- 2026-10-09a (claude-code/claude-opus-5-5): DEC-15 (owner): server name in .mcp.json is context-engine (agents see mcp__context-engine__<tool>); tool names use underscores (session_start, task_close, hk_close), not FRAMEWORK §8.0.2's dotted names. Check first that Claude tool names really refuse dots (UNVERIFIED).

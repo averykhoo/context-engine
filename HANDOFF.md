@@ -3,19 +3,22 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-08f)
+## Banner (2026-10-09a)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
   the first piece. **Since 2026-10-08f it runs this repo's own records** (CE-8, DEC-7 amended).
-- **State:** CE-1 (core), CE-2 (working state) and CE-8 (adoption) are done. The `ce` CLI runs
+- **The command is `context-engine`** (DEC-15, 2026-10-09a; `ce` before). Older records keep
+  `ce`. The MCP server will carry the same name, with underscored tool names.
+- **State:** CE-1 (core), CE-2 (working state) and CE-8 (adoption) are done. The CLI runs
   sessions, the board, questions, batons, pauses, the banner, `orient`, `lint`, `routes`, and
-  decisions and stories (`ce record new|stamp|amend`). AC-1 to AC-17 and AC-21 to AC-25 `tested`.
-- **Rituals are `ce` commands** (`CLAUDE.md` § Rituals). When `ce` errors, do the step by hand
-  from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `ce lint` is in the gate: every
-  decision and story is stamped, and the routing table is `[[routes]]` in `context.toml`.
-- **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19). NEXT: CE-4,
-  CE-15 (deploy path, now unblocked), CE-16. CE-7 waits on CE-4 and CE-5.
+  decisions and stories (`record new|stamp|amend`). AC-1 to AC-17 and AC-21 to AC-25 `tested`.
+- **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
+  step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
+  gate: every decision and story is stamped, and the routing table is `[[routes]]` in
+  `context.toml`.
+- **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19), named per
+  DEC-15. NEXT: CE-4, CE-15 (deploy path), CE-16. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 6).
 
@@ -25,17 +28,17 @@ None.
 
 ## Next session: start here
 
-1. `CLAUDE.md` (loads automatically): environment, gate, rules, and the rituals as `ce` commands.
-2. `ce session start`, then `ce orient` (the banner, batons, open sessions, the NEXT tier,
+1. `CLAUDE.md` (loads automatically): environment, gate, rules, and the rituals as `context-engine` commands.
+2. `context-engine session start`, then `context-engine orient` (the banner, batons, open sessions, the NEXT tier,
    questions to raise and the NOW item's Traps and Read first, under 6000 bytes). Raise any
-   question it lists in chat, one line each, then `ce ask raised <ids>`.
-3. `ce task show CE-3` (the NOW item). The board is `ce task list`; this note keeps no copy.
+   question it lists in chat, one line each, then `context-engine ask raised <ids>`.
+3. `context-engine task show CE-3` (the NOW item). The board is `context-engine task list`; this note keeps no copy.
 4. Read the rest of this note only if needed, and say which in your ledger entry's `read:` line.
 
 ## Facts not derivable from the code (dated)
 
-- **2026-10-08d, the CLI:** run it as `<interpreter> -m context_engine ...`; the `ce` script lands
-  in the env's `Scripts/`, which is not on PATH. Set `CE_ACTOR=claude-code/<model-id>` and
+- **2026-10-08d, the CLI:** run it as `<interpreter> -m context_engine ...`; the script (named `context-engine`
+  since 2026-10-09a, DEC-15; `ce` before) lands in the env's `Scripts/`, which is not on PATH. Set `CE_ACTOR=claude-code/<model-id>` and
   `CE_SESSION=<key>` for a session's writes.
 - **2026-10-08d, `tools/sabotage_ce1.py` no longer runs:** CE-2 rewrote `Store.set`, so its AC-9
   row's pattern stops matching (by design). Its 13 reds stand as CE-1's evidence; CE-14's G-T5

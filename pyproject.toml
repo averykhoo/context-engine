@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ce = "context_engine.cli:main"
+context-engine = "context_engine.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

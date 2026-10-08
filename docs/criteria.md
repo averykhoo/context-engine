@@ -50,8 +50,8 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-21 | Every `ce` subcommand has a `### ce <group> <op>` section in `docs/runbooks/manual-mode.md` giving its by-hand steps and a **Why** | US-11 | tested |
-| AC-22 | `ce record stamp` checks every named id before stamping any (all or nothing) and never replaces a stamp; `ce record amend` appends under `## Amendments` and refuses a body that moved since its stamp | US-7, US-11 | tested |
-| AC-23 | This repo's own records pass `ce lint` with no failures: every decision and story stamped and unchanged since, every board item in schema, the working-state guards green | US-7 | tested |
-| AC-24 | The routing table is `[[routes]]` in `context.toml`: `ce routes` prints it, a route missing `component`, `path` or `mode` or carrying an unknown key is refused at load, and lint fails (G-R1) when a non-optional routed path does not exist | US-9 | tested |
-| AC-25 | `ce record new` writes a decision or story stamped at birth, fills a missing required key only when it can mean nothing but now (a date with today, a session key with this session), never guesses `actor`, and refuses a non-append-only kind | US-7, US-11 | tested |
+| AC-21 | Every `context-engine` subcommand has a `### context-engine <group> <op>` section in `docs/runbooks/manual-mode.md` giving its by-hand steps and a **Why** | US-11 | tested |
+| AC-22 | `context-engine record stamp` checks every named id before stamping any (all or nothing) and never replaces a stamp; `context-engine record amend` appends under `## Amendments` and refuses a body that moved since its stamp | US-7, US-11 | tested |
+| AC-23 | This repo's own records pass `context-engine lint` with no failures: every decision and story stamped and unchanged since, every board item in schema, the working-state guards green | US-7 | tested |
+| AC-24 | The routing table is `[[routes]]` in `context.toml`: `context-engine routes` prints it, a route missing `component`, `path` or `mode` or carrying an unknown key is refused at load, and lint fails (G-R1) when a non-optional routed path does not exist | US-9 | tested |
+| AC-25 | `context-engine record new` writes a decision or story stamped at birth, fills a missing required key only when it can mean nothing but now (a date with today, a session key with this session), never guesses `actor`, and refuses a non-append-only kind | US-7, US-11 | tested |

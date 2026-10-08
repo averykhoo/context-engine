@@ -552,7 +552,7 @@ class Engine:
             if rec.kind.mode != "append-only":
                 raise Refusal(f"{rid} is a {rec.kind.mode} record", "only append-only records carry body_sha")
             if rec.doc.get("body_sha"):
-                raise Refusal(f"{rid} is already stamped", "a stamp is never replaced; record changes with `ce record amend`")
+                raise Refusal(f"{rid} is already stamped", "a stamp is never replaced; record changes with `context-engine record amend`")
         for rid in ids:
             self.store.stamp(rid, session=session, actor=actor)
         return f"stamped {len(ids)}: {_one(ids)}"
@@ -597,18 +597,18 @@ class Engine:
             if r.doc.get("resume_step"):
                 line += f"\n  resume: {r.doc.get('resume_step')} (branch {r.doc.get('branch')})"
             lines.append(line)
-        sections.append(("Batons and pauses: do these first", "\n".join(lines) or "none", "`ce task show <id>` on each"))
+        sections.append(("Batons and pauses: do these first", "\n".join(lines) or "none", "`context-engine task show <id>` on each"))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
         sections.append(("Other open sessions", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", self.w.ledger))
 
         top = [ln for ln in self.list(pri="NOW")]
-        sections.append(("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`ce task list`"))
+        sections.append(("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`"))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
         raise_ = [f"- {i}: {qs[i].doc.get('title')} (last asked {qs[i].doc.get('last_asked') or 'never'}{', overdue' if i in overdue else ''})" for i in dict.fromkeys(pending + overdue)]
-        sections.append(("Raise in chat now, one line each", "\n".join(raise_) or "none", "`ce task list --pri NEXT`"))
+        sections.append(("Raise in chat now, one line each", "\n".join(raise_) or "none", "`context-engine task list --pri NEXT`"))
 
         now = [r for r in self._open_board() if r.doc.get("pri") == "NOW"]
         if now:
@@ -617,9 +617,9 @@ class Engine:
             parts = [f"brief: {rec.doc.get('brief') or 'none'}"]
             for name in ("Traps", "Read first"):
                 parts.append(f"{name}:\n{okf.get_section(body, name) or 'none'}")
-            sections.append((f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`ce task show {rec.id}`"))
+            sections.append((f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`context-engine task show {rec.id}`"))
         else:
-            sections.append(("Top item", "no NOW item", "`ce task list`"))
+            sections.append(("Top item", "no NOW item", "`context-engine task list`"))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
 
