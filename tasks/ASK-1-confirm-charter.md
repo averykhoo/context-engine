@@ -3,9 +3,10 @@ type: Question
 id: ASK-1
 title: "Is the reconstructed charter right?"
 pri: NEXT
-state: open
+state: closed
 blocks: []
-last_asked: 2026-10-08a
+last_asked: 2026-10-08b
+answered: { on: 2026-10-08, session: 2026-10-08b, decision: DEC-10 }
 source: session 2026-10-08a
 created: 2026-10-08
 ---
@@ -21,3 +22,8 @@ reorder the principles.
 
 **Blocks:** nothing hard. Until confirmed, the charter guides work but does not settle a
 tradeoff you have not spoken to.
+
+## Answer
+
+2026-10-08b, owner: confirmed with changes. Scope widened to the whole framework, a managed
+server made an anti-goal, dogfood here before other repos (DEC-10; words verbatim in US-9).

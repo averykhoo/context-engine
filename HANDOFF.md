@@ -3,17 +3,18 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-08a)
+## Banner (2026-10-08b)
 
-- **This repo builds the record engine** specified in `docs/framework/FRAMEWORK.md` (v0.5,
-  §8.0), and **uses the framework on itself, by hand, until the engine exists** (DEC-7).
+- **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
+  all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
+  the first piece. **It uses the framework on itself, by hand, until the engine exists** (DEC-7).
 - **State:** a package skeleton (one test), the framework spec, and a step-0 spike that verified
   the MCP and hook assumptions (`spike/FINDINGS.md`). No engine code yet.
-- **NOW is CE-1, the engine core.** The first trial target is adhoc-microphone-array (DEC-6);
-  its baseline (CE-4) must be measured before any cutover.
-- **Two owner questions are open** (ASK-1, ASK-2): raise them at session start, one line each.
-- The founding commit of the board and ledger is **local and unpushed**; push only with
-  permission.
+- **NOW is CE-1, the engine core.** Order (DEC-10): dogfood here first (CE-8), then other
+  repos (CE-15, then the adhoc trial CE-7, whose baseline CE-4 must be measured first).
+- **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
+- **One owner question is open** (ASK-2): raise it at session start, one line.
+- Commits `0964993` onward are **local and unpushed**; push only with permission.
 
 ## Open batons and pause blocks
 
@@ -22,7 +23,7 @@ None.
 ## Next session: start here
 
 1. `CLAUDE.md` (loads automatically): environment, gate, rules, the routing table.
-2. Raise **ASK-1** and **ASK-2** in chat, one line each, unless answered; record any answer at
+2. Raise **ASK-2** in chat, one line, unless answered; record any answer at
    once (a decision with `actor: owner`, then close the question file).
 3. Read the board below, then the NOW item's file: `tasks/CE-1-engine-core.md`, its Traps and
    its Read first.
@@ -39,14 +40,16 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 | NEXT | CE-2 | Working state: tasks, questions, batons, pauses, ledger; session ops; `orient`; lint (AC-10 to AC-17) | CE-1 |
 | NEXT | CE-3 | MCP server over the CLI operations; dogfood it here (AC-18, AC-19) | CE-2 |
 | NEXT | CE-4 | Measure adhoc's start and close cost today, before any cutover (read-only) | |
-| NEXT | ASK-1 | Owner: is the reconstructed charter right? | |
+| NEXT | CE-16 | Coverage map: every FRAMEWORK component, ritual and guard → a task, prose-only, or deferred (G7) | |
 | NEXT | ASK-2 | Owner: may append-only records take logged typo fixes? | blocks CE-5 |
 | LATER | CE-5 | Decision records, `why()`, generated index, adhoc importer | CE-1, ASK-2 |
 | LATER | CE-6 | Tier-0 housekeeping script and the `hk_` operations | CE-2 |
-| LATER | CE-7 | adhoc trial cutover on a worktree branch, scored against CE-4 | CE-3, CE-4, CE-5 |
+| LATER | CE-7 | adhoc trial cutover on a worktree branch, scored against CE-4 | CE-3, CE-4, CE-5, CE-8 |
 | LATER | CE-8 | The engine adopts this repo's hand-written records | CE-3 |
 | LATER | CE-9 | Trim FRAMEWORK.md (112 KB) and move its change history out | |
 | LATER | CE-10 | Run the gate in GitHub Actions | |
+| LATER | CE-14 | The guard catalogue (§8.1 to §8.5) as engine lint guards | CE-2 |
+| LATER | CE-15 | Deploy path: how any repo gets the system, as text Claude Code manages | CE-8 |
 | SOMEDAY | CE-11 | intervals after its 2.0.0, then zanzibar and audio-workspace | CE-7 |
 | SOMEDAY | CE-12 | Tier-1 housekeeping agents restricted to `hk_` tools | CE-6 |
 | SOMEDAY | CE-13 | Check what `/clear` does to the MCP server, interactively | |

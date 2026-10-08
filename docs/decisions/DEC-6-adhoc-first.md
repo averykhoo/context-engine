@@ -26,3 +26,7 @@ formats (`D32`, `Q26`), and is the busier repo (185 commits in 14 days against a
 PROVISIONAL until the owner confirms, which the board does not block on.
 
 ## Amendments
+
+- **2026-10-08b (owner, DEC-10):** this repo is dogfooded first (CE-8); adhoc stays the first
+  *other* repo, but its trial (CE-7) now waits on CE-8. The choice of adhoc is still
+  PROVISIONAL.

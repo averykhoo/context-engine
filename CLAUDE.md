@@ -12,7 +12,7 @@ what is next live in `HANDOFF.md`; this file holds only what is durable.
 |---|---|---|
 | Spec | `docs/framework/FRAMEWORK.md`; a change gets a row in its §13 | replaced |
 | Frozen provenance | `docs/framework/FRAMEWORK-v0.*.md`, `A-*.md` to `D-*.md`, `review/` | never edited |
-| Charter | `docs/charter.md` (unconfirmed until ASK-1) | replaced, owner-stamped |
+| Charter | `docs/charter.md` (confirmed 2026-10-08, DEC-10) | replaced, owner-stamped |
 | Stories (owner's words) | `docs/stories/US-n-<slug>.md` | append-only: amend, never rewrite |
 | Criteria | `docs/criteria.md` (`AC-n`), claimed by `@pytest.mark.criterion("AC-n")` | replaced, ids kept |
 | Decisions | `docs/decisions/DEC-n-<slug>.md`, one record each (FRAMEWORK §6.5) | append-only: `## Amendments` |

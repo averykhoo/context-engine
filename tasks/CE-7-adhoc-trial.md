@@ -5,11 +5,11 @@ title: "Adhoc trial cutover on a worktree branch, scored against the CE-4 rubric
 brief: "One revertible commit; adhoc keeps its paths and ids; stop if adhoc has a live session"
 pri: LATER
 state: open
-deps: [CE-3, CE-4, CE-5]
+deps: [CE-3, CE-4, CE-5, CE-8]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08a
+updated: 2026-10-08b
 closed:
 ---
 
@@ -24,3 +24,4 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - `docs/decisions/DEC-5-framework-before-migration.md`, `DEC-6-adhoc-first.md`
 
 ## Log
+- 2026-10-08b: deps += CE-8 (owner, DEC-10: dogfood here before any other repo).

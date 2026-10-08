@@ -1,0 +1,33 @@
+---
+type: Task
+id: CE-15
+title: "Deploy path: how any repo gets the system, as text Claude Code manages"
+brief: "Bootstrap (§6.9) and adoption (§11) after dogfooding here; no server the owner starts (anti-goal, DEC-10)"
+pri: LATER
+state: open
+deps: [CE-8]
+source: session 2026-10-08b
+created: 2026-10-08
+moved: 2026-10-08b
+updated: 2026-10-08b
+closed:
+---
+
+The owner: *"lets start with it in here and dogfood it, then we'll figure out how to adopt it in
+new repos"* (US-9). After CE-8, design how a repo, new or existing, gets the system: what is
+committed (`.mcp.json`, `context.toml`, ritual text in `CLAUDE.md`, skills), how the engine is
+found from its own env, how a version upgrade lands (G-D0), and how existing repos map rather
+than move (§11.4). Feeds CE-7 and CE-11.
+
+## Traps
+
+- Anti-goal: nothing the owner starts or manages by hand. Any server is started by Claude Code
+  as a session ritual (charter G4).
+- Never install the engine into a target repo's environment (CLAUDE.md, DEC-1).
+
+## Read first
+
+- `docs/framework/FRAMEWORK.md` §6.9, §8.0.2, §8.0.3, §10, §11
+- `docs/decisions/DEC-10-charter-confirmed-whole-framework.md`
+
+## Log
