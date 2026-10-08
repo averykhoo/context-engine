@@ -20,3 +20,4 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["criterion(id): the AC-n criterion in docs/criteria.md that this test claims"]
