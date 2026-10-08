@@ -3,13 +3,13 @@ type: Task
 id: CE-3
 title: "MCP server over the CLI operations; dogfood it on this repo"
 brief: "One implementation per operation: each MCP tool calls the CLI's function; writes return one line"
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
-updated: 2026-10-08a
+moved: 2026-10-08f
+updated: 2026-10-08f
 closed:
 ---
 

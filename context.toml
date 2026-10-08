@@ -22,7 +22,7 @@ dir = "docs/stories"
 mode = "append-only"
 required = ["title", "actor", "date", "story_status", "goals"]
 enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
-types = { date = "date" }
+types = { date = "date", goals = "list" }
 
 [kinds.task]
 type = "Task"

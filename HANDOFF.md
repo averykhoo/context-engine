@@ -3,22 +3,21 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-08e)
+## Banner (2026-10-08f)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
-  the first piece. **It uses the framework on itself, by hand, until CE-8 switches it over** (DEC-7).
-- **State:** core (CE-1) and working state (CE-2) are built; the `ce` CLI runs sessions, the
-  board, questions, batons, pauses, the banner, `orient` and `lint`. AC-1 to AC-17 and AC-21 `tested`.
-- **New (US-11):** every engine operation must also be doable by hand, for repos without Python.
-  `docs/runbooks/manual-mode.md` gives each `ce` operation's steps and its **Why**; it is the
-  reference when the engine errors (fix the engine to match). AC-21 fails the gate if it falls
-  behind the CLI. Checking it against the code already caught one engine bug (fixed).
-- **NOW is CE-8**, runbook done. Left: stamp bodies, lint green, routing into `context.toml`,
-  `ce stamp`/`ce amend` in the CLI, then `CLAUDE.md` rituals as `ce` commands with the runbook as
-  the fallback. Then CE-3 (MCP), CE-15 (other repos), CE-7 (CE-4 first).
+  the first piece. **Since 2026-10-08f it runs this repo's own records** (CE-8, DEC-7 amended).
+- **State:** CE-1 (core), CE-2 (working state) and CE-8 (adoption) are done. The `ce` CLI runs
+  sessions, the board, questions, batons, pauses, the banner, `orient`, `lint`, `routes`, and
+  decisions and stories (`ce record new|stamp|amend`). AC-1 to AC-17 and AC-21 to AC-25 `tested`.
+- **Rituals are `ce` commands** (`CLAUDE.md` § Rituals). When `ce` errors, do the step by hand
+  from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `ce lint` is in the gate: every
+  decision and story is stamped, and the routing table is `[[routes]]` in `context.toml`.
+- **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19). NEXT: CE-4,
+  CE-15 (deploy path, now unblocked), CE-16. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
-- **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 7).
+- **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 6).
 
 ## Open batons and pause blocks
 
@@ -26,37 +25,12 @@ None.
 
 ## Next session: start here
 
-1. `CLAUDE.md` (loads automatically): environment, gate, rules, the routing table.
-2. Run `<interpreter> -m context_engine orient` (it prints the banner, batons, open sessions, the
-   NEXT tier, questions to raise and the NOW item's Traps and Read first, under 6000 bytes).
-   Raise any open `ASK-n` in chat, one line each (none on 2026-10-08d); record an answer at once
-   (`ask answer`, or by hand: a decision with `actor: owner`, then close the question file).
-3. Read the NOW item's file: `tasks/CE-8-dogfood-adoption.md`. Optionally open the session
-   through the engine as 2026-10-08d did: `session start`, then `--session <key>` or `CE_SESSION`.
+1. `CLAUDE.md` (loads automatically): environment, gate, rules, and the rituals as `ce` commands.
+2. `ce session start`, then `ce orient` (the banner, batons, open sessions, the NEXT tier,
+   questions to raise and the NOW item's Traps and Read first, under 6000 bytes). Raise any
+   question it lists in chat, one line each, then `ce ask raised <ids>`.
+3. `ce task show CE-3` (the NOW item). The board is `ce task list`; this note keeps no copy.
 4. Read the rest of this note only if needed, and say which in your ledger entry's `read:` line.
-
-## Board
-
-Source of truth: one file per item in `tasks/` (board size 2). This table is a view; keep it in
-step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
-
-| pri | id | what | deps |
-|---|---|---|---|
-| NOW | CE-8 | The engine adopts this repo's records: stamp bodies, rituals as `ce` commands | |
-| NEXT | CE-3 | MCP server over the CLI operations; dogfood it here (AC-18, AC-19) | |
-| NEXT | CE-4 | Measure adhoc's start and close cost today, before any cutover (read-only) | |
-| NEXT | CE-16 | Coverage map: every FRAMEWORK component, ritual and guard → a task, prose-only, or deferred (G7) | |
-| LATER | CE-5 | Decision records, insert-only `correct`, `why()`, generated index, adhoc importer | |
-| LATER | CE-6 | Tier-0 housekeeping script, the `hk_` operations, G-W11's window | |
-| LATER | CE-7 | adhoc trial cutover on a worktree branch, scored against CE-4 | CE-3, CE-4, CE-5, CE-8 |
-| LATER | CE-9 | Trim FRAMEWORK.md (112 KB) and move its change history out | |
-| LATER | CE-10 | Run the gate in GitHub Actions | |
-| LATER | CE-14 | The guard catalogue (§8.1 to §8.5) as engine lint guards | |
-| LATER | CE-15 | Deploy path: how any repo gets the system, as text Claude Code manages | CE-8 |
-| LATER | CE-17 | Tiled gate, run ledger keyed on each tile's input hash; `orient()` shows tested/untested | |
-| SOMEDAY | CE-11 | intervals after its 2.0.0, then zanzibar and audio-workspace | CE-7 |
-| SOMEDAY | CE-12 | Tier-1 housekeeping agents restricted to `hk_` tools | CE-6 |
-| SOMEDAY | CE-13 | Check what `/clear` does to the MCP server, interactively | |
 
 ## Facts not derivable from the code (dated)
 
@@ -66,6 +40,9 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 - **2026-10-08d, `tools/sabotage_ce1.py` no longer runs:** CE-2 rewrote `Store.set`, so its AC-9
   row's pattern stops matching (by design). Its 13 reds stand as CE-1's evidence; CE-14's G-T5
   replaces both tables.
+- **2026-10-08f, git checks committed files out with CRLF here** (autocrlf). The engine keeps
+  each file's endings, but a script that string-matches source must normalise first, as
+  `tools/sabotage_ce8.py` does; `tools/sabotage_ce2.py` was written before this bit.
 
 - **2026-10-08, heredocs in the Bash tool here can halve backslashes** (`"\n"` arrived as a
   newline in two Python heredocs): write probe scripts with the Write tool, as files.

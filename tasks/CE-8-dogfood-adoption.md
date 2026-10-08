@@ -4,13 +4,14 @@ id: CE-8
 title: "The engine adopts this repo's hand-written records"
 brief: "Stamp body_sha, make lint green, then switch this repo's rituals from hand edits to the tools"
 pri: NOW
-state: open
+state: closed
 deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08e
-updated: 2026-10-08e
-closed:
+moved: 2026-10-08f
+updated: 2026-10-08f
+closed: 2026-10-08f
+status: deprecated
 ---
 
 This repo runs the framework by hand (DEC-7). Once the engine can read and lint its records,
@@ -43,3 +44,5 @@ section, watch the gate go red).
 - 2026-10-08: scope widened by US-11: a manual-mode runbook covering every `ce` operation, with
   a parity guard, comes before the `CLAUDE.md` ritual rewrite.
 - 2026-10-08e (claude-code/claude-opus-5-5): manual-mode runbook written (docs/runbooks/manual-mode.md, US-11): every ce operation by hand, each with its Why; parity guard tests/test_runbook.py (AC-21). Verifying it against the code found okf._section_span prefix-matching headings (## Logs, ## Read first); fixed. Remaining: stamp, lint green, context.toml routing, CLAUDE.md rituals as ce commands with the runbook as fallback; add ce stamp/amend to the CLI (the runbook covers them by hand).
+- 2026-10-08f (claude-code/claude-opus-5-5): ce record new/stamp/amend and ce routes added; 24 records stamped; lint clean and in the gate (AC-23); routing in context.toml [[routes]] with G-R1; CLAUDE.md rituals rewritten as ce commands with the runbook as fallback; DEC-7 amended. AC-22 to AC-25 tested (tools/sabotage_ce8.py, 11 rows red).
+- 2026-10-08f (claude-code/claude-opus-5-5): closed: done: this repo runs through the engine

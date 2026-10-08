@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-08f · kind: open
+## 2026-10-08f · kind: close
 
-- **opened:** 2026-10-08T20:02:23+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-8 (closed); CE-3 (NEXT -> NOW); CE-15 (LATER -> NEXT); DEC-1..13, US-1..11 (stamped);
+  DEC-7 (amended); AC-22, AC-23, AC-24, AC-25 (tested)
+- **receipts:**
+  - guards: gate 120 passed; ce lint clean; tools/sabotage_ce8.py 11/11 red
+  - read: HANDOFF banner and start-here, CE-8 task, cli.py, store.py, working.py, config.py,
+    context.toml, manual-mode.md (append-only and lint sections), CLAUDE.md
+  - asked: none
+- **summary** (the owner digest):
+  - CE-8 is done: this repo now runs its own framework through the engine, not by hand.
+  - New commands: ce record new/stamp/amend for decisions and stories, ce routes for the routing
+    table.
+  - All 24 decisions and stories are stamped; ce lint is clean and is now part of the gate.
+  - The routing table moved from CLAUDE.md into context.toml; lint fails if a routed path
+    disappears.
+  - CLAUDE.md rituals are now ce commands; the manual-mode runbook is the fallback when ce errors.
+  - Every new guard was sabotaged: 11 rows in tools/sabotage_ce8.py, all red. NOW is CE-3 (MCP
+    server).
+- **Still owed:**
+  - CE-3 next: the MCP server over these same Engine functions (AC-18, AC-19)
+  - tools/sabotage_ce2.py may not match on CRLF checkouts (HANDOFF fact, 2026-10-08f)
 
 ---
 

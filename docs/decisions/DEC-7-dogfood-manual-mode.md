@@ -29,3 +29,5 @@ Story status uses `story_status`, task state uses `state`, decision status uses
 `decision_status`, because OKF reserves `status` (FRAMEWORK §9.3.1).
 
 ## Amendments
+
+- **2026-10-08f (claude-code/claude-opus-5-5):** CE-8 switched this repo from manual mode to the engine: every decision and story stamped, `ce lint` clean and in the gate (AC-23), the routing table in context.toml (`ce routes`), the CLAUDE.md rituals run through `ce`. Manual mode stays as the fallback (docs/runbooks/manual-mode.md, US-11).
