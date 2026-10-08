@@ -3,18 +3,20 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-08d)
+## Banner (2026-10-08e)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
   the first piece. **It uses the framework on itself, by hand, until CE-8 switches it over** (DEC-7).
-- **State:** core (CE-1) and working state (CE-2, closed 2026-10-08d) are built. The `ce` CLI
-  (`python -m context_engine`) runs sessions (`session start | close | pause`, keys minted under
-  the lock), the board, owner questions, batons and pauses, `banner show | set`, `orient` and
-  `lint` (schema, G-D10, G-D11, G-W1 to G-W6). AC-1 to AC-17 `tested`, each sabotaged red.
-  Session 2026-10-08d was opened and closed through the engine itself.
-- **NOW is CE-8: switch this repo to the engine.** Stamp bodies, then rewrite `CLAUDE.md`'s
-  rituals as `ce` commands. Then CE-3 (MCP), other repos (CE-15), the adhoc trial (CE-7; CE-4 first).
+- **State:** core (CE-1) and working state (CE-2) are built; the `ce` CLI runs sessions, the
+  board, questions, batons, pauses, the banner, `orient` and `lint`. AC-1 to AC-17 and AC-21 `tested`.
+- **New (US-11):** every engine operation must also be doable by hand, for repos without Python.
+  `docs/runbooks/manual-mode.md` gives each `ce` operation's steps and its **Why**; it is the
+  reference when the engine errors (fix the engine to match). AC-21 fails the gate if it falls
+  behind the CLI. Checking it against the code already caught one engine bug (fixed).
+- **NOW is CE-8**, runbook done. Left: stamp bodies, lint green, routing into `context.toml`,
+  `ce stamp`/`ce amend` in the CLI, then `CLAUDE.md` rituals as `ce` commands with the runbook as
+  the fallback. Then CE-3 (MCP), CE-15 (other repos), CE-7 (CE-4 first).
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 7).
 

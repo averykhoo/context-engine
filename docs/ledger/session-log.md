@@ -7,6 +7,34 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-08e · kind: close
+
+- **rows:** CE-8 (manual-mode runbook; touched); US-11 (created, amended); AC-21 (tested);
+  okf._section_span (bug fixed); context.toml (question labels type); CLAUDE.md (routing row:
+  runbooks)
+- **receipts:**
+  - guards: gate pytest -q green, 115 passed (2026-10-08e); sabotage 4 of 4 red (runbook section,
+    Why line, new subcommand, section regex); ce lint: 24 failures, all G-D10 no body_sha (stamping
+    is CE-8)
+  - read: orient banner; CE-8 task; src/context_engine cli, working, store, ledger, okf, config;
+    context.toml; FRAMEWORK 5.5, 7.5; subagent audit of the runbook against the code
+  - asked: none open
+- **summary** (the owner digest):
+  - Owner: rituals must work without Python, each with its reason (US-11, plus an amendment).
+  - Wrote docs/runbooks/manual-mode.md: every ce operation as by-hand steps with a Why; it is the
+    reference when the engine errors.
+  - AC-21: the gate fails if a ce subcommand has no runbook section or a section has no Why;
+    sabotaged red 3 ways.
+  - An audit of the runbook against the code found 14 mismatches and 8 gaps; all fixed in the text.
+  - One was an engine bug: section lookup matched by prefix (## Logs, ## Read first). Fixed test-
+    first.
+  - Next in CE-8: stamp bodies, add ce stamp/amend, routing to context.toml, CLAUDE.md rituals as ce
+    commands.
+- **Still owed:**
+  - push and its CI watcher: done after this entry, see the commit
+
+---
+
 ## 2026-10-08d · kind: close
 
 - **rows:** CE-2 (closed); CE-8 (NOW, Traps and Read first written); CE-6 (comment: G-W11); AC-10 to

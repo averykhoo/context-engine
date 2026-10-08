@@ -20,3 +20,5 @@
 {"at": "2026-10-08T19:06:14+08:00", "session": "2026-10-08e", "actor": "claude-code/claude-opus-5-5", "op": "amend", "id": "US-11", "path": "docs/stories/US-11-rituals-without-python.md", "fields": [], "mechanical": false}
 {"at": "2026-10-08T19:16:52+08:00", "session": "2026-10-08e", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-8", "path": "tasks/CE-8-dogfood-adoption.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-08T19:17:23+08:00", "session": "2026-10-08e", "actor": "claude-code/claude-opus-5-5", "op": "touch", "id": "CE-8", "path": "tasks/CE-8-dogfood-adoption.md", "fields": ["moved", "updated"], "mechanical": false}
+{"at": "2026-10-08T19:17:44+08:00", "session": "2026-10-08e", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-08e", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-10-08T19:17:45+08:00", "session": "2026-10-08e", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-08e", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
