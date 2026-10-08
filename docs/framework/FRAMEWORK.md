@@ -207,6 +207,8 @@ every guard has been shown to fail.**
 **P11. Delegate reading for context; parallelise building only when file ownership is
 disjoint. Judgement stays with the session.**
 - Reading: global `CLAUDE.md § Delegation`.
+- Several tasks in one request: one subagent per task, and the top level only reports (§6.6,
+  DEC-16).
 - Building: audio-workspace's multi-agent build rounds (§6.6) show that parallel builders work
   under disjoint file ownership, with no fan-out on a dependency chain.
 - *"The agent audits; the session deletes"* (global `CLAUDE.md § Sweeping it`), generalised:
@@ -1010,6 +1012,17 @@ keeps every id, so `D-157 §5` citations survive; `decisions.md#anchor` links br
 - check the file exists on return, and persist on receipt if it doesn't;
 - `Explore` cannot persist;
 - agents audit; the session decides.
+
+**Several tasks in one session** (owner, DEC-16): when one request asks for more than one task,
+- each task goes to its own subagent, which owns it end to end and can persist (not `Explore`);
+- that task agent pushes the work down again, to its own subagents or a workflow (ultracode);
+- the top-level conversation stays clear: progress, blockers and delays, then the digest;
+- judgement and owner words stay at the top: the session records owner words verbatim (§6.2)
+  and verifies first-hand before a commit, a push or a record write;
+- tasks that touch the same files go to one agent or run in sequence (disjoint ownership,
+  below).
+
+A single-task request is unaffected.
 
 **Build rounds** (audio-workspace `AGENTS.md`, `.claude/workflows/`, the
 `wds-slice.workflow.js` flow):

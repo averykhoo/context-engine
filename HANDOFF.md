@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-09a)
+## Banner (2026-10-09b)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -17,6 +17,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
   `context.toml`.
+- **Several tasks in one request → one subagent per task; the top level only reports**
+  (DEC-16, 2026-10-09b; FRAMEWORK §6.6, `CLAUDE.md` § Rules). A framework rule: CE-15 ships it.
 - **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19), named per
   DEC-15. NEXT: CE-4, CE-15 (deploy path), CE-16. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.

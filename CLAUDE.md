@@ -94,6 +94,9 @@ it became.
 
 ## Rules
 
+- **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
+  the work to its own subagents or a workflow; the top level only reports progress, blockers
+  and delays. Owner words and first-hand verification stay at the top.
 - Commit by path (`git commit -o <paths>`); never `git add -A`, never `git stash`.
 - Re-run `git status` and `git log -3` right before editing HANDOFF or the ledger and before
   committing: sessions here may run concurrently.

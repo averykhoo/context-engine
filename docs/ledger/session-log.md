@@ -7,6 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-09b · kind: close
+
+- **rows:** CE-15
+- **receipts:**
+  - guards: pytest -q: 122 passed
+  - read: FRAMEWORK P11, §6.6; DEC-15
+  - asked: none
+- **summary** (the owner digest):
+  - DEC-16 recorded verbatim: several tasks in one request -> one subagent per task, top level only
+    reports
+  - FRAMEWORK P11 and §6.6 carry it as a framework rule; CLAUDE.md § Rules applies it here
+  - CE-15 comment: the deploy path must ship DEC-16
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-09a · kind: close
 
 - **rows:** CE-3

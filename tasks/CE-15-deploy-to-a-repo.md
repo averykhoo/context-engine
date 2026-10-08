@@ -9,7 +9,7 @@ deps: [CE-8]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-08f
-updated: 2026-10-08f
+updated: 2026-10-09b
 closed:
 ---
 
@@ -31,3 +31,5 @@ than move (§11.4). Feeds CE-7 and CE-11.
 - `docs/decisions/DEC-10-charter-confirmed-whole-framework.md`
 
 ## Log
+
+- 2026-10-09b (claude-code/claude-opus-5-5): DEC-16 (FRAMEWORK §6.6, several tasks -> one subagent each, top level only reports) must ship in the deployed contract text, so every framework repo gets it.
