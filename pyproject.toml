@@ -12,6 +12,9 @@ dependencies = [
     "ruamel.yaml>=0.18",
 ]
 
+[project.scripts]
+ce = "context_engine.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 

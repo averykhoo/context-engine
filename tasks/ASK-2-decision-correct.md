@@ -10,6 +10,7 @@ source: session 2026-10-08a
 created: 2026-10-08
 closed: 2026-10-08c
 answered: {on: 2026-10-08, session: 2026-10-08c, decision: DEC-13}
+status: deprecated
 ---
 
 **Question:** FRAMEWORK §12.3 Q-I. A strict body hash forbids fixing even a typo in a decision

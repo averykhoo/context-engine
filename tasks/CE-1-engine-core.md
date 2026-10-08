@@ -11,6 +11,7 @@ created: 2026-10-08
 moved: 2026-10-08a
 updated: 2026-10-08c
 closed: 2026-10-08c
+status: deprecated
 ---
 
 Build step 1 of the plan: the core every record kind sits on. Claims AC-1 to AC-9

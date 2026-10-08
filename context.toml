@@ -13,6 +13,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
+types = { decided = "date", session = "key" }
 
 [kinds.story]
 type = "Story"
@@ -21,6 +22,7 @@ dir = "docs/stories"
 mode = "append-only"
 required = ["title", "actor", "date", "story_status", "goals"]
 enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
+types = { date = "date" }
 
 [kinds.task]
 type = "Task"
@@ -29,6 +31,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list" }
 
 [kinds.question]
 type = "Question"
@@ -37,3 +40,35 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", blocks = "list", last_asked = "key" }
+
+# Batons and pause blocks: one stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
+[kinds.baton]
+type = "Baton"
+prefix = "BTN"
+dir = "docs/working"
+mode = "stamped"
+required = ["title", "session", "state", "created"]
+enums = { state = ["open", "done", "expired"] }
+types = { session = "key", created = "date", done = "key" }
+
+[kinds.pause]
+type = "Pause"
+prefix = "PAU"
+dir = "docs/working"
+mode = "stamped"
+required = ["title", "session", "state", "created", "branch", "resume_step"]
+enums = { state = ["open", "done", "expired"] }
+types = { session = "key", created = "date", resumed = "key", uncommitted = "list", deferred = "list" }
+
+# Working state (FRAMEWORK §5): which files and kinds the session operations use.
+[working]
+ledger = "docs/ledger/session-log.md"   # one file under the lock (Q-H, DEC-14)
+handoff = "HANDOFF.md"
+board = ["task", "question"]
+task = "task"
+question = "question"
+decision = "decision"
+baton = "baton"
+pause = "pause"
+orient_max_bytes = 6000                  # provenance: DEC-14

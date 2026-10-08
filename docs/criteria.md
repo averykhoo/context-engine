@@ -29,14 +29,14 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-10 | `session.start` mints `max(newest ledger key, banner key) + 1 letter` under the lock and writes a `kind: open` stub; two concurrent starts get different keys (FRAMEWORK §5.5) | US-8 | planned |
-| AC-11 | `session.close` refuses a malformed receipt and finalises the session's stub; `session.pause` writes `kind: pause` | US-8 | planned |
-| AC-12 | Closing a task sets `state: closed` and derives `status: deprecated` in place; the file's path does not change; a close without a message is refused | US-5 | planned |
-| AC-13 | Listing filters and sorts by state, priority and label without reading bodies, one line per record | US-5, US-1 | planned |
-| AC-14 | `pause.open` records the branch and uncommitted paths from git itself and commits its own record by path | US-8 | planned |
-| AC-15 | A baton older than two sessions is reported by lint (G-W3) and converted into a task by housekeeping | US-8, US-3 | planned |
-| AC-16 | `banner.set(text, seen_hash)` refuses when the banner has changed since `seen_hash` | US-8 | planned |
-| AC-17 | `orient()` stays under its configured size cap and contains: the banner, open batons and pauses (own first), other open sessions, the NEXT tier, overdue owner questions, and the top item's brief, Traps and Read first | US-1 | planned |
+| AC-10 | `session.start` mints `max(newest ledger key, banner key) + 1 letter` under the lock and writes a `kind: open` stub; two concurrent starts get different keys (FRAMEWORK §5.5) | US-8 | tested |
+| AC-11 | `session.close` refuses a malformed receipt and finalises the session's stub; `session.pause` writes `kind: pause` | US-8 | tested |
+| AC-12 | Closing a task sets `state: closed` and derives `status: deprecated` in place; the file's path does not change; a close without a message is refused | US-5 | tested |
+| AC-13 | Listing filters and sorts by state, priority and label without reading bodies, one line per record | US-5, US-1 | tested |
+| AC-14 | `pause.open` records the branch and uncommitted paths from git itself and commits its own record by path | US-8 | tested |
+| AC-15 | A baton older than two sessions is reported by lint (G-W3) and converted into a task by housekeeping | US-8, US-3 | tested |
+| AC-16 | `banner.set(text, seen_hash)` refuses when the banner has changed since `seen_hash` | US-8 | tested |
+| AC-17 | `orient()` stays under its configured size cap and contains: the banner, open batons and pauses (own first), other open sessions, the NEXT tier, overdue owner questions, and the top item's brief, Traps and Read first | US-1 | tested |
 
 ## MCP (CE-3)
 

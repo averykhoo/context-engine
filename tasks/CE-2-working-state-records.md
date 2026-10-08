@@ -4,13 +4,14 @@ id: CE-2
 title: "Working state: tasks, questions, batons, pauses, ledger; session ops; orient; lint"
 brief: "Session key minted at start under the lock with a kind: open stub; closing never moves a file"
 pri: NOW
-state: open
+state: closed
 deps: [CE-1]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08c
-updated: 2026-10-08c
-closed:
+moved: 2026-10-08d
+updated: 2026-10-08d
+closed: 2026-10-08d
+status: deprecated
 ---
 
 Build step 2: the working-state record kinds and the session rituals as operations, CLI
@@ -41,3 +42,5 @@ later | answer`; `baton add | done`; `pause open | resume`; `banner set`; `lint`
   `docs/tasktool-trial-protocol.md`
 
 ## Log
+
+- 2026-10-08d (claude-code/claude-opus-5-5): closed: built in 2026-10-08d: ledger.py, working.py, cli.py (ce); AC-10 to AC-17 tested, tools/sabotage_ce2.py 34 of 34 red; calls in DEC-14

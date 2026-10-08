@@ -50,6 +50,11 @@ watch it go red for the right reason, then restore. Record it in the commit mess
 claiming test was sabotaged. When G-T5 (mutation per criterion, CE-14) exists, it does this
 mechanically and this hand step becomes its fallback.
 
+**Run every scripted sabotage with a fresh bytecode cache** (`PYTHONPYCACHEPREFIX=<new temp
+dir>`, as `tools/sabotage_ce2.py` does). Python trusts a `.pyc` whose source has the same size
+and the same mtime second, so a same-length sabotage written right after a restore runs the
+old code and passes: a false green, seen 2026-10-08d.
+
 ## Rituals (manual mode: FRAMEWORK §6, done by hand)
 
 **Session start:** follow `HANDOFF.md § Next session: start here`. Open batons and pause blocks

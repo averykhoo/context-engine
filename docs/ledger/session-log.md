@@ -7,6 +7,35 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-08d · kind: close
+
+- **rows:** CE-2 (closed); CE-8 (NOW, Traps and Read first written); CE-6 (comment: G-W11); AC-10 to
+  AC-17 (tested); DEC-14 (created); CE-1, ASK-1, ASK-2 (status: deprecated, G-W4); CLAUDE.md §
+  Sabotage rule (fresh bytecode cache)
+- **receipts:**
+  - guards: gate pytest -q green, 112 passed (2026-10-08d); sabotage tools/sabotage_ce2.py 34 of 34
+    red; ce lint: 23 failures, all G-D10 no body_sha (stamping is CE-8)
+  - read: board + CE-2 and its Read first; FRAMEWORK §5.2 to §5.5, §6.1, §6.3, §6.4, §7.1, §8.0.1,
+    §8.0.2, §8.4; zanzibar check_session_receipt, BANNER_MAX_LINES, check_read_first
+  - asked: none open
+- **summary** (the owner digest):
+  - Built CE-2: the ce CLI (python -m context_engine) runs sessions, the board, owner questions,
+    batons, pauses, the banner, orient and lint.
+  - Session keys are minted under the lock with a kind: open stub; close refuses a bad receipt or an
+    unraised NEXT or overdue question.
+  - This session was opened, closed and bannered through the engine itself; its first writes changed
+    only their own lines.
+  - Agent calls in DEC-14: one ledger file under the lock (Q-H), BTN/PAU record kinds, orient capped
+    at 6000 B (this repo measures 3015 B).
+  - Sabotage caught its own harness: a same-length edit ran stale bytecode and passed green. Fixed
+    with a fresh cache per run; rule in CLAUDE.md.
+  - Next is CE-8: stamp this repo's bodies and rewrite CLAUDE.md's rituals as ce commands.
+- **Still owed:**
+  - G-W11 (stale-stub window, abandoned stubs) moved to CE-6
+  - push and its CI watcher: done after this entry, see the commit
+
+---
+
 ## 2026-10-08c · kind: close
 
 - **rows:** CE-1 (closed); CE-2 (NOW); AC-1 to AC-9 (tested); DEC-10 to DEC-12 (status ACCEPTED

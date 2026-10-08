@@ -10,6 +10,7 @@ closed: 2026-10-08b
 answered: { on: 2026-10-08, session: 2026-10-08b, decision: DEC-10 }
 source: session 2026-10-08a
 created: 2026-10-08
+status: deprecated
 ---
 
 **Question:** `docs/charter.md` was reconstructed by the agent from your words. Confirm it, or

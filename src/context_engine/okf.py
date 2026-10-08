@@ -181,6 +181,24 @@ def parse(text: str) -> Document:
     )
 
 
+def read_head(path) -> Document:
+    """Parse only a record's frontmatter: the file is read up to its closing fence, never further.
+
+    Listing reads every record, so it must not pay for (or choke on) bodies (AC-13)."""
+    lines: list[bytes] = []
+    with open(path, "rb") as f:
+        if f.readline().rstrip(b"\r\n") != b"---":
+            return Document(fm_lines=None, body="", newline="\n")
+        for line in f:
+            if line.rstrip(b"\r\n") == b"---":
+                break
+            lines.append(line)
+        else:
+            raise Refusal(f"{path} has no closing `---` line", "add a `---` line after the last key")
+    fm = b"".join(lines).decode("utf-8").replace("\r\n", "\n")
+    return Document(fm_lines=fm.splitlines(keepends=True), body="", newline="\n", data=_load(fm))
+
+
 def has_frontmatter(doc: Document) -> bool:
     return doc.fm_lines is not None
 
@@ -209,3 +227,37 @@ def body_sha(body: str) -> str:
     """Hash of the original body, independent of line endings and surrounding blank lines (AC-7)."""
     canon = original_body(body).strip("\n") + "\n"
     return "sha256:" + hashlib.sha256(canon.encode("utf-8")).hexdigest()
+
+
+# -- body sections (replaced-mode records) ------------------------------------------------
+
+
+def _section_span(body: str, name: str) -> tuple[int, int] | None:
+    """[start, end) of the content under ``## name``; the end is the next ``## `` heading."""
+    m = re.search(rf"^## {re.escape(name)}[ \t]*\n?", body, re.MULTILINE)
+    if not m:
+        return None
+    nxt = re.search(r"^## ", body[m.end() :], re.MULTILINE)
+    return m.end(), m.end() + nxt.start() if nxt else len(body)
+
+
+def get_section(body: str, name: str) -> str | None:
+    span = _section_span(body.replace("\r\n", "\n"), name)
+    return None if span is None else body.replace("\r\n", "\n")[span[0] : span[1]].strip("\n")
+
+
+def set_section(body: str, name: str, text: str) -> str:
+    """Replace the content of ``## name``, appending the section if it is missing."""
+    text = text.strip("\n")
+    span = _section_span(body, name)
+    if span is None:
+        return body.rstrip("\n") + f"\n\n## {name}\n\n{text}\n"
+    start, end = span
+    tail = body[end:]
+    return body[:start] + "\n" + text + "\n" + ("\n" if tail else "") + tail
+
+
+def append_to_section(body: str, name: str, line: str) -> str:
+    """Append one line at the end of ``## name``, creating the section if needed."""
+    current = get_section(body, name)
+    return set_section(body, name, (current + "\n" if current else "") + line)

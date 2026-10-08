@@ -19,7 +19,7 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 from . import config as config_mod
 from . import okf
@@ -61,6 +61,49 @@ def slugify(title: str, limit: int = 48) -> str:
     return slug
 
 
+def key_order(key: str) -> tuple[str, int, str]:
+    """Session keys sort by date, then by letter sequence read as a number (z < aa)."""
+    return (key[:10], len(key) - 10, key[10:])
+
+
+def coerce(kind: Kind, key: str, text: str) -> Any:
+    """Turn a CLI string into the value the kind's schema declares (CE-2 trap: no quoted dates)."""
+    want = kind.types.get(key, "str")
+    if text.strip().lower() in ("", "null", "~"):
+        return None
+    try:
+        if want == "date":
+            return dt.date.fromisoformat(text.strip())
+        if want == "int":
+            return int(text)
+    except ValueError:
+        raise Refusal(f"{key}={text!r} is not a {want}", f"give {key} as a {want}" + (" (YYYY-MM-DD)" if want == "date" else "")) from None
+    if want == "list":
+        inner = text.strip()
+        if inner.startswith("[") and inner.endswith("]"):
+            inner = inner[1:-1]
+        return [x.strip() for x in inner.split(",") if x.strip()]
+    if want == "key":
+        if not SESSION_RE.match(text.strip()):
+            raise Refusal(f"{key}={text!r} is not a session key", "give a key like 2026-10-08c")
+        return text.strip()
+    return text
+
+
+def _wrong_type(want: str, value: Any) -> bool:
+    if value is None:
+        return False
+    if want == "date":
+        return not isinstance(value, dt.date) or isinstance(value, dt.datetime)
+    if want == "int":
+        return not isinstance(value, int) or isinstance(value, bool)
+    if want == "list":
+        return not isinstance(value, list)
+    if want == "key":
+        return not isinstance(value, str) or not SESSION_RE.match(value)
+    return False
+
+
 def _now() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -89,6 +132,14 @@ class Store:
 
     def read(self, path: Path) -> okf.Document:
         return okf.parse(path.read_bytes().decode("utf-8"))
+
+    def heads(self, kind_name: str) -> Iterator[Record]:
+        """Every record of a kind with its frontmatter only (``doc.body`` is empty, AC-13)."""
+        kind = self.config.kind(kind_name)
+        for path in self._files(kind):
+            rid = self._id_of(kind, path)
+            if rid:
+                yield Record(rid, kind, path, okf.read_head(path))
 
     def records(self, kind_name: str) -> Iterator[Record]:
         kind = self.config.kind(kind_name)
@@ -151,6 +202,10 @@ class Store:
             value = doc.get(key)
             if value is not None and str(value) not in allowed:
                 out.append((f"has {key} {value!r}", f"use one of {', '.join(allowed)}"))
+        for key, want in kind.types.items():
+            if _wrong_type(want, doc.get(key)):
+                hint = " (unquoted YYYY-MM-DD)" if want == "date" else ""
+                out.append((f"has {key} {doc.get(key)!r}, not a {want}", f"set `{key}` to a {want}{hint}"))
         status = doc.get("status")
         if status is not None and status not in OKF_STATUS:
             out.append((f"has OKF status {status!r}", f"use one of {', '.join(OKF_STATUS)}; record states go in their own key"))
@@ -226,6 +281,17 @@ class Store:
                 "use `human:<id>`, `process:<id>` or `<producer>/<version>` (e.g. `claude-code/<model-id>`)",
             )
 
+    def lock(self) -> FileLock:
+        """The repo lock, for operations that write a non-record file (the ledger, the note)."""
+        return self._lock()
+
+    def write_text(self, path: Path, text: str) -> None:
+        """Atomically replace a non-record file. Call it holding ``lock()``."""
+        self._write(path, okf.Document(fm_lines=None, body="", newline="\n", raw=text))
+
+    def log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool = False) -> None:
+        self._log(op, rec_id, path, session, actor, fields, mechanical)
+
     def _lock(self) -> FileLock:
         path = self.root / self.config.lockfile
         ignore = path.parent / ".gitignore"
@@ -291,23 +357,43 @@ class Store:
             self._log("new", rid, path, session, actor, list(doc.data.keys()), mechanical)
         return Record(rid, kind, path, doc)
 
-    def set(self, record_id: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), mechanical: bool = False) -> Record:
-        """Change top-level frontmatter keys. Every other byte of the file is kept."""
+    def set(
+        self,
+        record_id: str,
+        changes: dict[str, Any],
+        *,
+        session: str,
+        actor: str,
+        unset: tuple[str, ...] = (),
+        mechanical: bool = False,
+        body: Callable[[str], str] | None = None,
+        check: Callable[[Record], dict[str, Any] | None] | None = None,
+        op: str = "set",
+    ) -> Record:
+        """Change top-level frontmatter keys, and through ``body`` the body of a non-append-only
+        record. Every other byte of the file is kept. The record is re-read under the lock, so
+        ``check`` (which may refuse, or return more changes) and ``body`` see the current text."""
         self._check_caller(session, actor)
         owned = [k for k in (*changes, *unset) if k in TOOL_OWNED]
         if owned:
             raise Refusal(f"`{owned[0]}` is owned by the engine", "use the operation that owns it (`stamp` for body_sha); ids and types never change")
-        if not changes and not unset:
+        if not changes and not unset and body is None:
             raise Refusal("nothing to change", "pass at least one field")
         with self._lock():
             rec = self.get(record_id)
+            if check is not None:
+                changes = {**changes, **(check(rec) or {})}
+            if body is not None:
+                if rec.kind.mode == "append-only":
+                    raise Refusal(f"{record_id} is append-only", "record the change with `amend`")
+                rec.doc.set_body(body(rec.doc.body.replace("\r\n", "\n")))
             for key, value in changes.items():
                 rec.doc.set(key, value)
             for key in unset:
                 rec.doc.delete(key)
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
-            self._log("set", record_id, rec.path, session, actor, [*changes, *unset], mechanical)
+            self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical)
         return rec
 
     def stamp(self, record_id: str, *, session: str, actor: str) -> Record:

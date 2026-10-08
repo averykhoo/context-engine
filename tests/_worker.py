@@ -4,6 +4,7 @@ usage: _worker.py ROOT GATE OP N TAG [ID]
   new    N TAG      create N tasks titled "<TAG> <i>"
   amend  N TAG ID   amend record ID N times with "<TAG> <i>"
   set    N TAG ID   set field `note_<TAG>` on record ID N times
+  start  N TAG      run `session.start` N times (the repo needs a [working] ledger)
 """
 
 import sys
@@ -11,6 +12,7 @@ import time
 from pathlib import Path
 
 from context_engine.store import Store
+from context_engine.working import Engine
 
 root, gate, op, n, tag = sys.argv[1:6]
 target = sys.argv[6] if len(sys.argv) > 6 else None
@@ -29,5 +31,7 @@ for i in range(int(n)):
         store.amend(target, f"{tag} {i}", **kw)
     elif op == "set":
         store.set(target, {f"note_{tag}": i}, **kw)
+    elif op == "start":
+        Engine(root).session_start(actor=kw["actor"])
     else:
         sys.exit(f"unknown op {op}")

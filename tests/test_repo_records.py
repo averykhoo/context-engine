@@ -2,14 +2,15 @@
 
 from pathlib import Path
 
-from context_engine.store import Store
+from context_engine.working import Engine
 
 REPO = Path(__file__).resolve().parents[1]
 
 
 def test_this_repos_records_pass_every_check_except_the_body_stamp():
-    """Every record parses and fits its schema. Stamping body_sha is CE-8's job, so G-D10 is
-    the one failure allowed here, and only the "no body_sha" kind of it."""
-    failures = Store(REPO).lint()
+    """Every record parses and fits its schema, and the working state passes its guards (G-W1 to
+    G-W6). Stamping body_sha is CE-8's job, so G-D10 is the one failure allowed here, and only
+    the "no body_sha" kind of it."""
+    failures = Engine(REPO).lint()
     other = [str(f) for f in failures if not (f.guard == "G-D10" and "no body_sha" in f.message)]
     assert other == []
