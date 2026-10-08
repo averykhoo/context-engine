@@ -50,6 +50,7 @@ step by hand until CE-8. Caps: NOW exactly 1, NEXT at most 5.
 | LATER | CE-10 | Run the gate in GitHub Actions | |
 | LATER | CE-14 | The guard catalogue (§8.1 to §8.5) as engine lint guards | CE-2 |
 | LATER | CE-15 | Deploy path: how any repo gets the system, as text Claude Code manages | CE-8 |
+| LATER | CE-17 | Tiled gate, run ledger keyed on each tile's input hash; `orient()` shows tested/untested | CE-1 |
 | SOMEDAY | CE-11 | intervals after its 2.0.0, then zanzibar and audio-workspace | CE-7 |
 | SOMEDAY | CE-12 | Tier-1 housekeeping agents restricted to `hk_` tools | CE-6 |
 | SOMEDAY | CE-13 | Check what `/clear` does to the MCP server, interactively | |

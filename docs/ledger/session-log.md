@@ -9,7 +9,7 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ## 2026-10-08b · kind: close
 
-- **rows:** ASK-1 (closed); US-9, DEC-10, DEC-11, CE-14, CE-15, CE-16 (created); DEC-6 (amended);
+- **rows:** ASK-1 (closed); US-9, DEC-10, DEC-11, US-10, CE-14, CE-15, CE-16, CE-17 (created); DEC-6 (amended);
   CE-7 (deps += CE-8)
 - **receipts:**
   - guards: none exist yet; gate not run (docs and records only, no `src/` or `tests/` change)
@@ -23,6 +23,8 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
   - Filed the gaps the engine-only board missed: guard catalogue (CE-14), deploy path (CE-15),
     and a coverage map of the whole spec (CE-16, NEXT) to find the rest.
   - Sabotage rule made an owner mandate (DEC-11): charter, `CLAUDE.md`, criteria statuses.
+  - Owner asked for tiled tests keyed on a code hash (US-10): G-V1 has the hash part; tiles,
+    per-tile input hashes and showing it at session start are filed as CE-17.
   - Fact: Remote Control spawns default to `same-dir` (owner screenshot), matching §5.5.
 - **Still owed:**
   - pushes: commits `0964993` onward are local only (no permission asked)
