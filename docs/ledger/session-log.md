@@ -7,6 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-10a · kind: close
+
+- **rows:** CE-10, CE-21, CE-22
+- **receipts:**
+  - guards: pytest -q: 137 passed (2026-10-10)
+  - read: orient; FRAMEWORK 5.4, 5.5, 6.10, 12.3, G-D0; CE-10; DEC-1; DEC-21; context.toml kinds
+- **summary** (the owner digest):
+  - Owner answers recorded: DEC-22 (ask before every push, push only on green; one task per commit,
+    id in the title, Session trailer; repo public), DEC-23 (versioning), DEC-24 (batons).
+  - Versioning: engine major.minor = framework version; package now 0.5.0.dev0, contract framework:
+    0.5; G-D0 rewritten, build filed as CE-21.
+  - CLAUDE.md: push step and a Commits rule per DEC-22; DEC-1 and DEC-13 amended; CE-10 traps
+    rewritten for a public repo.
+  - FRAMEWORK: G-D0, 6.10, 12.3, new 12.6, a 13 row. Engine pause commit lacks the Session trailer:
+    filed CE-22.
+- **Still owed:**
+  - session-log header still says keys are minted by hand (carried from 2026-10-09f)
+
+---
+
 ## 2026-10-09f · kind: close
 
 - **rows:** CE-20, CE-3

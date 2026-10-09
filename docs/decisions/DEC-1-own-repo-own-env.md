@@ -30,3 +30,5 @@ Consequence: if a target repo's CI is to run the lint, CI must install the engin
 needs to be reachable from that CI (private repo: a token).
 
 ## Amendments
+
+- **2026-10-10a (claude-code/claude-opus-5-5):** 2026-10-10 (DEC-22): the repo is now public on GitHub, so target-repo CI needs no token to reach it.

@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08a
+updated: 2026-10-10a
 closed:
 ---
 
@@ -18,10 +18,7 @@ it needs the owner's permission, and its first run gets a CI watcher (global `CL
 
 ## Traps
 
-- **CI minutes are limited** (owner, 2026-10-08: *"its currently private so I don't have
-  unlimited compute so let's not run that too much"*). Keep the workflow cheap: one job, pip
-  cache, skip docs-only pushes (`paths:` filter), and consider running only on PRs or by hand.
-- Adding it ends the "push whenever" permission in `CLAUDE.md`; update that line in the same
-  commit.
+- **The repo is public** (owner, 2026-10-10, DEC-22), so GitHub Actions minutes are free. The owner's earlier words (2026-10-08: *"its currently private so I don't have unlimited compute so let's not run that too much"*) no longer bind; a cheap workflow (one job, pip cache, `paths:` filter for docs-only pushes) is still the aim.
+- Pushes are asked for every time and made only on a green gate (DEC-22); CI does not change that.
 
 ## Log

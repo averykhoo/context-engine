@@ -31,3 +31,5 @@ PROVISIONAL until built and used in CE-5; the bracket form is the owner's sugges
 and the insert-only check is the agent's way of keeping the typed words intact.
 
 ## Amendments
+
+- **2026-10-10a (claude-code/claude-opus-5-5):** 2026-10-10 (DEC-22): the push clause is replaced. Ask before every push and push only on a green gate, CI or not.

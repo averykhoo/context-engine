@@ -1,6 +1,6 @@
 # context-engine: contract
 
-framework: 0.5-draft (engine mode since 2026-10-08f, CE-8; manual mode is the fallback, US-11)
+framework: 0.5 (engine mode since 2026-10-08f, CE-8; manual mode is the fallback, US-11)
 
 This repo builds the record engine specified in `docs/framework/FRAMEWORK.md` (§8.0), and runs
 that framework on itself **through the engine** (`context-engine`). What is true now and what is next live in
@@ -82,10 +82,8 @@ it became.
    "<gate result>" --read "<what was read>" --asked "<ids>" --owed ...`.
 5. The banner: `context-engine banner show`, then `context-engine banner set --seen <hash> --file <banner.md>`. If it
    refuses, another session wrote it: read theirs, merge, retry.
-6. `context-engine lint` and the gate again, then commit by path. **Push whenever, while the repo has no
-   CI** (owner, 2026-10-08: *"if there's no cicd then push whenever for now"*); once CE-10 adds
-   CI, ask again, because the repo is private and its CI minutes are limited. Every push gets a
-   CI watcher (global `CLAUDE.md`).
+6. `context-engine lint` and the gate again, then commit by path. **Ask before every push, and push
+   only on a green gate** (DEC-22). Every push gets a CI watcher (global `CLAUDE.md`).
 7. The digest in chat.
 
 **Pause** (§6.4): owner words recorded, evidence out of `.scratch/`, `context-engine pause open --in-flight
@@ -98,6 +96,11 @@ it became.
   the work to its own subagents or a workflow; the top level only reports progress, blockers
   and delays. Owner words and first-hand verification stay at the top.
 - Commit by path (`git commit -o <paths>`); never `git add -A`, never `git stash`.
+- **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
+  change cannot be split. One task per commit, its id leading the title (`CE-n: what changed`);
+  a commit serving no task has a plain title. Small tasks may be done together: gate green over
+  all, then one commit per task by path (not surgical). Every agent commit ends with a
+  `Session: <key>` trailer, plus `Closes: CE-n` when it finishes the task.
 - Re-run `git status` and `git log -3` right before editing HANDOFF or the ledger and before
   committing: sessions here may run concurrently.
 - Frozen provenance is never edited (`context-engine routes`).

@@ -1,6 +1,6 @@
 # A context-engineering framework for agent-built repos
 
-**Draft v0.5, 2026-10-08; last updated 2026-10-09. Status: DRAFT, tracked.** It lives in the `context-engine` repo,
+**Draft v0.5, 2026-10-08; last updated 2026-10-10. Status: DRAFT, tracked.** It lives in the `context-engine` repo,
 `docs/framework/`, beside the engine that implements it. Until 2026-10-08 it was kept untracked
 in the gitignored `PycharmProjects/.scratch/context-framework/` while the goal was to
 understand the existing repos; it moved here, with its drafts, source notes and reviews, when
@@ -1137,6 +1137,10 @@ dysfunctional for someone using plain git or writing code by hand** (owner, 2026
 Humans are never required to perform rituals. The agent sessions absorb the cost:
 
 1. **Agent commits carry a trailer** `Session: <key>`. Commits without one are **foreign**.
+   One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
+   repo's own, `[kinds.task] prefix`); a commit that finishes the task also carries
+   `Closes: <id>` (§6.11). Small tasks may share a session: the gate goes green over all of
+   them, then each is committed by path (context-engine DEC-22).
 2. **At session start, reconcile foreign commits** since the newest ledger entry:
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
    - run the tier-1 trace-check over them (criteria or prose they may have staled);
@@ -1311,9 +1315,13 @@ They hold **method**, which survives when the status around it is archived. Exam
 - **Every tuned value carries a provenance note: MEASURED or JUDGEMENT, with the method and
   what would make it wrong.** A test refuses values copied from spec examples (zanzibar
   `tasks/config.json::_provenance`; `test_tasktool.py::test_shipped_config_is_measured_not_an_example`).
-- **G-D0:** the contract's `framework: <version>` matches the installed package. *Open
-  (2026-10-09): not built, and the schemes differ: this repo's contract pins `framework:
-  0.5-draft` while the package is `0.0.1.dev0` (§12.3).*
+- **G-D0:** the contract's `framework: <major.minor>` equals the installed engine's
+  major.minor (context-engine DEC-23). The framework is versioned `major.minor`; the engine is
+  `major.minor.patch`, and its major.minor is the framework version it implements. An engine
+  fix moves only the patch; a framework change the engine must follow moves the minor of both.
+  Below 1.0 is draft; there is no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`.
+  *Not built yet (2026-10-10); this repo's contract says `framework: 0.5` and the package is
+  `0.5.0.dev0`.*
 - **Upgrade ritual:** bump the version, run the lint, fix the reds, write a ledger line.
 - **Existing repos keep their own check numbers.** The package maps its ids onto them and
   never renumbers them (P3).
@@ -1754,9 +1762,7 @@ scorers, vendored libraries) still gets ordinary tests** (§3.3.1).
 ### 12.3 Still open
 
 - **Q-F, Q-G, Q-H, Q-J, Q-K:** answered 2026-10-09, see §12.5.
-- **G-D0 version schemes** (2026-10-09): the contract pins the framework version
-  (`framework: 0.5-draft`) and the package has its own (`0.0.1.dev0`); G-D0 needs to say which
-  it compares, or the two schemes merge.
+- **G-D0 version schemes:** answered 2026-10-10, see §12.6.
 - **The stale-stub window (G-W11):** the value, to be measured in the trial, with provenance
   (G-D9). Split from Q-K, which the owner answered for the write budget only.
 - **Rollback and close** (owner story, 2026-10-09, context-engine US-13): a session can end by
@@ -1801,6 +1807,14 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF. Bu
 | Q-H ledger storage | Default accepted: one file under the engine lock (already context-engine DEC-14) | §7.1 |
 | Q-J combined view | **Deferred, not refused.** Read by the owner as a generated file of open questions: the engine generates it on request, a human answers in place, and the answers are read back and filed against the questions. Not needed now; the channel stays Claude remote control | — |
 | Q-K housekeeping write budget | **No budget by default; measure** (writes, token counts). An editor agent may be cheap enough not to need one; change sizes vary, so a sensible budget may be unreasonably large and would be overridden. A configured cap stays possible. The stale-stub window stays open (§12.3) | G-W10, §6.11 |
+
+### 12.6 Answered in the fifth round (owner, 2026-10-10; context-engine DEC-22 to DEC-24)
+
+| Question | Answer | Where it landed |
+|---|---|---|
+| G-D0 version schemes | **Share major.minor.** The engine's major.minor is the framework version it implements; the patch is the engine's own; G-D0 compares major.minor; `-draft` dropped (DEC-23) | G-D0 |
+| `Session:` line in commits | **A trailer on every agent commit; the task id leads the title**, one task per commit; small tasks may be done together and committed per task (DEC-22) | §6.10 |
+| Who closes a baton | **Any session, by `baton done` with evidence** (DEC-24) | §5.5 rule 3 |
 
 ---
 
@@ -1885,3 +1899,4 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF. Bu
 | §12.5: Q-F, Q-G, Q-H defaults accepted; Q-J deferred as a generated answer-in-place question file; G-W10 measures instead of capping by default; rollback-and-close added as an open item (added 2026-10-09; context-engine DEC-21, US-13) | owner |
 | §6.12: this document is updated as we build; archive to `FRAMEWORK-v<version>.md` only what the future must reference, else change in place; the after-action review is noted as an open first idea (added 2026-10-09; context-engine DEC-19, US-12) | owner |
 | Consistency pass against the built engine and records (2026-10-09): one naming rule for operations (library dotted, CLI `context-engine <noun> <verb>`, MCP underscores) and real names in place of `story.record`, `decision.new`, `find`; id prefixes are per-repo config; `actor: owner` in a single-owner repo; task, question and story schemas, amendment format, baton and pause closing, `docs/working/` and op log in the layout; ledger entries not a record kind; G-R1 and the record schema check named, G-D11/G-W4 split; §6.9 moved before §6.10; §6.3 records the practised close order; dated notes where the engine lags the design (engine commits, `task close ASK-n`, G-D0 versions) | agent audit; DEC-1, DEC-2, DEC-14, DEC-15, US-10, US-11 |
+| §12.6, G-D0, §6.10: the engine's major.minor is the framework version (no `-draft`); one task per commit with its id in the title and a `Session:` trailer; any session closes a baton with evidence (added 2026-10-10; context-engine DEC-22 to DEC-24) | owner; agent recommendation |
