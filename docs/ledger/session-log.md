@@ -7,6 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-09d · kind: close
+
+- **rows:** DEC-18, DEC-19, DEC-20, US-12; FRAMEWORK P16, 6.6, 6.12
+- **receipts:**
+  - guards: pytest 127 passed 2026-10-09
+  - read: FRAMEWORK.md intro/6.6/6.11/13, CLAUDE.md, DEC-17
+- **summary** (the owner digest):
+  - Recorded owner notes: DEC-18 no fable subagents, DEC-19 keep FRAMEWORK.md current, DEC-20 ritual
+    fallbacks (P16), US-12 AAR (first note)
+  - FRAMEWORK.md: P16, fable rule in 6.6, new 6.12, three 13 rows; CLAUDE.md Rules updated
+- **Still owed:**
+  - AAR design (where stored, shape); manual-mode.md has no per-process fallback sections yet
+
+---
+
 ## 2026-10-09c · kind: close
 
 - **rows:** CE-15 (comment: DEC-17 ships in the deployed contract)

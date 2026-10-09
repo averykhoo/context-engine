@@ -256,6 +256,22 @@ that starts with no context"*).
   mechanisms that serve it: `orient()` (§6.1), batons and pause records (§5.4), ledger receipts
   (§7.1), and the run ledger, with tiles keyed on their inputs' hash (G-V1, §8.5; US-10).
 
+**P16. Every programmatic process has a ritual-based fallback** (owner, 2026-10-09: *"framework.md
+should mention ritual based fallbacks for programmatic processes. think of it as a sort of
+business continuity"*; context-engine DEC-20).
+- The engine, its guards, the housekeeping run and the MCP server are conveniences over rituals,
+  not replacements for them. For each one, the framework keeps a written procedure a session can
+  do by hand when the programme is missing, broken, or wrong, as a business keeps a continuity
+  plan for a system it normally runs by machine.
+- **The fallback is a section of a runbook, named after the process** (`docs/runbooks/manual-mode.md`
+  is the existing instance, US-11). A new engine operation is not done until its fallback section
+  exists.
+- **Using a fallback is an event, not a workaround:** do the step by hand, then fix the process
+  (runbook § When the engine and this runbook disagree), and note it in the session's review
+  (§6.12).
+- A refusal with a sensible remedy is not a failure of the process (§8.0); the fallback is for
+  an error, or for a refusal the process should not have made.
+
 ---
 
 ## 2. The components at a glance
@@ -1044,7 +1060,14 @@ A single-task request is unaffected.
 
 No `git stash`. Workflows are tracked files.
 
-**Model choice** is per-repo config (§8.0), not prose here.
+**Model choice** is per-repo config (§8.0), not prose here, with one rule that applies everywhere
+(owner, 2026-10-09, DEC-18):
+- **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
+  Never fan out with fable: it wastes tokens.
+- When it really is necessary, do whatever minimizes its cost: one agent, the narrowest prompt,
+  a capped output, verdicts back rather than prose. Say why in the session summary.
+- The default for delegated work is the cheaper model that can do it (global `CLAUDE.md §
+  Delegation`).
 
 ### 6.7 Promotion and demotion
 
@@ -1150,6 +1173,34 @@ the whole session.
 
 **Edit subagents** (agents that hand-edit files on the session's behalf) were considered and are
 deferred: try the script and MCP first (owner, 2026-10-08).
+
+### 6.12 Keeping this document current, and the after-action review (2026-10-09)
+
+**This document is updated as we build** (owner, 2026-10-09, DEC-19: *"keep framework.md updated
+as we build, and archive if needed when there are huge changes that need backing up and need
+referencing from the future. if we never need to see it again then leave it in git history and
+just change it in-place"*).
+- A change to how the framework works is made here in the same session as the work, and gets a
+  row in §13.
+- **Small or superseded text is changed in place;** git history is its archive.
+- **A huge change that the future may need to reference** (a rewrite that changes the shape, or
+  a design that was tried and dropped) first copies the current file to
+  `docs/framework/FRAMEWORK-v<version>.md`, as v0.1 and v0.4 were. Frozen once written.
+- If the old text will never be needed, do not archive it.
+
+**After-action review (AAR): a first note, not a design** (owner, 2026-10-09, US-12: *"at some
+point we will need to take stock of how this framework is working out and improve it, and this
+means we need sessions to note in a sort of aar what worked well and what could be improved? i
+havent really thought through this so just write it down first"*).
+- Intent: each session leaves a short record of **what worked well** and **what could be
+  improved**, so that the framework can later be assessed and improved from evidence instead of
+  from memory. Using a fallback (P16) and any ritual step that cost more than it was worth belong
+  in it.
+- **Open, to be designed when the owner takes stock:** where it lives (a field of the ledger
+  entry, or its own record kind); its shape and cap; whether `session.close` asks for it;
+  who reads it, when, and what turns a recurring note into a task or a framework change.
+- Not built, and no guard checks it yet. Until then a session that has a note can put it in its
+  ledger `summary:`.
 
 ---
 
@@ -1760,3 +1811,6 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | Q-I answered: `correct` only inserts `[bracketed]` text, re-stamps and logs; the typed words always survive; meaning changes are amendments (§6.5; context-engine DEC-13) | owner |
 | **P15: design for an agent that starts with no context**; names the principle behind P4, P5, P9, P10, P12 and the run ledger (added 2026-10-08, after v0.5; context-engine DEC-12) | owner |
 | §6.6: ultracode (the `Workflow` tool) has standing approval, no per-request opt-in, when used to keep the session's context and tokens down; shape, not permission (added 2026-10-09, after v0.5; context-engine DEC-17) | owner |
+| **P16: every programmatic process has a ritual-based fallback** (business continuity); the fallback is a runbook section, and using one is an event to fix and note (added 2026-10-09, after v0.5; context-engine DEC-20) | owner |
+| §6.6: no `fable` subagents unless asked for or really necessary; never fan out with fable; when necessary, minimize cost (added 2026-10-09; context-engine DEC-18) | owner |
+| §6.12: this document is updated as we build; archive to `FRAMEWORK-v<version>.md` only what the future must reference, else change in place; the after-action review is noted as an open first idea (added 2026-10-09; context-engine DEC-19, US-12) | owner |

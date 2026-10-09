@@ -107,3 +107,10 @@ it became.
 - `spike/` holds probes whose findings are transcribed into the spec; the probes are kept as
   evidence of how a finding was reached.
 - Cite code as `file::symbol`, never by line number; grep that a symbol exists before citing it.
+- **No `fable` subagents** unless the owner asks or it is really necessary; never fan out with
+  it; when necessary, minimize its cost (DEC-18, FRAMEWORK §6.6).
+- **Keep `FRAMEWORK.md` current as we build** (DEC-19, §6.12): change in place; archive to
+  `FRAMEWORK-v<version>.md` only what the future must reference. Every programmatic process has
+  a ritual fallback in a runbook (DEC-20, P16).
+- **After-action review** (US-12, §6.12) is an open idea, not built: if a session has a note on
+  what worked or could improve, put it in the ledger `summary:` for now.
