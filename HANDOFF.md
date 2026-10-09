@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-09d)
+## Banner (2026-10-09e)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -27,7 +27,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19), named per
   DEC-15. NEXT: CE-4, CE-15 (deploy path), CE-16. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
-- **No owner questions are open.** Push whenever while there is no CI (`CLAUDE.md`, close step 6).
+- **No owner questions are open.** FRAMEWORK §12.3 was answered 2026-10-09e (DEC-21, §12.5): no
+  housekeeping write budget by default, measure instead. New owner story US-13: rollback and
+  close for a session (CE-18, LATER). Push whenever while there is no CI (`CLAUDE.md`, close step 6).
 - **Owner notes, 2026-10-09d:** no `fable` subagents unless asked or really necessary (DEC-18);
   keep FRAMEWORK.md current, archive only what the future must reference (DEC-19, §6.12);
   every programmatic process has a ritual fallback (DEC-20, P16); an after-action review per

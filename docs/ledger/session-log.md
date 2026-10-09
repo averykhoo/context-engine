@@ -7,6 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-09e · kind: close
+
+- **rows:** DEC-21, US-13, CE-18, CE-19, CE-12
+- **receipts:**
+  - guards: pytest 131 passed (includes lint)
+  - read: board only + FRAMEWORK §12, §6.3-6.4, §6.11, G-W10/G-W11
+  - asked: none
+- **summary** (the owner digest):
+  - Owner answered FRAMEWORK §12.3: Q-F, Q-G, Q-H defaults accepted; Q-J deferred; no housekeeping
+    write budget by default (DEC-21).
+  - New owner story US-13: rollback-and-close for a session, safe in a shared checkout; filed as
+    CE-18 (LATER).
+  - Q-J as the owner read it (generated answer-in-place question file) filed as CE-19 (SOMEDAY).
+  - FRAMEWORK: new §12.5 table; §12.3 keeps the G-W11 window and rollback-and-close; G-W10 and §6.11
+    measure instead of cap; §7.1 Q-H settled.
+- **Still owed:**
+  - G-W11 stale-stub window still to be measured
+
+---
+
 ## 2026-10-09d · kind: close
 
 - **rows:** DEC-18, DEC-19, DEC-20, US-12; FRAMEWORK P16, 6.6, 6.12

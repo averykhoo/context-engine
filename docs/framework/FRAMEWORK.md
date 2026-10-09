@@ -1162,7 +1162,7 @@ Otherwise housekeeping proposes the close and the session approves the batch.
 **Safety:**
 - every `hk_` write is stamped `--mechanical` with its actor, is logged, and lands in its own
   commit by path with a `Session:` trailer, so `git revert` undoes it;
-- writes per run are capped (G-W10);
+- writes per run are counted and measured; a cap is optional and off by default (G-W10);
 - the run's report **is** its operation list, and it goes into the owner digest (§5.6);
 - the run takes the engine lock, because another session may be live in the same tree.
 
@@ -1213,9 +1213,9 @@ havent really thought through this so just write it down first"*).
   and `abandoned` (a stub housekeeping found never closed).
 - **Written by the engine** (v0.5): `session.start`, `session.close`, `session.pause`. The
   receipts are checked when the entry is written, as well as by the gate.
-- Append-only, newest first, **in its own file**, keyed by session key. *Open question Q-H:*
-  one file per entry (no two sessions append to one file; a generated rollup for reading)
-  versus the existing single file under the engine lock. zanzibar has 428 citations of
+- Append-only, newest first, **in its own file**, keyed by session key. **Q-H answered
+  (owner, 2026-10-09; context-engine DEC-21, DEC-14): one single file under the engine lock**,
+  not one file per entry, until a trial shows append collisions. zanzibar has 428 citations of
   `session-log.md` and `spec-deviations.md` together (grep, 2026-10-07), so an existing single
   file stays readable either way.
 - Receipts are machine-checked (zanzibar `check_session_receipt`).
@@ -1453,8 +1453,12 @@ follow once the core holds.
 - **G-W9 (v0.5):** every `--mechanical` close cites its evidence: a commit whose message
   carries `Closes: <id>`, or a ledger entry naming the item. `hk.close` checks it at write time;
   the lint re-checks it at rest.
-- **G-W10 (v0.5):** housekeeping writes per run stay within the configured budget (the value,
-  with provenance, is open question Q-K).
+- **G-W10 (v0.5):** housekeeping writes per run are **counted and measured** (writes, token
+  counts), and the count goes into the run's report. **No budget by default** (owner,
+  2026-10-09, context-engine DEC-21): change sizes vary by session, so a sensible cap may be
+  unreasonably large, and the owner would most likely override it. A repo may still configure a
+  cap, with provenance (G-D9); hitting it stops the run and asks, and the owner may say write
+  anyway.
 - **G-W11 (v0.5):** no `kind: open` ledger stub older than the configured window without a
   matching `close`, `pause` or `abandoned` entry.
 
@@ -1566,7 +1570,7 @@ docs/
   invariants.md            # durable traps
   runbooks/                # method
   evidence/<id>-<topic>-<date>.md
-  ledger/                  # session ledger (single file or one entry per file: Q-H)
+  ledger/                  # session ledger (one file under the engine lock: Q-H)
   archive/README.md        # redirect table
 tasks/                     # flat; open and closed side by side, `state:` in frontmatter (§5.2)
   batons/                  # v0.5: baton and pause records (§5.4)
@@ -1693,22 +1697,17 @@ scorers, vendored libraries) still gets ordinary tests** (§3.3.1).
 
 ### 12.3 Still open
 
-- **Q-F. Roles with several humans:** is there one owner per repo who decides goals and
-  priorities, with other humans contributing stories, or several humans with equal say?
-  *Default: one owner per repo, named in the charter; other humans' stories are recorded
-  under their own id, and conflicts go to the owner.*
-- **Q-G. Who gets nagged:** only the owner, or every human with an open question addressed
-  to them? *Default: only humans who use the remote-control channel get nagged in chat;
-  questions for anyone else are left as board rows for them to find.*
-- **Q-H. Ledger storage (v0.5):** one file per entry (no shared append; a generated rollup for
-  reading) or the existing single file under the engine lock? *Default: single file under the
-  lock until the trial shows append collisions.*
-- **Q-I. `decision.correct`:** ANSWERED 2026-10-08 (owner): corrections are bracketed
-  insertions that never delete the typed words (§6.5).
-- **Q-J. A combined read-only view of all decisions** for reading in an editor? *Default: no;
-  the generated index plus `grep` covers it, and a combined file would be a second copy.*
-- **Q-K. Housekeeping write budget per run** (G-W10) and the stale-stub window (G-W11): values
-  to be measured in the trial, with provenance (G-D9).
+- **Q-F, Q-G, Q-H, Q-J, Q-K:** answered 2026-10-09, see §12.5.
+- **The stale-stub window (G-W11):** the value, to be measured in the trial, with provenance
+  (G-D9). Split from Q-K, which the owner answered for the write budget only.
+- **Rollback and close** (owner story, 2026-10-09, context-engine US-13): a session can end by
+  undoing what it changed instead of saving it, without breaking other humans or agents in the
+  same checkout (a shared directory, not a worktree). Not designed. Agent notes, for the
+  design: the shared-tree rules (§5.5) rule out `git stash`, `git reset` and checking out whole
+  files another writer may also have touched; candidates are `git revert` of the session's own
+  commits (found by `Session:` trailer) plus restoring only the paths the session's op log says
+  it wrote, recorded as a ledger entry of its own kind; owner words recorded this session stay
+  (§6.3 item 0). Its ritual fallback is a runbook section (P16).
 
 **To verify before building (UNVERIFIED claims in §6.1 and §8.0.2):** that SessionStart hook
 output is added to the model's context; that `.mcp.json` expands environment variables; whether
@@ -1732,6 +1731,16 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | OKF `status` | (owner asked the agent to check) → reserved for `draft \| stable \| deprecated`; tasks use `state:` and the engine derives `status` | §9.3.1 |
 | Decisions | Handled by the tool, as OKF records | §6.5 |
 | Batons | (asked by the owner) → yes, the engine owns baton passing, as records | §5.4 |
+
+### 12.5 Answered in the fourth round (owner, 2026-10-09; context-engine DEC-21)
+
+| Question | Answer | Where it landed |
+|---|---|---|
+| Q-F roles with several humans | Default accepted: one owner per repo, named in the charter; other humans' stories under their own id; conflicts go to the owner | §6.5 |
+| Q-G who gets nagged | Default accepted: only humans on the remote-control channel are nagged in chat; questions for anyone else stay as board rows | §5.3 |
+| Q-H ledger storage | Default accepted: one file under the engine lock (already context-engine DEC-14) | §7.1 |
+| Q-J combined view | **Deferred, not refused.** Read by the owner as a generated file of open questions: the engine generates it on request, a human answers in place, and the answers are read back and filed against the questions. Not needed now; the channel stays Claude remote control | — |
+| Q-K housekeeping write budget | **No budget by default; measure** (writes, token counts). An editor agent may be cheap enough not to need one; change sizes vary, so a sensible budget may be unreasonably large and would be overridden. A configured cap stays possible. The stale-stub window stays open (§12.3) | G-W10, §6.11 |
 
 ---
 
@@ -1813,4 +1822,5 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | §6.6: ultracode (the `Workflow` tool) has standing approval, no per-request opt-in, when used to keep the session's context and tokens down; shape, not permission (added 2026-10-09, after v0.5; context-engine DEC-17) | owner |
 | **P16: every programmatic process has a ritual-based fallback** (business continuity); the fallback is a runbook section, and using one is an event to fix and note (added 2026-10-09, after v0.5; context-engine DEC-20) | owner |
 | §6.6: no `fable` subagents unless asked for or really necessary; never fan out with fable; when necessary, minimize cost (added 2026-10-09; context-engine DEC-18) | owner |
+| §12.5: Q-F, Q-G, Q-H defaults accepted; Q-J deferred as a generated answer-in-place question file; G-W10 measures instead of capping by default; rollback-and-close added as an open item (added 2026-10-09; context-engine DEC-21, US-13) | owner |
 | §6.12: this document is updated as we build; archive to `FRAMEWORK-v<version>.md` only what the future must reference, else change in place; the after-action review is noted as an open first idea (added 2026-10-09; context-engine DEC-19, US-12) | owner |

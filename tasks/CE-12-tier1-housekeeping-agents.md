@@ -9,7 +9,7 @@ deps: [CE-6]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08a
+updated: 2026-10-09e
 closed:
 ---
 
@@ -18,3 +18,5 @@ reading: commits into task comments, foreign-commit reconciliation, unrecorded o
 (reported, never written).
 
 ## Log
+
+- 2026-10-09e (claude-code/claude-opus-5-5): Q-K answered (DEC-21, 2026-10-09): no write budget by default; measure writes and token counts per run instead. A configured cap stays optional (G-W10).
