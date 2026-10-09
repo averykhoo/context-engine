@@ -5,7 +5,9 @@
 in the gitignored `PycharmProjects/.scratch/context-framework/` while the goal was to
 understand the existing repos; it moved here, with its drafts, source notes and reviews, when
 building started (owner, 2026-10-08). v0.1 and v0.4 are kept beside it as `FRAMEWORK-v0.1.md`
-and `FRAMEWORK-v0.4.md`; `A-zanzibar.md` to `D-light-and-global.md` are the v0.1 source notes.
+and `FRAMEWORK-v0.4.md`. The v0.1 source notes (`A-zanzibar.md` to `D-light-and-global.md`)
+and the v0.2 reviews (`review/`) surveyed the owner's other repos; since 2026-10-09 they are
+kept outside this repo and are not in its history. Citations of them below are kept as written.
 
 **v0.5 adds the record engine** (§8.0): one tool owns every component that is a set of id'd
 records (tasks, owner questions, batons, pause blocks, ledger entries, decisions, stories,

@@ -83,7 +83,7 @@ mode = "replaced; a change gets a row in its §13"
 [[routes]]
 component = "Frozen provenance"
 path = "docs/framework"
-pattern = "FRAMEWORK-v0.*.md, A-*.md to D-*.md, review/"
+pattern = "FRAMEWORK-v0.*.md"
 mode = "never edited"
 
 [[routes]]
