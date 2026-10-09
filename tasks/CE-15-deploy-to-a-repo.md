@@ -9,7 +9,7 @@ deps: [CE-8]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-08f
-updated: 2026-10-09b
+updated: 2026-10-09c
 closed:
 ---
 
@@ -33,3 +33,4 @@ than move (§11.4). Feeds CE-7 and CE-11.
 ## Log
 
 - 2026-10-09b (claude-code/claude-opus-5-5): DEC-16 (FRAMEWORK §6.6, several tasks -> one subagent each, top level only reports) must ship in the deployed contract text, so every framework repo gets it.
+- 2026-10-09c (claude-code/claude-opus-5-5): DEC-17 (ultracode has standing approval when used to minimize token/context consumption) is now FRAMEWORK §6.6 'Ultracode'; the deployed contract text must carry it, like DEC-16.

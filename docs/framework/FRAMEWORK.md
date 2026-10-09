@@ -1013,6 +1013,12 @@ keeps every id, so `D-157 §5` citations survive; `decisions.md#anchor` links br
 - `Explore` cannot persist;
 - agents audit; the session decides.
 
+**Ultracode** (owner, DEC-17): a workflow (the `Workflow` tool, multi-agent orchestration) needs
+no per-request opt-in when it keeps the session's own context and tokens down: bulky reading,
+auditing or verification pushed into agents, only verdicts kept.
+- The test is shape, not permission: a real fan-out with a reconcile step;
+- not a cheap lookup, and not coupled work split up to go "faster".
+
 **Several tasks in one session** (owner, DEC-16): when one request asks for more than one task,
 - each task goes to its own subagent, which owns it end to end and can persist (not `Explore`);
 - that task agent pushes the work down again, to its own subagents or a workflow (ultracode);
@@ -1751,3 +1757,4 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF.
 | Layout, minimum set and add-when-needed updated; trial plan (§8.0.3); open questions Q-H to Q-K and a to-verify list | agent design |
 | Q-I answered: `correct` only inserts `[bracketed]` text, re-stamps and logs; the typed words always survive; meaning changes are amendments (§6.5; context-engine DEC-13) | owner |
 | **P15: design for an agent that starts with no context**; names the principle behind P4, P5, P9, P10, P12 and the run ledger (added 2026-10-08, after v0.5; context-engine DEC-12) | owner |
+| §6.6: ultracode (the `Workflow` tool) has standing approval, no per-request opt-in, when used to keep the session's context and tokens down; shape, not permission (added 2026-10-09, after v0.5; context-engine DEC-17) | owner |
