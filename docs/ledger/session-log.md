@@ -7,9 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-09c · kind: open
+## 2026-10-09c · kind: close
 
-- **opened:** 2026-10-09T13:28:45+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-15 (comment: DEC-17 ships in the deployed contract)
+- **receipts:**
+  - guards: gate 123 passed (2026-10-09c)
+  - read: CE-15, CE-11, FRAMEWORK §6.6 §6.9 §8.0 §11, DEC-1
+- **summary** (the owner digest):
+  - Owner rule DEC-17: ultracode has standing approval when it keeps the session's tokens down;
+    FRAMEWORK §6.6 and §13.
+  - History rewritten (owner): the survey notes and reviews moved out of the repo; every commit SHA
+    changed; force-pushed main.
+  - Rewrite verified by four independent read-only agents (blobs, metadata, equivalence, residue):
+    clean.
+  - Answered: how another repo adopts the engine, versioned and upgradable (feeds CE-15; not yet
+    written into CE-15).
+- **Still owed:**
+  - Design draft for CE-15 (versioned install, managed contract blocks, upgrade command) not yet
+    recorded
 
 ---
 

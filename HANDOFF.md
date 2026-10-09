@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-09b)
+## Banner (2026-10-09c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -18,7 +18,12 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
   `context.toml`.
 - **Several tasks in one request → one subagent per task; the top level only reports**
-  (DEC-16, 2026-10-09b; FRAMEWORK §6.6, `CLAUDE.md` § Rules). A framework rule: CE-15 ships it.
+  (DEC-16, 2026-10-09b; FRAMEWORK §6.6, `CLAUDE.md` § Rules). **Ultracode has standing
+  approval when it keeps the session's tokens down** (DEC-17, 2026-10-09c; FRAMEWORK §6.6).
+  Both are framework rules: CE-15 ships them.
+- **History was rewritten on 2026-10-09c** (the survey notes and reviews moved out of the repo;
+  `FRAMEWORK.md` says so). Every commit SHA changed. A checkout made before it must
+  `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
 - **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19), named per
   DEC-15. NEXT: CE-4, CE-15 (deploy path), CE-16. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
