@@ -7,6 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-09f · kind: close
+
+- **rows:** CE-20, CE-3
+- **receipts:**
+  - guards: pytest 131 passed (includes lint)
+  - read: board only + audit reports + FRAMEWORK diff
+  - asked: none
+- **summary** (the owner digest):
+  - Audited FRAMEWORK.md against the engine and records (two read-only auditors, 49 findings, sample
+    re-checked first-hand).
+  - Consistency pass applied in place: operation naming rule (lib dotted, CLI noun verb, MCP
+    underscores), actors, id prefixes, ledger not a record kind, batons in docs/working, G-R1 and
+    schema guards catalogued, §6.9 moved.
+  - Where the engine lags the design, dated Built-so-far notes instead of rewriting intent; G-D0
+    version schemes open in §12.3.
+  - CE-20 filed: engine accepts task close ASK-n. CE-3 comment: pyproject pins mcp>=1.2 vs SDK 2.x.
+- **Still owed:**
+  - session-log.md preamble still says keys are minted by hand (stale since CE-2)
+  - Session: commit trailer (FRAMEWORK §6.10) not required by CLAUDE.md; only 2 of 25 commits carry
+    it; owner call
+
+---
+
 ## 2026-10-09e · kind: close
 
 - **rows:** DEC-21, US-13, CE-18, CE-19, CE-12
