@@ -7,6 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-10b · kind: close
+
+- **rows:** CE-23
+- **receipts:**
+  - guards: pytest -q: 139 passed; lint clean (2026-10-10)
+  - read: FRAMEWORK P15, P16, 5.2, 7.4; the DfS Regulations PDF; the DfM excerpt
+- **summary** (the owner digest):
+  - Owner story US-14 recorded verbatim: adopt design for safety (Singapore DfS Regulations 2015)
+    and BCA design for maintainability (F.A.M.E.).
+  - FRAMEWORK P17 (hierarchy of controls: eliminate, reduce at source, collective, individual;
+    residual risks; handover) and P18 (F.A.M.E., BCA text plus meaning here).
+  - Task Design review above a threshold (5.2) and invariants as the residual-risk register (7.4)
+    designed; build filed as CE-23 at NEXT.
+- **Still owed:**
+  - session-log header still says keys are minted by hand (carried from 2026-10-09f)
+
+---
+
 ## 2026-10-10a · kind: close
 
 - **rows:** CE-10, CE-21, CE-22

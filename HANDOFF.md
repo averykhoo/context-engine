@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-10a)
+## Banner (2026-10-10b)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -42,6 +42,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   agent commit (DEC-22, `CLAUDE.md` § Rules). The engine's major.minor is the framework version
   (DEC-23): package `0.5.0.dev0`, contract `framework: 0.5`; G-D0 build is CE-21. Any session
   closes a baton with evidence (DEC-24). CE-22: engine commits need the trailer too.
+- **Design for safety and maintainability, 2026-10-10b (US-14):** FRAMEWORK P17 (hierarchy of
+  controls: eliminate, reduce at source, collective guard, individual rule last; residual risks
+  to a register that travels with the work) and P18 (BCA's F.A.M.E.). Use them at a project's
+  design stage, and re-derive intent from them when a process breaks. Build is CE-23 (NEXT).
 
 ## Open batons and pause blocks
 

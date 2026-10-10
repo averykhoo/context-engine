@@ -273,6 +273,80 @@ business continuity"*; context-engine DEC-20).
 - A refusal with a sensible remedy is not a failure of the process (§8.0); the fallback is for
   an error, or for a refusal the process should not have made.
 
+**P17. Design for safety: foresee whom a design can hurt, and remove the risk before relying on
+anyone to avoid it** (owner, 2026-10-10, context-engine US-14). Adapted from Singapore's
+Workplace Safety and Health (Design for Safety) Regulations 2015 (S 428/2015).
+- **The source principles**, paraphrased so the intent can be re-derived if a process here
+  breaks:
+  - every foreseeable design risk is eliminated, as far as reasonably practicable (regs. 4(1),
+    9(1));
+  - a risk that cannot be eliminated is reduced as low as reasonably practicable, **at its
+    source**, and **collective protective measures come before individual ones** (regs. 4(2),
+    9(2));
+  - risks are found in design reviews with everyone who designs and builds the work (reg. 6);
+  - a **register** of the reviews and of every **residual risk** (one not reasonably
+    practicable to eliminate) is kept up to date, open to everyone working on the project,
+    and **handed to whoever next takes the structure over** (regs. 7, 11);
+  - whoever builds and notices a foreseeable risk reports it (reg. 10(1)); designers and
+    builders are given the information they need, and the designer passes on what is needed
+    to build and maintain the work (regs. 5(3), 9(3)).
+- **Here:** the *structure* is the engine, a record kind, a guard, a ritual or a repo layout.
+  The *affected persons* are the session building it, the next session with no context (P15),
+  the owner, a human using plain git (§6.10), and every repo the engine is deployed to.
+  *Harm* is lost work in a shared checkout, a false green, owner words lost or altered, a git
+  operation that destroys work, or a rule that silently stops applying. The *life* of the
+  structure is build, operate, maintain, and roll back or remove (US-13).
+- **Hierarchy of controls**, strongest first:
+  1. **eliminate:** the design cannot produce the harm (no operation that can do it, a format
+     that cannot express it);
+  2. **reduce at source:** the operation refuses the harmful write as it is made (P7);
+  3. **collective:** a guard in the gate or the lint, which protects every session and every
+     human at once;
+  4. **individual:** a rule in a contract or runbook that each reader must remember. This is
+     the last resort, and choosing it puts an entry in the register saying why the stronger
+     controls were not practicable.
+
+  The global rule "prefer a mechanical refusal over a doc warning" is this ladder. Example: the
+  `Session:` commit trailer, as a written rule, held on 2 of 25 commits (counted 2026-10-09);
+  CE-22 moves it up the ladder.
+- **Residual risks go to the register** (§7.4), which travels with the work: from a closed task
+  into the repo, and from the engine into every repo it is deployed to (§11).
+- **Where it happens:** the design review of a task (§5.2) and a project's architectural design
+  stage (§10). Like the regulation, which applies only to projects of S$10 million or more, the
+  review has a threshold (§5.2), so small work carries no ceremony (P8).
+
+**P18. Design for maintainability: F.A.M.E.** (owner, 2026-10-10, context-engine US-14).
+Adopted from the Singapore Building and Construction Authority's Design for Maintainability
+(DfM), which integrates maintenance experience into design to make maintenance easy, safe and
+economical over the whole life of the work. Its four principles, as BCA states them, then what
+each means here:
+- **F, Forecast maintenance:** *"Designers should understand the impact of their designs and
+  the expected downstream maintenance works, thereby making necessary upstream design
+  provisions."* Here: for each new component, say what will need doing to it later, who does it
+  (a session, housekeeping, the owner), how often, and what makes it stale; make the provision
+  now (a housekeeping operation, a guard, a `stale_after`).
+- **A, Access for maintenance:** *"Designers should give due considerations for all areas
+  requiring access for inspection and maintenance, thereby making necessary design
+  provisions."* Here: every record is readable and fixable without the engine (G5, §6.10), and
+  every process has a fallback done by hand (P16). Nothing is reachable only through a server,
+  a cache or a model.
+- **M, Minimise maintenance interventions:** *"Designers should give adequate attention to
+  materials performance and detailing to minimise common and critical defects."* Here: choose
+  the forms that do not drift: one home per statement (P1), derived numbers generated (P5),
+  schemas and write-time refusals (P7), owner words append-only with a hash (§3).
+- **E, Enable simple maintenance:** *"Designers should consciously consider standardisation
+  and prefabricated components to facilitate easy inspection and productive maintenance."*
+  Here: one engine and one record format across every repo (§0.2), one name per operation
+  across library, CLI and MCP, and one runbook section per process.
+
+BCA turns F.A.M.E. into five design considerations: design strategy and collaboration, access
+for maintenance, materials and finishes, design and detailing, and integrating technology.
+
+**Use:** walk F.A.M.E. and P17 as a checklist at a project's architectural design stage (a new
+repo, §10, or a new engine subsystem) and in a task's design review (§5.2). **When a process
+here breaks or a rule is unclear, re-derive the intent from P17 and P18** and fix the process
+from them, not from the broken process.
+
 ---
 
 ## 2. The components at a glance
@@ -634,6 +708,14 @@ by an item count.
 - `brief`: ≤120 characters, **a constraint, not a summary**;
 - body: summary, `## Traps`, and `## Read first`, whose pointers are lint-resolved with a
   floor; and `## Log`, which `comment` and `close` append to and which is never replaced.
+- **`## Design review`** (P17, P18; owner, 2026-10-10, US-14), required before a task above the
+  threshold is promoted to NOW. It names the affected persons; lists each foreseeable risk as
+  *eliminated*, *reduced (how, at which rung of the P17 ladder)* or *residual*; and answers
+  F.A.M.E. in one line each. **Threshold:** the task adds a record kind, a guard, an operation
+  that writes or commits, a git operation that can lose work, a long-lived process, or anything
+  shipped to other repos. Other tasks skip it. On close, the residual risks move to the register
+  (§7.4). *Not built yet (2026-10-10): the section, the promotion refusal and the move on close
+  are CE-23.*
 
 zanzibar's trial found sessions still read the note "ten times out of eleven" until the tree
 carried these sections (`docs/tasktool-trial-protocol.md`, 2026-08-30).
@@ -1275,11 +1357,20 @@ havent really thought through this so just write it down first"*).
 - Archive headings act as the index (audio-workspace `docs/archive/HANDOFF_ARCHIVE.md`,
   `## Pruned from HANDOFF.md on <date>`).
 
-### 7.4 Invariants vs unverified hazards
+### 7.4 Invariants (the residual-risk register) vs unverified hazards
 
 - **Invariants:** durable, load-bearing traps. They change only when the code does
   (audio-workspace `docs/invariants.md`). LIVING, part of the rules layer. They carry
   `stale_after` only if they are about something external.
+- **The invariants are the residual-risk register** (P17; owner, 2026-10-10, US-14). Each entry
+  says what the risk is and whom it affects, why it was not eliminated, which control holds it
+  (the P17 rung, and the guard or rule by name), and where it came from (task, decision or
+  incident). Entries arrive from a task's design review when it closes (§5.2), and from any
+  session that notices a risk and confirms it (an unverified hazard, once confirmed, below).
+- **The register is handed over with the work:** the engine's own register ships with it to
+  every repo it is deployed to (§11, CE-15), as the regulation hands the register to whoever
+  next takes the structure over. *Not built yet (2026-10-10): this repo has no register file;
+  CE-23.*
 - **Unverified hazards:** volatile suspicions ("do NOT fix blind"). They live in the note or on
   the board. When resolved, they either become an invariant, a fix plus a ledger line, or are
   dismissed with a ledger line.
@@ -1816,6 +1907,12 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF. Bu
 | `Session:` line in commits | **A trailer on every agent commit; the task id leads the title**, one task per commit; small tasks may be done together and committed per task (DEC-22) | §6.10 |
 | Who closes a baton | **Any session, by `baton done` with evidence** (DEC-24) | §5.5 rule 3 |
 
+### 12.7 Owner direction, 2026-10-10 (context-engine US-14)
+
+Design for safety and design for maintainability are adopted as P17 and P18, with the source
+principles and BCA's F.A.M.E. stated in full so the intent can be re-derived; the task design
+review and the residual-risk register (§5.2, §7.4) are designed and filed as CE-23.
+
 ---
 
 ## 13. Changes from v0.1, and where they came from
@@ -1900,3 +1997,4 @@ hashing, because a Windows checkout with `core.autocrlf` rewrites LF as CRLF. Bu
 | §6.12: this document is updated as we build; archive to `FRAMEWORK-v<version>.md` only what the future must reference, else change in place; the after-action review is noted as an open first idea (added 2026-10-09; context-engine DEC-19, US-12) | owner |
 | Consistency pass against the built engine and records (2026-10-09): one naming rule for operations (library dotted, CLI `context-engine <noun> <verb>`, MCP underscores) and real names in place of `story.record`, `decision.new`, `find`; id prefixes are per-repo config; `actor: owner` in a single-owner repo; task, question and story schemas, amendment format, baton and pause closing, `docs/working/` and op log in the layout; ledger entries not a record kind; G-R1 and the record schema check named, G-D11/G-W4 split; §6.9 moved before §6.10; §6.3 records the practised close order; dated notes where the engine lags the design (engine commits, `task close ASK-n`, G-D0 versions) | agent audit; DEC-1, DEC-2, DEC-14, DEC-15, US-10, US-11 |
 | §12.6, G-D0, §6.10: the engine's major.minor is the framework version (no `-draft`); one task per commit with its id in the title and a `Session:` trailer; any session closes a baton with evidence (added 2026-10-10; context-engine DEC-22 to DEC-24) | owner; agent recommendation |
+| P17 design for safety (hierarchy of controls, residual risks, handover) and P18 design for maintainability (F.A.M.E.); task `## Design review` above a threshold; invariants become the residual-risk register (added 2026-10-10; context-engine US-14, CE-23) | owner; Singapore DfS Regulations 2015; BCA DfM |
