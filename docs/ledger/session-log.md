@@ -7,6 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-10d · kind: close
+
+- **rows:** none
+- **receipts:**
+  - guards: pytest -q: 180 passed
+  - read: CLAUDE.md, .mcp.json, .claude/settings.json, manual-mode.md head
+  - asked: none
+- **summary** (the owner digest):
+  - Owner asked why the MCP server needs CE_PYTHON; recorded DEC-25: if the MCP tools are missing,
+    set the server up, fall back to the CLI, ask the owner to restart
+  - Tested headless (claude -p haiku): settings.local.json env does NOT reach .mcp.json expansion
+    (TOOL_MISSING); env var set: TOOL_OK; local-scope claude mcp add with CE_PYTHON unset: TOOL_OK
+  - Registered the server at local scope on the owner's machine; CLAUDE.md Environment and manual-
+    mode.md 'When the MCP tools are missing' carry the instruction
+  - AAR: test where a setting actually lands before writing it into a ritual; the plausible option
+    (settings env) failed
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-10c · kind: close
 
 - **rows:** CE-3 (closed), CE-4 (promoted to NOW)

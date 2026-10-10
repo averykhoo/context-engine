@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-10c)
+## Banner (2026-10-10d)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -15,9 +15,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   `lint`, `routes`, and decisions and stories (`record new|stamp|amend`). AC-1 to AC-19 and
   AC-21 to AC-25 `tested`.
 - **The MCP server is built (CE-3, 2026-10-10c):** `mcp__context-engine__<group>_<verb>`, one
-  tool per operation in `ops.OPS`, the same function the CLI calls. `.mcp.json` needs
-  `CE_PYTHON` set to the engine's interpreter (`CLAUDE.md` § Environment); **not yet set on
-  the owner's machine**, so interactive sessions still use the CLI. Call `session_start` first.
+  tool per operation in `ops.OPS`, the same function the CLI calls. **Set up on the owner's
+  machine 2026-10-10d** by a local-scope `claude mcp add` (DEC-25); live from the next Claude
+  Code start. Missing tools at session start: register it, use the CLI, ask the owner to
+  restart (`CLAUDE.md` § Environment). Call `session_start` first.
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
