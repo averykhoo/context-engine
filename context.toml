@@ -72,6 +72,7 @@ decision = "decision"
 baton = "baton"
 pause = "pause"
 orient_max_bytes = 6000                  # provenance: DEC-14
+read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
 
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
 # with `context-engine routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.

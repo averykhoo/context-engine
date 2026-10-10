@@ -29,6 +29,11 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 - **`context-engine` below means `<interpreter> -m context_engine`** (the `context-engine` script is not on PATH). Set
   `CE_ACTOR=claude-code/<model-id>` and `CE_SESSION=<key>` in every command: shell state does
   not persist between tool calls.
+- **The MCP server** (CE-3) carries the same operations as `mcp__context-engine__<group>_<verb>`
+  tools (`session_start`, `task_list`, ...); `.mcp.json` starts it with `${CE_PYTHON}`, which
+  must be set to the interpreter above in the environment Claude Code starts from. Call
+  `session_start(actor=...)` first: the server remembers the key and actor, and a subagent
+  passes its own `actor`. Where the tools are missing, the CLI is the fallback.
 
 ## Gate
 

@@ -1,4 +1,4 @@
-"""The command line: one subcommand per operation in ``working.Engine`` (FRAMEWORK §8.0.2).
+"""The command line: one subcommand per operation in ``ops.OPS`` (FRAMEWORK §8.0.2, AC-18).
 
 ``context-engine [--root DIR] [--session KEY] [--actor ACTOR] <group> <op> ...``. The session key and the
 actor may also come from ``CE_SESSION`` and ``CE_ACTOR``. A refusal prints its remedy to stderr
@@ -12,6 +12,7 @@ import os
 import sys
 from pathlib import Path
 
+from . import ops
 from .errors import Refusal
 from .working import Engine
 
@@ -157,95 +158,49 @@ def build() -> argparse.ArgumentParser:
     return ap
 
 
+# (group, verb) -> the operation in ``ops.OPS``. The CLI spells `context-engine <group> <verb>`.
+CLI_OPS = {
+    ("session", "start"): "session_start",
+    ("session", "close"): "session_close",
+    ("session", "pause"): "session_pause",
+    ("orient", None): "orient",
+    ("routes", None): "routes",
+    ("lint", None): "lint",
+    **{("task", v): f"task_{v}" for v in ("new", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
+    **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer")},
+    ("baton", "add"): "baton_add",
+    ("baton", "done"): "baton_done",
+    ("baton", "expire"): "hk_expire_batons",
+    ("pause", "open"): "pause_open",
+    ("pause", "resume"): "pause_resume",
+    ("record", "new"): "record_new",
+    ("record", "stamp"): "record_stamp",
+    ("record", "amend"): "record_amend",
+    ("banner", "show"): "banner_show",
+    ("banner", "set"): "banner_set",
+}
+
+
+def _params(args: argparse.Namespace) -> dict:
+    """Turn the parsed arguments into the operation's parameters (lists, dicts, file bodies)."""
+    a = vars(args)
+    if "set" in a:
+        a["fields"] = _fields(a["set"])
+    for name in ("deps", "add", "remove", "blocks"):
+        if isinstance(a.get(name), str):
+            a[name] = _ids(a[name])
+    if isinstance(a.get("ids"), list):
+        a["ids"] = _ids(" ".join(a["ids"]))
+    if a.get("file") is not None:
+        a["body" if args.group == "record" else "text"] = a["file"].read_text(encoding="utf-8")
+    return a
+
+
 def run(argv: list[str] | None = None) -> tuple[int, str]:
     args = build().parse_args(argv)
-    e = Engine(args.root)
-    kw = {"session": args.session, "actor": args.actor}
-    g, op = args.group, getattr(args, "op", None)
-
-    if g == "session" and op == "start":
-        key = e.session_start(actor=args.actor)
-        return 0, f"session {key} opened (stub written to {e.w.ledger}); pass --session {key} or set CE_SESSION={key}"
-    if g == "session" and op == "close":
-        receipts = {"guards": args.guards, "read": args.read, "asked": args.asked}
-        return 0, e.session_close(args.session, actor=args.actor, rows=args.rows, summary=args.summary, receipts=receipts, owed=args.owed)
-    if g == "session":
-        return 0, e.session_pause(args.session, actor=args.actor, rows=args.rows, deferred=args.deferred)
-    if g == "orient":
-        return 0, e.orient(args.session).rstrip("\n")
-    if g == "routes":
-        return 0, e.routes()
-    if g == "lint":
-        failures = e.lint_working() if args.working else e.lint()
-        return (1 if failures else 0), "\n".join(map(str, failures)) or "lint: clean"
-
-    if g == "task":
-        if op == "new":
-            rec = e.new(args.kind, args.title, pri=args.pri, brief=args.brief, deps=_ids(args.deps), body=args.body, **kw)
-            return 0, f"{rec.id}: created at {args.pri} ({rec.path.relative_to(e.root).as_posix()})"
-        if op == "set":
-            return 0, e.set(args.id, _fields(args.set), unset=tuple(args.unset), mechanical=args.mechanical, **kw)
-        if op == "promote":
-            return 0, e.promote(args.id, args.pri, **kw)
-        if op == "dep":
-            return 0, e.dep(args.id, add=_ids(args.add), remove=_ids(args.remove), **kw)
-        if op == "comment":
-            return 0, e.comment(args.id, args.text, mechanical=args.mechanical, **kw)
-        if op == "touch":
-            return 0, e.touch(args.id, mechanical=args.mechanical, **kw)
-        if op == "close":
-            return 0, e.close(args.id, args.msg, **kw)
-        if op == "reopen":
-            return 0, e.reopen(args.id, args.msg, **kw)
-        if op == "section":
-            return 0, e.section(args.id, args.name, args.text, **kw)
-        if op == "list":
-            rows = e.list(state=None if args.state == "all" else args.state, pri=args.pri, label=args.label)
-            return 0, "\n".join(rows) or "no matching items"
-        if op == "show":
-            return 0, e.show(args.id, section=args.section, head=args.head).rstrip("\n")
-
-    if g == "ask":
-        if op == "new":
-            rec = e.ask_new(args.title, pri=args.pri, brief=args.brief, body=args.body, blocks=_ids(args.blocks), **kw)
-            return 0, f"{rec.id}: question created at {args.pri}; raise it in chat this session"
-        if op == "raised":
-            return 0, e.ask_raised(_ids(" ".join(args.ids)), **kw)
-        if op == "later":
-            return 0, e.ask_later(args.id, **kw)
-        if op == "answer":
-            return 0, e.ask_answer(args.id, args.words, title=args.title, **kw)
-
-    if g == "baton":
-        if op == "add":
-            return 0, e.baton_add(args.step, args.why, **kw)
-        if op == "done":
-            return 0, e.baton_done(args.id, args.evidence, **kw)
-        return 0, e.expire_batons(session=args.session, actor=args.actor or "process:housekeep")
-
-    if g == "pause":
-        if op == "open":
-            return 0, e.pause_open(args.in_flight, args.resume, evidence=args.evidence, deferred=args.deferred, **kw)
-        return 0, e.pause_resume(args.id, **kw)
-
-    if g == "record":
-        if op == "new":
-            text = args.body if args.body is not None else args.file.read_text(encoding="utf-8")
-            rec = e.record_new(args.kind, args.title, text, _fields(args.set), **kw)
-            return 0, f"{rec.id}: created and stamped ({rec.path.relative_to(e.root).as_posix()})"
-        if op == "stamp":
-            return 0, e.stamp(_ids(" ".join(args.ids)), **kw)
-        return 0, e.amend(args.id, args.text, **kw)
-
-    if g == "banner":
-        if op == "show":
-            b = e.banner()
-            if b is None:
-                return 0, f"no note at {e.w.handoff}"
-            return 0, f"banner {b.key} hash {b.sha}\n\n{b.text}"
-        text = args.text if args.text is not None else args.file.read_text(encoding="utf-8")
-        return 0, e.banner_set(text, args.seen, **kw)
-    raise AssertionError(f"unhandled {g} {op}")
+    o = ops.OPS[CLI_OPS[(args.group, getattr(args, "op", None))]]
+    a = _params(args)
+    return o.fn(Engine(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
 
 
 def main(argv: list[str] | None = None) -> int:

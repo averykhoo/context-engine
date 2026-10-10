@@ -42,8 +42,8 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-18 | Every MCP tool calls the same function as its CLI subcommand; there is one implementation per operation | US-4 | planned |
-| AC-19 | Every write tool returns one line; every read tool returns a capped slice with a pointer to the rest | US-1 | planned |
+| AC-18 | Every MCP tool calls the same function as its CLI subcommand; there is one implementation per operation | US-4 | tested |
+| AC-19 | Every write tool returns one line; every read tool returns a capped slice with a pointer to the rest | US-1 | tested |
 | AC-20 | `hk.close` refuses unless the named commit really carries `Closes: <id>` or the session's ledger entry names the item (G-W9) | US-3 | planned |
 
 ## Manual mode (CE-8)

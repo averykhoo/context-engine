@@ -48,6 +48,7 @@ class Working:
     baton: str = ""
     pause: str = ""
     orient_max_bytes: int = 6000
+    read_max_bytes: int = 6000  # every other MCP read (AC-19)
     caps: dict[str, int] = field(default_factory=lambda: {"NOW": 1, "NEXT": 5})
     ask_overdue_sessions: int = 5  # FRAMEWORK §5.3 (owner, 2026-10-07)
     ask_overdue_days: int = 7

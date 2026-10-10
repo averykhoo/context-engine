@@ -8,7 +8,7 @@ version = "0.5.0.dev0"
 description = "Record engine for agent-built repos: OKF records, a per-session MCP server, housekeeping and lints"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.2",
+    "mcp>=2.3,<3",  # SDK 2.x: mcp.server.mcpserver.MCPServer (DEC-8)
     "ruamel.yaml>=0.18",
 ]
 

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "context-engine": {
+      "command": "${CE_PYTHON}",
+      "args": ["-m", "context_engine.mcp"]
+    }
+  }
+}

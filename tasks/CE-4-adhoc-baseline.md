@@ -3,13 +3,13 @@ type: Task
 id: CE-4
 title: "Measure adhoc's session start and close cost today, before any cutover"
 brief: "Read-only in adhoc, which may have a live session. Write the rubric down before measuring"
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
-updated: 2026-10-08a
+moved: 2026-10-10c
+updated: 2026-10-10c
 closed:
 ---
 

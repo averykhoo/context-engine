@@ -1447,7 +1447,7 @@ by hand survives the next tool write.
 | Entry point | For | Notes |
 |---|---|---|
 | **CLI** | humans, Bash, the gate | `context-engine` (built, CE-1/CE-2); zanzibar `task.py` was the model (DEC-2) |
-| **MCP server** | agents | a thin wrapper: each MCP tool calls the function its CLI subcommand calls |
+| **MCP server** | agents | a thin wrapper: each MCP tool calls the function its CLI subcommand calls (built, CE-3: `python -m context_engine.mcp`; both look the operation up in `ops.OPS`) |
 | **Housekeeping script** | the gate, hooks, §6.11 tier 0 | no model; actor `process:housekeep` |
 
 **The MCP server is local and per session; nothing has to be run by hand.** It uses the
@@ -1511,8 +1511,8 @@ Following §5.2's adopt-by-trial rule. **Build first:** the engine's own task op
 generalised from zanzibar's `task.py` (DEC-2), then the MCP wrapper (CE-3); `orient`;
 `session.start` / `close` / `pause`; baton and pause records; the tier-0 housekeeping script.
 *Built by 2026-10-09: the CLI with the task, ask, session, orient, baton, pause, banner and
-record operations, and `baton expire` (CE-1, CE-2, CE-8); not yet the MCP wrapper or the rest of
-tier 0.* **Pre-registered rubric:** context spent on session start and
+record operations, and `baton expire` (CE-1, CE-2, CE-8). Built 2026-10-10: the MCP wrapper
+(CE-3), one tool per operation; not yet the rest of tier 0.* **Pre-registered rubric:** context spent on session start and
 clean close against the same rituals done by hand (the `read:` receipt is the existing
 measure), plus collisions or lost blocks across two concurrent sessions. Decisions as records
 follow once the core holds.
@@ -1998,3 +1998,4 @@ review and the residual-risk register (§5.2, §7.4) are designed and filed as C
 | Consistency pass against the built engine and records (2026-10-09): one naming rule for operations (library dotted, CLI `context-engine <noun> <verb>`, MCP underscores) and real names in place of `story.record`, `decision.new`, `find`; id prefixes are per-repo config; `actor: owner` in a single-owner repo; task, question and story schemas, amendment format, baton and pause closing, `docs/working/` and op log in the layout; ledger entries not a record kind; G-R1 and the record schema check named, G-D11/G-W4 split; §6.9 moved before §6.10; §6.3 records the practised close order; dated notes where the engine lags the design (engine commits, `task close ASK-n`, G-D0 versions) | agent audit; DEC-1, DEC-2, DEC-14, DEC-15, US-10, US-11 |
 | §12.6, G-D0, §6.10: the engine's major.minor is the framework version (no `-draft`); one task per commit with its id in the title and a `Session:` trailer; any session closes a baton with evidence (added 2026-10-10; context-engine DEC-22 to DEC-24) | owner; agent recommendation |
 | P17 design for safety (hierarchy of controls, residual risks, handover) and P18 design for maintainability (F.A.M.E.); task `## Design review` above a threshold; invariants become the residual-risk register (added 2026-10-10; context-engine US-14, CE-23) | owner; Singapore DfS Regulations 2015; BCA DfM |
+| §8.0.2 built: the MCP server (CE-3). One function per operation in `ops.OPS`, called by the CLI and by the server; the server remembers the caller from `session_start` (a tool may pass its own `session`/`actor`, so a subagent names itself); reads over `read_max_bytes` are cut at a line with a pointer; a refusal reaches the agent as a tool error with its remedy. VERIFIED 2026-10-10 headless with a control: Claude Code started it from `.mcp.json` via `${CE_PYTHON}` and the agent got `routes` (unset: tool unavailable). MCP itself allows dots in tool names (SDK 2.3 `TOOL_NAME_REGEX`); underscores stay (DEC-15) | agent; CE-3 |
