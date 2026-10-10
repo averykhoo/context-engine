@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-10d)
+## Banner (2026-10-11a)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -16,9 +16,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   AC-21 to AC-25 `tested`.
 - **The MCP server is built (CE-3, 2026-10-10c):** `mcp__context-engine__<group>_<verb>`, one
   tool per operation in `ops.OPS`, the same function the CLI calls. **Set up on the owner's
-  machine 2026-10-10d** by a local-scope `claude mcp add` (DEC-25); live from the next Claude
-  Code start. Missing tools at session start: register it, use the CLI, ask the owner to
-  restart (`CLAUDE.md` § Environment). Call `session_start` first.
+  machine 2026-10-10d** by a local-scope `claude mcp add` (DEC-25); live since then (used for
+  session 2026-10-11a). Missing tools at session start: register it, use the CLI, ask the owner
+  to restart (`CLAUDE.md` § Environment). Call `session_start` first.
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
@@ -30,8 +30,11 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **History was rewritten on 2026-10-09c** (the survey notes and reviews moved out of the repo;
   `FRAMEWORK.md` says so). Every commit SHA changed. A checkout made before it must
   `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
-- **NOW is CE-4** (measure adhoc's session start and close cost, promoted 2026-10-10c when CE-3
-  closed). NEXT: CE-15 (deploy path), CE-16, CE-23. CE-7 waits on CE-4 and CE-5.
+- **NOW is CE-15** (deploy path), promoted 2026-10-11a when CE-4 closed. NEXT: CE-16, CE-23.
+  **The adhoc baseline is done (CE-4):** `docs/evidence/adhoc-baseline-2026-10-11.md`, rubric
+  fixed before the numbers: start 48,540 B required (CLAUDE.md + HANDOFF.md, adhoc `3e3f442`),
+  close W-read 48,540 B, W-write median 3,352 B, no concurrency incidents; bytes only. CE-7 is
+  scored against it and now waits only on CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** FRAMEWORK §12.3 was answered 2026-10-09e (DEC-21, §12.5): no
   housekeeping write budget by default, measure instead. New owner story US-13: rollback and

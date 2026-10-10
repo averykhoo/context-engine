@@ -7,6 +7,32 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-11a · kind: close
+
+- **rows:** CE-4, CE-15
+- **receipts:**
+  - guards: pytest -q: 180 passed (lint included)
+  - read: board + CE-4 note + FRAMEWORK §6.1, §6.3, §8.0.3 + DEC-6; adhoc via subagent
+  - asked: none
+- **summary** (the owner digest):
+  - CE-4 closed: adhoc baseline in docs/evidence/adhoc-baseline-2026-10-11.md (adhoc 3e3f442),
+    rubric written before the numbers.
+  - Session start S = 48,540 B (CLAUDE.md 16,553 + HANDOFF.md 31,987); 78,519 B with today's top
+    item's reading list. HANDOFF grew 13% since 2026-10-08.
+  - Clean close: W-read 48,540 B every close (114,715 with a decision); W-write median 3,352 B,
+    range 1,016-38,816 over 10 write-back commits; 6+2 hand steps.
+  - Concurrency incidents recorded in adhoc: none. Bytes only: no tokenizer or API key on this
+    machine.
+  - Better (for CE-7) = start at least 25% lower, close no higher, no new collisions, no fallback
+    reads of the old HANDOFF.
+  - CE-15 promoted to NOW (top of NEXT), since NOW must hold one.
+  - Delegation: haiku for the clean-tree check, sonnet for the measurement; key numbers re-run
+    first-hand, one sum caught and fixed.
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-10d · kind: close
 
 - **rows:** none

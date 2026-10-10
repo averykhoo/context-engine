@@ -3,13 +3,13 @@ type: Task
 id: CE-15
 title: "Deploy path: how any repo gets the system, as text Claude Code manages"
 brief: "Bootstrap (§6.9) and adoption (§11) after dogfooding here; no server the owner starts (anti-goal, DEC-10)"
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-8]
 source: session 2026-10-08b
 created: 2026-10-08
-moved: 2026-10-08f
-updated: 2026-10-09c
+moved: 2026-10-11a
+updated: 2026-10-11a
 closed:
 ---
 
