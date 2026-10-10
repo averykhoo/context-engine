@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-11a)
+## Banner (2026-10-11b)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -32,9 +32,11 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
 - **NOW is CE-15** (deploy path), promoted 2026-10-11a when CE-4 closed. NEXT: CE-16, CE-23.
   **The adhoc baseline is done (CE-4):** `docs/evidence/adhoc-baseline-2026-10-11.md`, rubric
-  fixed before the numbers: start 48,540 B required (CLAUDE.md + HANDOFF.md, adhoc `3e3f442`),
-  close W-read 48,540 B, W-write median 3,352 B, no concurrency incidents; bytes only. CE-7 is
-  scored against it and now waits only on CE-5.
+  fixed before the numbers: start 48,540 B required (CLAUDE.md + HANDOFF.md, adhoc `3e3f442`;
+  14,095 tiktoken / 15,745 Gemma proxy tokens), close W-read the same, W-write median 3,352 B,
+  no concurrency incidents. `tools/count_context.py` regenerates bytes and both proxies (not
+  Claude's tokenizer; that needs the API and a key). CE-7 is scored against it and now waits
+  only on CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** FRAMEWORK §12.3 was answered 2026-10-09e (DEC-21, §12.5): no
   housekeeping write budget by default, measure instead. New owner story US-13: rollback and

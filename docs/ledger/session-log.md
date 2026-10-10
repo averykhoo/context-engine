@@ -7,6 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-11b · kind: close
+
+- **rows:** CE-4
+- **receipts:**
+  - guards: pytest -q: 180 passed (lint included)
+  - read: CE-4 evidence doc (own, this conversation); tools/sabotage_ce1.py header for conventions
+  - asked: none
+- **summary** (the owner digest):
+  - Owner asked for a tokenizer: tiktoken 0.14.0 installed into the engine env (o200k_base,
+    OpenAI's; a proxy, not Claude's).
+  - CE-4 baseline gains proxy tokens (§3): S = 14,095 (24,225 with the top item's reading list);
+    W-read 14,095 per close, 32,064 with a decision.
+  - tools/count_context.py regenerates bytes, lines and proxy tokens at a commit, read-only via git
+    show.
+  - Bytes per token spans 2.8 to 5.0 across adhoc's docs, so CE-7 reports both; thresholds stay on
+    bytes.
+  - Exact Claude counts need the token-counting API and a key, which this machine lacks.
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-11a · kind: close
 
 - **rows:** CE-4, CE-15
