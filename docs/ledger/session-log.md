@@ -7,6 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-10c · kind: close
+
+- **rows:** CE-3 (closed), CE-4 (promoted to NOW)
+- **receipts:**
+  - guards: gate green, 179 passed (2026-10-10c); lint clean; tools/sabotage_ce3.py all red
+  - read: orient, CE-3, FRAMEWORK 8.0-8.0.3, spike/FINDINGS.md, cli.py, working.py (parts), MCP SDK
+    source
+- **summary** (the owner digest):
+  - CE-3 done: MCP server, one tool per operation in ops.OPS; the CLI now calls the same functions
+    (AC-18)
+  - Writes one line, reads capped at read_max_bytes=6000 with a pointer (AC-19); AC-18 and AC-19
+    tested, 11 sabotage rows red
+  - Dogfood VERIFIED headless via .mcp.json + CE_PYTHON, with control; CE_PYTHON is not yet set on
+    the owner's machine
+  - Agent decision: no SessionStart hook for orient (5195 bytes); session_start must come first
+    anyway
+  - Agent decision: CE-4 promoted to NOW (first NEXT in the banner); push back if another should
+    lead
+  - AAR: a PowerShell Set-Content rewrite left a BOM and CRLF in a test file; edit with the Edit
+    tool, not shell rewrites
+- **Still owed:**
+  - Owner: set CE_PYTHON (user env var) so interactive sessions get the MCP tools
+
+---
+
 ## 2026-10-10b · kind: close
 
 - **rows:** CE-23

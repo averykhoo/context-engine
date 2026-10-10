@@ -3,16 +3,21 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-10b)
+## Banner (2026-10-10c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
   the first piece. **Since 2026-10-08f it runs this repo's own records** (CE-8, DEC-7 amended).
 - **The command is `context-engine`** (DEC-15, 2026-10-09a; `ce` before). Older records keep
   `ce`. The MCP server will carry the same name, with underscored tool names.
-- **State:** CE-1 (core), CE-2 (working state) and CE-8 (adoption) are done. The CLI runs
-  sessions, the board, questions, batons, pauses, the banner, `orient`, `lint`, `routes`, and
-  decisions and stories (`record new|stamp|amend`). AC-1 to AC-17 and AC-21 to AC-25 `tested`.
+- **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption) and CE-3 (MCP server) are
+  done. The CLI runs sessions, the board, questions, batons, pauses, the banner, `orient`,
+  `lint`, `routes`, and decisions and stories (`record new|stamp|amend`). AC-1 to AC-19 and
+  AC-21 to AC-25 `tested`.
+- **The MCP server is built (CE-3, 2026-10-10c):** `mcp__context-engine__<group>_<verb>`, one
+  tool per operation in `ops.OPS`, the same function the CLI calls. `.mcp.json` needs
+  `CE_PYTHON` set to the engine's interpreter (`CLAUDE.md` § Environment); **not yet set on
+  the owner's machine**, so interactive sessions still use the CLI. Call `session_start` first.
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
@@ -24,8 +29,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **History was rewritten on 2026-10-09c** (the survey notes and reviews moved out of the repo;
   `FRAMEWORK.md` says so). Every commit SHA changed. A checkout made before it must
   `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
-- **NOW is CE-3**: the MCP server over the same `Engine` functions (AC-18, AC-19), named per
-  DEC-15. NEXT: CE-4, CE-15 (deploy path), CE-16. CE-7 waits on CE-4 and CE-5.
+- **NOW is CE-4** (measure adhoc's session start and close cost, promoted 2026-10-10c when CE-3
+  closed). NEXT: CE-15 (deploy path), CE-16, CE-23. CE-7 waits on CE-4 and CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** FRAMEWORK §12.3 was answered 2026-10-09e (DEC-21, §12.5): no
   housekeeping write budget by default, measure instead. New owner story US-13: rollback and
