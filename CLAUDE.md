@@ -30,10 +30,15 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
   `CE_ACTOR=claude-code/<model-id>` and `CE_SESSION=<key>` in every command: shell state does
   not persist between tool calls.
 - **The MCP server** (CE-3) carries the same operations as `mcp__context-engine__<group>_<verb>`
-  tools (`session_start`, `task_list`, ...); `.mcp.json` starts it with `${CE_PYTHON}`, which
-  must be set to the interpreter above in the environment Claude Code starts from. Call
-  `session_start(actor=...)` first: the server remembers the key and actor, and a subagent
-  passes its own `actor`. Where the tools are missing, the CLI is the fallback.
+  tools (`session_start`, `task_list`, ...). Call `session_start(actor=...)` first: the server
+  remembers the key and actor, and a subagent passes its own `actor`.
+- **If the MCP tools are missing at session start, set the server up, use the CLI for this
+  session, and ask the owner to restart Claude Code** (DEC-25). Set-up is one command, run once
+  per machine: `claude mcp add --scope local context-engine -- <interpreter> -m
+  context_engine.mcp` (stored in `~/.claude.json` for this project; no env var, no new
+  terminal). `.mcp.json`'s `${CE_PYTHON}` also works, but only from the environment Claude Code
+  was started in: an `env` block in `.claude/settings.local.json` does NOT reach it (tested
+  2026-10-10d). Neither takes effect until Claude Code restarts.
 
 ## Gate
 

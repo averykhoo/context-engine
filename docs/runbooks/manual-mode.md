@@ -33,6 +33,22 @@ A guard keeps it whole: `tests/test_runbook.py` fails the gate if any `context-e
 - **Neither is clearly right:** it is a decision. Record it (`DEC-n`), or ask the owner if it
   changes what they asked for.
 
+## When the MCP tools are missing
+
+The MCP server (CE-3) is a thin layer over the same functions the CLI calls, so nothing is lost
+without it (DEC-25):
+
+1. Run every operation as `<interpreter> -m context_engine ...` for the rest of the session.
+2. Register the server once for this machine: `claude mcp add --scope local context-engine --
+   <interpreter> -m context_engine.mcp`. Check it with `claude mcp get context-engine`.
+3. Tell the owner to restart Claude Code; the tools appear at the next start.
+
+**Why:** Claude Code starts MCP servers only when a session launches, so nothing done mid-session
+brings the tools in. The local registration carries the interpreter's absolute path outside the
+repo, so the checked-in `.mcp.json` stays machine-neutral. Its `${CE_PYTHON}` works only if the
+variable was in Claude Code's starting environment; an `env` block in
+`.claude/settings.local.json` reaches the agent's shell but not `.mcp.json` (tested 2026-10-10d).
+
 ## What every write does
 
 These hold for every operation below. The per-operation sections only list what is extra.
