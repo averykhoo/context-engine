@@ -1456,9 +1456,19 @@ interpreter, never the target repo's environment, DEC-1, and the wrapper script)
 opens in the repo and ends it with the session. There are no ports, and each concurrent session
 gets its own process. Claude Code asks once before trusting a server defined by a repo.
 - **The interpreter path is machine-specific** (bare `python` is broken on this laptop; global
-  `CLAUDE.md § Python environments`). Use an environment variable in `.mcp.json` rather than a
-  hard-coded path. VERIFIED 2026-10-08 with a control: `.mcp.json` expands `${VAR}` in
-  `command`, `args` and `env` (`spike/FINDINGS.md` row 1).
+  `CLAUDE.md § Python environments`), so it never goes into a committed file. VERIFIED
+  2026-10-08 with a control: `.mcp.json` expands `${VAR}` in `command`, `args` and `env`
+  (`spike/FINDINGS.md` row 1), but only from the environment Claude Code was started in: an
+  `env` block in `.claude/settings.local.json` reaches the agent's shell, not `.mcp.json`
+  (VERIFIED 2026-10-10d headless, `TOOL_MISSING`). The set-up that works without any variable
+  is a **local-scope registration**, once per machine: `claude mcp add --scope local
+  context-engine -- <interpreter> -m context_engine.mcp`, stored in the user's `~/.claude.json`
+  for that project (VERIFIED 2026-10-10d, `CE_PYTHON` unset: the agent got `routes`).
+- **Missing tools are a set-up step, not a stop** (DEC-25). Claude Code starts MCP servers only
+  at launch, so a session that finds the tools missing registers the server as above, runs every
+  operation through the CLI for the rest of the session (same functions, nothing lost), and
+  asks the owner to restart Claude Code. Fallback text: `manual-mode.md` § When the MCP tools
+  are missing.
 - **A server process is not a framework session.** The process lives as long as the Claude
   Code process (VERIFIED for a session exit: the server was gone after `claude -p` ended), and a
   `/clear` probably leaves it running (UNVERIFIED: not testable headless). So a session begins
@@ -1999,3 +2009,4 @@ review and the residual-risk register (§5.2, §7.4) are designed and filed as C
 | §12.6, G-D0, §6.10: the engine's major.minor is the framework version (no `-draft`); one task per commit with its id in the title and a `Session:` trailer; any session closes a baton with evidence (added 2026-10-10; context-engine DEC-22 to DEC-24) | owner; agent recommendation |
 | P17 design for safety (hierarchy of controls, residual risks, handover) and P18 design for maintainability (F.A.M.E.); task `## Design review` above a threshold; invariants become the residual-risk register (added 2026-10-10; context-engine US-14, CE-23) | owner; Singapore DfS Regulations 2015; BCA DfM |
 | §8.0.2 built: the MCP server (CE-3). One function per operation in `ops.OPS`, called by the CLI and by the server; the server remembers the caller from `session_start` (a tool may pass its own `session`/`actor`, so a subagent names itself); reads over `read_max_bytes` are cut at a line with a pointer; a refusal reaches the agent as a tool error with its remedy. VERIFIED 2026-10-10 headless with a control: Claude Code started it from `.mcp.json` via `${CE_PYTHON}` and the agent got `routes` (unset: tool unavailable). MCP itself allows dots in tool names (SDK 2.3 `TOOL_NAME_REGEX`); underscores stay (DEC-15) | agent; CE-3 |
+| §8.0.2: MCP set-up. A settings `env` block does not reach `.mcp.json`; a local-scope `claude mcp add` with the interpreter's absolute path does, with no variable (both VERIFIED 2026-10-10d headless with a control). A session that finds the tools missing registers the server, uses the CLI, and asks the owner to restart (DEC-25) | owner; agent test |
