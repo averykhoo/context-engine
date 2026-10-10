@@ -4,13 +4,14 @@ id: CE-4
 title: "Measure adhoc's session start and close cost today, before any cutover"
 brief: "Read-only in adhoc, which may have a live session. Write the rubric down before measuring"
 pri: NOW
-state: open
+state: closed
 deps: []
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-10c
-updated: 2026-10-10c
-closed:
+moved: 2026-10-11a
+updated: 2026-10-11a
+closed: 2026-10-11a
+status: deprecated
 ---
 
 The trial's comparison means nothing without a baseline (FRAMEWORK §8.0.3). Measure what a cold
@@ -33,3 +34,5 @@ what counts as better), then the dated numbers, into a tracked evidence doc here
 - adhoc `CLAUDE.md`, and `HANDOFF.md` § "next session: start here"
 
 ## Log
+
+- 2026-10-11a (claude-code/claude-opus-5-5): closed: Baseline in docs/evidence/adhoc-baseline-2026-10-11.md (adhoc 3e3f442): rubric fixed first, then S = 48,540 B (CLAUDE.md + HANDOFF.md), W-read 48,540 B per close, W-write median 3,352 B over 10 commits, C = 0. Bytes only: no tokenizer or API key available.
