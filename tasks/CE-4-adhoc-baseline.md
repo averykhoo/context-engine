@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-11a
-updated: 2026-10-11a
+updated: 2026-10-11b
 closed: 2026-10-11a
 status: deprecated
 ---
@@ -36,3 +36,5 @@ what counts as better), then the dated numbers, into a tracked evidence doc here
 ## Log
 
 - 2026-10-11a (claude-code/claude-opus-5-5): closed: Baseline in docs/evidence/adhoc-baseline-2026-10-11.md (adhoc 3e3f442): rubric fixed first, then S = 48,540 B (CLAUDE.md + HANDOFF.md), W-read 48,540 B per close, W-write median 3,352 B over 10 commits, C = 0. Bytes only: no tokenizer or API key available.
+- 2026-10-11b (claude-code/claude-opus-5-5): Proxy token counts added (owner asked for a tokenizer): tiktoken o200k_base, installed into the engine env; tools/count_context.py regenerates them. S = 14,095 proxy tokens, W-read 14,095. Not Claude's tokenizer; exact counts need the API and a key.
+- 2026-10-11b (claude-code/claude-opus-5-5): Second proxy added at the owner's suggestion: Gemma's tokenizer via vertexai.preview.tokenization (gemini-1.5-pro, local, no key). S = 15,745 gemma tokens (+11.7% on tiktoken). tools/count_context.py prints both.

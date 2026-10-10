@@ -44,6 +44,9 @@ history (HANDOFF, decisions, commit messages), each cited.
   and `tiktoken` not installed, `ANTHROPIC_API_KEY` unset). Bytes are the proxy for context;
   every number below is bytes unless it says otherwise. CE-7 must use the same unit, so any
   token count added later is added to both arms.
+  *Added 2026-10-11b, after the measurements: proxy token counts from two tokenizers (tiktoken
+  `o200k_base` and Gemma's, via Vertex AI; neither is Claude's) are in §3. The thresholds are still judged on bytes; tokens are reported
+  beside them.*
 - A file is counted once per ritual even if two rules point at it.
 
 ### What counts as better (for CE-7)
@@ -152,3 +155,40 @@ adhoc has **no `read:` receipt**, so its sessions do not record what they actual
 numbers above are what the rituals *require*, not what sessions did. CE-7's engine arm will
 have receipts. The comparison has to set required against required, and report receipts on
 the side.
+
+## 3. Proxy token counts (2026-10-11b)
+
+**These are proxies, not Claude's count.** Claude has no local tokenizer release, and an exact
+count needs the token-counting API and a key, which this machine does not have. Two proxies
+give a spread:
+- **tiktoken** 0.14.0, encoding `o200k_base` (OpenAI's);
+- **gemma**: Vertex AI's local tokenizer for `gemini-1.5-pro` (`google-cloud-aiplatform`
+  2.4.0, `vertexai.preview.tokenization`), which is Gemma's sentencepiece model, fetched once
+  without a key. Newer Gemini model names are not supported locally.
+
+Use them to compare the two arms, not as absolute context figures. Regenerate with
+`tools/count_context.py <adhoc> 3e3f442 <paths>`; both packages are installed in the engine
+env, and neither is an engine dependency. Bytes matched §2 exactly.
+
+| path | bytes | tiktoken | gemma | bytes/token (tiktoken) |
+|---|---|---|---|---|
+| `CLAUDE.md` | 16,553 | 4,356 | 4,695 | 3.8 |
+| `HANDOFF.md` | 31,987 | 9,739 | 11,050 | 3.3 |
+| `docs/decisions.md` | 64,175 | 17,969 | 19,582 | 3.6 |
+| `docs/methods.md` | 9,349 | 2,584 | 2,860 | 3.6 |
+| `docs/project-brief.txt` | 5,667 | 1,136 | 1,171 | 5.0 |
+| `docs/archive/README.md` | 1,616 | 488 | 567 | 3.3 |
+| `docs/results/2026-10-06-talker-count.md` | 10,677 | 3,471 | 3,774 | 3.1 |
+| `docs/results/2026-10-07-sep-estimated.md` | 7,905 | 2,657 | 2,942 | 3.0 |
+| `docs/results/2026-10-10-fresh-meeting-scoring.md` | 11,397 | 4,002 | 4,433 | 2.8 |
+| `~/.claude/CLAUDE.md` (global, excluded; read from disk, not a commit) | 24,764 | 6,550 | 6,854 | 3.8 |
+
+The §2 totals (tiktoken / gemma):
+- **S = 14,095 / 15,745** (20,645 / 22,599 with the global file); with today's top item's
+  reading list 24,225 / 26,894; with `decisions.md` as well 42,194 / 46,476.
+- **W-read = 14,095 / 15,745 every close**; 32,064 / 35,327 with a decision; plus 488 / 567
+  at a rotation.
+
+gemma counts 3% to 16% more tokens than tiktoken file by file (11.7% more on S). Bytes per
+token runs from 2.8 to 5.0 across these files (tables and numbers tokenize densely), so bytes
+and tokens can rank two versions of a doc differently. CE-7 reports all three.
