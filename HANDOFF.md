@@ -3,60 +3,51 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-11b)
+## Banner (2026-10-11c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
   the first piece. **Since 2026-10-08f it runs this repo's own records** (CE-8, DEC-7 amended).
-- **The command is `context-engine`** (DEC-15, 2026-10-09a; `ce` before). Older records keep
-  `ce`. The MCP server will carry the same name, with underscored tool names.
+- **FRAMEWORK.md holds the framework only (DEC-26, 2026-10-11c):** a summary and section guide
+  on top, then §0 to §11; no history, prior art, owner Q&A or change log. Change it in place;
+  the why goes in a decision or story. The pre-trim text (with the old §11.3, §12 owner answers
+  and §13 changelog) is frozen in `FRAMEWORK-v0.5.md`; older records citing §12/§13 mean that file.
+- **The command is `context-engine`** (DEC-15; `ce` before). Older records keep `ce`.
 - **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption) and CE-3 (MCP server) are
   done. The CLI runs sessions, the board, questions, batons, pauses, the banner, `orient`,
   `lint`, `routes`, and decisions and stories (`record new|stamp|amend`). AC-1 to AC-19 and
   AC-21 to AC-25 `tested`.
-- **The MCP server is built (CE-3, 2026-10-10c):** `mcp__context-engine__<group>_<verb>`, one
-  tool per operation in `ops.OPS`, the same function the CLI calls. **Set up on the owner's
-  machine 2026-10-10d** by a local-scope `claude mcp add` (DEC-25); live since then (used for
-  session 2026-10-11a). Missing tools at session start: register it, use the CLI, ask the owner
-  to restart (`CLAUDE.md` § Environment). Call `session_start` first.
+- **The MCP server is built (CE-3):** `mcp__context-engine__<group>_<verb>`, one tool per
+  operation in `ops.OPS`, the same function the CLI calls. Set up on the owner's machine by a
+  local-scope `claude mcp add` (DEC-25). Missing tools at session start: register it, use the
+  CLI, ask the owner to restart (`CLAUDE.md` § Environment). Call `session_start` first.
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
   `context.toml`.
 - **Several tasks in one request → one subagent per task; the top level only reports**
-  (DEC-16, 2026-10-09b; FRAMEWORK §6.6, `CLAUDE.md` § Rules). **Ultracode has standing
-  approval when it keeps the session's tokens down** (DEC-17, 2026-10-09c; FRAMEWORK §6.6).
-  Both are framework rules: CE-15 ships them.
-- **History was rewritten on 2026-10-09c** (the survey notes and reviews moved out of the repo;
-  `FRAMEWORK.md` says so). Every commit SHA changed. A checkout made before it must
-  `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
-- **NOW is CE-15** (deploy path), promoted 2026-10-11a when CE-4 closed. NEXT: CE-16, CE-23.
-  **The adhoc baseline is done (CE-4):** `docs/evidence/adhoc-baseline-2026-10-11.md`, rubric
-  fixed before the numbers: start 48,540 B required (CLAUDE.md + HANDOFF.md, adhoc `3e3f442`;
-  14,095 tiktoken / 15,745 Gemma proxy tokens), close W-read the same, W-write median 3,352 B,
-  no concurrency incidents. `tools/count_context.py` regenerates bytes and both proxies (not
-  Claude's tokenizer; that needs the API and a key). CE-7 is scored against it and now waits
-  only on CE-5.
+  (DEC-16; FRAMEWORK §6.6). **Ultracode has standing approval when it keeps the session's
+  tokens down** (DEC-17). Both are framework rules: CE-15 ships them.
+- **History was rewritten on 2026-10-09c** (survey notes and reviews moved out of the repo).
+  A checkout made before it must `git fetch origin && git reset --hard origin/main`; old SHAs
+  quoted in text no longer resolve.
+- **NOW is CE-15** (deploy path). NEXT: CE-16, CE-23. **The adhoc baseline is done (CE-4):**
+  `docs/evidence/adhoc-baseline-2026-10-11.md` (start 48,540 B required; 14,095 tiktoken /
+  15,745 Gemma proxy tokens; close W-write median 3,352 B). `tools/count_context.py`
+  regenerates it. CE-7 is scored against it and waits only on CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
-- **No owner questions are open.** FRAMEWORK §12.3 was answered 2026-10-09e (DEC-21, §12.5): no
-  housekeeping write budget by default, measure instead. New owner story US-13: rollback and
-  close for a session (CE-18, LATER).
-- **FRAMEWORK.md was checked against the built engine on 2026-10-09f** and fixed in place (§13
-  row). Where the engine lags the design it says *Built so far*; gaps filed: CE-20, CE-3 comment.
-- **Owner notes, 2026-10-09d:** no `fable` subagents unless asked or really necessary (DEC-18);
-  keep FRAMEWORK.md current, archive only what the future must reference (DEC-19, §6.12);
+- **No owner questions are open.** Rollback and close (US-13) is FRAMEWORK §6.13, CE-18 LATER.
+- **Owner rules in force:** no `fable` subagents unless asked or really necessary (DEC-18);
   every programmatic process has a ritual fallback (DEC-20, P16); an after-action review per
   session is a first note, not designed (US-12, §6.12). Still owed: AAR design; per-process
   fallback sections in `manual-mode.md`.
-- **Owner answers, 2026-10-10a:** the repo is PUBLIC. **Ask before every push; push only on a
-  green gate.** One task per commit, its id leading the title, a `Session:` trailer on every
-  agent commit (DEC-22, `CLAUDE.md` § Rules). The engine's major.minor is the framework version
-  (DEC-23): package `0.5.0.dev0`, contract `framework: 0.5`; G-D0 build is CE-21. Any session
-  closes a baton with evidence (DEC-24). CE-22: engine commits need the trailer too.
-- **Design for safety and maintainability, 2026-10-10b (US-14):** FRAMEWORK P17 (hierarchy of
-  controls: eliminate, reduce at source, collective guard, individual rule last; residual risks
-  to a register that travels with the work) and P18 (BCA's F.A.M.E.). Use them at a project's
-  design stage, and re-derive intent from them when a process breaks. Build is CE-23 (NEXT).
+- **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
+  its id leading the title, a `Session:` trailer on every agent commit (DEC-22). The engine's
+  major.minor is the framework version (DEC-23); G-D0 build is CE-21. Any session closes a
+  baton with evidence (DEC-24). CE-22: engine commits need the trailer too.
+- **Design for safety and maintainability (US-14):** FRAMEWORK P17 (hierarchy of controls;
+  residual risks to a register that travels with the work) and P18 (F.A.M.E.). Use them at a
+  project's design stage, and re-derive intent from them when a process breaks. Build is CE-23.
 
 ## Open batons and pause blocks
 

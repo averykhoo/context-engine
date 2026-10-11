@@ -7,6 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-11c · kind: close
+
+- **rows:** CE-9 closed; CE-17 commented; DEC-26 new
+- **receipts:**
+  - guards: pytest 181 passed (includes lint)
+  - read: orient + FRAMEWORK.md in full
+  - asked: none
+- **summary** (the owner digest):
+  - DEC-26 (owner): FRAMEWORK.md holds only the framework; history and owner answers archived.
+  - FRAMEWORK-v0.5.md: byte-identical archive of the spec before the trim (frozen).
+  - FRAMEWORK.md: new Summary and per-section guide; origin story, prior art, dated attributions,
+    v0.x markers, §11.3, §12 and §13 removed; section numbers kept; 141 KB to 106 KB.
+  - §12 answers not yet in the body were stated in place; rollback and close is new §6.13 (CE-18).
+  - Spec route mode: changed in place, no change log. CE-9 closed; CE-17 told to change the spec in
+    place.
+  - A sonnet audit against v0.5 found no lost rule; it caught two 'Not built yet' misstatements,
+    fixed.
+  - Push back if: you want build-status notes (*Not built yet*, CE ids) out of FRAMEWORK.md too.
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-11b · kind: close
 
 - **rows:** CE-4
