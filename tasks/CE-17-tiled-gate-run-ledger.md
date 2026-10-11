@@ -9,7 +9,7 @@ deps: [CE-1]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-08b
-updated: 2026-10-08b
+updated: 2026-10-11c
 closed:
 ---
 
@@ -41,3 +41,5 @@ US-10; serves FRAMEWORK P15 (an agent that starts with no context knows what is 
   `scripts/gate_lock.py`, `.gate-runs/`
 
 ## Log
+
+- 2026-10-11c (claude-code/claude-opus-5-5): §13 is retired (DEC-26): make the G-V1 spec change in FRAMEWORK.md in place; the why goes in a decision or story, not a change row.

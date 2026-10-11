@@ -79,7 +79,7 @@ read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orie
 [[routes]]
 component = "Spec"
 path = "docs/framework/FRAMEWORK.md"
-mode = "replaced; a change gets a row in its §13"
+mode = "replaced in place; no change log, the why is in decisions and stories (DEC-26)"
 
 [[routes]]
 component = "Frozen provenance"
