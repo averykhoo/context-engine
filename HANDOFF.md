@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-11c)
+## Banner (2026-10-12a)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -25,22 +25,29 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate: every decision and story is stamped, and the routing table is `[[routes]]` in
   `context.toml`.
+- **One source of truth for rituals (US-15, 2026-10-12a):** FRAMEWORK.md plus the fallback
+  runbook, pasted into a repo, must be all an agent needs. The paste test
+  (`docs/evidence/framework-paste-test-2026-10-12.md`) found day-to-day ops fine, but no
+  by-hand section for any whole ritual, little housekeeping fallback, and ritual order written in
+  three drifting places. **CE-24** builds a rituals runbook (engine command and by-hand step side
+  by side; FRAMEWORK §6 keeps rules, `CLAUDE.md` points); the kit gaps (config schema, install,
+  skeletons, this repo's ids leaking) are on CE-15.
 - **Several tasks in one request → one subagent per task; the top level only reports**
   (DEC-16; FRAMEWORK §6.6). **Ultracode has standing approval when it keeps the session's
   tokens down** (DEC-17). Both are framework rules: CE-15 ships them.
 - **History was rewritten on 2026-10-09c** (survey notes and reviews moved out of the repo).
   A checkout made before it must `git fetch origin && git reset --hard origin/main`; old SHAs
   quoted in text no longer resolve.
-- **NOW is CE-15** (deploy path). NEXT: CE-16, CE-23. **The adhoc baseline is done (CE-4):**
-  `docs/evidence/adhoc-baseline-2026-10-11.md` (start 48,540 B required; 14,095 tiktoken /
-  15,745 Gemma proxy tokens; close W-write median 3,352 B). `tools/count_context.py`
-  regenerates it. CE-7 is scored against it and waits only on CE-5.
+- **NOW is CE-15** (deploy path). NEXT: CE-16, CE-23, CE-24. **The adhoc baseline is done
+  (CE-4):** `docs/evidence/adhoc-baseline-2026-10-11.md` (start 48,540 B required; 14,095
+  tiktoken / 15,745 Gemma proxy tokens; close W-write median 3,352 B).
+  `tools/count_context.py` regenerates it. CE-7 is scored against it and waits only on CE-5.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** Rollback and close (US-13) is FRAMEWORK §6.13, CE-18 LATER.
 - **Owner rules in force:** no `fable` subagents unless asked or really necessary (DEC-18);
   every programmatic process has a ritual fallback (DEC-20, P16); an after-action review per
-  session is a first note, not designed (US-12, §6.12). Still owed: AAR design; per-process
-  fallback sections in `manual-mode.md`.
+  session is a first note, not designed (US-12, §6.12). Still owed: AAR design; the per-ritual
+  fallback sections are now CE-24.
 - **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
   its id leading the title, a `Session:` trailer on every agent commit (DEC-22). The engine's
   major.minor is the framework version (DEC-23); G-D0 build is CE-21. Any session closes a

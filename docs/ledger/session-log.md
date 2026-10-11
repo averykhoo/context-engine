@@ -7,6 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-12a · kind: close
+
+- **rows:** US-15, CE-24, CE-15, CE-22
+- **receipts:**
+  - guards: pytest -q: 183 passed (2026-10-12a, before close)
+  - read: orient + CE-15 + FRAMEWORK §6, §6.11, §7.5, §8.0, §10, §11 + US-11 + charter goals; paste-
+    test agent read FRAMEWORK and manual-mode in full
+- **summary** (the owner digest):
+  - Owner asked if FRAMEWORK.md + manual-mode.md pasted into a repo are enough, and for one source
+    of truth for rituals: recorded as US-15.
+  - Blind-reader paste test: day-to-day ops work with or without Python; bootstrap, whole rituals by
+    hand and housekeeping do not. Evidence: docs/evidence/framework-paste-test-2026-10-12.md.
+  - CE-24 (NEXT): rituals runbook, each ritual's steps in one file with engine command and by-hand
+    step side by side; FRAMEWORK §6 keeps rules, CLAUDE.md points.
+  - Drift fixed: §5.5 key resets on a new day; §6.3 order and CLAUDE.md close carry lint-first and
+    pre-close housekeeping; manual-mode hashes (lowercase, no BOM, banner to EOF).
+  - Kit gaps (context.toml schema, install, skeletons, adopter gate, repo leaks) on CE-15; pause
+    commit trailer on CE-22.
+  - AAR: a blind reader given only the shipped files is a cheap, sharp completeness test; worth
+    repeating for the CE-15 kit.
+- **Still owed:**
+  - CE-24 itself (the rituals runbook) is open
+  - the hash canonicalisation example in manual-mode (extraction and CRLF shown step by step) is not
+    written
+
+---
+
 ## 2026-10-11c · kind: close
 
 - **rows:** CE-9 closed; CE-17 commented; DEC-26 new
