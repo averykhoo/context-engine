@@ -82,12 +82,14 @@ it became.
   backslashes and quotes).
 
 **Clean close** (§6.3), in this order:
-0. Every owner word from this session is recorded.
+0. Every owner word from this session is recorded. Then `context-engine lint`, to see what
+   earlier sessions left red before adding to it (§6.3 step 1).
 1. The board: `context-engine task touch|comment|promote|close|section` on every item this session moved
    (the engine bumps `moved`/`updated` and enforces NOW = 1, NEXT <= 5). `context-engine task list` is the
    board; HANDOFF keeps no copy.
 2. Anything skipped: `context-engine baton add "<step>" --why "<why>"`.
-3. Durable rules come here; method lessons go into a runbook.
+3. Durable rules come here; method lessons go into a runbook. Then pre-close housekeeping
+   (§6.3 step 6a): `context-engine baton expire`.
 4. Gate, then `context-engine session close --rows ... --summary ... (one per line, at most 7) --guards
    "<gate result>" --read "<what was read>" --asked "<ids>" --owed ...`.
 5. The banner: `context-engine banner show`, then `context-engine banner set --seen <hash> --file <banner.md>`. If it

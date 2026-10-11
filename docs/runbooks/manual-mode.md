@@ -116,13 +116,17 @@ then by letter count, then alphabetically, so `z` comes before `aa`.
   `sha256:` + the full hex SHA-256 of those UTF-8 bytes. *Why: it makes "verbatim" checkable.
   Rewriting an owner's words changes the hash (G-D10), and amendments sit below the cut so they
   never break it.*
-- **Banner hash**: take the `## Banner (<key>)` heading line through to the next `## ` heading.
-  Convert to LF and strip leading and trailing `\n` characters. Then `sha256:` + the **first 16** hex
+- **Banner hash**: take the `## Banner (<key>)` heading line through to the next `## ` heading,
+  or to the end of the file if there is none. Convert to LF and strip leading and trailing `\n` characters. Then `sha256:` + the **first 16** hex
   characters. *Why: `banner set` must refuse when another session rewrote the banner since you
   read it (FRAMEWORK §5.5 rule 2).*
 
 By hand: `printf '%s\n' "$text" | sha256sum` (Git Bash), or
 `Get-FileHash -Algorithm SHA256` on a file holding exactly the canonical bytes (PowerShell).
+The hex is **lowercase**: `Get-FileHash` and `certutil -hashfile` print uppercase, so lower it.
+The bytes are UTF-8 **without a BOM**: PowerShell 5.1's `-Encoding utf8` writes one, so write
+the file another way (the Write tool, or `[IO.File]::WriteAllText(path, text)`). *Why: a
+different case or one extra BOM gives a hash that never matches the engine's.*
 
 ---
 

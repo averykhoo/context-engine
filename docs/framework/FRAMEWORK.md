@@ -743,7 +743,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
 ### 5.5 Rules for several writers
 
 1. **Mint the session key at start, under a lock:** `session.start` computes
-   `max(newest ledger key, banner key) + 1 letter` while holding the engine lock, and
+   `max(newest ledger key, banner key) + 1 letter` while holding the engine lock (a newest key
+   from an earlier day gives today's date plus `a`), and
    immediately writes a **`kind: open` ledger stub** that reserves it. Two concurrent sessions
    therefore never share a key. The stubs also make:
    - **live sessions visible:** open stubs are the sessions in flight, and `orient()` lists
@@ -917,9 +918,10 @@ Write the records first, then run the gate, then commit. The steps:
 
 **The order in practice, with the engine:** steps 2–4 and 6 are operations (`session.close`,
 which refuses a malformed receipt; `banner.set`; the board operations; `baton.add`). They run in
-this order: owner words (0); board operations (4); batons (6); durable rules (5); the gate, then
-`session close` with the gate result as its `guards:` receipt (2); the banner (3); lint and the
-gate again, then commit by path (7); the digest (8). The ledger entry comes after the gate
+this order: owner words (0); `lint`, to see what earlier sessions left red (1); board operations
+(4); batons (6); durable rules (5); pre-close housekeeping (6a); the gate, then `session close`
+with the gate result as its `guards:` receipt (2); the banner (3); lint and the gate again, then
+commit by path (7); the digest (8). The ledger entry comes after the gate
 because the close receipt carries the gate result, and after the board operations because
 `rows:` names what they touched.
 
