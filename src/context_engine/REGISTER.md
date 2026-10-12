@@ -55,8 +55,8 @@ risks (FRAMEWORK §10: `docs/invariants.md`).
 ## INV-7: an adopted repo runs an engine whose major.minor no longer matches its committed `framework:` line or kit block
 
 - **affects:** the session adopting a repo, the adopting repo's owner and its plain-git humans, the repo's own environment and files, the next session in that repo with no context, every repo the engine is pointed at
-- **why not eliminated:** G-D0 is not built (CE-21), and the kit marker version in bootstrap.BEGIN is a literal not tied to __version__
-- **control:** individual: the kit README § 4 (Upgrade) steps and the pin in the first ledger summary; CE-21 makes it a lint check
+- **why not eliminated:** the engine is installed outside the repo (DEC-1), so a repo cannot stop its owner running another engine; and the kit marker version in bootstrap.BEGIN is still a literal not tied to __version__
+- **control:** collective: G-D0 (CE-21, working.py::Engine.lint_contract) turns lint red when the contract's `framework:` line or kit-block marker names another major.minor than the installed engine, naming the upgrade remedy; an engine version bump that leaves bootstrap.BEGIN behind fails the engine's own gate, because test_kit.py::test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session lints a fresh init; individual: the kit README § 4 (Upgrade) steps and the pin in the first ledger summary
 - **from:** CE-15, session 2026-10-12b
 
 ## INV-8: adopters pin the engine by a bare commit SHA, because there is no release tag
