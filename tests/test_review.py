@@ -88,8 +88,16 @@ def test_promote_to_now_refuses_a_task_above_the_threshold_without_a_ready_revie
     with pytest.raises(Refusal) as r:
         e.promote(rid, "NOW", **kw(key))
     assert reason in r.value.message
-    assert "task section" in r.value.remedy and "manual-mode.md" in r.value.remedy
+    assert "manual-mode.md" in r.value.remedy
     assert e.store.get(rid).doc.get("pri") == "LATER"  # nothing written
+    command = re.search(r"`task (section .*?)`", r.value.remedy).group(1).replace('"<text>"', '"F: x"')
+    assert main(["--root", str(e.root), "--session", key, "--actor", ACTOR, "task", *_split(command)]) == 0  # the remedy runs as written
+
+
+def _split(command: str) -> list[str]:
+    import shlex
+
+    return shlex.split(command)
 
 
 @pytest.mark.criterion("AC-26")

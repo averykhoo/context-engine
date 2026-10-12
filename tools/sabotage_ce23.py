@@ -18,6 +18,7 @@ R = "src/context_engine/review.py"
 T = "tests/test_review.py"
 S = [
  ("AC-26", W, '            if pri == "NOW" and rec.doc.get("review"):', "            if False:", T + " -k promote_to_now"),
+ ("AC-26", W, '\\"<text>\\"` from the template', '--file <f>` from the template', T + " -k no-section"),
  ("AC-26", W, '        if changes.get("review") is not None:', "        if False:", T + " -k outside_the_configured"),
  ("AC-26", R, "    if section is not None and any(ln.strip() in template", "    if False and any(ln.strip() in template", T + " -k placeholder"),
  ("AC-26", R, '            for k in ("why", "control"):', '            for k in ("why",):', T + " -k residual-without-control"),

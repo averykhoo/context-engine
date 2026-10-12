@@ -263,7 +263,7 @@ class Engine:
                 if probs:
                     raise Refusal(
                         f"{rid} is above the review threshold ({', '.join(map(str, rec.doc.get('review')))}) and its design review is not ready: {'; '.join(probs)}",
-                        f"write it with `task section {rid} \"{R.SECTION}\" --file <f>` from the template in docs/runbooks/manual-mode.md § context-engine task promote",
+                        f"write it with `task section {rid} \"{R.SECTION}\" \"<text>\"` from the template in docs/runbooks/manual-mode.md § context-engine task promote",
                     )
 
         self._board_set(rid, {"pri": pri, "moved": session}, session=session, actor=actor, check=check, op="promote")
@@ -329,7 +329,7 @@ class Engine:
         """Inside the close's lock: append the review's residuals to the register (idempotent)."""
         rv, probs = R.check(rec.doc.body)
         if probs:
-            raise Refusal(f"{rec.id}'s design review is not ready, so its residuals cannot be filed: {'; '.join(probs)}", f"fix `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" --file <f>`, then close")
+            raise Refusal(f"{rec.id}'s design review is not ready, so its residuals cannot be filed: {'; '.join(probs)}", f"fix `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" \"<text>\"`, then close")
         if not rv.residuals:
             return []
         if not self.w.register:
