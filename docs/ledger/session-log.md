@@ -7,6 +7,34 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-12d · kind: close
+
+- **rows:** CE-24,CE-5,CE-14,CE-10,CE-31,CE-32,CE-33,CE-34,CE-35,CE-27
+- **receipts:**
+  - guards: gate 346 passed (2026-10-12d, top level); lint clean
+  - read: orient; workflow result (13 agents); G-D10 and link probes re-run
+- **summary** (the owner digest):
+  - Owner asked for every NOW and NEXT item done by workflow (ultracode): one sequential run, build
+    -> adversarial review -> fix per task, 13 agents
+  - Batons: BTN-1 (INV-7 names G-D0) and BTN-2 (refuse reopening an answered ASK, filed CE-31)
+    closed
+  - CE-24 closed: docs/runbooks/rituals.md holds every ritual's order; runbooks de-leaked and
+    shipped in the kit (AC-36, AC-37, INV-13)
+  - CE-5 closed: record correct, decision supersede/link/find/show/import, why, generated index;
+    G-D6, G-D10 (AC-38..42, INV-14, INV-15); CE-32 filed
+  - CE-14 closed: guards.py with G-D1/D2/D3/D7/D8/D9/T3/W7 and [guards] switches (AC-43..51,
+    INV-16..20); G-D4/D5 split to CE-33, G-T5 to CE-34, CE-35 filed
+  - CE-10 built but open (NOW): .github/workflows/gate.yml; closing needs a push and a watched CI
+    run (BTN-3)
+  - AAR: reviewer per task paid off: it found real defects in all four (G-D10 laundering, unchecked
+    link ids, G-T3 skipping code: links, CI fallback missing); top level re-ran the G-D10 and link
+    probes first-hand
+- **Still owed:**
+  - BTN-3: push + CI watch + close CE-10; NEXT is empty, owner to pick (candidates CE-7, CE-25,
+    CE-30)
+
+---
+
 ## 2026-10-12c · kind: close
 
 - **rows:** CE-22, CE-20, CE-21 closed; CE-5, CE-14, CE-10 to NEXT; CE-19, CE-13 closed as not
