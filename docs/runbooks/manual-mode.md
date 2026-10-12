@@ -546,6 +546,8 @@ open. Set `state: done`, `done: <key>`, `evidence: <text>`.
 
 ### context-engine baton expire
 
+Over MCP this is the tool `mcp__context-engine__hk_expire_batons`, not `baton_expire`.
+
 Housekeeping: actor `process:housekeep` unless the caller gives one. For every open baton or
 pause from a session with 2 or more closes/pauses after it:
 1. new task at LATER, titled `Expired <id>: <title>` (cut to 120 characters), `source: <id>`,

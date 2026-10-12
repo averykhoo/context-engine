@@ -20,13 +20,18 @@ def _subparsers(parser: argparse.ArgumentParser) -> dict[str, argparse.ArgumentP
     return {}
 
 
-def cli_operations() -> list[str]:
-    """Every `context-engine <group> [<op>]` the CLI accepts, read from the parser itself."""
-    ops = []
+def cli_parsers() -> dict[str, argparse.ArgumentParser]:
+    """Every `context-engine <group> [<op>]` the CLI accepts -> its parser, read from the parser
+    itself."""
+    out = {}
     for group, gp in _subparsers(build()).items():
         subs = _subparsers(gp)
-        ops += [f"context-engine {group} {op}" for op in subs] if subs else [f"context-engine {group}"]
-    return ops
+        out |= {f"context-engine {group} {op}": sp for op, sp in subs.items()} if subs else {f"context-engine {group}": gp}
+    return out
+
+
+def cli_operations() -> list[str]:
+    return list(cli_parsers())
 
 
 def runbook_sections() -> dict[str, str]:
@@ -137,7 +142,8 @@ def test_every_framework_ritual_has_a_rituals_section():
 
 @pytest.mark.criterion("AC-36")
 def test_every_ritual_step_names_an_existing_operation_and_its_by_hand_section():
-    ops = sorted(cli_operations(), key=len, reverse=True)
+    parsers = cli_parsers()
+    ops = sorted(parsers, key=len, reverse=True)
     anchors = {slug(h) for h in re.findall(r"^#{2,3} (.*)$", _text(RUNBOOK), flags=re.MULTILINE)}
     have = rituals()
     for name, (_, body) in have.items():
@@ -153,6 +159,9 @@ def test_every_ritual_step_names_an_existing_operation_and_its_by_hand_section()
             for span in re.findall(r"`(context-engine [^`]*)`", engine):
                 op = next((o for o in ops if span == o or span.startswith(o + " ")), None)
                 assert op, f"{where}: `{span}` is not an engine operation"
+                flags = re.findall(r"(?<![^\s])(--?[A-Za-z][\w-]*)", span[len(op) :])
+                stale = [f for f in flags if f not in parsers[op]._option_string_actions]
+                assert stale == [], f"{where}: `{op}` has no option {stale}"
                 named.append(op)
                 anchor = slug(op)
                 assert f"manual-mode.md#{anchor})" in by_hand, f"{where}: names `{op}` but its By hand does not link manual-mode.md#{anchor}"
@@ -177,3 +186,19 @@ def test_every_framework_step_a_ritual_cites_exists():
             lo, _, hi = label.partition("–")
             want = [str(i) for i in range(int(lo), int(hi) + 1)] if hi else [lo]
             assert set(want) <= items, f"§ {name} step {label}: FRAMEWORK §{cited[0]} has items {sorted(items)}"
+
+
+@pytest.mark.criterion("AC-36")
+def test_rituals_runbook_names_every_mcp_tool_its_naming_rule_misses():
+    """rituals.md says the MCP tool for `context-engine <group> <verb>` is `<group>_<verb>`: every
+    operation that breaks that rule must be named there, or an MCP-only agent looks for a tool
+    that does not exist."""
+    from context_engine import ops
+    from context_engine.cli import CLI_OPS
+
+    text = _text(RITUALS)
+    assert set(CLI_OPS.values()) <= set(ops.OPS), "a CLI verb maps to no operation, so to no MCP tool"
+    odd = {k: v for k, v in CLI_OPS.items() if v != "_".join(p for p in k if p)}
+    assert odd, "the walk found no exception: has CLI_OPS changed shape?"
+    unnamed = [f"{' '.join(p for p in k if p)} -> {v}" for k, v in odd.items() if f"mcp__context-engine__{v}" not in text]
+    assert unnamed == [], f"{RITUALS.name} does not name these MCP tools: {unnamed}"
