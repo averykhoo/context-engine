@@ -669,4 +669,6 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
 
 **Why:** a new repo should get every file the rituals expect in one step, and an existing repo
 must not lose a byte of what it has: it maps its components onto the routes instead of moving
-them (FRAMEWORK §11.4).
+them (FRAMEWORK §11.4). The engine also refuses a file that appears while it runs (it creates
+each one only if it is still absent) and a `CLAUDE.md` that changed since it read it; by hand,
+`git status` before committing shows the same.

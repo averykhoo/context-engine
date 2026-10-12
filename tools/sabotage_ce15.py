@@ -21,7 +21,7 @@ S = [
     ("no-overwrite", BS, "        elif (root / dst).exists():\n            skipped.append(dst)", "        elif False:\n            skipped.append(dst)", T + " -k never_overwrites"),
     ("no-overwrite", BS, 'ANY_BEGIN = re.compile(r"<!-- context-engine kit (\\S+) begin -->")', 'ANY_BEGIN = re.compile(r"<!-- never (\\S+) -->")', T + " -k never_overwrites"),
     ("crlf-kept", BS, 'add.replace("\\n", "\\r\\n") if "\\r\\n" in old else add', "add", T + " -k never_overwrites"),
-    ("dry-run", BS, "    if not dry_run:\n        for rel", "    if True:\n        for rel", T + " -k dry_run"),
+    ("dry-run", BS, "    if not dry_run:\n        done: list", "    if True:\n        done: list", T + " -k dry_run"),
     ("config-loads", BS, "        cfg = _existing_config(root, prefixes)\n", "        cfg = C.from_dict(tomllib.loads(text))\n", T + " -k does_not_load"),
     ("prefix-own-kind", BS, "text, n = section.subn(lambda m: f'{m.group(1)}\"{prefix}\"', text, count=1)", "text, n = re.subn(r'^prefix = \"[^\"]*\"', f'prefix = \"{prefix}\"', text, count=1, flags=re.MULTILINE)", T + " -k prefix_override"),
     ("schema", KIT + "context.toml.template", "lock_timeout = 30.0 ", "# lock_timeout = 30.0 ", T + " -k names_every_key"),
@@ -63,6 +63,10 @@ S = [
     ("g-w1-none", WK, "                if b is None:  # a session closed", "                if False:  # a session closed", T + " -k g_w1"),
     ("contract-orient", KIT + "contract.md", "then `context-engine orient`.", "then read the board.", T + " -k marked_and_pins"),
     ("banner-show", "src/context_engine/ops.py", 'return 0, f"banner none hash {L.NO_BANNER}', 'return 0, f"no banner ({L.NO_BANNER})', T + " -k first_banner"),
+    # init refuses a file created mid-run (design review residual narrowed, 2026-10-12b)
+    ("create-x", BS, '        mode = "x"  # create only', '        mode = "w"  # create only', T + " -k created_after_its_plan"),
+    ("claude-recheck", BS, "        if now != seen[rel]:\n", "        if False:\n", T + " -k edited_after_its_plan"),
+    ("claude-seen", BS, "            seen[CONTRACT_TARGET] = old\n", "", T + " -k edited_after_its_plan"),
 ]
 ok = True
 for name, f, old, new, sel in S:

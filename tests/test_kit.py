@@ -55,8 +55,40 @@ def test_init_dry_run_writes_nothing(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
+def _plan_then(monkeypatch, act):
+    """Run ``act`` after init's plan and before its writes: another writer in that window."""
+    real = B.plan
+
+    def plan(root, prefixes=None):
+        out = real(root, prefixes)
+        act(Path(root))
+        return out
+
+    monkeypatch.setattr(B, "plan", plan)
+
+
 @pytest.mark.criterion("AC-31")
-@pytest.mark.parametrize("old,sep", [("rules", "\n\n"), ("rules\n", "\n"), ("rules\n\n", ""), ("", "")])
+def test_init_refuses_a_file_created_after_its_plan_and_leaves_it_as_it_is(tmp_path, monkeypatch):
+    theirs = b"# their charter, written mid-run\n"
+    _plan_then(monkeypatch, lambda root: (root / "docs").mkdir() or (root / "docs" / "charter.md").write_bytes(theirs))
+    with pytest.raises(Refusal, match=r"docs/charter.md appeared while init ran") as e:
+        B.init(tmp_path)
+    assert (tmp_path / "docs" / "charter.md").read_bytes() == theirs
+    assert "run init again" in e.value.remedy
+
+
+@pytest.mark.criterion("AC-31")
+def test_init_refuses_a_claude_md_edited_after_its_plan_and_leaves_the_edit(tmp_path, monkeypatch):
+    (tmp_path / "CLAUDE.md").write_bytes(b"# Ours\n")
+    edited = b"# Ours\n\nan edit made while init ran\n"
+    _plan_then(monkeypatch, lambda root: (root / "CLAUDE.md").write_bytes(edited))
+    with pytest.raises(Refusal, match=r"CLAUDE.md changed while init ran"):
+        B.init(tmp_path)
+    assert (tmp_path / "CLAUDE.md").read_bytes() == edited
+
+
+@pytest.mark.criterion("AC-31")
+@pytest.mark.parametrize("old,sep",[("rules", "\n\n"), ("rules\n", "\n"), ("rules\n\n", ""), ("", "")])
 def test_the_contract_block_starts_on_its_own_line_after_a_blank_one(tmp_path, old, sep):
     (tmp_path / "CLAUDE.md").write_bytes(old.encode())
     B.init(tmp_path)

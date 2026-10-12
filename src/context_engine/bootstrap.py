@@ -88,8 +88,9 @@ def _used(rel: str, uses: set[str]) -> bool:
     return any(u == rel or u.startswith(rel + "/") or rel.startswith(u + "/") for u in uses)
 
 
-def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, str], list[str], list[str]]:
-    """(path -> text to write, created, skipped). ``CLAUDE.md``'s text is the whole new file.
+def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, str], list[str], list[str], dict[str, str]]:
+    """(path -> text to write, created, skipped, seen). ``CLAUDE.md``'s text is the whole new
+    file, and ``seen`` holds the text it was planned from; every other write is a new file.
 
     A ``context.toml`` already present is kept, once it loads, and a skeleton or directory is then
     written only where that config points: a repo that mapped a component elsewhere (§11.4) does
@@ -97,6 +98,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, 
     root = Path(root)
     writes: dict[str, str] = {}
     skipped: list[str] = []
+    seen: dict[str, str] = {}
     text = config_text(prefixes)
     if (root / C.CONFIG_NAME).exists():
         cfg = _existing_config(root, prefixes)
@@ -128,6 +130,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, 
             sep = "" if not norm or norm.endswith("\n\n") else ("\n" if norm.endswith("\n") else "\n\n")
             add = sep + block
             writes[CONTRACT_TARGET] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
+            seen[CONTRACT_TARGET] = old
     for d in KEEP:
         if not _used(d, uses):
             skipped.append(f"{d}/ (not in {C.CONFIG_NAME})")
@@ -142,7 +145,28 @@ def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, 
             skipped.append(f"{d}/.gitignore")
         else:
             writes[f"{d}/.gitignore"] = "*\n"
-    return writes, list(writes), skipped
+    return writes, list(writes), skipped, seen
+
+
+def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str]) -> None:
+    """Create ``rel``, refusing if it appeared after the plan; or, for the one file the plan read
+    (``CLAUDE.md``), rewrite it only if it still holds the text the plan read."""
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    so_far = f"created so far: {', '.join(done) or 'none'}; run init again, it skips what exists"
+    if rel in seen:
+        now = path.read_bytes().decode("utf-8") if path.exists() else None
+        if now != seen[rel]:
+            raise Refusal(f"{rel} changed while init ran, so the contract block was not appended", so_far)
+        mode = "w"
+    else:
+        mode = "x"  # create only: a file that appeared after the plan is refused, never overwritten
+    try:
+        with open(path, mode, encoding="utf-8", newline="") as f:
+            f.write(text)
+    except FileExistsError:
+        raise Refusal(f"{rel} appeared while init ran, so it was left as it is", so_far) from None
+    done.append(rel)
 
 
 def init(root: Path | str, prefixes: dict[str, str] | None = None, dry_run: bool = False) -> str:
@@ -150,13 +174,11 @@ def init(root: Path | str, prefixes: dict[str, str] | None = None, dry_run: bool
     root = Path(root)
     if not root.is_dir():
         raise Refusal(f"{root} is not a directory", "pass the repo root with --root")
-    writes, created, skipped = plan(root, prefixes)
+    writes, created, skipped, seen = plan(root, prefixes)
     if not dry_run:
+        done: list[str] = []
         for rel, text in writes.items():
-            path = root / rel
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding="utf-8", newline="") as f:
-                f.write(text)
+            _write(root, rel, text, seen, done)
     verb = "would create" if dry_run else "created"
     head = "init (dry run)" if dry_run else "init"
     nxt = "" if dry_run or not created else "; next: fill docs/charter.md with the owner, register the MCP server, run lint"
