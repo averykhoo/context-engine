@@ -106,17 +106,40 @@ def _known(table: str, got: dict, allowed) -> None:
         raise Refusal(f"{table} has unknown key {extra[0]!r}", f"use only {', '.join(allowed)} (the kit's context.toml.template is the schema)")
 
 
+def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> None:
+    """Refuse a value of the wrong TOML type, so `orient_max_bytes = "big"` is a red too."""
+    for key, want in spec.items():
+        if key not in got:
+            continue
+        v = got[key]
+        ok = isinstance(v, want) and not (isinstance(v, bool) and bool not in (want if isinstance(want, tuple) else (want,)))
+        if ok and want is list:
+            ok = all(isinstance(x, str) for x in v)
+        if not ok:
+            names = " or ".join(t.__name__ for t in (want if isinstance(want, tuple) else (want,)))
+            raise Refusal(f"{table} `{key}` is {type(v).__name__} {v!r}, not {names}", "fix its type (the kit's context.toml.template shows each)")
+
+
+TOP_KEYS = ("engine", "kinds", "working", "routes")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout")
+ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float)}
 KIND_KEYS = tuple(f for f in Kind.__dataclass_fields__ if f != "name")
+KIND_TYPES = {"type": str, "prefix": str, "dir": str, "mode": str, "required": list, "enums": dict, "extra_dirs": list, "types": dict}
+_PY = {str: str, int: int, tuple: list, dict: dict}
+WORKING_TYPES = {f: _PY[type(getattr(Working(), f))] for f in Working.__dataclass_fields__}
+ROUTE_TYPES = {f: (bool if f == "optional" else str) for f in Route.__dataclass_fields__}
 
 
 def from_dict(raw: dict) -> Config:
+    _known("the top level", raw, TOP_KEYS)
     engine = raw.get("engine", {})
     _known("[engine]", engine, ENGINE_KEYS)
+    _typed("[engine]", engine, ENGINE_TYPES)
     kinds = {}
     prefixes = set()
     for name, k in raw.get("kinds", {}).items():
         _known(f"[kinds.{name}]", k, KIND_KEYS)
+        _typed(f"[kinds.{name}]", k, KIND_TYPES)
         mode = k.get("mode")
         if mode not in CHANGE_MODES:
             raise Refusal(
@@ -147,10 +170,16 @@ def from_dict(raw: dict) -> Config:
         )
     w = raw.get("working", {})
     _known("[working]", w, Working.__dataclass_fields__)
+    _typed("[working]", w, WORKING_TYPES)
     named = [w[r] for r in ("task", "question", "decision", "baton", "pause") if w.get(r)] + list(w.get("board", ()))
     for name in named:
         if name not in kinds:
             raise Refusal(f"[working] names kind {name!r}, which is not declared", f"declare [kinds.{name}] or fix [working]")
+    caps = w.get("caps", {})
+    tiers = sorted({p for n in w.get("board", ()) for p in kinds[n].enums.get("pri", ())})
+    if tiers:  # a cap names a board tier, so a typo (`NEXTT`) is a red, not an uncapped tier
+        _known("[working.caps]", caps, tiers)
+    _typed("[working.caps]", caps, {t: int for t in caps})
     working = Working(
         **{k: (tuple(v) if k in ("board", "review_triggers") else v) for k, v in w.items() if k in Working.__dataclass_fields__ and k != "caps"},
         caps={**Working().caps, **w.get("caps", {})},
@@ -163,6 +192,7 @@ def from_dict(raw: dict) -> Config:
         extra = set(r) - set(Route.__dataclass_fields__)
         if extra:
             raise Refusal(f"route {n} has unknown key {sorted(extra)[0]!r}", f"use only {', '.join(Route.__dataclass_fields__)}")
+        _typed(f"route {n}", r, ROUTE_TYPES)
         routes.append(Route(**r))
     return Config(
         kinds=kinds,
@@ -179,4 +209,4 @@ def load(root: Path) -> Config:
     path = Path(root) / CONFIG_NAME
     if not path.exists():
         raise Refusal(f"no {CONFIG_NAME} at {root}", f"create {CONFIG_NAME} declaring the repo's record kinds")
-    return from_dict(tomllib.loads(path.read_text(encoding="utf-8")))
+    return from_dict(tomllib.loads(path.read_text(encoding="utf-8-sig")))  # an editor's BOM is not a config error

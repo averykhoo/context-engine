@@ -16,15 +16,15 @@ are `[kinds.*]` there too.
   `<engine-python>` below is that environment's interpreter. `context-engine` means
   `<engine-python> -m context_engine`, run from this repo's root, with `CE_ACTOR=<harness>/<model>`
   and `CE_SESSION=<key>` set in every command (shell state does not persist between tool calls).
-- **The MCP server** carries the same operations as `mcp__context-engine__<group>_<verb>` tools.
-  Claude Code starts it per session over stdio; nothing is run by hand. Call
-  `session_start(actor=...)` first: the server remembers the key and actor.
-- **Set-up, once per machine:** `claude mcp add --scope local context-engine -- <engine-python> -m
-  context_engine.mcp` (stored in `~/.claude.json` for this project, never committed: the path is
-  machine-specific). `claude mcp get context-engine` prints the interpreter it was given.
-- **If the MCP tools are missing at session start,** register the server as above, run every
-  operation through the CLI for the rest of the session (same functions, nothing lost), and ask
-  the owner to restart Claude Code.
+- **The MCP server is optional** (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
+  reports); the CLI carries every operation. Where it is registered, it carries the same
+  operations as `mcp__context-engine__<group>_<verb>` tools, and Claude Code starts it per
+  session over stdio; nothing is run by hand. Call `session_start(actor=...)` first: the server
+  remembers the key and actor.
+- **To register it, once per machine:** `claude mcp add --scope local context-engine --
+  <engine-python> -m context_engine.mcp` (stored in `~/.claude.json` for this project, never
+  committed: the path is machine-specific), then ask the owner to restart Claude Code. Until the
+  restart, use the CLI (same functions, nothing lost).
 
 ### Gate
 
@@ -35,10 +35,17 @@ to a stamped record, a broken record or a dead route.
 
 ### Rituals
 
-Session start, intake, clean close and pause are FRAMEWORK §6.1 to §6.4, each step a
-`context-engine` operation. When the engine errors or refuses something it should allow, do that
-step by hand from the manual-mode runbook (`docs/runbooks/manual-mode.md`, here or in the
-engine repo at the pinned ref), then report the engine bug. A refusal with a sensible remedy is not an error: follow the remedy.
+**Session start:** `context-engine session start` (it prints the key; use it as `CE_SESSION`),
+then `context-engine orient`. Do the batons and pauses it lists first, raise every question it
+lists in chat, one line each, then `context-engine ask raised <ids>`, and read the top item with
+`context-engine task show <id>`.
+
+Intake, clean close and pause are FRAMEWORK §6.2 to §6.4, each step a `context-engine`
+operation. FRAMEWORK.md and the manual-mode runbook are not installed with the engine: read
+them in the engine repo at the pinned ref (`docs/framework/FRAMEWORK.md` and
+`docs/runbooks/manual-mode.md`), or in this repo's `docs/runbooks/` if a copy is kept there.
+When the engine errors or refuses something it should allow, do that step by hand from the
+manual-mode runbook, then report the engine bug. A refusal with a sensible remedy is not an error: follow the remedy.
 
 ### Rules
 

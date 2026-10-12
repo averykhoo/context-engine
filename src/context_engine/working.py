@@ -802,9 +802,11 @@ class Engine:
         if led is not None:
             closes = [e for e in led.entries if e.kind == "close"]
             b = self.banner() if self.w.handoff else None
-            if closes and b:
+            if closes and self.w.handoff:
                 newest_close = max((e.key for e in closes), key=key_order)
-                if key_order(b.key) < key_order(newest_close):
+                if b is None:  # a session closed, so a banner is owed: a missing or renamed heading is a red
+                    out.append(Failure("G-W1", self.w.handoff, f"no `## Banner (<key>)` heading, but {newest_close} closed", "write it at clean close (`banner set`, with `--seen none` for the first)"))
+                elif key_order(b.key) < key_order(newest_close):
                     out.append(Failure("G-W1", self.w.handoff, f"banner key {b.key} is older than the newest close {newest_close}", "replace the banner at clean close (`banner set`)"))
             run = 0
             for e in led.entries:

@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-12a
 created: 2026-10-12
 moved: 2026-10-12a
-updated: 2026-10-12a
+updated: 2026-10-12b
 ---
 
 US-15 (owner, 2026-10-12a): rituals and housekeeping get one source of truth, and FRAMEWORK.md
@@ -31,8 +31,13 @@ Scope:
   FRAMEWORK §6 has a runbook section, and every step names an existing operation.
 - Strip this repo's specifics out of the runbooks (CE-n/DEC-n/US-n prefixes as fixed values, AC
   ids as reasons) or mark them as this repo's values, so the kit (CE-15) can ship them.
+- Ship them (moved here from CE-15 by its review, 2026-10-12b): the stripped runbooks become kit
+  package data (`pyproject.toml` package-data), `init` copies them into `docs/runbooks/` instead
+  of the bare `.gitkeep` (`bootstrap.py::KEEP`), a test checks a built wheel carries them, and the
+  kit contract's Rituals and the kit README's Runbooks section point at the repo's own copy
+  rather than the engine repo's. CE-7 depends on this.
 
-Out of scope: the adoption kit itself (context.toml schema, install, skeletons) is CE-15.
+Out of scope: the rest of the adoption kit (context.toml schema, install, skeletons) is CE-15.
 
 ## Traps
 
@@ -49,3 +54,4 @@ Out of scope: the adoption kit itself (context.toml schema, install, skeletons) 
 ## Log
 
 - 2026-10-12a (claude-code/claude-opus-5-5): Drift fixed first (2026-10-12a): FRAMEWORK §5.5 key resets on a new day; §6.3 order in practice and CLAUDE.md § Rituals now carry step 1 (lint first) and 6a (baton expire); manual-mode hashes: lowercase hex, no BOM, banner to EOF. The runbook itself is open.
+- 2026-10-12b (claude-code/claude-opus-5-5): Scope gains 'ship the stripped runbooks in the kit' (init copies them into docs/runbooks/, wheel test), moved from CE-15 by its 2026-10-12b review; CE-7 now depends on CE-24.

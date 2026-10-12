@@ -18,11 +18,11 @@ CF = "src/context_engine/config.py"
 WK = "src/context_engine/working.py"
 LG = "src/context_engine/ledger.py"
 S = [
-    ("no-overwrite", BS, "        if (root / dst).exists():\n            skipped.append(dst)", "        if False:\n            skipped.append(dst)", T + " -k never_overwrites"),
-    ("no-overwrite", BS, "        if BEGIN in old:", "        if False:", T + " -k never_overwrites"),
+    ("no-overwrite", BS, "        elif (root / dst).exists():\n            skipped.append(dst)", "        elif False:\n            skipped.append(dst)", T + " -k never_overwrites"),
+    ("no-overwrite", BS, 'ANY_BEGIN = re.compile(r"<!-- context-engine kit (\\S+) begin -->")', 'ANY_BEGIN = re.compile(r"<!-- never (\\S+) -->")', T + " -k never_overwrites"),
     ("crlf-kept", BS, 'add.replace("\\n", "\\r\\n") if "\\r\\n" in old else add', "add", T + " -k never_overwrites"),
     ("dry-run", BS, "    if not dry_run:\n        for rel", "    if True:\n        for rel", T + " -k dry_run"),
-    ("config-differs", BS, "        if target.read_text(encoding=\"utf-8\").replace(\"\\r\\n\", \"\\n\") != cfg:", "        if False:", T + " -k different_context"),
+    ("config-loads", BS, "        cfg = _existing_config(root, prefixes)\n", "        cfg = C.from_dict(tomllib.loads(text))\n", T + " -k does_not_load"),
     ("prefix-own-kind", BS, "text, n = section.subn(lambda m: f'{m.group(1)}\"{prefix}\"', text, count=1)", "text, n = re.subn(r'^prefix = \"[^\"]*\"', f'prefix = \"{prefix}\"', text, count=1, flags=re.MULTILINE)", T + " -k prefix_override"),
     ("schema", KIT + "context.toml.template", "lock_timeout = 30.0 ", "# lock_timeout = 30.0 ", T + " -k names_every_key"),
     ("schema", KIT + "context.toml.template", "extra_dirs = []\n", "", T + " -k names_every_key"),
@@ -48,6 +48,20 @@ S = [
     ("banner-none-read", WK, "return L.find_banner(path.read_bytes()", "return L.read_banner(path.read_bytes()", T + " -k bootstraps_with_init"),
     ("banner-seen-none", WK, "if (now.sha if now else L.NO_BANNER) != seen_hash:", "if now and now.sha != seen_hash:", T + " -k first_banner"),
     ("banner-place", LG, "start = end = first.start() if first else len(norm)", "start = end = 0 if first else len(norm)", T + " -k first_banner"),
+    # review fixes, 2026-10-12b
+    ("sep", BS, 'sep = "" if not norm or norm.endswith("\\n\\n") else ("\\n" if norm.endswith("\\n") else "\\n\\n")', 'sep = ""', T + " -k own_line"),
+    ("old-block", BS, "        elif have:  # never a second block", "        elif False:  # never a second block", T + " -k never_doubled"),
+    ("keep-config", BS, "        cfg = _existing_config(root, prefixes)\n", '        raise Refusal("differs", "x")\n', T + " -k edited_context_toml"),
+    ("uses-filter", BS, "        if not _used(dst, uses):", "        if False:", T + " -k edited_context_toml"),
+    ("prefix-agree", BS, "        if have != prefix:", "        if False:", T + " -k edited_context_toml"),
+    ("bom", CF, 'encoding="utf-8-sig"', 'encoding="utf-8"', T + " -k edited_context_toml"),
+    ("cfg-top", CF, '    _known("the top level", raw, TOP_KEYS)\n', "", T + " -k mistyped"),
+    ("cfg-caps", CF, '        _known("[working.caps]", caps, tiers)', "        pass", T + " -k mistyped"),
+    ("cfg-types", CF, "        if not ok:\n", "        if False:\n", T + " -k mistyped"),
+    ("cfg-bool", CF, "and not (isinstance(v, bool)", "and not (False", T + " -k mistyped"),
+    ("cfg-list-items", CF, "            ok = all(isinstance(x, str) for x in v)", "            ok = True", "tests/test_kit.py -k mistyped"),
+    ("g-w1-none", WK, "                if b is None:  # a session closed", "                if False:  # a session closed", T + " -k g_w1"),
+    ("contract-orient", KIT + "contract.md", "then `context-engine orient`.", "then read the board.", T + " -k marked_and_pins"),
     ("banner-show", "src/context_engine/ops.py", 'return 0, f"banner none hash {L.NO_BANNER}', 'return 0, f"no banner ({L.NO_BANNER})', T + " -k first_banner"),
 ]
 ok = True

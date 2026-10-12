@@ -649,16 +649,18 @@ in order, and the hash above the heading still holds.
 Give a repo the framework's files (FRAMEWORK §6.9). The kit is `src/context_engine/kit/` in the
 engine repo at the pinned ref (or `context_engine/kit/` in the installed package), and its
 `README.md` has the same steps.
-1. If `context.toml` exists and is not the kit's `context.toml.template` (with your prefixes),
-   stop: this repo already has a config, so create only the missing files it names.
+1. If `context.toml` exists, keep it: check it loads (`context-engine lint` names what it
+   refuses; stop and fix that first), and in steps 3 and 5 create only what it points at (a kind's
+   `dir`, a `[working]` path, a route's `path`, the lock's directory).
 2. Otherwise copy `context.toml.template` to `context.toml`; to change a kind's id prefix, edit
    `prefix` in its `[kinds.<name>]` table (no two kinds may share one, and none may collide with
    ids the repo already uses).
 3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md` and `docs/ledger/session-log.md`
    from the kit to the same paths, skipping any that exist.
-4. `CLAUDE.md`: if it does not contain `<!-- context-engine kit 0.5 begin -->`, append the kit's
-   `contract.md` after a blank line (create the file with a `# <repo>: contract` title if it is
-   absent), keeping the file's line endings.
+4. `CLAUDE.md`: if it holds no `<!-- context-engine kit <version> begin -->` marker, append the
+   kit's `contract.md` after a blank line (create the file with a `# <repo>: contract` title if
+   it is absent), keeping the file's line endings. If it holds an older version's block, leave it
+   for the upgrade to replace (kit README § Upgrade); never add a second block.
 5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/runbooks`,
    `docs/evidence` and `tasks` that does not exist, create it with an empty `.gitkeep`. Create
    `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.

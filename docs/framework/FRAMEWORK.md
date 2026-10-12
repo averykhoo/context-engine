@@ -1149,8 +1149,9 @@ note, charter, criteria and ledger, and a README with the install, bootstrap and
 
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
 2. The agent installs the engine into its own environment, pinned to a release tag or commit
-   (the engine runs from its own environment and is never installed into the repo's), and
-   registers its MCP server (§8.0.2).
+   (the engine runs from its own environment and is never installed into the repo's). The MCP
+   server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
+   operation, and a repo that wants the server registers it here.
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, and the
    contract block appended to `CLAUDE.md`. It only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
@@ -1341,7 +1342,8 @@ hold **method**, which survives when the status around it is archived:
 - **One versioned package, the record engine** (`context-engine`), plus a per-repo
   config, `context.toml`. The same package owns record writes (§8.0.1–8.0.3) and the lint. The
   kit's `context.toml.template` (§6.9) is the config's schema: every key the engine reads, with
-  its default, and the engine refuses a key it does not know. The config holds:
+  its default, and the engine refuses a table or key it does not know, a `[working.caps]` tier
+  no board kind's `pri` names, and a value of the wrong type. The config holds:
   - enabled guards;
   - paths: the routing map of components onto files (`[[routes]]`; not `docs/index.md`,
     because OKF fixes `index.md`'s shape, §9.3.1);
@@ -1657,7 +1659,7 @@ docs/
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; ignores itself, never tracked
-.claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent
+.claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
 .scratch/                * # gitignored crash bag (ignores itself)
 ```
 
@@ -1678,7 +1680,8 @@ tasks/                   * # flat; open and closed side by side, `state:` in fro
 - decision log with negative results;
 - ledger in its own file;
 - the scratch rule;
-- the fallback runbook: every engine operation by hand (P16).
+- the fallback runbook: every engine operation by hand (P16). *The kit does not ship it yet
+  (CE-24): until it does, the contract block points at the engine repo's copy at the pinned ref.*
 
 **Rituals:** intake, start/resume, clean close, pause, bootstrap.
 
@@ -1725,12 +1728,12 @@ G-R1); the rest are checked by hand. *Not built yet: G-D0 (CE-21) and the other 
   existing files. Existing ids and check numbers are never renumbered; the package maps onto
   them.
 - **`init` on an existing repo** writes only what is missing: it skips every file that exists,
-  appends the contract block to an existing `CLAUDE.md` only when the block's markers are absent,
-  and refuses when a different `context.toml` is already there. Then edit `context.toml` in
+  appends the contract block to an existing `CLAUDE.md` only when no kit block (of any version)
+  is there, and keeps an existing `context.toml` once it loads. Then edit `context.toml` in
   place: each kind's `dir` and `prefix` and each route's `path` point at what the repo already
   has (an existing `D-n` series stays `D-n`), and the skeletons `init` wrote for components the
-  repo keeps elsewhere are deleted rather than routed. Lint (G-R1 and the schemas) shows what
-  still disagrees.
+  repo keeps elsewhere are deleted rather than routed. A re-run of `init` writes only what that
+  edited config points at. Lint (G-R1 and the schemas) shows what still disagrees.
 - **Enable guards incrementally.** Each one starts as a warning, with a dated deadline for
   becoming a refusal.
 - **Back-filled stories are reconstructions, never the owner's words:**

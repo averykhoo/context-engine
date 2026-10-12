@@ -4,7 +4,8 @@ The kit is text in ``kit/`` beside this module, shipped as package data, so a pl
 ``pip install`` of the engine carries it and anyone can read it in the engine repo. ``init``
 copies the files a repo is missing and creates the empty record directories. It only ever
 creates: an existing file is never touched, except that ``CLAUDE.md`` gets the kit's contract
-block appended when the block's markers are not in it yet.
+block appended when no kit block (of any version) is in it yet. An existing ``context.toml`` is
+kept, so init can be re-run after it is edited to fill in what is still missing.
 
 Deliberately not here: installing anything (the engine runs from its own environment and is
 never installed into the target repo's), registering the MCP server (a ``claude mcp add`` the
@@ -26,6 +27,8 @@ TEMPLATE = "context.toml.template"
 CONTRACT = "contract.md"
 CONTRACT_TARGET = "CLAUDE.md"
 BEGIN, END = "<!-- context-engine kit 0.5 begin -->", "<!-- context-engine kit 0.5 end -->"
+# any kit version's begin marker: an older block is the one an upgrade replaces, never a second one
+ANY_BEGIN = re.compile(r"<!-- context-engine kit (\S+) begin -->")
 # kit file -> where it goes in the repo
 FILES = {
     "HANDOFF.md": "HANDOFF.md",
@@ -55,25 +58,57 @@ def config_text(prefixes: dict[str, str] | None = None) -> str:
     return text
 
 
+def _existing_config(root: Path, prefixes: dict[str, str] | None) -> C.Config:
+    """The repo's own ``context.toml``, which init keeps: it must load, and agree with any
+    ``--prefix`` given (init never edits a config, so a different prefix is edited by hand)."""
+    try:
+        cfg = C.load(root)
+    except Refusal as e:
+        raise Refusal(f"{C.CONFIG_NAME} exists and does not load: {e.message}", e.remedy + "; then run init again") from None
+    except ValueError as e:  # tomllib.TOMLDecodeError
+        raise Refusal(f"{C.CONFIG_NAME} exists and is not TOML: {e}", "fix it, then run init again") from None
+    for kind, prefix in (prefixes or {}).items():
+        have = cfg.kinds[kind].prefix if kind in cfg.kinds else None
+        if have != prefix:
+            raise Refusal(
+                f"{C.CONFIG_NAME} exists and gives {kind} the prefix {have!r}, not {prefix!r}",
+                f"init never edits a config: change `prefix` in [kinds.{kind}] by hand, or run init without --prefix",
+            )
+    return cfg
+
+
+def _uses(cfg: C.Config) -> set[str]:
+    """Every repo path the config points at: kind dirs, working files, routes, the lock and op log."""
+    w = cfg.working
+    paths = [k.dir for k in cfg.kinds.values()] + [r.path for r in cfg.routes] + [cfg.lockfile, cfg.oplog, w.ledger, w.handoff, w.register]
+    return {p.strip("/") for p in paths if p}
+
+
+def _used(rel: str, uses: set[str]) -> bool:
+    return any(u == rel or u.startswith(rel + "/") or rel.startswith(u + "/") for u in uses)
+
+
 def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, str], list[str], list[str]]:
-    """(path -> text to write, created, skipped). ``CLAUDE.md``'s text is the whole new file."""
+    """(path -> text to write, created, skipped). ``CLAUDE.md``'s text is the whole new file.
+
+    A ``context.toml`` already present is kept, once it loads, and a skeleton or directory is then
+    written only where that config points: a repo that mapped a component elsewhere (§11.4) does
+    not get the kit's default file back on a re-run."""
     root = Path(root)
     writes: dict[str, str] = {}
     skipped: list[str] = []
-    cfg = config_text(prefixes)
-    target = root / C.CONFIG_NAME
-    if target.exists():
-        if target.read_text(encoding="utf-8").replace("\r\n", "\n") != cfg:
-            raise Refusal(
-                f"{C.CONFIG_NAME} exists and differs from the kit's",
-                "init writes the kit's default layout, which this config may not use: create any missing file by hand "
-                "(kit README § Bootstrap by hand), or move context.toml aside and run init again",
-            )
+    text = config_text(prefixes)
+    if (root / C.CONFIG_NAME).exists():
+        cfg = _existing_config(root, prefixes)
         skipped.append(C.CONFIG_NAME)
     else:
-        writes[C.CONFIG_NAME] = cfg
+        cfg = C.from_dict(tomllib.loads(text))
+        writes[C.CONFIG_NAME] = text
+    uses = _uses(cfg)
     for src, dst in FILES.items():
-        if (root / dst).exists():
+        if not _used(dst, uses):
+            skipped.append(f"{dst} (not in {C.CONFIG_NAME})")
+        elif (root / dst).exists():
             skipped.append(dst)
         else:
             writes[dst] = (KIT / src).read_text(encoding="utf-8")
@@ -83,20 +118,27 @@ def plan(root: Path, prefixes: dict[str, str] | None = None) -> tuple[dict[str, 
         writes[CONTRACT_TARGET] = f"# {root.resolve().name}: contract\n\n" + block
     else:
         old = claude.read_bytes().decode("utf-8")
-        if BEGIN in old:
+        have = ANY_BEGIN.search(old)
+        if have and have.group(0) == BEGIN:
             skipped.append(CONTRACT_TARGET)
+        elif have:  # never a second block beside an older one: the upgrade replaces it (kit README § Upgrade)
+            skipped.append(f"{CONTRACT_TARGET} (holds the kit {have.group(1)} block: replace it with kit/{CONTRACT} by hand)")
         else:
             norm = old.replace("\r\n", "\n")
             sep = "" if not norm or norm.endswith("\n\n") else ("\n" if norm.endswith("\n") else "\n\n")
             add = sep + block
             writes[CONTRACT_TARGET] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
     for d in KEEP:
-        if (root / d).exists():
+        if not _used(d, uses):
+            skipped.append(f"{d}/ (not in {C.CONFIG_NAME})")
+        elif (root / d).exists():
             skipped.append(d + "/")
         else:
             writes[f"{d}/.gitkeep"] = ""
     for d in SELF_IGNORING:
-        if (root / d / ".gitignore").exists():
+        if not _used(d, uses):
+            skipped.append(f"{d}/ (not in {C.CONFIG_NAME})")
+        elif (root / d / ".gitignore").exists():
             skipped.append(f"{d}/.gitignore")
         else:
             writes[f"{d}/.gitignore"] = "*\n"

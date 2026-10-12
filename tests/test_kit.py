@@ -56,9 +56,45 @@ def test_init_dry_run_writes_nothing(tmp_path):
 
 
 @pytest.mark.criterion("AC-31")
-def test_init_refuses_a_different_context_toml_and_bad_prefixes(tmp_path):
-    (tmp_path / "context.toml").write_text("[engine]\n", encoding="utf-8")
-    with pytest.raises(Refusal, match="exists and differs"):
+@pytest.mark.parametrize("old,sep", [("rules", "\n\n"), ("rules\n", "\n"), ("rules\n\n", ""), ("", "")])
+def test_the_contract_block_starts_on_its_own_line_after_a_blank_one(tmp_path, old, sep):
+    (tmp_path / "CLAUDE.md").write_bytes(old.encode())
+    B.init(tmp_path)
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + sep + (B.KIT / B.CONTRACT).read_text(encoding="utf-8")
+
+
+@pytest.mark.criterion("AC-31")
+def test_an_older_kit_block_is_never_doubled(tmp_path):
+    old = "# Ours\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
+    (tmp_path / "CLAUDE.md").write_text(old, encoding="utf-8")
+    out = B.init(tmp_path)
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old
+    assert "CLAUDE.md (holds the kit 0.4 block: replace it" in out, out
+
+
+@pytest.mark.criterion("AC-31")
+def test_init_keeps_an_edited_context_toml_and_writes_only_what_it_points_at(tmp_path):
+    B.init(tmp_path, {"task": "PRJ"})
+    assert B.init(tmp_path).startswith("init: created 0"), "a bare re-run after --prefix is a no-op"
+    cfg = tmp_path / "context.toml"
+    text = cfg.read_text(encoding="utf-8").replace('path = "docs/criteria.md"', 'path = "docs/spec/criteria.md"')
+    cfg.write_bytes(b"\xef\xbb\xbf" + text.encode())  # edited in place, by an editor that writes a BOM
+    (tmp_path / "docs/criteria.md").unlink()
+    (tmp_path / "docs/charter.md").unlink()
+    out = B.init(tmp_path)
+    assert out.startswith("init: created 1 (docs/charter.md)"), out
+    assert "docs/criteria.md (not in context.toml)" in out and not (tmp_path / "docs/criteria.md").exists()
+    with pytest.raises(Refusal, match="gives task the prefix 'PRJ', not 'T2'"):
+        B.init(tmp_path, {"task": "T2"})
+
+
+@pytest.mark.criterion("AC-31")
+def test_init_refuses_a_context_toml_that_does_not_load_and_bad_prefixes(tmp_path):
+    (tmp_path / "context.toml").write_text("[enigne]\n", encoding="utf-8")
+    with pytest.raises(Refusal, match="exists and does not load: the top level has unknown key 'enigne'"):
+        B.init(tmp_path)
+    (tmp_path / "context.toml").write_text("[engine\n", encoding="utf-8")
+    with pytest.raises(Refusal, match="exists and is not TOML"):
         B.init(tmp_path)
     with pytest.raises(Refusal, match="share the id prefix"):
         B.config_text({"task": "D"})
@@ -130,6 +166,8 @@ def test_the_contract_block_is_marked_and_pins_the_framework():
     text = (B.KIT / B.CONTRACT).read_text(encoding="utf-8")
     assert text.startswith(B.BEGIN) and text.rstrip("\n").endswith(B.END)
     assert re.search(r"^framework: \d+\.\d+$", text, re.MULTILINE)
+    # the block alone starts a session: no other file is needed to know the first two steps
+    assert re.search(r"\*\*Session start:\*\* `context-engine session start`.*\n?.*then `context-engine orient`", text), text
 
 
 # -- no leaks from this repo ----------------------------------------------------------------
@@ -220,6 +258,30 @@ def test_the_config_refuses_an_unknown_key_naming_the_allowed_ones(table):
         C.from_dict(raw)
 
 
+@pytest.mark.criterion("AC-32")
+@pytest.mark.parametrize(
+    "edit,match",
+    [
+        (lambda r: r.update(enigne={}), r"the top level has unknown key 'enigne'"),
+        (lambda r: r.update(kind={"task": {}}), r"the top level has unknown key 'kind'"),
+        (lambda r: r["working"]["caps"].update(NEXTT=3), r"\[working.caps\] has unknown key 'NEXTT'"),
+        (lambda r: r["working"]["caps"].update(NEXT="5"), r"\[working.caps\] `NEXT` is str"),
+        (lambda r: r["working"].update(orient_max_bytes="big"), r"\[working\] `orient_max_bytes` is str 'big', not int"),
+        (lambda r: r["working"].update(max_pauses=True), r"`max_pauses` is bool"),
+        (lambda r: r["working"].update(board="task"), r"`board` is str"),
+        (lambda r: r["engine"].update(lock_timeout="30"), r"\[engine\] `lock_timeout` is str"),
+        (lambda r: r["kinds"]["task"].update(required="title"), r"\[kinds.task\] `required` is str"),
+        (lambda r: r["kinds"]["task"].update(required=["title", 1]), r"\[kinds.task\] `required` is list"),
+        (lambda r: r["routes"][0].update(optional="yes"), r"route 1 `optional` is str"),
+    ],
+)
+def test_the_config_refuses_unknown_tables_tiers_and_mistyped_values(edit, match):
+    raw = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
+    edit(raw)
+    with pytest.raises(Refusal, match=match):
+        C.from_dict(raw)
+
+
 def test_this_repos_own_config_still_loads():
     C.load(REPO)
 
@@ -249,3 +311,24 @@ def test_the_first_banner_is_written_with_seen_none_and_only_then(tmp_path, note
         assert text.index("## Banner") < text.index("## Next") and text.startswith("# Note\n\nintro\n\n")
     with pytest.raises(Refusal, match="changed since you read it"):
         _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- C.")
+
+
+# -- G-W1: once a session has closed, a banner is owed ------------------------------------------
+
+
+def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_path):
+    from context_engine.cli import run
+
+    def lint() -> str:
+        return run(["--root", str(tmp_path), "lint"])[1]
+
+    B.init(tmp_path)
+    key = _cli(tmp_path, "session", "start").split()[1]
+    assert lint() == "lint: clean"  # no close yet: nothing is owed
+    _cli(tmp_path, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g", "--read", "r", key=key)
+    assert "G-W1" in lint() and "no `## Banner (<key>)` heading" in lint()
+    _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- B.", key=key)
+    assert lint() == "lint: clean"
+    note = tmp_path / "HANDOFF.md"
+    note.write_text(note.read_text(encoding="utf-8").replace("## Banner (", "## Old banner ("), encoding="utf-8")
+    assert "G-W1" in lint()

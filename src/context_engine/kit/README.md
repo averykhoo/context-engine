@@ -32,7 +32,9 @@ a full commit SHA until then), and the `framework: <major.minor>` line in `CLAUD
 must match the engine's major.minor. Write the ref into the first ledger entry's summary, so the
 repo records which engine it was bootstrapped with.
 
-Register the MCP server once per machine, from the repo root:
+The MCP server is optional (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
+reports); the CLI carries every operation. To use it, register it once per machine, from the
+repo root:
 
 ```
 claude mcp add --scope local context-engine -- <engine-env-python> -m context_engine.mcp
@@ -52,10 +54,13 @@ From the repo root:
 ```
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
-it skipped. It never overwrites a file; it appends the contract block to an existing `CLAUDE.md`
-only when the block's markers (`<!-- context-engine kit 0.5 begin -->`) are not already there;
-and it refuses if a `context.toml` that differs from the kit's is already present. `--prefix`
-changes a kind's id series (`--prefix task=PRJ`): pick prefixes no id already in the repo uses.
+it skipped. It never overwrites a file. It appends the contract block to an existing `CLAUDE.md`
+only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a block from an
+older kit is left for the upgrade to replace (§4), never doubled. An existing `context.toml` is
+kept if it loads (init refuses one that does not, or one whose prefixes disagree with
+`--prefix`), and init then writes only the files and directories that config points at, so it
+can be re-run after the config is edited. `--prefix` changes a kind's id series
+(`--prefix task=PRJ`): pick prefixes no id already in the repo uses.
 
 Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
@@ -105,4 +110,10 @@ run yet are checked by hand (FRAMEWORK §11.1).
 
 The by-hand fallback for every engine operation is `docs/runbooks/manual-mode.md` in the engine
 repo, at the pinned ref; copy it into `docs/runbooks/` if the repo must work without the engine.
-The ritual order is FRAMEWORK §6.1 to §6.4.
+The kit does not ship it yet. The ritual order is FRAMEWORK §6.1 to §6.4. Neither file is
+installed with the engine: read them in the engine repo at the pinned ref.
+
+## Skills, workflows and agents
+
+The kit ships no `.claude/skills/`, `.claude/workflows/` or `.claude/agents/`; a repo adds them
+when it needs them (FRAMEWORK §10, §11.2), and commits them.

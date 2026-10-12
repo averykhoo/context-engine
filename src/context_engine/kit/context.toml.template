@@ -1,6 +1,7 @@
 # context.toml: the framework config for this repo (FRAMEWORK §8.0). This file IS the schema:
-# every key the engine reads appears below with its default, and the engine refuses any key it
-# does not know (so a typo is a red, not a silent default).
+# every key the engine reads appears below with its default, and the engine refuses any table or
+# key it does not know, a [working.caps] tier no board kind's `pri` names, and a value of the wrong
+# type (so a typo is a red, not a silent default).
 #
 # Written by `context-engine init` from the adoption kit; edit it in place afterwards. For an
 # existing repo (FRAMEWORK §11.4), point `dir`, `prefix` and the routes at the files and id
