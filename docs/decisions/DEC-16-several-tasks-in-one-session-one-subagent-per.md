@@ -32,3 +32,7 @@ The agent's readings, which the owner has not confirmed:
   record write, and owner words are still recorded at the top level, verbatim (§6.2).
 - Tasks that touch the same files go to one agent or run in sequence: the disjoint-ownership
   rule of build rounds (§6.6) applies to task agents too.
+
+## Amendments
+
+- **2026-10-12b (claude-code/claude-opus-5-5):** Owner, 2026-10-12b (recorded verbatim by the session): "Do 15,16,23, by sending ultracode subagents off to do each task. Minimize your own context, you should be handing off the task and delegating to subagents and just reporting to me as needed or asking me about blockers (but start the next task if a task is blocked). If this works out we'll encode this practice of the top level agent being a coordinator rather than a doer when multiple tasks have to be done"

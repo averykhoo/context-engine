@@ -140,3 +140,5 @@
 {"at": "2026-10-12T07:10:26+08:00", "session": "2026-10-12a", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-24", "path": "tasks/CE-24-rituals-runbook-every-ritual-s-steps-in-one.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-12T07:11:17+08:00", "session": "2026-10-12a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-12a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
 {"at": "2026-10-12T07:11:35+08:00", "session": "2026-10-12a", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-12a", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-10-12T08:02:31+08:00", "session": "2026-10-12b", "actor": "claude-code/claude-opus-5-5", "op": "session.start", "id": "2026-10-12b", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-12T08:02:47+08:00", "session": "2026-10-12b", "actor": "claude-code/claude-opus-5-5", "op": "amend", "id": "DEC-16", "path": "docs/decisions/DEC-16-several-tasks-in-one-session-one-subagent-per.md", "fields": [], "mechanical": false}
