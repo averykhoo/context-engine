@@ -31,7 +31,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list" }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
 
 [kinds.question]
 type = "Question"
@@ -40,7 +40,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key" }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
 
 # Batons and pause blocks: one stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
 [kinds.baton]
@@ -73,6 +73,8 @@ baton = "baton"
 pause = "pause"
 orient_max_bytes = 6000                  # provenance: DEC-14
 read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
+register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
+review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
 
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
 # with `context-engine routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.
@@ -127,6 +129,12 @@ mode = "replaced at clean close; banner through `context-engine banner set`"
 component = "Session ledger"
 path = "docs/ledger/session-log.md"
 mode = "append-only, one entry per session, through `context-engine session`"
+
+[[routes]]
+component = "Residual-risk register"
+path = "src/context_engine/REGISTER.md"
+mode = "entries appended by `context-engine task close`; an entry is edited only when the code changes"
+note = "INV-n; package data, so every repo the engine is pointed at reads it (`context-engine register show --engine`)"
 
 [[routes]]
 component = "Operation log"

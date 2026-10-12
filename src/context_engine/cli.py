@@ -148,6 +148,10 @@ def build() -> argparse.ArgumentParser:
     ra.add_argument("id")
     ra.add_argument("text")
 
+    rg = groups.add_parser("register", help="the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
+    rgs = rg.add_parser("show")
+    rgs.add_argument("--engine", action="store_true", help="the engine's own register, shipped with the package")
+
     bn = groups.add_parser("banner").add_subparsers(dest="op", required=True)
     bn.add_parser("show")
     bs = bn.add_parser("set")
@@ -176,6 +180,7 @@ CLI_OPS = {
     ("record", "new"): "record_new",
     ("record", "stamp"): "record_stamp",
     ("record", "amend"): "record_amend",
+    ("register", "show"): "register_show",
     ("banner", "show"): "banner_show",
     ("banner", "set"): "banner_set",
 }

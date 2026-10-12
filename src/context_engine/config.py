@@ -54,6 +54,8 @@ class Working:
     ask_overdue_days: int = 7
     baton_max_age: int = 2  # sessions closed after the owning one (G-W3)
     max_pauses: int = 2  # consecutive `kind: pause` entries (G-W2, owner 2026-10-07)
+    register: str = ""  # the residual-risk register, one markdown file (FRAMEWORK §7.4, CE-23)
+    review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
 
 
 @dataclass(frozen=True)
@@ -136,7 +138,7 @@ def from_dict(raw: dict) -> Config:
         if name not in kinds:
             raise Refusal(f"[working] names kind {name!r}, which is not declared", f"declare [kinds.{name}] or fix [working]")
     working = Working(
-        **{k: (tuple(v) if k == "board" else v) for k, v in w.items() if k in Working.__dataclass_fields__ and k != "caps"},
+        **{k: (tuple(v) if k in ("board", "review_triggers") else v) for k, v in w.items() if k in Working.__dataclass_fields__ and k != "caps"},
         caps={**Working().caps, **w.get("caps", {})},
     )
     routes = []

@@ -51,6 +51,7 @@ CALLS = {
     "record_new": (["decision", "T", "--body", "words", "--set", "actor=owner"], {"kind": "decision", "title": "T", "body": "words", "fields": {"actor": "owner"}}),
     "record_stamp": (["DEC-1", "DEC-2"], {"ids": ["DEC-1", "DEC-2"]}),
     "record_amend": (["DEC-1", "more"], {"id": "DEC-1", "text": "more"}),
+    "register_show": (["--engine"], {"engine": True}),
     "banner_show": ([], {}),
     "banner_set": (["--seen", "abc", "--text", "new"], {"seen": "abc", "text": "new"}),
 }

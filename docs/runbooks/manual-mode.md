@@ -86,6 +86,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | session start, close, pause | `session.start`, `session.close`, `session.pause` | id = session key, path = the ledger | `["kind"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
+| task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 
 ### Record kinds here (from `context.toml`)
 
@@ -223,7 +224,9 @@ not fit, cut it at a line and say where the rest is:
 3. other sessions with an open stub in the ledger;
 4. board items at NOW and NEXT (as `context-engine task list`);
 5. owner questions to raise now: open at NOW or NEXT, or overdue (see session close step 3);
-6. the NOW item's brief, `## Traps` and `## Read first`.
+6. the NOW item's brief, `## Traps` and `## Read first`;
+7. in a repo whose `[working] register` is not the engine's own `REGISTER.md`: one line,
+   `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
 **Why:** one bounded read at session start replaces opening a dozen files (US-1, AC-17). The
 order is the order of urgency: carried work and live sessions come before new work.
@@ -259,6 +262,12 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`.
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt.
+- **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
+  `task promote`. *Why: the promotion refused it, so a failing review there was edited by hand.*
+- **G-W13**: every `- residual:` line of a closed item carrying `review:` has a register entry
+  with the same risk text and that task in `from:`; every register entry has `affects`, `why not
+  eliminated`, `control` and `from` lines; no two entries share an INV id. *Why: the register is
+  what is handed over, so a residual missing from it is a risk nobody downstream is told about.*
 - **G-R1**: every `[[routes]]` path in `context.toml` exists, unless the route says
   `optional = true`. *Why: a routing table that points at a moved file sends every reader to
   nothing.*
@@ -308,7 +317,9 @@ Change any key except the ones operations own. `state`, `status` and `closed` ch
 `body_sha` never change. The brief stays at most 120 characters. Values take the kind's declared
 type: an empty value, `null` or `~` means null (so `brief=` clears the brief); a list is
 comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must look like
-`2026-10-08e`. A set with no fields still bumps `updated`.
+`2026-10-08e`. A set with no fields still bumps `updated`. `review` takes only values from
+`[working] review_triggers` (`record-kind`, `guard`, `write-op`, `git-loss`, `long-lived`,
+`shipped`): set it on an item above the design-review threshold (FRAMEWORK §5.2).
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule (DEC-14 item 7).
@@ -318,8 +329,32 @@ comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must loo
 Item open; `pri` a valid tier; the target tier has room, not counting the item itself. Set `pri`,
 `moved: <key>`, `updated: <key>`.
 
+**Promoting to NOW an item that carries `review:`** (it is above the threshold, FRAMEWORK §5.2):
+first check its `## Design review` section by hand, and do not promote while any check fails.
+Start a review from this template (the engine knows it verbatim, so a copy left unchanged is
+refused):
+
+```
+affects: <who can be hurt: the building session, the next session, the owner, a plain-git human, every deployed repo>
+- eliminated: <a risk the design cannot produce>
+- reduced: <risk> | rung: <reduce|collective|individual> | control: <the refusal, guard or rule, by name>
+- residual: <risk> | rung: <reduce|collective|individual> | why: <why it was not eliminated> | control: <the guard or rule, by name>
+F: <what will need doing to it later, by whom, how often, and what makes it stale>
+A: <how it is read and fixed without the engine>
+M: <which forms keep it from drifting>
+E: <what it reuses: one name, one format, one runbook section>
+```
+
+The checks: no template line left verbatim; an `affects:` line with text; at least one risk
+line; every line starting `- ` is `- <class>: <risk>` with class `eliminated`, `reduced` or
+`residual`, then ` | key: value` fields from `rung`, `why`, `control`, `affects`; a `reduced`
+or `residual` line has a `rung` from `eliminate`, `reduce`, `collective`, `individual` (a
+residual is never at `eliminate`); a `residual` line has `why` and `control`; and `F:`, `A:`,
+`M:` and `E:` lines, each with text. Any other unindented line is an error.
+
 **Why:** re-ranking is progress on the board, so it bumps `moved`, and it is where the caps are
-enforced.
+enforced. Promotion to NOW is the last point before building starts, so it is where a design
+above the threshold must show whom it can hurt and how each risk is held (P17, P18).
 
 ### context-engine task dep
 
@@ -350,8 +385,30 @@ A message is required, and the item must be open. Set `state: closed`, `status: 
 `closed: <key>`, `moved`, `updated`. Append `- <key> (<actor>): closed: <message>` to `## Log`.
 Do not move or rename the file.
 
+**If the item carries `review:`**, first check its `## Design review` as in `task promote`; if a
+check fails, fix the review, do not close. Then copy each `- residual:` line into the register
+(`[working] register`; here `src/context_engine/REGISTER.md`). Skip a residual already there
+with the same risk text and the same task id in its `from:` line. Create the file with the
+heading `# Residual-risk register` if it is missing. Each entry takes the next `INV-n` (the
+highest in the file + 1, never reused), after one blank line:
+
+```
+## INV-<n>: <the risk text>
+
+- **affects:** <the line's `affects` field, else the review's `affects:` line>
+- **why not eliminated:** <its `why`>
+- **control:** <its `rung`>: <its `control`>
+- **from:** <task id>, session <key>
+```
+
+Log one op line per close that added entries: `op: register.append`, `id` the task, `path` the
+register, `fields` the new INV ids. With residuals and no register configured, stop: configure
+one first.
+
 **Why:** closed items stay in place as records, so links never break (US-5, AC-12). `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
+The residuals move to the register at close because that is when the design is final, and the
+register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
 
 ### context-engine task reopen
 
@@ -503,6 +560,22 @@ rule 4, AC-14).
 The pause must be open. Set `state: done`, `resumed: <key>`.
 
 **Why:** closes the loop so `orient` stops listing it, and records who picked it up.
+
+## The residual-risk register
+
+### context-engine register show
+
+Read the register file named by `[working] register` (here `src/context_engine/REGISTER.md`).
+Print `register <path>: <N> residual risks`, then for each `## INV-n: <risk>` entry, a blank
+line, `INV-n: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
+indented two spaces. With `--engine`, read instead the `REGISTER.md` inside the installed
+`context_engine` package (`<interpreter> -c "import context_engine, os;
+print(os.path.dirname(context_engine.__file__))"` prints the directory) and say `engine
+<version>` for the path.
+
+**Why:** the register is handed over with the work (P17, regs. 7 and 11). The engine's own
+register ships inside the package, so a repo the engine is pointed at can read what the engine
+cannot protect it from, without a checkout of the engine (FRAMEWORK §7.4).
 
 ## The banner
 

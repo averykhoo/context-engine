@@ -55,3 +55,12 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-23 | This repo's own records pass `context-engine lint` with no failures: every decision and story stamped and unchanged since, every board item in schema, the working-state guards green | US-7 | tested |
 | AC-24 | The routing table is `[[routes]]` in `context.toml`: `context-engine routes` prints it, a route missing `component`, `path` or `mode` or carrying an unknown key is refused at load, and lint fails (G-R1) when a non-optional routed path does not exist | US-9 | tested |
 | AC-25 | `context-engine record new` writes a decision or story stamped at birth, fills a missing required key only when it can mean nothing but now (a date with today, a session key with this session), never guesses `actor`, and refuses a non-append-only kind | US-7, US-11 | tested |
+
+## Design review and the residual-risk register (CE-23)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-26 | `task promote <id> NOW` on an item carrying `review:` is refused, naming every reason, while its `## Design review` is missing, still the template, lacks `affects:`, a risk line, a rung, a residual's `why:` or `control:`, or an F, A, M or E line; an item with no `review:`, or a promotion below NOW, is not checked; a `review:` value outside `[working] review_triggers` is refused | US-14 | tested |
+| AC-27 | `task close` on an item carrying `review:` appends each residual to the configured register as the next `INV-n`, under the close's lock, and logs it; re-closing adds no duplicate; it refuses residuals with no register configured, and a review that is not ready | US-14 | tested |
+| AC-28 | Lint fails G-W12 on an open NOW item carrying `review:` whose review is not ready, and G-W13 on a closed reviewed item whose residuals are missing from the register, a register entry missing a field, or two entries sharing an INV id | US-14 | tested |
+| AC-29 | The engine's register ships as package data: `register show --engine` reads the `REGISTER.md` inside the installed package, and `orient` in a repo whose register is not that file points at it | US-14 | tested |

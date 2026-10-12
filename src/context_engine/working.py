@@ -21,8 +21,10 @@ import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
+from . import __version__
 from . import ledger as L
 from . import okf
+from . import review as R
 from .config import Config
 from .errors import Refusal
 from .store import ACTOR_RE, Failure, Record, Store, _now, coerce, key_order
@@ -239,6 +241,8 @@ class Engine:
             raise Refusal(f"the brief is {len(raw['brief'])} characters", f"cut it to {BRIEF_MAX}")
         kind = self.store.config.kind_for_id(rid)
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
+        if changes.get("review") is not None:
+            self._review_triggers(changes["review"])
         self._board_set(rid, changes, session=session, actor=actor, unset=unset, mechanical=mechanical)
         return f"{rid}: set {_one([*raw, *unset])}"
 
@@ -254,6 +258,13 @@ class Engine:
                 raise Refusal(f"{rid} is closed", "reopen it first")
             old.append(str(rec.doc.get("pri")))
             self._cap_check(pri, exclude=rid)
+            if pri == "NOW" and rec.doc.get("review"):
+                _, probs = R.check(rec.doc.body)
+                if probs:
+                    raise Refusal(
+                        f"{rid} is above the review threshold ({', '.join(map(str, rec.doc.get('review')))}) and its design review is not ready: {'; '.join(probs)}",
+                        f"write it with `task section {rid} \"{R.SECTION}\" --file <f>` from the template in docs/runbooks/manual-mode.md § context-engine task promote",
+                    )
 
         self._board_set(rid, {"pri": pri, "moved": session}, session=session, actor=actor, check=check, op="promote")
         return f"{rid}: {old[0]} -> {pri}"
@@ -293,13 +304,91 @@ class Engine:
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
 
+        filed: list[str] = []
+
         def check(rec: Record) -> None:
             if rec.doc.get("state") == "closed":
                 raise Refusal(f"{rid} is already closed", "nothing to do; `reopen` it if it is not done")
+            if rec.doc.get("review"):
+                filed.extend(self._file_residuals(rec, session, actor))
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
         self._board_set(rid, changes, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"closed: {msg.strip()}"), op="close")
-        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]})"
+        moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
+        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}"
+
+    # -- design review and the residual-risk register (FRAMEWORK §5.2, §7.4) ------------
+
+    def _review_triggers(self, values: list[str]) -> None:
+        allowed = self.w.review_triggers
+        bad = [str(v) for v in values if str(v) not in allowed]
+        if bad:
+            raise Refusal(f"review trigger {bad[0]!r} is not configured", f"use one of {_one(allowed)} (`review_triggers` in [working] of context.toml)")
+
+    def _file_residuals(self, rec: Record, session: str, actor: str) -> list[str]:
+        """Inside the close's lock: append the review's residuals to the register (idempotent)."""
+        rv, probs = R.check(rec.doc.body)
+        if probs:
+            raise Refusal(f"{rec.id}'s design review is not ready, so its residuals cannot be filed: {'; '.join(probs)}", f"fix `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" --file <f>`, then close")
+        if not rv.residuals:
+            return []
+        if not self.w.register:
+            raise Refusal(f"{rec.id} has {len(rv.residuals)} residual risks and no register is configured", "set `register = \"<repo-relative path>\"` in [working] of context.toml (FRAMEWORK §10: docs/invariants.md)")
+        path = self.root / self.w.register
+        text = path.read_bytes().decode("utf-8") if path.exists() else None
+        new, added = R.append(text, rv, rec.id, session)
+        if added:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self.store.write_text(path, new)
+            self.store.log("register.append", rec.id, path, session, actor, added)
+        return added
+
+    def register_show(self, engine: bool = False) -> str:
+        """The register's entries: this repo's, or with ``engine`` the one shipped in the package."""
+        if engine:
+            path, where = R.packaged(), f"engine {__version__}"
+        else:
+            if not self.w.register:
+                raise Refusal("[working] has no `register` path", "set `register = \"<repo-relative path>\"` in [working], or pass --engine for the engine's own")
+            path, where = self.root / self.w.register, self.w.register
+        if not path.exists():
+            raise Refusal(f"no register at {path}", "reinstall the engine: its REGISTER.md is package data" if engine else "the first `task close` that files a residual creates it")
+        return R.summary(path.read_bytes().decode("utf-8"), where)
+
+    def _engine_register_line(self) -> str | None:
+        """Orient's pointer at the engine's register, in a repo that is not the engine's own."""
+        pkg = R.packaged()
+        if not pkg.exists():
+            return None
+        if self.w.register and (self.root / self.w.register).resolve() == pkg.resolve():
+            return None
+        n = len(R.entries(pkg.read_bytes().decode("utf-8")))
+        return f"Engine register ({__version__}): {n} residual risks, `context-engine register show --engine`"
+
+    def lint_review(self) -> list[Failure]:
+        """G-W12: an open NOW item above the threshold has a valid design review. G-W13: every
+        closed reviewed item's residuals are in the register, and every entry is well-formed."""
+        out: list[Failure] = []
+        reviewed = [r for r in self.board_heads() if r.doc.get("review")]
+        reg = (self.root / self.w.register) if self.w.register else None
+        text = reg.read_bytes().decode("utf-8") if reg is not None and reg.exists() else ""
+        es = R.entries(text)
+        have = {R.key(e.source, e.risk) for e in es}
+        for h in reviewed:
+            rel = h.path.relative_to(self.root).as_posix()
+            if h.doc.get("state") == "open" and h.doc.get("pri") == "NOW":
+                _, probs = R.check(self.store.get(h.id).doc.body)
+                if probs:
+                    out.append(Failure("G-W12", rel, f"{h.id} is at NOW above the review threshold, and its design review is not ready: {probs[0]}", f"fix `## {R.SECTION}` (template: manual-mode.md § context-engine task promote), or demote it"))
+            elif h.doc.get("state") == "closed":
+                rv, _ = R.read(self.store.get(h.id).doc.body)
+                missing = [r.text for r in (rv.residuals if rv else []) if R.key(h.id, r.text) not in have]
+                if missing:
+                    where = self.w.register or "no register configured"
+                    out.append(Failure("G-W13", rel, f"{h.id} is closed but {len(missing)} of its residuals are not in the register ({where}): {missing[0][:60]!r}", "copy each into the register as the next INV-n (manual-mode.md § context-engine task close)"))
+        for p in R.entry_problems(es):
+            out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own INV id"))
+        return out
 
     def reopen(self, rid: str, msg: str, *, session: str, actor: str) -> str:
         self._check(session, actor)
@@ -620,6 +709,9 @@ class Engine:
             sections.append((f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`context-engine task show {rec.id}`"))
         else:
             sections.append(("Top item", "no NOW item", "`context-engine task list`"))
+        pointer = self._engine_register_line()
+        if pointer:
+            sections.append(("Engine register", pointer, "`context-engine register show --engine`"))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
 
@@ -692,6 +784,7 @@ class Engine:
                 if len(holders) > cap or (pri == "NOW" and open_ and len(holders) != cap):
                     rule = f"exactly {cap}" if pri == "NOW" else f"at most {cap}"
                     out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, f"{pri} holds {len(holders)} ({_one(holders)}); the cap is {rule}", "re-rank with `promote`"))
+            out += self.lint_review()
         return out
 
 

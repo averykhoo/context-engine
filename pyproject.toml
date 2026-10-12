@@ -21,6 +21,9 @@ dev = ["pytest>=8"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+context_engine = ["REGISTER.md"]  # the engine's residual-risk register ships with it (FRAMEWORK §7.4)
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["criterion(id): the AC-n criterion in docs/criteria.md that this test claims"]

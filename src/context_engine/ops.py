@@ -258,6 +258,15 @@ def record_amend(e: Engine, c: Caller, id: str, text: str) -> tuple[int, str]:
     return 0, e.amend(id, text, **c.kw)
 
 
+# -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------
+
+
+@op(write=False, rest="read the register file itself")
+def register_show(e: Engine, c: Caller, engine: bool = False) -> tuple[int, str]:
+    """The residual-risk register's entries; `engine` reads the one shipped with the engine (the handover)."""
+    return 0, e.register_show(engine=engine)
+
+
 # -- the banner (FRAMEWORK §5.5) ----------------------------------------------------------
 
 
