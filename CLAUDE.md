@@ -69,8 +69,9 @@ old code and passes: a false green, seen 2026-10-08d.
 ## Rituals (FRAMEWORK §6, through `context-engine`)
 
 **Session start:** `context-engine session start` (prints the key; use it as `CE_SESSION`), then `context-engine orient`.
-Do the batons and pauses it lists first. Raise every question it lists in chat, one line each,
-then `context-engine ask raised <ids>`. Read the NOW item with `context-engine task show <id>`.
+Do the batons and pauses it lists first. Show the owner the other open sessions it lists (or
+"none"), one line each, so they can say what to stop. Raise every question it lists in chat,
+one line each, then `context-engine ask raised <ids>`. Read the NOW item with `context-engine task show <id>`.
 
 **Every ritual's steps, in order, are `docs/runbooks/rituals.md`, and only there**: intake, clean
 close, pause, resume, push and CI, bootstrap, foreign reconcile, housekeeping. Each step gives its

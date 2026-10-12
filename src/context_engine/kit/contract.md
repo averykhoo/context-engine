@@ -36,9 +36,10 @@ to a stamped record, a broken record or a dead route.
 ### Rituals
 
 **Session start:** `context-engine session start` (it prints the key; use it as `CE_SESSION`),
-then `context-engine orient`. Do the batons and pauses it lists first, raise every question it
-lists in chat, one line each, then `context-engine ask raised <ids>`, and read the top item with
-`context-engine task show <id>`.
+then `context-engine orient`. Do the batons and pauses it lists first, show the owner the other
+open sessions it lists (or "none"), one line each, so they can say what to stop; raise every
+question it lists in chat, one line each, then `context-engine ask raised <ids>`; and read the
+top item with `context-engine task show <id>`.
 
 Every other ritual (intake, clean close, pause, resume, push and CI, foreign reconcile,
 housekeeping), in order, each step with its engine command and its by-hand step, is

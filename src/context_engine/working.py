@@ -973,7 +973,7 @@ class Engine:
         sections.append(("Batons and pauses: do these first", "\n".join(lines) or "none", "`context-engine task show <id>` on each"))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
-        sections.append(("Other open sessions", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", self.w.ledger))
+        sections.append(("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", self.w.ledger))
 
         top = [ln for ln in self.list(pri="NOW")]
         sections.append(("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`"))

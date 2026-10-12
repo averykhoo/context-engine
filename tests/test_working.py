@@ -460,11 +460,23 @@ def test_orient_carries_every_part_in_order_under_the_cap(eng):
     key, other = _busy_repo(eng)
     out = eng.orient(key)
     assert len(out.encode()) <= eng.w.orient_max_bytes
-    order = ["## Banner (2026-10-07b)", "where things stand", "## Batons and pauses", "BTN-2", "BTN-1", "## Other open sessions", f"- {other}, opened", "## Board: NOW and NEXT", "The top item", "A next item", "## Raise in chat", "Overdue question?", "## Top item: CE-1", "never move a file", "Traps:", "- trap one", "Read first:", "- docs/x.md"]
+    order = ["## Banner (2026-10-07b)", "where things stand", "## Batons and pauses", "BTN-2", "BTN-1", "## Other open sessions: show the owner, one line each", f"- {other}, opened", "## Board: NOW and NEXT", "The top item", "A next item", "## Raise in chat", "Overdue question?", "## Top item: CE-1", "never move a file", "Traps:", "- trap one", "Read first:", "- docs/x.md"]
     positions = [out.index(s) for s in order]
     assert positions == sorted(positions)
     assert "A later item" not in out
     assert "BTN-2 from " + key + " (yours)" in out  # own batons first
+
+
+@pytest.mark.criterion("AC-52")
+def test_orient_tells_the_session_to_show_the_owner_every_other_open_session(eng):
+    heading = "## Other open sessions: show the owner, one line each\n"
+    alone = started(eng)
+    section = eng.orient(alone).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert section.strip().splitlines()[0] == "none"  # said even when there are none
+    other = started(eng)
+    section = eng.orient(alone).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert f"- {other}, opened " in section
+    assert f"- {alone}," not in section  # not the session's own stub
 
 
 @pytest.mark.criterion("AC-17")

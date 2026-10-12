@@ -230,7 +230,8 @@ not fit, cut it at a line and say where the rest is:
 1. the banner (`HANDOFF.md` § Banner);
 2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, each pause
    with its resume step and branch;
-3. other sessions with an open stub in the ledger;
+3. other sessions with an open stub in the ledger, which the session then shows the owner, one
+   line each (`rituals.md` § Session start); say `none` when there are none;
 4. board items at NOW and NEXT (as `context-engine task list`);
 5. owner questions to raise now: open at NOW or NEXT, or overdue (see session close step 3);
 6. the NOW item's brief, `## Traps` and `## Read first`;

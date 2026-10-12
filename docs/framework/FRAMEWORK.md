@@ -846,7 +846,9 @@ letter suffix); none is renumbered.
 2. **Open batons and pause records: execute or resume them first.**
 3. The board query, which prints the banner. **Raise NEXT-tier and overdue owner questions
    in chat now,** one line each (§5.3), together with any tier-2 flags from the background
-   pass.
+   pass. **Show the owner the other open sessions too,** one line each, or say there are none:
+   only the owner knows whether one is live in another window or died, and what to stop.
+   The session stops or closes none of them on its own.
 4. `show` the top item, or the one the owner assigned.
 5. Read that item's `## Read first` list.
 6. Read the rest of the note **only if needed**, and record which in the `read:` receipt.
