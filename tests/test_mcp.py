@@ -22,6 +22,7 @@ ACTOR = "claude-code/test"
 # One call per operation: (the CLI's argv after the global flags, the MCP tool's arguments).
 # Both must reach the operation's function with the same parameters.
 CALLS = {
+    "init": (["--prefix", "task=PRJ", "--prefix", "decision=DEC", "--dry-run"], {"prefix": {"task": "PRJ", "decision": "DEC"}, "dry_run": True}),
     "session_start": ([], {}),
     "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--owed", "o"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "owed": ["o"]}),
     "session_pause": (["--rows", "r", "--deferred", "d"], {"rows": "r", "deferred": "d"}),
@@ -119,7 +120,7 @@ def test_the_cli_and_the_tool_call_the_same_function_with_the_same_parameters(na
         seen.append(_same(kw))
         return 0, "ok"
 
-    monkeypatch.setitem(ops.OPS, name, ops.Op(name, spy, o.write, o.rest))
+    monkeypatch.setitem(ops.OPS, name, ops.Op(name, spy, o.write, o.rest, o.engine))
     argv, args = CALLS[name]
     g, verb = CLI_VERB[name]
     assert main(["--root", str(root), "--actor", ACTOR, "--session", "2026-10-08a", g, *([verb] if verb else []), *argv]) == 0
@@ -169,7 +170,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp"}  # one-line by the same code paths; covered in test_working
+    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init"}  # one-line by the same code paths; covered in test_working (init: test_kit)
 
 
 @pytest.mark.criterion("AC-19")

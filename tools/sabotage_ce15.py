@@ -14,6 +14,9 @@ BS = "src/context_engine/bootstrap.py"
 KIT = "src/context_engine/kit/"
 FW = "docs/framework/FRAMEWORK.md"
 T = "tests/test_kit.py"
+CF = "src/context_engine/config.py"
+WK = "src/context_engine/working.py"
+LG = "src/context_engine/ledger.py"
 S = [
     ("no-overwrite", BS, "        if (root / dst).exists():\n            skipped.append(dst)", "        if False:\n            skipped.append(dst)", T + " -k never_overwrites"),
     ("no-overwrite", BS, "        if BEGIN in old:", "        if False:", T + " -k never_overwrites"),
@@ -33,6 +36,19 @@ S = [
     ("leak-kit", KIT + "README.md", "repo, at the pinned ref; copy it", "repo (spike/FINDINGS.md), at the pinned ref; copy it", T + " -k carry_none"),
     ("leak-fw", FW, "fallback is a runbook section (P16). Not built yet (CE-18).", "fallback is a runbook section (P16). Board task: CE-18.", T + " -k carry_none"),
     ("leak-fw", FW, "  `context.toml`, with the defaults in §10); or", "  `context.toml`; this repo uses `US`, `DEC`, `AC-21`); or", T + " -k carry_none"),
+    # the CLI/MCP wiring, the config refusal and the first banner
+    ("cli-no-config", "src/context_engine/cli.py", "return o.fn(o.target(args.root), ", "return o.fn(ops.Engine(args.root), ", T + " -k bootstraps_with_init"),
+    ("mcp-no-config", "src/context_engine/mcp.py", "            e = o.target(root)  #", "            e = ops.Engine(root)  #", T + " -k mcp_init"),
+    ("cli-op", "src/context_engine/cli.py", '    ("init", None): "init",\n', "", "tests/test_mcp.py -k every_cli_subcommand"),
+    ("runbook", "docs/runbooks/manual-mode.md", "### context-engine init\n", "### init by hand\n", "tests/test_runbook.py"),
+    ("cfg-engine", CF, '    _known("[engine]", engine, ENGINE_KEYS)\n', "", T + " -k unknown_key"),
+    ("cfg-working", CF, '    _known("[working]", w, Working.__dataclass_fields__)\n', "", T + " -k unknown_key"),
+    ("cfg-kinds", CF, '        _known(f"[kinds.{name}]", k, KIND_KEYS)\n', "", T + " -k unknown_key"),
+    ("cfg-over-refuse", CF, '    _known("[working]", w, Working.__dataclass_fields__)', '    _known("[working]", w, ("ledger",))', T + " -k own_config_still_loads"),
+    ("banner-none-read", WK, "return L.find_banner(path.read_bytes()", "return L.read_banner(path.read_bytes()", T + " -k bootstraps_with_init"),
+    ("banner-seen-none", WK, "if (now.sha if now else L.NO_BANNER) != seen_hash:", "if now and now.sha != seen_hash:", T + " -k first_banner"),
+    ("banner-place", LG, "start = end = first.start() if first else len(norm)", "start = end = 0 if first else len(norm)", T + " -k first_banner"),
+    ("banner-show", "src/context_engine/ops.py", 'return 0, f"banner none hash {L.NO_BANNER}', 'return 0, f"no banner ({L.NO_BANNER})', T + " -k first_banner"),
 ]
 ok = True
 for name, f, old, new, sel in S:

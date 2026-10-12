@@ -148,6 +148,12 @@ mode = "replaced; AC-21 keeps manual-mode.md in step with the CLI"
 note = "manual-mode.md does every engine operation by hand, with its Why (US-11)"
 
 [[routes]]
+component = "Adoption kit"
+path = "src/context_engine/kit"
+mode = "replaced; package data, so it ships with the engine; tests/test_kit.py keeps it in step with config.py and FRAMEWORK §6.6"
+note = "what `context-engine init` copies into a repo (FRAMEWORK §6.9); README.md there is the install, bootstrap and upgrade guide"
+
+[[routes]]
 component = "Evidence"
 path = "docs"
 pattern = "evidence/<topic>-<date>.md"

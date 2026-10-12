@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
+from . import bootstrap
+from . import ledger as L
 from .working import Engine
 
 
@@ -37,6 +40,11 @@ class Op:
     fn: Callable[..., tuple[int, str]]
     write: bool
     rest: str = ""  # reads: where to get what the MCP cap cut
+    engine: bool = True  # False: the function takes the repo root (a Path) instead of an Engine, as `init` does
+
+    def target(self, root) -> "Engine | Path":
+        """What the function's first parameter gets: an Engine on ``root``, or the root itself."""
+        return Engine(root) if self.engine else Path(root)
 
     @property
     def params(self) -> list[inspect.Parameter]:
@@ -47,9 +55,9 @@ class Op:
 OPS: dict[str, Op] = {}
 
 
-def op(*, write: bool, rest: str = ""):
+def op(*, write: bool, rest: str = "", engine: bool = True):
     def register(fn):
-        OPS[fn.__name__] = Op(fn.__name__, fn, write, rest)
+        OPS[fn.__name__] = Op(fn.__name__, fn, write, rest, engine)
         return fn
 
     return register
@@ -57,6 +65,15 @@ def op(*, write: bool, rest: str = ""):
 
 def _rel(e: Engine, path) -> str:
     return path.relative_to(e.root).as_posix()
+
+
+# -- bootstrap (FRAMEWORK §6.9) -----------------------------------------------------------
+
+
+@op(write=True, engine=False)
+def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: bool = False) -> tuple[int, str]:
+    """Write the adoption kit's missing files into the repo (config, contract block, skeletons); never overwrites. `prefix` maps kind -> id prefix."""
+    return 0, bootstrap.init(root, prefix or {}, dry_run=dry_run)
 
 
 # -- sessions (FRAMEWORK §6.1, §6.3, §6.4) ---------------------------------------------
@@ -275,7 +292,8 @@ def banner_show(e: Engine, c: Caller) -> tuple[int, str]:
     """The banner and its hash; pass the hash to banner_set."""
     b = e.banner()
     if b is None:
-        return 0, f"no note at {e.w.handoff}"
+        why = "no banner yet" if (e.root / e.w.handoff).exists() else f"no note at {e.w.handoff} yet"
+        return 0, f"banner none hash {L.NO_BANNER}\n\n{why}: the first `banner set --seen {L.NO_BANNER}` writes it"
     return 0, f"banner {b.key} hash {b.sha}\n\n{b.text}"
 
 

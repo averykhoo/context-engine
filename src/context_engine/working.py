@@ -87,7 +87,7 @@ class Engine:
 
     def banner(self) -> L.Banner | None:
         path = self._path("handoff")
-        return L.read_banner(path.read_bytes().decode("utf-8")) if path.exists() else None
+        return L.find_banner(path.read_bytes().decode("utf-8")) if path.exists() else None
 
     def board_heads(self, kinds: tuple[str, ...] | None = None) -> list[Record]:
         return [r for k in (kinds or self._board()) for r in self.store.heads(k)]
@@ -660,13 +660,15 @@ class Engine:
             raise Refusal("an empty banner", "write what is true now")
         path = self._path("handoff")
         with self.store.lock():
-            note = path.read_bytes().decode("utf-8")
-            now = L.read_banner(note)
-            if now.sha != seen_hash:
-                raise Refusal(f"the banner changed since you read it (now {now.sha}, key {now.key})", "re-read it with `banner show`, merge, and pass the new hash")
+            note = path.read_bytes().decode("utf-8") if path.exists() else ""
+            now = L.find_banner(note)  # None: the first banner, which `seen` = "none" vouches for
+            if (now.sha if now else L.NO_BANNER) != seen_hash:
+                where = f"now {now.sha}, key {now.key}" if now else f"there is no banner yet, so pass --seen {L.NO_BANNER}"
+                raise Refusal(f"the banner changed since you read it ({where})", "re-read it with `banner show`, merge, and pass the new hash")
+            path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, L.replace_banner(note, session, text))
             self.store.log("banner.set", session, path, session, actor, ["banner"])
-        return f"banner replaced, key {session}, new hash {self.banner().sha}"
+        return f"banner {'replaced' if now else 'written (the first)'}, key {session}, new hash {self.banner().sha}"
 
     # -- orient (FRAMEWORK §6.1) --------------------------------------------------------
 

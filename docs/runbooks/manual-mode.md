@@ -582,6 +582,7 @@ cannot protect it from, without a checkout of the engine (FRAMEWORK §7.4).
 ### context-engine banner show
 
 Print the banner's key, its hash (above) and its text. Keep the hash: `banner set` needs it.
+If the note has no `## Banner (<key>)` heading yet (or there is no note), the hash is `none`.
 
 **Why:** reading and hashing together is what makes the later write safe.
 
@@ -592,6 +593,9 @@ Print the banner's key, its hash (above) and its text. Keep the hash: `banner se
 2. Replace the heading and text up to the next `## ` heading with `## Banner (<your key>)`, a
    blank line, and your text; add a blank line after it only if something follows. Keep the
    note's line endings.
+3. **The first banner** (the hash you saw was `none`): insert the same block just before the
+   note's first `## ` heading, so that heading still ends the banner; with no `## ` heading,
+   append it after a blank line. Create the note if it does not exist.
 
 **Why:** the banner carries exactly one session key, and a later close must not silently erase
 another session's truth (FRAMEWORK §5.5 rule 2, AC-16).
@@ -632,3 +636,30 @@ blank).
 
 **Why:** owner intent changes by addition, so the original words and every change stay readable
 in order, and the hash above the heading still holds.
+
+## Bootstrap
+
+### context-engine init
+
+Give a repo the framework's files (FRAMEWORK §6.9). The kit is `src/context_engine/kit/` in the
+engine repo at the pinned ref (or `context_engine/kit/` in the installed package), and its
+`README.md` has the same steps.
+1. If `context.toml` exists and is not the kit's `context.toml.template` (with your prefixes),
+   stop: this repo already has a config, so create only the missing files it names.
+2. Otherwise copy `context.toml.template` to `context.toml`; to change a kind's id prefix, edit
+   `prefix` in its `[kinds.<name>]` table (no two kinds may share one, and none may collide with
+   ids the repo already uses).
+3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md` and `docs/ledger/session-log.md`
+   from the kit to the same paths, skipping any that exist.
+4. `CLAUDE.md`: if it does not contain `<!-- context-engine kit 0.5 begin -->`, append the kit's
+   `contract.md` after a blank line (create the file with a `# <repo>: contract` title if it is
+   absent), keeping the file's line endings.
+5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/runbooks`,
+   `docs/evidence` and `tasks` that does not exist, create it with an empty `.gitkeep`. Create
+   `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.
+6. Report in one line what you created and what you skipped. Never overwrite an existing file,
+   and never install anything into the repo's environment.
+
+**Why:** a new repo should get every file the rituals expect in one step, and an existing repo
+must not lose a byte of what it has: it maps its components onto the routes instead of moving
+them (FRAMEWORK §11.4).

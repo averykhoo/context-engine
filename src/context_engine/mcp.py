@@ -31,7 +31,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from . import ops
 from .errors import Refusal
-from .working import Engine
 
 NAME = "context-engine"  # DEC-15
 INSTRUCTIONS = (
@@ -72,7 +71,7 @@ def make_tool(o: ops.Op, root: Path, state: ops.Caller):
     def tool(**kw: Any) -> str:
         c = ops.Caller(kw.pop("session", None) or state.session, kw.pop("actor", None) or state.actor)
         try:
-            e = Engine(root)
+            e = o.target(root)  # an Engine, or for `init` the bare root: there may be no context.toml yet
             _, text = o.fn(e, c, **kw)
         except Refusal as r:
             raise ToolError(str(r)) from r  # the SDK passes a ToolError's text, remedy and all, to the agent

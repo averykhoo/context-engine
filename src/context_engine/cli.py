@@ -14,14 +14,13 @@ from pathlib import Path
 
 from . import ops
 from .errors import Refusal
-from .working import Engine
 
 
-def _fields(pairs: list[str]) -> dict[str, str]:
+def _fields(pairs: list[str], flag: str = "--set") -> dict[str, str]:
     out = {}
     for p in pairs or []:
         if "=" not in p:
-            raise Refusal(f"--set {p!r} has no `=`", "write it as key=value")
+            raise Refusal(f"{flag} {p!r} has no `=`", "write it as key=value")
         k, v = p.split("=", 1)
         out[k.strip()] = v
     return out
@@ -37,6 +36,10 @@ def build() -> argparse.ArgumentParser:
     ap.add_argument("--session", default=os.environ.get("CE_SESSION"), help="the session key (or CE_SESSION)")
     ap.add_argument("--actor", default=os.environ.get("CE_ACTOR"), help="the OKF actor, e.g. claude-code/<model> (or CE_ACTOR)")
     groups = ap.add_subparsers(dest="group", required=True)
+
+    ini = groups.add_parser("init", help="write the adoption kit's missing files into the repo (FRAMEWORK §6.9); never overwrites")
+    ini.add_argument("--prefix", action="append", default=[], metavar="KIND=PREFIX", help="a kind's id prefix, e.g. task=PRJ; repeat for each")
+    ini.add_argument("--dry-run", action="store_true", help="say what would be written, write nothing")
 
     s = groups.add_parser("session").add_subparsers(dest="op", required=True)
     s.add_parser("start")
@@ -164,6 +167,7 @@ def build() -> argparse.ArgumentParser:
 
 # (group, verb) -> the operation in ``ops.OPS``. The CLI spells `context-engine <group> <verb>`.
 CLI_OPS = {
+    ("init", None): "init",
     ("session", "start"): "session_start",
     ("session", "close"): "session_close",
     ("session", "pause"): "session_pause",
@@ -191,6 +195,8 @@ def _params(args: argparse.Namespace) -> dict:
     a = vars(args)
     if "set" in a:
         a["fields"] = _fields(a["set"])
+    if isinstance(a.get("prefix"), list):
+        a["prefix"] = _fields(a["prefix"], "--prefix")
     for name in ("deps", "add", "remove", "blocks"):
         if isinstance(a.get(name), str):
             a[name] = _ids(a[name])
@@ -205,7 +211,7 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
     args = build().parse_args(argv)
     o = ops.OPS[CLI_OPS[(args.group, getattr(args, "op", None))]]
     a = _params(args)
-    return o.fn(Engine(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
+    return o.fn(o.target(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -64,3 +64,13 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-27 | `task close` on an item carrying `review:` appends each residual to the configured register as the next `INV-n`, under the close's lock, and logs it; re-closing adds no duplicate; it refuses residuals with no register configured, and a review that is not ready | US-14 | tested |
 | AC-28 | Lint fails G-W12 on an open NOW item carrying `review:` whose review is not ready, and G-W13 on a closed reviewed item whose residuals are missing from the register, a register entry missing a field, or two entries sharing an INV id | US-14 | tested |
 | AC-29 | The engine's register ships as package data: `register show --engine` reads the `REGISTER.md` inside the installed package, and `orient` in a repo whose register is not that file points at it | US-14 | tested |
+
+## Adoption (CE-15)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-30 | `context-engine init` (CLI and MCP, no `context.toml` needed) writes the adoption kit into an empty repo, and that repo then passes `context-engine lint` and runs `session start`, `session close` and its first `banner set` with no hand edit | US-9 | tested |
+| AC-31 | `init` only creates: a file that exists is byte-identical afterwards, `CLAUDE.md` gets the marked contract block appended only when its markers are absent (keeping its line endings), a second run creates nothing, and a different `context.toml` or a bad or colliding `--prefix` is refused | US-9 | tested |
+| AC-32 | The kit's `context.toml.template` is the config schema: it sets every key the engine reads and parses as a config, every tuned value in it carries a provenance note, and loading a config refuses an unknown key in `[engine]`, `[working]` or `[kinds.*]`, naming the allowed keys | US-15 | tested |
+| AC-33 | The kit's contract block carries FRAMEWORK §6.6 'Ultracode', 'Several tasks' and the fable rule verbatim and a `framework:` pin, and neither the kit nor FRAMEWORK carries this repo's ids (other than `(CE-n)` build marks) or paths | US-9, US-15 | tested |
+| AC-34 | `banner show` on a note with no banner gives hash `none`; `banner set --seen none` writes the first banner just before the note's first `## ` section (creating the note if absent), and refuses any other hash while there is no banner | US-15 | tested |

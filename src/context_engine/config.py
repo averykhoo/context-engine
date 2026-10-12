@@ -99,11 +99,24 @@ class Config:
             ) from None
 
 
+def _known(table: str, got: dict, allowed) -> None:
+    """Refuse a key the engine does not read, so a typo is a red rather than a silent default."""
+    extra = sorted(set(got) - set(allowed))
+    if extra:
+        raise Refusal(f"{table} has unknown key {extra[0]!r}", f"use only {', '.join(allowed)} (the kit's context.toml.template is the schema)")
+
+
+ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout")
+KIND_KEYS = tuple(f for f in Kind.__dataclass_fields__ if f != "name")
+
+
 def from_dict(raw: dict) -> Config:
     engine = raw.get("engine", {})
+    _known("[engine]", engine, ENGINE_KEYS)
     kinds = {}
     prefixes = set()
     for name, k in raw.get("kinds", {}).items():
+        _known(f"[kinds.{name}]", k, KIND_KEYS)
         mode = k.get("mode")
         if mode not in CHANGE_MODES:
             raise Refusal(
@@ -133,6 +146,7 @@ def from_dict(raw: dict) -> Config:
             types=types,
         )
     w = raw.get("working", {})
+    _known("[working]", w, Working.__dataclass_fields__)
     named = [w[r] for r in ("task", "question", "decision", "baton", "pause") if w.get(r)] + list(w.get("board", ()))
     for name in named:
         if name not in kinds:

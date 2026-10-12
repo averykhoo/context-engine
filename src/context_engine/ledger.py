@@ -168,11 +168,19 @@ class Banner:
     end: int  # where the next `## ` heading starts
 
 
+NO_BANNER = "none"  # the `seen` hash of a note with no banner yet: the first `banner set` passes it
+
+
+def find_banner(note: str) -> Banner | None:
+    """The note's banner, or None when it has no ``## Banner (<key>)`` heading yet."""
+    return read_banner(note) if BANNER_RE.search(note.replace("\r\n", "\n")) else None
+
+
 def read_banner(note: str) -> Banner:
     note = note.replace("\r\n", "\n")
     m = BANNER_RE.search(note)
     if not m:
-        raise Refusal("the note has no `## Banner (<session key>)` heading", "add one: `## Banner (2026-10-08a)` followed by the banner text")
+        raise Refusal("the note has no `## Banner (<session key>)` heading", f"the first `banner set` writes it: pass --seen {NO_BANNER}")
     nxt = re.search(r"^## ", note[m.end() :], re.MULTILINE)
     end = m.end() + nxt.start() if nxt else len(note)
     section = note[m.start() : end]
@@ -185,7 +193,15 @@ def replace_banner(note: str, key: str, text: str) -> str:
         raise Refusal(f"session key {key!r} is not like 2026-10-08a", "pass this session's key")
     newline = "\r\n" if note.count("\r\n") * 2 > note.count("\n") else "\n"
     norm = note.replace("\r\n", "\n")
-    b = read_banner(norm)
-    tail = norm[b.end :]
-    out = norm[: b.start] + f"## Banner ({key})\n\n" + text.strip("\n") + "\n" + ("\n" if tail else "") + tail
+    b = find_banner(norm)
+    if b is None:  # the first banner goes before the note's first `## ` section, so that section still bounds it
+        first = re.search(r"^## ", norm, re.MULTILINE)
+        start = end = first.start() if first else len(norm)
+        if not first and norm and not norm.endswith("\n\n"):
+            norm += "\n" if norm.endswith("\n") else "\n\n"
+            start = end = len(norm)
+    else:
+        start, end = b.start, b.end
+    tail = norm[end:]
+    out = norm[:start] + f"## Banner ({key})\n\n" + text.strip("\n") + "\n" + ("\n" if tail else "") + tail
     return out.replace("\n", newline) if newline != "\n" else out

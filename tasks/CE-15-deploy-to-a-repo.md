@@ -9,7 +9,7 @@ deps: [CE-8]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-11a
-updated: 2026-10-12a
+updated: 2026-10-12b
 closed:
 ---
 
@@ -35,3 +35,4 @@ than move (§11.4). Feeds CE-7 and CE-11.
 - 2026-10-09b (claude-code/claude-opus-5-5): DEC-16 (FRAMEWORK §6.6, several tasks -> one subagent each, top level only reports) must ship in the deployed contract text, so every framework repo gets it.
 - 2026-10-09c (claude-code/claude-opus-5-5): DEC-17 (ultracode has standing approval when used to minimize token/context consumption) is now FRAMEWORK §6.6 'Ultracode'; the deployed contract text must carry it, like DEC-16.
 - 2026-10-12a (claude-code/claude-opus-5-5): US-15 paste test (docs/evidence/framework-paste-test-2026-10-12.md): the kit must carry a context.toml schema or commented template, the install and version-pin step, ledger/HANDOFF/charter skeletons (first banner, empty-ledger key), a definition of the adopter's gate, and runbooks and FRAMEWORK without this repo's ids and paths. Ritual order itself is CE-24.
+- 2026-10-12b (claude-code/claude-opus-5-5): build: 02973b6 FRAMEWORK deploy path de-leaked (6.9, 8.0, 10, 11.1, 11.4, leaks); a1e2cd3 adoption kit text at src/context_engine/kit/ and bootstrap.init (create-only), tests/test_kit.py + tools/sabotage_ce15.py (18 rows red). Next: init on CLI/MCP, config unknown-key refusal, first banner, after CE-23 commits the shared files.
