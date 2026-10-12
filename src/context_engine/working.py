@@ -309,6 +309,12 @@ class Engine:
         self._check(session, actor)
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
+        if self.w.question and self.store.config.kind_for_id(rid).name == self.w.question:
+            # FRAMEWORK §5.3: a question is closed only by an owner answer (audit finding A20)
+            raise Refusal(
+                f"{rid} is an owner question, which closes only on the owner's answer (FRAMEWORK §5.3)",
+                f"record the owner's words with `ask answer {rid} \"<owner words>\" --title \"<decision title>\"`; if the owner said later, `ask later {rid}`",
+            )
 
         filed: list[str] = []
 

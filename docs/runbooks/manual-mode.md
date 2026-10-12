@@ -384,7 +384,9 @@ mechanical, so they must not look like progress (FRAMEWORK §5.2).
 
 ### context-engine task close
 
-A message is required, and the item must be open. Set `state: closed`, `status: deprecated`,
+A message is required, and the item must be open. **Never close an owner question (`ASK-n`)
+this way:** it closes only on the owner's answer, through `ask answer` (FRAMEWORK §5.3); if the
+owner said later, use `ask later`. Set `state: closed`, `status: deprecated`,
 `closed: <key>`, `moved`, `updated`. Append `- <key> (<actor>): closed: <message>` to `## Log`.
 Do not move or rename the file.
 
@@ -411,6 +413,8 @@ one first.
 
 **Why:** closed items stay in place as records, so links never break (US-5, AC-12). `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
+A question closed by `task close` would carry no decision in the owner's words, and the agent
+would in effect have answered its own question (FRAMEWORK §5.3).
 The residuals move to the register at close because that is when the design is final, and the
 register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
 

@@ -316,6 +316,20 @@ def test_answer_records_the_owner_words_as_a_decision_and_unblocks(eng):
     assert out.endswith(f"unblocked {t.id}")
 
 
+def test_task_close_refuses_a_question_and_names_ask_answer(eng):
+    """FRAMEWORK §5.3: a question closes only on an owner answer (CE-20, audit finding A20)."""
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    before = q.path.read_bytes()
+    with pytest.raises(Refusal, match=f"{q.id} is an owner question") as exc:
+        eng.close(q.id, "decided it myself", **kw(key))
+    assert f"ask answer {q.id}" in exc.value.remedy
+    assert q.path.read_bytes() == before  # nothing written
+    out = eng.ask_answer(q.id, "blue", title="Blue", **kw(key))  # the one way it closes
+    assert out.startswith(f"{q.id}: answered as DEC-")
+    assert eng.store.get(q.id).doc.get("state") == "closed"
+
+
 # -- batons and pauses (AC-14, AC-15) ------------------------------------------------------
 
 

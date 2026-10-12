@@ -730,8 +730,8 @@ into the flat directory once the schema carries `state` (§11.4).
   - only humans on the remote-control channel are nagged in chat; questions for anyone else
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
-  recorded **immediately** (§6.4 item 0). *Not built yet: `task close ASK-n` is not refused;
-  close a question with `ask answer` (CE-20).*
+  recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
+  `ask answer` (CE-20).
 - **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
   receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, owner_words)` records
   the words verbatim as a decision with `actor: owner`, closes the question, and reports which
