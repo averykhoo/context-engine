@@ -21,7 +21,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every Claude Code session using the MCP tools, its subagents, the next session with no context, the owner, every repo the engine is pointed at
 - **why not eliminated:** an MCP call carries no caller identity the engine can verify; the actor is self-declared (OKF §7)
-- **control:** individual: the server instructions and CLAUDE.md tell each subagent to pass its own `actor`; G-W7 (not built, CE-14) will cross-check the op log
+- **control:** individual: the server instructions and CLAUDE.md tell each subagent to pass its own `actor`; G-W7 (CE-14) cross-checks only the session keys on board items against the op log, not who the actor was, so it does not catch this
 - **from:** CE-3, session 2026-10-12b
 
 ## INV-3: the MCP tools are missing at session start, and a session works around them silently
@@ -114,3 +114,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** an existence guard over decision links is G-T3, not built (CE-14)
 - **control:** collective: `decision link` refuses a file or symbol that does not exist at link time; G-T3 when CE-14 lands
 - **from:** CE-5, session 2026-10-12d
+
+## INV-16: G-D3 and G-T3 grep each dotted part of a symbol as a word, so a renamed symbol whose old name still appears elsewhere in the file passes
+
+- **affects:** the building session; every later session, since lint runs in the gate (AC-23); every repo the kit deploys to, through the `[guards]` defaults; the owner, whose attention a false red costs
+- **why not eliminated:** resolving definitions needs a parser per language, and the grep works for every file type
+- **control:** reduce: the citing rule in CLAUDE.md (grep that a symbol exists before citing it)
+- **from:** CE-14, session 2026-10-12d
+
+## INV-17: a doc missing from a `[guards]` list is not checked at all
+
+- **affects:** the building session; every later session, since lint runs in the gate (AC-23); every repo the kit deploys to, through the `[guards]` defaults; the owner, whose attention a false red costs
+- **why not eliminated:** owner words are append-only and frozen provenance is never edited, so a red there has no remedy and the lists are chosen per repo
+- **control:** collective: the kit template's default lists; the coverage guard planned in CE-30
+- **from:** CE-14, session 2026-10-12d
+
+## INV-18: G-W7 cannot recheck the values of `state`, `pri` and `deps`, only the session keys
+
+- **affects:** the building session; every later session, since lint runs in the gate (AC-23); every repo the kit deploys to, through the `[guards]` defaults; the owner, whose attention a false red costs
+- **why not eliminated:** the op log records which keys changed, not their values, and logging values would duplicate every record
+- **control:** reduce: write-time refusal in `task set` (BOARD_OWNED); G-W4 and G-W5 at rest
+- **from:** CE-14, session 2026-10-12d
+
+## INV-19: G-D9's example check is a word match, so a value copied from a spec example under a note that does not say so passes
+
+- **affects:** the building session; every later session, since lint runs in the gate (AC-23); every repo the kit deploys to, through the `[guards]` defaults; the owner, whose attention a false red costs
+- **why not eliminated:** the spec's examples are prose, with no list to compare against
+- **control:** individual: the `wrong if` the note must state; review of the config diff
+- **from:** CE-14, session 2026-10-12d
+
+## INV-20: G-D8 does not see a session layer written as a sentence inside a banner bullet
+
+- **affects:** the building session; every later session, since lint runs in the gate (AC-23); every repo the kit deploys to, through the `[guards]` defaults; the owner, whose attention a false red costs
+- **why not eliminated:** dated facts cite session keys mid-sentence and must pass
+- **control:** reduce: G-D1 line and byte caps on the note's route (the backstop, P6)
+- **from:** CE-14, session 2026-10-12d

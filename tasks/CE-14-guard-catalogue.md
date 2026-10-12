@@ -4,14 +4,15 @@ id: CE-14
 title: "The guard catalogue (FRAMEWORK §8.1 to §8.5) as engine lint guards"
 brief: "Minimum set first (§11.1); every guard sabotaged red before it is believed; each docstring says what it does not check"
 pri: NOW
-state: open
+state: closed
 deps: [CE-2]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-12d
 updated: 2026-10-12d
-closed:
+closed: 2026-10-12d
 review: [guard]
+status: deprecated
 ---
 
 The engine's lint framework (CE-1, CE-2) carries the record-level guards; this item builds the
@@ -32,6 +33,7 @@ this repo actually hits. Part of G7 (DEC-10).
 ## Log
 
 - 2026-10-12d (claude-code/claude-opus-5-5): built G-D1, G-D2 (at rest), G-D3, G-D7, G-D8, G-D9, G-T3, G-W7 and [guards] switches in src/context_engine/guards.py; tests/test_guards.py (AC-43..AC-51); tools/sabotage_ce14.py 32 rows all red; split G-D4+G-D5 to CE-33 and G-T5 to CE-34; G-I/G-T1/T2/T6 stay CE-25
+- 2026-10-12d (claude-code/claude-opus-5-5): closed: done in d999bc3: G-D1, G-D2, G-D3, G-D7, G-D8, G-D9, G-T3, G-W7 and [guards] switches built and sabotaged; G-D4/G-D5 split to CE-33, G-T5 to CE-34; intent-chain guards stay CE-25
 
 ## Design review
 
