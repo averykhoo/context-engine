@@ -1,0 +1,191 @@
+# context.toml: the framework config for this repo (FRAMEWORK §8.0). This file IS the schema:
+# every key the engine reads appears below with its default, and the engine refuses any key it
+# does not know (so a typo is a red, not a silent default).
+#
+# Written by `context-engine init` from the adoption kit; edit it in place afterwards. For an
+# existing repo (FRAMEWORK §11.4), point `dir`, `prefix` and the routes at the files and id
+# series the repo already has: map, don't move, and never renumber an id.
+#
+# Every tuned value carries a provenance note (FRAMEWORK §8.0): MEASURED or JUDGEMENT, the method,
+# and what would make it wrong. The values below are the engine's defaults, so their provenance
+# starts as JUDGEMENT; re-state it when this repo measures or decides otherwise.
+#
+# Read by nothing yet, so not keys here (FRAMEWORK §8.0 lists them): enabled guards, cutoff ids,
+# model choices for background agents, the housekeeping write cap and the stale-stub window.
+
+[engine]
+oplog = "docs/ledger/ops.jsonl"      # one JSON line per engine write; append-only, written by the engine
+lockfile = ".context/engine.lock"    # .context/ ignores itself; never tracked
+bundles = ["docs/decisions", "docs/stories", "tasks"]   # directories declared OKF bundles (lint G-D11)
+lock_timeout = 30.0                  # seconds to wait for the repo lock; provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
+
+# -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
+# Keys of a [kinds.<name>] table:
+#   type        the OKF `type:` value written into every record of the kind
+#   prefix      the id series: prefix "D" gives D-1, D-2, ... Ids are never reused or renumbered.
+#   dir         repo-relative directory holding the records (one file each: <id>-<slug>.md)
+#   mode        append-only | replaced | stamped (FRAMEWORK §8.0.1)
+#   required    frontmatter fields every record must carry
+#   enums       field -> its allowed values
+#   extra_dirs  further directories scanned for ids, e.g. a legacy tasks/closed/
+#   types       field -> str | date | key | list | int (`key` is a session key like 2026-01-31a)
+# OKF reserves `status`: name state fields `state`, `decision_status`, `story_status`.
+
+[kinds.decision]
+type = "Decision"
+prefix = "D"
+dir = "docs/decisions"
+mode = "append-only"
+required = ["title", "actor", "decided", "session", "decision_status"]
+enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
+types = { decided = "date", session = "key" }
+extra_dirs = []
+
+[kinds.story]
+type = "Story"
+prefix = "S"
+dir = "docs/stories"
+mode = "append-only"
+required = ["title", "actor", "date", "story_status", "goals"]
+enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
+types = { date = "date", goals = "list" }   # goals: the charter's G-n ids
+
+[kinds.task]
+type = "Task"
+prefix = "T"
+dir = "tasks"
+mode = "replaced"
+required = ["title", "pri", "state", "created"]
+enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
+
+[kinds.question]
+type = "Question"
+prefix = "ASK"
+dir = "tasks"
+mode = "replaced"
+required = ["title", "pri", "state", "created"]
+enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
+
+# Batons and pause blocks: one stamped record each (FRAMEWORK §5.4).
+[kinds.baton]
+type = "Baton"
+prefix = "BTN"
+dir = "docs/working"
+mode = "stamped"
+required = ["title", "session", "state", "created"]
+enums = { state = ["open", "done", "expired"] }
+types = { session = "key", created = "date", done = "key" }
+
+[kinds.pause]
+type = "Pause"
+prefix = "PAU"
+dir = "docs/working"
+mode = "stamped"
+required = ["title", "session", "state", "created", "branch", "resume_step"]
+enums = { state = ["open", "done", "expired"] }
+types = { session = "key", created = "date", resumed = "key", uncommitted = "list", deferred = "list" }
+
+# -- working state (FRAMEWORK §5): which files and kinds the session operations use ---------
+[working]
+ledger = "docs/ledger/session-log.md"   # the session ledger, one file under the engine lock
+handoff = "HANDOFF.md"                  # the orientation note; `banner set` writes its `## Banner (<key>)`
+board = ["task", "question"]            # kinds ranked on the board
+task = "task"                           # the kind baton expiry files into, and `ask answer` reports as unblocked
+question = "question"
+decision = "decision"
+baton = "baton"
+pause = "pause"
+orient_max_bytes = 6000      # provenance: JUDGEMENT, engine default sized to one screen of orient; wrong if a routine orient gets cut
+read_max_bytes = 6000        # every other MCP read; provenance: JUDGEMENT, the orient cap reused; wrong if a routine read (one task, the board) gets cut
+ask_overdue_sessions = 5     # an owner question not raised in this many sessions is overdue (FRAMEWORK §5.3); provenance: JUDGEMENT, engine default; wrong if the owner is asked too often or too rarely
+ask_overdue_days = 7         # ...or in this many days, whichever comes first; provenance: JUDGEMENT, engine default; wrong as above
+baton_max_age = 2            # sessions closed after the owning one before a baton expires (G-W3); provenance: JUDGEMENT, engine default; wrong if batons expire while still being worked
+register = "docs/invariants.md"   # the residual-risk register (FRAMEWORK §7.4); the first `task close` that files a residual creates it
+review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # the values a board item's `review:` may take: FRAMEWORK §5.2's design-review threshold, one per clause
+max_pauses = 2               # consecutive pause entries before lint asks for a clean close (G-W2); provenance: JUDGEMENT, engine default; wrong if real work routinely needs more
+
+[working.caps]               # board tier caps: NOW holds exactly this many, others at most
+NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if never
+NEXT = 5                     # provenance: JUDGEMENT, engine default; wrong if NEXT routinely overflows with work that is really next
+
+# -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
+# Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,
+# free text), pattern (how files under `path` are named), note, optional (may be absent).
+
+[[routes]]
+component = "Contract"
+path = "CLAUDE.md"
+mode = "replaced; the framework block between the kit markers is replaced only on upgrade"
+
+[[routes]]
+component = "Charter"
+path = "docs/charter.md"
+mode = "replaced, owner-stamped"
+note = "goals carry G-n ids; a story's `goals` names them"
+
+[[routes]]
+component = "Stories (owner's words)"
+path = "docs/stories"
+pattern = "<id>-<slug>.md"
+mode = "append-only: `context-engine record amend`, never rewrite"
+
+[[routes]]
+component = "Criteria"
+path = "docs/criteria.md"
+mode = "replaced, ids kept"
+
+[[routes]]
+component = "Decisions"
+path = "docs/decisions"
+pattern = "<id>-<slug>.md"
+mode = "append-only: `context-engine record amend`"
+note = "one record each (FRAMEWORK §6.5)"
+
+[[routes]]
+component = "Tasks and owner questions"
+path = "tasks"
+pattern = "<id>-<slug>.md"
+mode = "frontmatter through `context-engine task`/`context-engine ask`, bodies by hand"
+
+[[routes]]
+component = "Batons and pauses"
+path = "docs/working"
+pattern = "<id>-<slug>.md"
+mode = "stamped, through `context-engine baton`/`context-engine pause`"
+
+[[routes]]
+component = "Orientation note"
+path = "HANDOFF.md"
+mode = "replaced at clean close; banner through `context-engine banner set`"
+
+[[routes]]
+component = "Session ledger"
+path = "docs/ledger/session-log.md"
+mode = "append-only, one entry per session, through `context-engine session`"
+
+[[routes]]
+component = "Operation log"
+path = "docs/ledger/ops.jsonl"
+mode = "append-only, written by the engine"
+optional = true
+note = "created by the first engine write"
+
+[[routes]]
+component = "Runbooks"
+path = "docs/runbooks"
+mode = "replaced"
+note = "manual-mode: every engine operation by hand (FRAMEWORK §7.5)"
+
+[[routes]]
+component = "Evidence"
+path = "docs/evidence"
+pattern = "<id>-<topic>-<date>.md"
+mode = "ACTIVE-PLAN, then FROZEN"
+
+[[routes]]
+component = "Scratch"
+path = ".scratch"
+mode = "throwaway, the gitignored crash bag"
+optional = true
