@@ -1,6 +1,6 @@
 # Framework coverage map, 2026-10-12 (CE-16, G7, US-9)
 
-FROZEN 2026-10-12b. The board moves on after this; the map does not. CE-30 would keep a
+FROZEN 2026-10-12b. Corrected 2026-10-12b after review, before the item closed: G-T5 is EXISTING CE-14 (was DEFERRED, contradicting FRAMEWORK §8.2 and `CLAUDE.md`), and component 15 now names ledger rotation as deferred (the docstring it cited does not give rotation to CE-6). Totals updated. The board moves on after this; the map does not. CE-30 would keep a
 newer map honest mechanically.
 
 **Question (G7, US-9):** the charter is now the whole framework (DEC-10), but the board was
@@ -39,11 +39,11 @@ is split, the reason names the other homes.
 | 12 | Batons and pause records | §5.4 | EXISTING CE-2 (built) | `working.py::Engine.expire_batons`; `[kinds.baton]`, `[kinds.pause]` | Expiry into tasks is built (G-W3); other housekeeping is CE-6. |
 | 13 | Unverified hazards | §7.4 | NEW CE-29 | none | No declared home, route or kind. |
 | 14 | Decisions | §6.5 | EXISTING CE-5 | `[kinds.decision]`; record new / amend / stamp built in CE-8 | Supersede, why(), generated index and importer are CE-5. |
-| 15 | Session ledger | §7.1 | EXISTING CE-2 (built) | `ledger.py::Ledger`; `working.py::Engine.session_start`, `session_close`, `session_pause` | Rotation and `kind: abandoned` are not built (CE-6, per `working.py` module docstring). |
+| 15 | Session ledger | §7.1 | EXISTING CE-2 (built) | `ledger.py::Ledger`; `working.py::Engine.session_start`, `session_close`, `session_pause` | Not built: `kind: abandoned` is CE-6 (G-W11; CE-6 log and `working.py` module docstring). Ledger rotation (§7.1 "rotate by period when it passes its cap") is DEFERRED: §11.4 adopts it by trial, and no ledger cap is set. Un-defer: a ledger cap is set (G-D1, CE-14) and the ledger passes it; then trial it as housekeeping (CE-6). |
 | 16 | Evidence and plan docs | §7.2 | NEW CE-27 | `docs/evidence/` (Evidence route) | Hand-written and routed; nothing freezes an ACTIVE-PLAN doc on close. |
 | 17 | Archive | §7.3 | NEW CE-27 | none | No archive operation, ARCHIVED line or redirect table. |
 | 18 | Tests and proofs | §2 | EXISTING CE-1 (built) | `pytest -q` gate; `criterion` marker in `pyproject.toml` | The gate exists; criterion claims are checked by G-T2 (CE-25). |
-| 19 | Trace and existence guards | §8.2 | EXISTING CE-14 | see guards table | G-T3 is CE-14; the intent-chain ones are CE-25. |
+| 19 | Trace and existence guards | §8.2 | EXISTING CE-14 | see guards table | G-T3 and G-T5 are CE-14; the intent-chain ones are CE-25. |
 | 20 | Doc and working-state guards | §8.3, §8.4 | EXISTING CE-14 | see guards table | Part built (CE-1, CE-2, CE-8); the rest is CE-14. |
 | 21 | Verification state | §8.5 | EXISTING CE-17 | not built | Run ledger G-V1, tiles. |
 | 22 | Scratch | §2 | PROSE-ONLY | global `CLAUDE.md` § `.scratch/`; optional `.scratch` route in `context.toml` | A throwaway area needs a rule (gitignored, evidence out the same hour), not a tool. |
@@ -78,7 +78,7 @@ is split, the reason names the other homes.
 | G-T2 | §8.2 | NEW CE-25 | `criterion` marker exists, unchecked | §11.1 minimum set. |
 | G-T3 | §8.2 | EXISTING CE-14 | none | Existence check over normative prose. |
 | G-T4 | §8.2 | DEFERRED | none | §11.2 trigger "the spec makes structural claims" not hit. Un-defer: the first pinned structural claim. |
-| G-T5 | §8.2 | DEFERRED | none | Needs CE-14's lint frame and a large suite (§11.2). Un-defer: CE-14 lands; the hand sabotage rule (DEC-11) covers it until then. |
+| G-T5 | §8.2 | EXISTING CE-14 | none | FRAMEWORK §8.2 G-T5, `CLAUDE.md` § Sabotage rule and the `tools` route note in `context.toml` all assign it to CE-14. CE-14 builds it when its §11.2 trigger "the suite is large" is hit; the hand sabotage rule (DEC-11) covers it until then. |
 | G-T6 | §8.2 | NEW CE-25 | none | Needs criteria refs as data. |
 | G-T7 | §8.2 | DEFERRED | none | Comes with the deviation register (component 5); un-defer with it. |
 | G-D0 | §8.0 | EXISTING CE-21 | none | Contract `framework:` against the engine version. |
@@ -128,10 +128,10 @@ is split, the reason names the other homes.
 | Class | Components | Rituals | Guards | All |
 |---|---|---|---|---|
 | EXISTING (built) | 7 | 3 | 12 | 22 |
-| EXISTING (open item) | 5 | 6 | 15 | 26 |
+| EXISTING (open item) | 5 | 6 | 16 | 27 |
 | NEW | 7 | 4 | 5 | 16 |
 | PROSE-ONLY | 2 | 1 | 1 | 4 |
-| DEFERRED | 2 | 0 | 6 | 8 |
+| DEFERRED | 2 | 0 | 5 | 7 |
 | **Rows** | **23** | **14** | **39** (38 G-ids plus schema) | **76** |
 
 ## Filed
