@@ -64,7 +64,7 @@ These hold for every operation below. The per-operation sections only list what 
 | **New keys go last** | A key the record does not have yet (`status`, `closed`, `answered`, `done`, `evidence`, `resumed`, `expired_to`, `body_sha`) is added after the last key. An existing key is replaced where it stands, keeping an end-of-line comment. | Keeps every untouched line in place, so the diff shows only the change. |
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
-| **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 will read it. |
+| **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 reads it. |
 | **Engine-owned keys** | Never hand-edit `type`, `id` or `body_sha` on an existing record. | Ids are never reused or renumbered (P3). `body_sha` pins an owner's words (G-D10). |
 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
@@ -289,6 +289,42 @@ Check every record, then the working state. `--working` does only the second hal
   equal the first two numbers of the installed engine's version (`<engine-python> -m pip show
   context-engine`, or `context_engine.__version__`). *Why: the pin says which engine the repo's
   rules were written for; a stale one means the rules and the tool disagree.*
+- **G-D1**: for each `[[routes]]` entry with `max_lines`, `max_bytes` or `max_width`, the routed
+  file (or each `.md` under a routed directory) has at most that many lines and bytes, and no
+  line wider than that many characters except table rows (lines starting `|`). *Why: a place
+  with no cap bloats (FRAMEWORK P6); the cap makes the way out (archive, ledger, a decision) due.*
+- **G-D2**: in each kind's directories no two files carry the same id, by file name or by `id:`;
+  and no id appears in two `new` or `import` lines of the op log. *Why: an id is never reused (P3).*
+- **G-D3**: in each file `[guards] links` lists (each `.md` under a listed directory; skip a
+  record with `status: deprecated`), outside fenced code: every relative link `[x](path#anchor)`
+  and `[x]: path` names a file that exists with exactly that case, relative to the doc, and its
+  anchor is a heading there (GitHub's slug: lower case, punctuation dropped, spaces to hyphens);
+  every backticked `path::Name.attr` names a file that exists case-exact (a bare file name may be
+  anywhere in the repo) whose text has each dotted part as a word. *Why: a dead reference sends
+  the reader to nothing, and on Windows a wrong case still opens.*
+- **G-T3**: in each file `[guards] existence` lists, skipping fenced code, blockquotes and lines
+  with `*HISTORY —*`: every backticked name of a file (a path with a `/`, or a name ending in a
+  text extension such as `.py` or `.md`) exists case-exact, and every `file::symbol` resolves as
+  for G-D3. Spans with spaces, `*`, `<`, or a leading `.` or `/` are not names. *Why: normative
+  text that names a file which is gone states a rule nobody can follow.*
+- **G-D7**: in each file `[guards] signals` lists, outside fenced code: at most `warn_max` ⚠, at
+  most `bold_caps_max` bold spans with a run of four capitals and no lower case (`**NEVER**`),
+  and none of `retired_glyphs`. *Why: a signal ranks only while it is rare.*
+- **G-D8**: the note (`handoff` in `[working]`) has at most one `## Banner (<key>)` heading, no
+  other heading containing a session key, and no banner line that starts with a session key as
+  a bullet or in bold. *Why: a note under a replace rule regrows by layering; this is the layer
+  detector.*
+- **G-D9**: every line of `context.toml` that assigns a number (inline tables too) has a comment
+  with `provenance: MEASURED` or `provenance: JUDGEMENT` and `wrong if` (or `wrong as above`),
+  and the comment does not cite an example. *Why: a tuned value with no provenance cannot be
+  re-judged, and a spec example is neither a measurement nor a judgement.*
+- **G-W7**: for each board item and each of `moved`, `updated`, `closed`, `last_asked`: the value
+  equals the `session` of the newest op log line for that id whose `fields` lists the key; with
+  no such line, the value is older than the log's first session. Every op log line parses as
+  JSON. *Why: those keys are written only by operations, so a mismatch is a hand edit.*
+
+A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed). A path
+listed in `[guards]` that does not exist is itself a red.
 
 **Why:** lint is the at-rest check. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).

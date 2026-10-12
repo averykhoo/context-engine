@@ -11,8 +11,8 @@
 # and what would make it wrong. The values below are the engine's defaults, so their provenance
 # starts as JUDGEMENT; re-state it when this repo measures or decides otherwise.
 #
-# Read by nothing yet, so not keys here (FRAMEWORK §8.0 lists them): enabled guards, cutoff ids,
-# model choices for background agents, the housekeeping write cap and the stale-stub window.
+# Read by nothing yet, so not keys here (FRAMEWORK §8.0 lists them): cutoff ids, model choices
+# for background agents, the housekeeping write cap and the stale-stub window.
 
 [engine]
 oplog = "docs/ledger/ops.jsonl"      # one JSON line per engine write; append-only, written by the engine
@@ -114,14 +114,29 @@ max_pauses = 2               # consecutive pause entries before lint asks for a 
 NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if never
 NEXT = 5                     # provenance: JUDGEMENT, engine default; wrong if NEXT routinely overflows with work that is really next
 
+# -- guards (FRAMEWORK §8): which guards lint reports, and what the doc guards read ----------
+# A doc guard whose list is empty checks nothing; a listed path that does not exist is a red.
+[guards]
+off = []                     # guard ids lint does not report (`context-engine lint` names them); say why in a comment
+links = ["CLAUDE.md", "HANDOFF.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "tasks"]   # G-D3: relative links, their #anchors and `file::symbol` spans resolve, case-exact
+existence = ["docs/criteria.md"]   # G-T3: files and `file::symbol` named in normative text exist; add the invariants register and any law doc once they exist
+signals = ["CLAUDE.md", "HANDOFF.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md"]   # G-D7: the signal budgets below
+warn_max = 3                 # ⚠ per file (G-D7); provenance: JUDGEMENT, engine default; wrong if a real trap goes unmarked to stay under it
+bold_caps_max = 5            # bold all-caps spans per file (G-D7); provenance: JUDGEMENT, engine default; wrong as above
+retired_glyphs = []          # glyphs no file may use any more (G-D7)
+
 # -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
 # Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,
-# free text), pattern (how files under `path` are named), note, optional (may be absent).
+# free text), pattern (how files under `path` are named), note, optional (may be absent), and the G-D1
+# caps max_lines, max_bytes, max_width (0 is no cap).
 
 [[routes]]
 component = "Contract"
 path = "CLAUDE.md"
 mode = "replaced; the framework block between the kit markers is replaced only on upgrade"
+max_lines = 200    # G-D1: caps on the routed file (or each .md under a routed directory); 0 is no cap; provenance: JUDGEMENT, engine default (the kit block is about 80 lines); wrong if a rule that belongs here is kept elsewhere to stay under it
+max_bytes = 16000  # provenance: JUDGEMENT, engine default; wrong as above
+max_width = 120    # characters per line, table rows exempt; provenance: JUDGEMENT, engine default; wrong if wrapping splits commands mid-line
 
 [[routes]]
 component = "Charter"
@@ -163,6 +178,9 @@ mode = "stamped, through `context-engine baton`/`context-engine pause`"
 component = "Orientation note"
 path = "HANDOFF.md"
 mode = "replaced at clean close; banner through `context-engine banner set`"
+max_lines = 150    # G-D1, the backstop to G-D8's layer detector (FRAMEWORK P6); provenance: JUDGEMENT, engine default; wrong if a cold session needs more to orient than fits
+max_bytes = 12000  # provenance: JUDGEMENT, engine default; wrong as above
+max_width = 120    # provenance: JUDGEMENT, engine default; wrong if wrapping splits commands mid-line
 
 [[routes]]
 component = "Session ledger"

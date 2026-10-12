@@ -1387,8 +1387,10 @@ hold **method**, which survives when the status around it is archived:
   - model choices for background agents;
   - an optional housekeeping write cap (none by default) and the stale-stub window.
 
-  *Not built yet: guard switches, cutoff ids, model choices, the housekeeping cap and the
-  stale-stub window are not config keys yet (CE-14).*
+  Guard switches are `[guards] off`, and `[guards]` also lists what the doc guards read.
+  *Not built yet: cutoff ids (only an index that parses prose needs them, and none does),
+  model choices (CE-12), the housekeeping cap (G-W10, CE-6) and the stale-stub window (G-W11,
+  CE-6) are not config keys yet.*
 - **Every tuned value carries a provenance note: MEASURED or JUDGEMENT, with the method and
   what would make it wrong.** A test refuses values copied from spec examples (G-D9).
 - **G-D0:** the contract's `framework: <major.minor>` equals the installed engine's
@@ -1516,36 +1518,50 @@ Decisions as records follow once the core holds.
   annotation resolves.
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
   **normative** text of a story, criterion, law doc or invariant exists in the code; history
-  notes (`*HISTORY —*`, blockquotes) are exempt.
+  notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
+  lists, and the names in backticks there; HTTP routes are not checked.
 - **G-T4:** structural-claim anchors resolve and their body hashes match the pins; re-pinning
   is an explicit, reviewed act.
 - **G-T5 (mutation per criterion):** runs as a scheduled routine, or as the one slow background
   job, keyed on the hash, with results in a tracked evidence doc; it does not apply to formal
-  theorems, where G-T4 substitutes. It mechanises the hand sabotage of P7 (CE-14).
+  theorems, where G-T4 substitutes. It mechanises the hand sabotage of P7. *Not built yet
+  (CE-34).*
 - **G-T6:** every criterion's story or decision ref resolves, and its actor matches the
   source's.
 - **G-T7:** every `deviates` criterion references a deviation-register entry; every `retired`
   one references a decision.
 
 ### 8.3 Doc guards
-- **G-D1:** per-component caps (lines, bytes, line width), set in config with provenance.
+- **G-D1:** per-component caps (lines, bytes, line width), set in config with provenance:
+  `max_lines`, `max_bytes` and `max_width` on a `[[routes]]` entry, applied to the routed file
+  or to each `.md` under a routed directory. Table rows are exempt from the width cap.
 - **G-D2:** ids are unique within their series and never reused; a new id is allocated after
-  scanning open and closed items.
-- **G-D3:** every link and `file::symbol` resolves, case-exact.
+  scanning open and closed items. At rest, no two files carry one id, and the op log never
+  shows an id created twice.
+- **G-D3:** every link and `file::symbol` resolves, case-exact. The lint reads the docs
+  `[guards] links` lists, and checks relative links with their `#anchor`s and backticked
+  `file::symbol` spans; a bare file name resolves to any file of that name, and a record no
+  longer current (`status: deprecated`) is history and is skipped.
 - **G-D4:** every doc declares its liveness near the top; history directories are checked for
-  frozen banners within a window.
+  frozen banners within a window. *Not built yet (CE-33).*
 - **G-D5:** derivable counts appear only in generated blocks. A typed number needs one of the
-  four allowed forms (P5).
+  four allowed forms (P5). *Not built yet (CE-33).*
 - **G-D6:** generated indexes match a regeneration **and** are content-complete from a
   configured cutoff id. An index built from record frontmatter needs only the regeneration
   check; the cutoff check remains for indexes that still parse prose. Built for the decision
   index (`[working] decision_index`): a missing index fails while any decision exists.
 - **G-D7:** signal budgets: ⚠ ≤N per file, a bold-caps budget, retired glyphs. Signals rank
-  only if they are bounded.
+  only if they are bounded. Config: `[guards] signals`, `warn_max`, `bold_caps_max`,
+  `retired_glyphs`.
 - **G-D8:** the note's banner carries exactly one session key (the layer detector); there is no
   session history in the note; an inline board, if present, starts within the first K lines.
+  The lint fails a second banner heading, any other heading carrying a session key, and a
+  banner bullet led by a session key; dated facts citing a key inside a sentence pass. *The
+  inline-board clause is not checked: the board is one file per item.*
 - **G-D9:** tuned config values carry a provenance note, and spec-example values are refused
-  (§8.0).
+  (§8.0). The lint reads every number `context.toml` assigns: its line needs `provenance:
+  MEASURED` or `JUDGEMENT`, and `wrong if` (or `wrong as above`); a note citing an example is
+  refused.
 - **G-D10:** every append-only record's `body_sha` matches its body above `## Amendments`, with
   its logged `corrected:` insertions undone. This turns "append-only" and "owner words are
   verbatim" into refusals. Line endings are normalised before hashing, because a Windows
@@ -1573,7 +1589,11 @@ Decisions as records follow once the core holds.
   question exists. The engine checks `asked:` when the entry is written; the lint re-checks
   `guards:`, `read:` and `rows:` at rest.
 - **G-W7:** every record kind's tool-owned frontmatter is changed only by the tool; `moved` is
-  consistent with the session-stamped op log.
+  consistent with the session-stamped op log. The lint checks each board item's `moved`,
+  `updated`, `closed` and `last_asked` against the session of the newest logged operation that
+  wrote it (a value no operation wrote must predate the log), and that every log line parses.
+  The values of `state`, `pri` and `deps` are refused at write time; the log does not record
+  values, so the lint cannot recheck them.
 - **G-W8:** no clean close while an overdue owner question (§5.3) has not been raised this
   session. This is the nag that gives the owner a tracker.
 - **G-W9:** every `--mechanical` close cites its evidence: a commit whose message carries
@@ -1734,8 +1754,9 @@ from the repo root before every commit that touches code, tests or records, and 
 push. The kit's contract block (§6.9) states it.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
-`context-engine lint` runs G-D0, G-D10, G-W1, G-W2, G-W4 and G-W6 (plus the record schemas,
-G-D11 and G-R1); the rest are checked by hand. *Not built yet: the other guards (CE-14).*
+`context-engine lint` runs G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-W1, G-W2, G-W4 and G-W6 (plus
+the record schemas, G-D11, G-R1 and the other built guards of §8); G-I2, G-T1 and G-T2 are
+checked by hand. *Not built yet: G-I2, G-T1 and G-T2 (CE-25).*
 
 ### 11.2 Add when needed
 

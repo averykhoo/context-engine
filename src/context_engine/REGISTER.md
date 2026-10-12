@@ -8,7 +8,7 @@ code changes. Ids are `INV-n`, never reused.
 This is the engine's own register. It is package data, so it ships with the engine to every repo
 the engine is pointed at: `context-engine register show --engine` reads it there, and `orient`
 points at it (the handover, P17 regs. 7 and 11). A target repo keeps its own register for its own
-risks (FRAMEWORK §10: `docs/invariants.md`).
+risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 ## INV-1: a long-lived server keeps running old engine code after the engine changes, and it may outlive `/clear`
 

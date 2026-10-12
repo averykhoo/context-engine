@@ -9,7 +9,7 @@ deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-12b
+updated: 2026-10-12d
 closed:
 ---
 
@@ -20,7 +20,7 @@ Build step 5 (FRAMEWORK §6.11): baton expiry into tasks; stale `kind: open` stu
 ## Read first
 
 - `docs/framework/FRAMEWORK.md` §6.11, §8.4 (G-W9 to G-W11)
-- zanzibar `scripts/task.py::write_op` (the `--mechanical` flag, and why close has none)
+- zanzibar's scripts/task.py, function write_op (the `--mechanical` flag, and why close has none); another repo, so not a `file::symbol` here (G-D3)
 
 ## Log
 

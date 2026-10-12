@@ -72,7 +72,7 @@ question = "question"
 decision = "decision"
 baton = "baton"
 pause = "pause"
-orient_max_bytes = 6000                  # provenance: DEC-14
+orient_max_bytes = 6000                  # provenance: JUDGEMENT, DEC-14 (one screen of orient); wrong if a routine orient gets cut
 read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
 register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
 decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it
@@ -85,6 +85,14 @@ review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived",
 component = "Spec"
 path = "docs/framework/FRAMEWORK.md"
 mode = "replaced in place; no change log, the why is in decisions and stories (DEC-26)"
+
+[[routes]]
+component = "Contract"
+path = "CLAUDE.md"
+mode = "replaced; durable rules only, promoted from HANDOFF (FRAMEWORK §6.7)"
+max_lines = 140    # G-D1; provenance: MEASURED 2026-10-12d, 116 lines, plus room for two or three rules; wrong if a rule that belongs here is kept in HANDOFF to stay under it
+max_bytes = 10000  # G-D1; provenance: MEASURED 2026-10-12d, 8086 bytes, plus the same room; wrong as above
+max_width = 125    # G-D1; provenance: MEASURED 2026-10-12d, widest prose line 121; wrong if wrapping starts to split commands mid-line
 
 [[routes]]
 component = "Frozen provenance"
@@ -127,6 +135,9 @@ mode = "frontmatter through `context-engine task`/`context-engine ask`, bodies b
 component = "Orientation note"
 path = "HANDOFF.md"
 mode = "replaced at clean close; banner through `context-engine banner set`"
+max_lines = 130    # G-D1, the byte cap is the backstop to G-D8 (P6); provenance: MEASURED 2026-10-12d, 101 lines, plus about a quarter; wrong if a cold session needs more to orient than fits
+max_bytes = 10000  # G-D1; provenance: MEASURED 2026-10-12d, 7723 bytes, plus about a quarter; wrong as above
+max_width = 140    # G-D1; provenance: MEASURED 2026-10-12d, widest prose line 136; wrong if wrapping starts to split commands mid-line
 
 [[routes]]
 component = "Session ledger"
@@ -172,10 +183,21 @@ note = "FINDINGS.md is the result; the probes show how"
 component = "Sabotage probes"
 path = "tools"
 pattern = "sabotage_<task>.py"
-mode = "kept as evidence until G-T5 replaces them (CE-14)"
+mode = "kept as evidence until G-T5 replaces them (CE-34)"
 
 [[routes]]
 component = "Scratch"
 path = ".scratch"
 mode = "throwaway, the gitignored crash bag"
 optional = true  # absent on a fresh clone
+
+# The doc guards (FRAMEWORK §8.2, §8.3; G-D1's caps are on [[routes]] above). Each list names
+# what its guard reads; `off` names guards lint does not report (none here).
+[guards]
+off = []
+links = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "src/context_engine/REGISTER.md", "src/context_engine/kit", "tasks"]  # G-D3; closed tasks are skipped (status: deprecated)
+existence = ["docs/criteria.md", "src/context_engine/REGISTER.md"]  # G-T3: the normative docs (§11.2 "traps accumulate"); stories are owner words that cite other repos' files, so they are not listed
+signals = ["CLAUDE.md", "HANDOFF.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md"]  # G-D7
+warn_max = 3       # G-D7; provenance: JUDGEMENT, engine default (the global contract keeps about this many per section); wrong if a real trap goes unmarked to stay under it
+bold_caps_max = 5  # G-D7; provenance: JUDGEMENT, engine default; FRAMEWORK holds 3 on 2026-10-12d (its liveness words); wrong as above
+retired_glyphs = []

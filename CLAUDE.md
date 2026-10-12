@@ -54,7 +54,7 @@ records (AC-23), so a hand edit to a stamped story, a broken record or a dead ro
 refusal: break what it protects (edit the code, corrupt the fixture, drop the check), run it and
 watch it go red for the right reason, then restore. Record it in the commit message as
 `Sabotage: <what was broken> -> <test> red`. A criterion moves to `tested` only after its
-claiming test was sabotaged. When G-T5 (mutation per criterion, CE-14) exists, it does this
+claiming test was sabotaged. When G-T5 (mutation per criterion, CE-34) exists, it does this
 mechanically and this hand step becomes its fallback.
 
 **Run every scripted sabotage with a fresh bytecode cache** (`PYTHONPYCACHEPREFIX=<new temp

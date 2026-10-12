@@ -11,6 +11,7 @@ import pytest
 
 from context_engine import bootstrap as B
 from context_engine import config as C
+from context_engine import guards as G
 from context_engine.errors import Refusal
 from context_engine.ledger import EMPTY_LEDGER
 
@@ -156,15 +157,16 @@ def _keys(cls, drop=()) -> set[str]:
 def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     raw = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
     cfg = C.from_dict(raw)
-    assert _keys(C.Config, ("kinds", "working", "routes")) <= set(raw["engine"])
+    assert _keys(C.Config, ("kinds", "working", "routes", "guards")) <= set(raw["engine"])
     assert _keys(C.Working) <= set(raw["working"])
     kind_keys = set().union(*(set(k) for k in raw["kinds"].values()))
     assert _keys(C.Kind, ("name",)) <= kind_keys
     route_keys = set().union(*(set(r) for r in raw["routes"]))
     assert _keys(C.Route) <= route_keys
+    assert _keys(C.Guards) <= set(raw["guards"])
     assert len(cfg.kinds) == 6 and cfg.working.board
-    tuned = [ln for ln in (B.KIT / B.TEMPLATE).read_text(encoding="utf-8").splitlines() if re.match(r"^(\w+_(bytes|sessions|days|age|pauses|timeout)|NOW|NEXT) = ", ln)]
-    assert len(tuned) == 9 and all("provenance: " in ln and ("wrong if" in ln or "wrong as above" in ln) for ln in tuned), tuned
+    tuned = G.provenance_problems((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))  # G-D9 over the template
+    assert len(tuned) >= 17 and [t for t in tuned if t.problem] == [], tuned
 
 
 @pytest.mark.criterion("AC-30")

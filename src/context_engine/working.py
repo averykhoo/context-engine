@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -25,6 +24,7 @@ from typing import Any, Callable
 
 from . import __version__
 from . import decisions as D
+from . import guards as G
 from . import ledger as L
 from . import okf
 from . import review as R
@@ -775,17 +775,12 @@ class Engine:
     def _code_exists(self, target: str) -> None:
         """A `file` or `file::symbol` link: the file exists, case-exact, and names each part of the symbol."""
         file, _, symbol = target.partition("::")
-        here = self.root
-        for part in Path(file).parts:
-            names = os.listdir(here) if here.is_dir() else []
-            if part not in names:
-                raise Refusal(f"{file} does not exist (case-exact) in the repo", "link a file that exists, with its exact case")
-            here = here / part
-        if symbol:
-            text = here.read_bytes().decode("utf-8", errors="replace") if here.is_file() else ""
-            missing = [p for p in symbol.split(".") if not re.search(rf"\b{re.escape(p)}\b", text)]
-            if missing:
-                raise Refusal(f"{file} has no {missing[0]!r}", "grep for the symbol and link the name that exists")
+        here = G.Files(self.root).case_exact(file)
+        if here is None:
+            raise Refusal(f"{file} does not exist (case-exact) in the repo", "link a file that exists, with its exact case")
+        missing = G.symbol_missing(here, symbol) if symbol else None
+        if missing:
+            raise Refusal(f"{file} has no {missing!r}", "grep for the symbol and link the name that exists")
 
     def _criteria(self) -> set[str]:
         """The criterion ids: the first cell of each table row of ``[working] criteria``."""
@@ -1006,8 +1001,11 @@ class Engine:
 
     # -- working-state guards (FRAMEWORK §8.4) ------------------------------------------
 
-    def lint(self) -> list[Failure]:
-        return self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract()
+    def lint(self, working: bool = False) -> list[Failure]:
+        """Every guard (`working`: the working-state guards alone), less those `[guards] off` names."""
+        found = self.lint_working() + G.tool_owned(self) if working else self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract() + G.lint(self)
+        off = set(self.store.config.guards.off)
+        return [f for f in found if f.guard not in off]
 
     # -- routing (FRAMEWORK §2) ---------------------------------------------------------
 

@@ -16,6 +16,11 @@ from .errors import Refusal
 CHANGE_MODES = ("append-only", "replaced", "stamped")
 FIELD_TYPES = ("str", "date", "key", "list", "int")  # `key` is a session key, e.g. 2026-10-08c
 CONFIG_NAME = "context.toml"
+# Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
+LINT_IDS = (
+    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-R1", "G-T3",
+    "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W12", "G-W13",
+)
 
 
 @dataclass(frozen=True)
@@ -70,6 +75,23 @@ class Route:
     pattern: str = ""  # how files under ``path`` are named, e.g. "US-n-<slug>.md"
     note: str = ""
     optional: bool = False  # may be absent, e.g. a gitignored directory on a fresh clone
+    max_lines: int = 0  # G-D1 caps on the routed file, or on each .md under a routed directory; 0 is no cap
+    max_bytes: int = 0
+    max_width: int = 0  # characters per line; table rows are exempt
+
+
+@dataclass(frozen=True)
+class Guards:
+    """``[guards]``: which guards lint reports and what the doc guards read (FRAMEWORK §8.0, §8.2,
+    §8.3). A doc guard whose path list is empty checks nothing."""
+
+    off: tuple[str, ...] = ()  # guard ids lint does not report (LINT_IDS)
+    links: tuple[str, ...] = ()  # G-D3: files and directories whose links and `file::symbol` spans must resolve
+    existence: tuple[str, ...] = ()  # G-T3: normative docs whose named files and `file::symbol` spans must exist
+    signals: tuple[str, ...] = ()  # G-D7: files and directories under the signal budgets
+    warn_max: int = 3  # G-D7: ⚠ per file
+    bold_caps_max: int = 5  # G-D7: bold all-caps spans (`**NEVER**`) per file
+    retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
 
 
 @dataclass(frozen=True)
@@ -82,6 +104,7 @@ class Config:
     contract: str = "CLAUDE.md"  # the file holding `framework: <major.minor>` (lint G-D0, DEC-23)
     working: Working = field(default_factory=Working)
     routes: tuple[Route, ...] = ()
+    guards: Guards = field(default_factory=Guards)
 
     def kind_for_id(self, record_id: str) -> Kind:
         for k in self.kinds.values():
@@ -123,14 +146,15 @@ def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> N
             raise Refusal(f"{table} `{key}` is {type(v).__name__} {v!r}, not {names}", "fix its type (the kit's context.toml.template shows each)")
 
 
-TOP_KEYS = ("engine", "kinds", "working", "routes")
+TOP_KEYS = ("engine", "kinds", "working", "routes", "guards")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract")
 ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str}
 KIND_KEYS = tuple(f for f in Kind.__dataclass_fields__ if f != "name")
 KIND_TYPES = {"type": str, "prefix": str, "dir": str, "mode": str, "required": list, "enums": dict, "extra_dirs": list, "types": dict}
 _PY = {str: str, int: int, tuple: list, dict: dict}
 WORKING_TYPES = {f: _PY[type(getattr(Working(), f))] for f in Working.__dataclass_fields__}
-ROUTE_TYPES = {f: (bool if f == "optional" else str) for f in Route.__dataclass_fields__}
+ROUTE_TYPES = {f: (bool if f == "optional" else int if f.startswith("max_") else str) for f in Route.__dataclass_fields__}
+GUARDS_TYPES = {f: _PY[type(getattr(Guards(), f))] for f in Guards.__dataclass_fields__}
 
 
 def from_dict(raw: dict) -> Config:
@@ -199,6 +223,13 @@ def from_dict(raw: dict) -> Config:
             raise Refusal(f"route {n} has unknown key {sorted(extra)[0]!r}", f"use only {', '.join(Route.__dataclass_fields__)}")
         _typed(f"route {n}", r, ROUTE_TYPES)
         routes.append(Route(**r))
+    g = raw.get("guards", {})
+    _known("[guards]", g, Guards.__dataclass_fields__)
+    _typed("[guards]", g, GUARDS_TYPES)
+    unknown = [x for x in g.get("off", ()) if x not in LINT_IDS]
+    if unknown:
+        raise Refusal(f"[guards] `off` names {unknown[0]!r}, which lint does not report", f"use guard ids lint reports: {', '.join(LINT_IDS)}")
+    guards = Guards(**{k: (tuple(v) if isinstance(v, list) else v) for k, v in g.items()})
     return Config(
         kinds=kinds,
         oplog=engine.get("oplog", Config.oplog),
@@ -208,6 +239,7 @@ def from_dict(raw: dict) -> Config:
         contract=engine.get("contract", Config.contract),
         working=working,
         routes=tuple(routes),
+        guards=guards,
     )
 
 

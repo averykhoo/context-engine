@@ -39,6 +39,7 @@ CONFIG = {
         "pause": "pause",
         "orient_max_bytes": 4000,
     },
+    "guards": {"off": ["G-D9"]},  # a fixture's numbers are not tuned, so they carry no provenance
 }
 LEDGER = """# Session ledger
 
