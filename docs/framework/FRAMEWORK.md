@@ -42,6 +42,10 @@ records as OKF files, refuses bad writes and names the remedy, and is reachable 
 CLI and a per-session MCP server. Prose is written by hand. **Rituals** (session start, intake,
 clean close, pause) are engine operations, and every one has a by-hand fallback in a runbook.
 
+A `CE-n` in parentheses, as in *Not built yet (CE-n)*, points at the record engine's own board in
+the engine repo: it is build status, not part of the framework, and an adopting repo has no such
+item.
+
 ## What each section covers
 
 | § | Section | What it covers |
@@ -413,7 +417,7 @@ template is ever imposed on the owner, and the agent never rewrites the owner's 
 
 **Where stories live.** Either is fine, and a repo may use both:
 - one story per file (`S-n`; id prefixes are per-repo config, `[kinds.*].prefix` in
-  `context.toml`; this repo uses `US`, `DEC`, `AC`, `CE`, `ASK`, `BTN`, `PAU`); or
+  `context.toml`, with the defaults in §10); or
 - numbered sections of a per-feature **PRD** (`docs/issues/<slug>/PRD.md § N`), each carrying
   the owner's words with a date, e.g. `(OWNER: "make Ctrl click include the cursors row")`.
 
@@ -827,7 +831,7 @@ pause records, then other sessions'; the other sessions still open; the NEXT tie
 questions to raise; and the top item's brief, Traps and Read first. Step 1 is unchanged, and
 step 6 is still on demand. A **SessionStart hook** can run start-of-session housekeeping (§6.11)
 and inject `orient()`'s output, so orientation costs no tool call (hook stdout reaches the
-model's context: `spike/FINDINGS.md`).
+model's context; verified by a probe in the engine repo).
 
 **Resume** (an open pause record of your own, or the owner says "continue"): re-check the tree
 against the record, then continue.
@@ -1119,12 +1123,23 @@ the hold and where it is recorded.
 
 ### 6.9 Bootstrap (a new repo)
 
+The engine ships an **adoption kit**: text only, as package data beside the engine's code
+(`kit/`), readable in the engine repo too. It holds the config template (`context.toml.template`,
+which is the config schema), the contract block for `CLAUDE.md`, skeletons for the orientation
+note, charter, criteria and ledger, and a README with the install, bootstrap and upgrade steps.
+
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
-2. The agent scaffolds the layout (§10), points the record engine (§8.0) at the repo, pinned to
-   a version (the engine runs from its own environment and is never installed into the repo's),
-   and writes the per-repo config, with a provenance note on every cap.
-3. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
-4. First clean close: the guards are green, and the ledger entry is `kind: close`.
+2. The agent installs the engine into its own environment, pinned to a release tag or commit
+   (the engine runs from its own environment and is never installed into the repo's), and
+   registers its MCP server (§8.0.2).
+3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, and the
+   contract block appended to `CLAUDE.md`. It only creates files and never overwrites one; by
+   hand, copy the kit's files as its README says. The agent then fills the charter and the
+   config, with a provenance note on every cap, and checks the id prefixes against ids the repo
+   already uses.
+4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
+5. First clean close: the guards are green, the ledger entry is `kind: close`, and the first
+   `banner set` (with `--seen none`) writes the banner heading.
 
 ### 6.10 Humans working outside the rituals
 
@@ -1231,7 +1246,7 @@ shared-tree rules (§5.5) rule out `git stash`, `git reset` and checking out who
 writer may also have touched; candidates are `git revert` of the session's own commits (found by
 `Session:` trailer) plus restoring only the paths the session's op log says it wrote, recorded as
 a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its ritual
-fallback is a runbook section (P16). Board task: CE-18.
+fallback is a runbook section (P16). Not built yet (CE-18).
 
 ---
 
@@ -1286,7 +1301,7 @@ fallback is a runbook section (P16). Board task: CE-18.
 Gate, sabotage procedure, fan-out, release, test baselines, and the manual-mode fallback. They
 hold **method**, which survives when the status around it is archived:
 - `docs/runbooks/manual-mode.md`: every engine operation done by hand, each step with its why
-  (P16); AC-21 keeps it in step with the CLI;
+  (P16); a test in the engine repo keeps it in step with the CLI;
 - a testing runbook keeps one dated baseline per suite, and an *unexplained* drop is a blocker.
 
 ---
@@ -1295,9 +1310,10 @@ hold **method**, which survives when the status around it is archived:
 
 ### 8.0 Packaging: the record engine
 
-- **One versioned package, the record engine** (`context-engine`, this repo), plus a per-repo
+- **One versioned package, the record engine** (`context-engine`), plus a per-repo
   config, `context.toml`. The same package owns record writes (§8.0.1–8.0.3) and the lint. The
-  config holds:
+  kit's `context.toml.template` (§6.9) is the config's schema: every key the engine reads, with
+  its default, and the engine refuses a key it does not know. The config holds:
   - enabled guards;
   - paths: the routing map of components onto files (`[[routes]]`; not `docs/index.md`,
     because OKF fixes `index.md`'s shape, §9.3.1);
@@ -1306,6 +1322,9 @@ hold **method**, which survives when the status around it is archived:
   - cutoff ids;
   - model choices for background agents;
   - an optional housekeeping write cap (none by default) and the stale-stub window.
+
+  *Not built yet: guard switches, cutoff ids, model choices, the housekeeping cap and the
+  stale-stub window are not config keys yet (CE-14).*
 - **Every tuned value carries a provenance note: MEASURED or JUDGEMENT, with the method and
   what would make it wrong.** A test refuses values copied from spec examples (G-D9).
 - **G-D0:** the contract's `framework: <major.minor>` equals the installed engine's
@@ -1313,7 +1332,9 @@ hold **method**, which survives when the status around it is archived:
   its major.minor is the framework version it implements. An engine fix moves only the patch; a
   framework change the engine must follow moves the minor of both. Below 1.0 is draft; there is
   no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. *Not built yet (CE-21).*
-- **Upgrade ritual:** bump the version, run the lint, fix the reds, write a ledger line.
+- **Upgrade ritual:** bump the engine's pinned ref (reinstall it in its own environment) and
+  the contract's `framework:` line, run the lint, fix the reds, and write a ledger line naming
+  the new ref. A new kit contract block replaces the old one between its markers.
 - **Existing repos keep their own check numbers.** The package maps its ids onto them and
   never renumbers them (P3).
 - **Tools that refuse name the remedy.** Every red says what to do.
@@ -1359,7 +1380,7 @@ session. There are no ports, and each concurrent session gets its own process.
   for that project. The interpreter path is machine-specific, so it never goes into a committed
   file. A committed `.mcp.json` may name it through `${VAR}`, which Claude Code expands only from
   the environment it was started in: an `env` block in `.claude/settings.local.json` does not
-  reach it (`spike/FINDINGS.md`).
+  reach it (verified by a probe in the engine repo).
 - **Missing tools are a set-up step, not a stop.** Claude Code starts MCP servers only at
   launch, so a session that finds the tools missing registers the server as above, runs every
   operation through the CLI for the rest of the session (same functions, nothing lost), and asks
@@ -1414,8 +1435,8 @@ hand-run rituals. **Build first:** the task operations, then the MCP wrapper; `o
 What is built so far is on the board (`context-engine task list --state all`), not here. **Pre-registered
 rubric:** context spent on session start and clean close against the same rituals done by hand
 (the `read:` receipt is the existing measure), plus collisions or lost records across two
-concurrent sessions. The hand-run baseline is
-`docs/evidence/adhoc-baseline-2026-10-11.md`. Decisions as records follow once the core holds.
+concurrent sessions. The hand-run baseline is an evidence doc measured before the trial starts.
+Decisions as records follow once the core holds.
 
 ### 8.1 Intent guards
 - **G-I1:** every charter goal has at least one story; every story names at least one goal.
@@ -1577,33 +1598,34 @@ All derived and disposable; the files stay the source of truth:
 
 ## 10. Layout for a **new** repo
 
-Existing repos map instead of moving (§11.4).
+Existing repos map instead of moving (§11.4). `context-engine init` (§6.9) writes the entries
+marked `*` that the repo does not have yet; the rest are added when needed (§11.2).
 
 ```
 AGENTS.md                  # workflow conventions (how agents work), read first
-CLAUDE.md                  # product contract: mandates, gate, footguns; push-hold line on top; framework: <version>
-HANDOFF.md                 # orientation note: banner (one key), next session, generated pointer to open batons/pauses
-context.toml               # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
-.mcp.json                  # optional: starts the engine's stdio MCP server per session (§8.0.2)
+CLAUDE.md                * # product contract: mandates, gate, footguns; push-hold line on top; framework: <version>
+HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
+context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
+.mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)
-  charter.md
+  charter.md             *
   law.md                   # optional: NFRs / data-model law with invariant → test map
-  stories/S-n-<slug>.md or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
-  criteria.md, criteria/ or features/*.feature
-  decisions/D-n-<slug>.md  # one record per decision; generated index.md
+  stories/S-n-<slug>.md  * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
+  criteria.md            * or criteria/ or features/*.feature
+  decisions/D-n-<slug>.md * # one record per decision; generated index.md
   deviations/              # append-only records (+ optional generated open-gaps view)
   invariants.md            # durable traps; the residual-risk register
-  runbooks/                # method, including manual-mode.md (every engine operation by hand)
-  evidence/<id>-<topic>-<date>.md
-  ledger/session-log.md    # session ledger (one file under the engine lock)
+  runbooks/              * # method, including manual-mode.md (every engine operation by hand)
+  evidence/<id>-<topic>-<date>.md *
+  ledger/session-log.md  * # session ledger (one file under the engine lock)
   ledger/ops.jsonl         # engine op log, one JSON line per write
-  working/                 # baton (BTN-n) and pause (PAU-n) records (§5.4)
+  working/               * # baton (BTN-n) and pause (PAU-n) records (§5.4)
   archive/README.md        # redirect table
-tasks/                     # flat; open and closed side by side, `state:` in frontmatter (§5.2)
-.context/                  # engine lock; ignores itself, never tracked
+tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
+.context/                * # engine lock; ignores itself, never tracked
 .claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent
-.scratch/                  # gitignored crash bag
+.scratch/                * # gitignored crash bag (ignores itself)
 ```
 
 ---
@@ -1617,7 +1639,8 @@ tasks/                     # flat; open and closed side by side, `state:` in fro
 - stories;
 - criteria with statuses;
 - contract;
-- orientation note with an inline board (including question rows);
+- orientation note (banner and next steps; the board itself is one file per item in `tasks/`,
+  questions included, read with `task list`);
 - batons and pause records;
 - decision log with negative results;
 - ledger in its own file;
@@ -1626,10 +1649,17 @@ tasks/                     # flat; open and closed side by side, `state:` in fro
 
 **Rituals:** intake, start/resume, clean close, pause, bootstrap.
 
-**Tooling:** the record engine's CLI and the tier-0 housekeeping script. The MCP server is not
-in the minimum set until the §8.0.3 trial reports.
+**Tooling:** the record engine's CLI, and the tier-0 housekeeping script (*not built yet (CE-6)*:
+until it is, `baton expire` is the only housekeeping operation). The MCP server is not in the
+minimum set until the §8.0.3 trial reports.
+
+**The gate** of an adopting repo is its own test command followed by `context-engine lint`, run
+from the repo root before every commit that touches code, tests or records, and before every
+push. The kit's contract block (§6.9) states it.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
+`context-engine lint` runs G-D10, G-W1, G-W2, G-W4 and G-W6 (plus the record schemas, G-D11 and
+G-R1); the rest are checked by hand. *Not built yet: G-D0 (CE-21) and the other guards (CE-14).*
 
 ### 11.2 Add when needed
 
@@ -1660,6 +1690,13 @@ in the minimum set until the §8.0.3 trial reports.
 - **Map, don't move.** The routing map in `context.toml` maps each component onto the repo's
   existing files. Existing ids and check numbers are never renumbered; the package maps onto
   them.
+- **`init` on an existing repo** writes only what is missing: it skips every file that exists,
+  appends the contract block to an existing `CLAUDE.md` only when the block's markers are absent,
+  and refuses when a different `context.toml` is already there. Then edit `context.toml` in
+  place: each kind's `dir` and `prefix` and each route's `path` point at what the repo already
+  has (an existing `D-n` series stays `D-n`), and the skeletons `init` wrote for components the
+  repo keeps elsewhere are deleted rather than routed. Lint (G-R1 and the schemas) shows what
+  still disagrees.
 - **Enable guards incrementally.** Each one starts as a warning, with a dated deadline for
   becoming a refusal.
 - **Back-filled stories are reconstructions, never the owner's words:**
