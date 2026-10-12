@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-10a
+updated: 2026-10-12c
 closed:
 ---
 
@@ -22,3 +22,5 @@ it needs the owner's permission, and its first run gets a CI watcher (global `CL
 - Pushes are asked for every time and made only on a green gate (DEC-22); CI does not change that.
 
 ## Log
+
+- 2026-10-12c (claude-code/claude-opus-5-5): 2026-10-12c prioritisation (owner approved): top of LATER; NEXT is full (CE-22, CE-20, CE-21, CE-5, CE-14). Next to promote when a NEXT slot frees.

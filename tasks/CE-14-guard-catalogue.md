@@ -3,13 +3,13 @@ type: Task
 id: CE-14
 title: "The guard catalogue (FRAMEWORK §8.1 to §8.5) as engine lint guards"
 brief: "Minimum set first (§11.1); every guard sabotaged red before it is believed; each docstring says what it does not check"
-pri: LATER
+pri: NEXT
 state: open
 deps: [CE-2]
 source: session 2026-10-08b
 created: 2026-10-08
-moved: 2026-10-08b
-updated: 2026-10-08b
+moved: 2026-10-12c
+updated: 2026-10-12c
 closed:
 ---
 
