@@ -26,11 +26,16 @@ from . import __version__
 from . import ledger as L
 from . import okf
 from . import review as R
+from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
 from .store import ACTOR_RE, Failure, Record, Store, _now, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
+# G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
+VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
+FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
+PIN_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)(?:\.\*)?")
 BRIEF_MAX = 120  # FRAMEWORK §5.2: a constraint, not a summary
 BOARD_OWNED = {
     "state": "close or reopen",
@@ -779,7 +784,7 @@ class Engine:
     # -- working-state guards (FRAMEWORK §8.4) ------------------------------------------
 
     def lint(self) -> list[Failure]:
-        return self.store.lint() + self.lint_working() + self.lint_routes()
+        return self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract()
 
     # -- routing (FRAMEWORK §2) ---------------------------------------------------------
 
@@ -801,6 +806,34 @@ class Engine:
             for r in self.store.config.routes
             if not r.optional and not (self.root / r.path).exists()
         ]
+
+    def lint_contract(self, version: str = __version__) -> list[Failure]:
+        """G-D0 (DEC-23): every `framework:` line in the contract, and the version in its kit
+        block's begin marker, equal the installed engine's major.minor. `0.5.*` is a synonym of
+        `0.5`. A missing contract, a contract with no `framework:` line, or a value that is not
+        `major.minor` is a red too: the pin is what says which engine the repo's rules assume."""
+        rel = self.store.config.contract
+        m = VERSION_RE.match(version)
+        assert m, f"engine version {version!r} has no major.minor"
+        want = f"{m['major']}.{m['minor']}"
+        path = self.root / rel if rel else None
+        if path is None or not path.is_file():
+            return [Failure("G-D0", rel or "context.toml", f"the contract {rel or '([engine] contract is empty)'} does not exist", f"create it with a `framework: {want}` line, or point `contract` in [engine] of context.toml at the repo's contract")]
+        text = path.read_bytes().decode("utf-8-sig")
+        out: list[Failure] = []
+        pins = FRAMEWORK_LINE_RE.findall(text)
+        if not pins:
+            out.append(Failure("G-D0", rel, "has no `framework:` line, so nothing says which framework version its rules assume", f"add `framework: {want}` on a line of its own (the installed engine is {version})"))
+        for value in pins:
+            v = PIN_RE.fullmatch(value)
+            if not v:
+                out.append(Failure("G-D0", rel, f"`framework: {value}` is not a major.minor version", f"write it as `framework: {want}` (or `{want}.*`): the framework has no patch number and no `-draft` suffix (DEC-23)"))
+            elif (have := f"{v['major']}.{v['minor']}") != want:
+                out.append(Failure("G-D0", rel, f"`framework: {value}` does not match the installed engine {version} (framework {want})", f"if the repo has moved to framework {want}, follow the upgrade ritual (FRAMEWORK §8.0; kit README § Upgrade) and set `framework: {want}`; otherwise run an engine {have}.x"))
+        for marker in ANY_BEGIN.findall(text):
+            if marker != want:
+                out.append(Failure("G-D0", rel, f"holds the kit {marker} contract block, but the installed engine is framework {want}", f"replace the block between its markers with the engine's kit/contract.md (kit README § Upgrade), or run an engine {marker}.x"))
+        return out
 
     def lint_working(self) -> list[Failure]:
         out: list[Failure] = []

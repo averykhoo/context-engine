@@ -6,6 +6,7 @@ import subprocess
 
 import pytest
 
+from context_engine import __version__
 from context_engine import ledger as L
 from context_engine import okf
 from context_engine.cli import main
@@ -70,6 +71,7 @@ Newest first.
   - nothing
 """
 NOTE = "# HANDOFF\n\n## Banner ({key})\n\n- The banner says where things stand.\n\n## Board\n\n| a | b |\n"
+FRAMEWORK = ".".join(__version__.split(".")[:2])  # the framework version this engine implements (DEC-23)
 
 
 @pytest.fixture
@@ -77,6 +79,7 @@ def eng(tmp_path):
     (tmp_path / "context.toml").write_text(_toml(CONFIG), encoding="utf-8")
     (tmp_path / "ledger.md").write_text(LEDGER, encoding="utf-8")
     (tmp_path / "HANDOFF.md").write_text(NOTE.format(key="2026-10-07b"), encoding="utf-8")
+    (tmp_path / "CLAUDE.md").write_text(f"# contract\n\nframework: {FRAMEWORK}\n", encoding="utf-8")
     return Engine(tmp_path, today=lambda: TODAY)
 
 
@@ -573,6 +576,66 @@ def test_a_malformed_route_is_refused_at_load(tmp_path, route, says):
     with pytest.raises(Refusal) as e:
         routed(tmp_path, [route])
     assert says in e.value.message
+
+
+# -- G-D0: the contract's framework: pin against the installed engine (DEC-23) ---------------
+
+
+def pinned(eng, text, version="0.5.0.dev0", name="CLAUDE.md"):
+    (eng.root / name).write_text(text, encoding="utf-8", newline="")
+    return [(f.path, f.message, f.remedy) for f in eng.lint_contract(version)]
+
+
+@pytest.mark.criterion("AC-35")
+@pytest.mark.parametrize("text", ["framework: 0.5\n", "# c\n\nframework: 0.5.*\n", "framework: 0.5 (engine mode since CE-8)\r\n", "framework:0.5"])
+def test_a_framework_pin_equal_to_the_engines_major_minor_passes(eng, text):
+    assert pinned(eng, text) == []
+    assert pinned(eng, text, version="0.5.17") == []  # the engine's patch number is its own
+
+
+@pytest.mark.criterion("AC-35")
+@pytest.mark.parametrize("text, version, says, remedy", [
+    ("framework: 0.4\n", "0.5.0.dev0", "`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "otherwise run an engine 0.4.x"),
+    ("framework: 1.5\n", "0.5.0", "`framework: 1.5` does not match the installed engine 0.5.0 (framework 0.5)", "set `framework: 0.5`"),
+    ("framework: 0.5.*\n", "0.6.1", "`framework: 0.5.*` does not match the installed engine 0.6.1 (framework 0.6)", "follow the upgrade ritual"),
+])
+def test_a_framework_pin_with_another_major_minor_fails_lint_naming_the_remedy(eng, text, version, says, remedy):
+    [(path, message, rem)] = pinned(eng, text, version)
+    assert path == "CLAUDE.md" and message == says and remedy in rem
+
+
+@pytest.mark.criterion("AC-35")
+@pytest.mark.parametrize("text, says", [
+    ("# contract\n\nno pin here\n", "has no `framework:` line"),
+    ("  framework: 0.5\n", "has no `framework:` line"),  # only a line of its own is the pin
+    ("framework: 0.5-draft\n", "`framework: 0.5-draft` is not a major.minor version"),
+    ("framework: 0.5.3\n", "`framework: 0.5.3` is not a major.minor version"),
+    ("framework: five\n", "`framework: five` is not a major.minor version"),
+    ("framework:\n", "`framework: ` is not a major.minor version"),
+])
+def test_a_missing_or_garbled_framework_pin_fails_lint(eng, text, says):
+    [(_, message, remedy)] = pinned(eng, text)
+    assert message.startswith(says) and "framework: 0.5" in remedy
+
+
+@pytest.mark.criterion("AC-35")
+def test_every_pin_and_the_kit_block_marker_must_match(eng):
+    stale = "framework: 0.5\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
+    got = pinned(eng, stale)
+    assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 contract block, but the installed engine is framework 0.5"]
+    assert "kit/contract.md" in got[1][2]
+    assert pinned(eng, stale.replace("0.4", "0.5")) == []
+
+
+@pytest.mark.criterion("AC-35")
+def test_a_missing_contract_fails_lint_and_the_contract_can_be_mapped(eng, tmp_path):
+    assert [f for f in eng.lint() if f.guard == "G-D0"] == []  # lint runs G-D0 against the installed engine
+    (tmp_path / "CLAUDE.md").unlink()
+    [f] = [f for f in eng.lint() if f.guard == "G-D0"]
+    assert (f.path, f.message) == ("CLAUDE.md", "the contract CLAUDE.md does not exist") and "[engine]" in f.remedy
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "engine": {**CONFIG["engine"], "contract": "AGENTS.md"}}), encoding="utf-8")
+    mapped = Engine(tmp_path, today=lambda: TODAY)
+    assert pinned(mapped, "framework: 0.4\n", name="AGENTS.md")[0][:2] == ("AGENTS.md", "`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)")
 
 
 # -- the other working-state guards (G-W1, G-W2, G-W5, G-W6) -------------------------------

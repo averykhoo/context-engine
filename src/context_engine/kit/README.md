@@ -29,7 +29,8 @@ into the target repo's environment, and the target repo never imports it.
 
 **The pin** is two things: the ref in that install line (a release tag once there are releases;
 a full commit SHA until then), and the `framework: <major.minor>` line in `CLAUDE.md`, which
-must match the engine's major.minor. Write the ref into the first ledger entry's summary, so the
+must match the engine's major.minor (`context-engine lint` checks it, and the kit block's marker
+version, as G-D0). Write the ref into the first ledger entry's summary, so the
 repo records which engine it was bootstrapped with.
 
 The MCP server is optional (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
@@ -97,7 +98,7 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
 2. Bump `framework:` in `CLAUDE.md` if the engine's major.minor moved, and replace the block
    between the kit markers with the new kit's `contract.md`.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
-   key shows up here).
+   key shows up here; G-D0 names a `framework:` line or kit block the new engine does not match).
 4. Write a ledger line naming the new ref (in the session's close summary).
 
 ## 5. The gate

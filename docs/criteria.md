@@ -74,3 +74,9 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-32 | The kit's `context.toml.template` is the config schema: it sets every key the engine reads and parses as a config, every tuned value in it carries a provenance note, and loading a config refuses an unknown key in `[engine]`, `[working]` or `[kinds.*]`, naming the allowed keys | US-15 | tested |
 | AC-33 | The kit's contract block carries FRAMEWORK §6.6 'Ultracode', 'Several tasks' and the fable rule verbatim and a `framework:` pin, and neither the kit nor FRAMEWORK carries this repo's ids (other than `(CE-n)` build marks) or paths | US-9, US-15 | tested |
 | AC-34 | `banner show` on a note with no banner gives hash `none`; `banner set --seen none` writes the first banner just before the note's first `## ` section (creating the note if absent), and refuses any other hash while there is no banner | US-15 | tested |
+
+## Versioning (CE-21)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-35 | Lint fails G-D0, naming the remedy, when the contract (`[engine] contract`, default `CLAUDE.md`) is missing, has no `framework:` line, has one that is not `major.minor` or `major.minor.*`, has one whose major.minor differs from the installed engine's, or holds a kit block whose begin marker names another version; `0.5` and `0.5.*` both pass against any engine `0.5.N` (DEC-23) | US-9 | tested |

@@ -5,6 +5,7 @@
 oplog = "docs/ledger/ops.jsonl"     # one JSON line per engine write (AC-6)
 lockfile = ".context/engine.lock"   # .context/ ignores itself; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]
+contract = "CLAUDE.md"              # its `framework:` line must equal the engine's major.minor (lint G-D0, DEC-23)
 
 [kinds.decision]
 type = "Decision"

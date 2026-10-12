@@ -271,6 +271,13 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-R1**: every `[[routes]]` path in `context.toml` exists, unless the route says
   `optional = true`. *Why: a routing table that points at a moved file sends every reader to
   nothing.*
+- **G-D0**: the contract (`contract` in `[engine]` of `context.toml`, `CLAUDE.md` by default)
+  exists; it has at least one line starting `framework:`; every such line's value is
+  `major.minor` or `major.minor.*` (no patch, no `-draft`; words after the value are a comment);
+  and that major.minor, and the version in any `<!-- context-engine kit X.Y begin -->` marker,
+  equal the first two numbers of the installed engine's version (`<engine-python> -m pip show
+  context-engine`, or `context_engine.__version__`). *Why: the pin says which engine the repo's
+  rules were written for; a stale one means the rules and the tool disagree (DEC-23).*
 
 **Why:** lint is the at-rest check. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).

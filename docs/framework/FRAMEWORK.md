@@ -1361,7 +1361,10 @@ hold **method**, which survives when the status around it is archived:
   major.minor. The framework is versioned `major.minor`; the engine is `major.minor.patch`, and
   its major.minor is the framework version it implements. An engine fix moves only the patch; a
   framework change the engine must follow moves the minor of both. Below 1.0 is draft; there is
-  no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. *Not built yet (CE-21).*
+  no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. `context-engine lint` checks
+  every `framework:` line of the contract (`contract` in `[engine]`, `CLAUDE.md` by default),
+  and the version in its kit block's begin marker. A missing contract, a missing line, or a value
+  that is not `major.minor` fails it too, and each red names the remedy (CE-21).
 - **Upgrade ritual:** bump the engine's pinned ref (reinstall it in its own environment) and
   the contract's `framework:` line, run the lint, fix the reds, and write a ledger line naming
   the new ref. A new kit contract block replaces the old one between its markers.
@@ -1694,8 +1697,8 @@ from the repo root before every commit that touches code, tests or records, and 
 push. The kit's contract block (§6.9) states it.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
-`context-engine lint` runs G-D10, G-W1, G-W2, G-W4 and G-W6 (plus the record schemas, G-D11 and
-G-R1); the rest are checked by hand. *Not built yet: G-D0 (CE-21) and the other guards (CE-14).*
+`context-engine lint` runs G-D0, G-D10, G-W1, G-W2, G-W4 and G-W6 (plus the record schemas,
+G-D11 and G-R1); the rest are checked by hand. *Not built yet: the other guards (CE-14).*
 
 ### 11.2 Add when needed
 

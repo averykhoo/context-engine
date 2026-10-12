@@ -18,6 +18,7 @@
 oplog = "docs/ledger/ops.jsonl"      # one JSON line per engine write; append-only, written by the engine
 lockfile = ".context/engine.lock"    # .context/ ignores itself; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]   # directories declared OKF bundles (lint G-D11)
+contract = "CLAUDE.md"               # the contract; its `framework: <major.minor>` must equal the engine's (lint G-D0)
 lock_timeout = 30.0                  # seconds to wait for the repo lock; provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
 
 # -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
