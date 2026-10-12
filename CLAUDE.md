@@ -47,6 +47,10 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 `<interpreter> -m pytest -q` from the repo root. Run it before every commit that touches
 `src/`, `tests/` or any record, and before every push. It includes `context-engine lint` on this repo's own
 records (AC-23), so a hand edit to a stamped story, a broken record or a dead route turns it red.
+CI runs the same gate on every push (`.github/workflows/gate.yml`, CE-10): a clean checkout,
+Python 3.12 (the `requires-python` floor), `pip install -e ".[dev]"`, then the gate;
+`tests/test_ci.py` keeps the workflow in step with this section and `pyproject.toml`. A red CI
+run is a red gate. Without CI, the by-hand fallback is those two commands in a fresh 3.12 env.
 
 ## Sabotage rule (owner mandate, DEC-11)
 
