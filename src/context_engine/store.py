@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from . import config as config_mod
+from . import decisions
 from . import okf
 from .config import Config, Kind
 from .errors import Refusal
@@ -223,7 +224,75 @@ class Store:
                 "body above `## Amendments` changed since it was stamped",
                 "restore the original text from git (`git log -p` on the file) and record the change with `context-engine record amend`",
             )
+        try:
+            okf.strip_corrections(doc.body)
+        except ValueError as exc:
+            return (
+                f"a `corrected:` line under ## Amendments does not match the body: {exc}",
+                "restore the file from git (`git log -p` on it); a correction is made only with `context-engine record correct`",
+            )
         return None
+
+    # -- the generated decision index (G-D6) --------------------------------------------
+
+    def _index_kind(self) -> Kind | None:
+        w = self.config.working
+        return self.config.kind(w.decision) if w.decision_index and w.decision else None
+
+    def render_index(self) -> str | None:
+        """The decision index as a regeneration would write it; None when none is configured."""
+        kind = self._index_kind()
+        if kind is None:
+            return None
+        base = (self.root / self.config.working.decision_index).parent
+        rows = [decisions.Row(r.id, Path(os.path.relpath(r.path, base)).as_posix(), dict(r.doc.data)) for r in self.heads(kind.name)]
+        return decisions.render_index(rows, kind.enums.get(decisions.STATUS_KEY, ()))
+
+    def _reindex(self, kind: Kind, session: str, actor: str) -> None:
+        """Holding the lock, after a write to ``kind``: rewrite the index if it changed."""
+        ik = self._index_kind()
+        if ik is None or kind.name != ik.name:
+            return
+        try:
+            text = self.render_index()
+        except Refusal:
+            return  # a broken neighbour must not block the write; lint reports both
+        path = self.root / self.config.working.decision_index
+        if path.exists() and path.read_bytes().decode("utf-8").replace("\r\n", "\n") == text:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.write_text(path, text)
+        self._log("index", "index", path, session, actor, ["index"], True)
+
+    def reindex(self, *, session: str, actor: str) -> bool:
+        """Regenerate the decision index (`hk.regen_index`); True if it changed."""
+        self._check_caller(session, actor)
+        kind = self._index_kind()
+        if kind is None:
+            raise Refusal("[working] has no `decision_index`", "set `decision_index = \"docs/decisions/index.md\"` in [working] of context.toml")
+        path = self.root / self.config.working.decision_index
+        with self._lock():
+            before = path.read_bytes() if path.exists() else None
+            self._reindex(kind, session, actor)
+            return before != path.read_bytes()
+
+    def lint_index(self) -> list[Failure]:
+        """G-D6: the generated index equals a regeneration from the records' frontmatter."""
+        try:
+            text = self.render_index()
+        except Refusal:
+            return []  # the schema check reports the broken record
+        if text is None:
+            return []
+        rel = self.config.working.decision_index
+        path = self.root / rel
+        remedy = "regenerate it with `context-engine decision index`; never edit it by hand"
+        if not path.exists():
+            kind = self._index_kind()
+            return [Failure("G-D6", rel, "the decision index is missing", remedy)] if any(True for _ in self.heads(kind.name)) else []
+        if path.read_bytes().decode("utf-8").replace("\r\n", "\n") != text:
+            return [Failure("G-D6", rel, "is not what the decisions' frontmatter generates", remedy)]
+        return []
 
     def lint(self) -> list[Failure]:
         out: list[Failure] = []
@@ -242,6 +311,7 @@ class Store:
                 if bp:
                     out.append(Failure("G-D10", rel, *bp))
         out += self.lint_bundles()
+        out += self.lint_index()
         return out
 
     def lint_bundles(self) -> list[Failure]:
@@ -355,6 +425,7 @@ class Store:
             path.parent.mkdir(parents=True, exist_ok=True)
             self._write(path, doc)
             self._log("new", rid, path, session, actor, list(doc.data.keys()), mechanical)
+            self._reindex(kind, session, actor)
         return Record(rid, kind, path, doc)
 
     def set(
@@ -394,6 +465,7 @@ class Store:
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
             self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical)
+            self._reindex(rec.kind, session, actor)
         return rec
 
     def stamp(self, record_id: str, *, session: str, actor: str) -> Record:
@@ -409,6 +481,7 @@ class Store:
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
             self._log("stamp", record_id, rec.path, session, actor, ["body_sha"], False)
+            self._reindex(rec.kind, session, actor)
         return rec
 
     def amend(self, record_id: str, text: str, *, session: str, actor: str) -> Record:
@@ -423,12 +496,107 @@ class Store:
             bp = self.body_problem(rec.kind, rec.doc)
             if bp and rec.doc.get("body_sha"):
                 raise Refusal(f"{record_id} {bp[0]}", bp[1])
-            body = rec.doc.body.rstrip("\n") + "\n"
-            if not okf.AMENDMENTS_HEADING.search(body):
-                body += "\n## Amendments\n"
-            lines = text.strip("\n").splitlines()
-            entry = f"- **{session} ({actor}):** {lines[0]}\n" + "".join(f"  {ln}\n" if ln else "\n" for ln in lines[1:])
-            rec.doc.set_body(body + "\n" + entry)
+            rec.doc.set_body(amended(rec.doc.body, text, session, actor))
             self._write(rec.path, rec.doc)
             self._log("amend", record_id, rec.path, session, actor, [], False)
+            self._reindex(rec.kind, session, actor)
         return rec
+
+    def correct(self, record_id: str, after: str, text: str, *, session: str, actor: str) -> tuple[Record, str]:
+        """Insert ``[text]`` after the one place ``after`` occurs in the original body, re-stamp
+        ``body_sha`` and log a ``corrected:`` amendment (DEC-13). Insert-only: undoing the logged
+        insertions gives back the words as typed (``okf.strip_corrections``)."""
+        self._check_caller(session, actor)
+        if not after:
+            raise Refusal("no anchor", "give the words the insertion goes right after")
+        if not text.strip():
+            raise Refusal("an empty correction", "give the text to insert; it is written as `[text]`")
+        if any(c in after + text for c in "\r\n"):
+            raise Refusal("a correction and its anchor are each one line", "correct one place at a time; a change of meaning is `record amend`")
+        with self._lock():
+            rec = self.get(record_id)
+            if rec.kind.mode != "append-only":
+                raise Refusal(f"{record_id} is a {rec.kind.mode} record", "edit its body directly; `record correct` is for append-only records")
+            if not rec.doc.get("body_sha"):
+                raise Refusal(f"{record_id} is not stamped yet", "its text is not final, so edit it directly, then `context-engine record stamp`")
+            bp = self.body_problem(rec.kind, rec.doc)
+            if bp:
+                raise Refusal(f"{record_id} {bp[0]}", bp[1])
+            body, pos, inserted = okf.insert_correction(rec.doc.body, after, text)
+            rec.doc.set_body(amended(body, okf.correction_entry(pos, inserted, after), session, actor))
+            rec.doc.set("body_sha", okf.body_sha(rec.doc.body))
+            self._validate(rec.kind, rec.doc, rec.path)
+            self._write(rec.path, rec.doc)
+            self._log("correct", record_id, rec.path, session, actor, ["body_sha", "body"], False)
+            self._reindex(rec.kind, session, actor)
+        return rec, inserted
+
+    def update(self, ids: list[str], mutate: Callable[[dict[str, Record]], dict[str, list[str]]], *, session: str, actor: str, op: str) -> dict[str, Record]:
+        """Change the frontmatter of several records as one write: under one lock, every record
+        is re-read, changed by ``mutate`` (which may refuse, and returns id -> changed keys), and
+        validated before any of them is written. Bodies never change here."""
+        self._check_caller(session, actor)
+        with self._lock():
+            recs = {i: self.get(i) for i in dict.fromkeys(ids)}
+            bodies = {i: r.doc.body for i, r in recs.items()}
+            changed = mutate(recs)
+            for i, r in recs.items():
+                if r.doc.body != bodies[i]:
+                    raise Refusal(f"an update tried to change the body of {i}", "bodies change only through their own operations")
+                owned = [k for k in changed.get(i, ()) if k in TOOL_OWNED]
+                if owned:
+                    raise Refusal(f"`{owned[0]}` is owned by the engine", "ids, types and body_sha never change this way")
+                self._validate(r.kind, r.doc, r.path)
+            for i, r in recs.items():
+                if changed.get(i):
+                    self._write(r.path, r.doc)
+                    self._log(op, i, r.path, session, actor, list(changed[i]), False)
+            for kind in {r.kind.name: r.kind for r in recs.values()}.values():
+                self._reindex(kind, session, actor)
+        return recs
+
+    def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:
+        """Write several new records with ids the caller chose (an import keeps every id), all or
+        nothing: each id must be free and each record valid before any file is written. Each
+        item is (id, fields, body); append-only records are stamped at birth."""
+        self._check_caller(session, actor)
+        kind = self.config.kind(kind_name)
+        out: list[Record] = []
+        with self._lock():
+            used = self.ids_in_use(kind)
+            for rid, fields, body in items:
+                m = kind.id_re.match(rid)
+                if not m:
+                    raise Refusal(f"{rid} is not a {kind.prefix}-n id", f"the {kind.name} kind's ids are {kind.prefix}-n")
+                if int(m.group(1)) in used:
+                    raise Refusal(f"{rid} is already in use", "an id is never reused (G-D2)")
+                clash = [k for k in TOOL_OWNED if k in fields]
+                if clash:
+                    raise Refusal(f"`{clash[0]}` is set by the engine", f"drop `{clash[0]}` from the fields")
+                slug = slugify(str(fields.get("title", "")))
+                path = self.root / kind.dir / (f"{rid}-{slug}.md" if slug else f"{rid}.md")
+                doc = okf.new_document({"type": kind.type, "id": rid, **fields}, body)
+                if kind.mode == "append-only":
+                    doc.set("body_sha", okf.body_sha(doc.body))
+                self._validate(kind, doc, path)
+                if path.exists():
+                    raise Refusal(f"{self._rel(path)} already exists", "move it aside, then retry")
+                out.append(Record(rid, kind, path, doc))
+            if len({r.path for r in out}) != len(out) or len({r.id for r in out}) != len(out):
+                raise Refusal("two of the records share an id or a file name", "give each its own id and title")
+            for r in out:
+                r.path.parent.mkdir(parents=True, exist_ok=True)
+                self._write(r.path, r.doc)
+                self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False)
+            self._reindex(kind, session, actor)
+        return out
+
+
+def amended(body: str, text: str, session: str, actor: str) -> str:
+    """``body`` with one dated entry appended under ``## Amendments`` (added if absent)."""
+    body = body.replace("\r\n", "\n").rstrip("\n") + "\n"
+    if not okf.AMENDMENTS_HEADING.search(body):
+        body += "\n## Amendments\n"
+    lines = text.strip("\n").splitlines()
+    entry = f"- **{session} ({actor}):** {lines[0]}\n" + "".join(f"  {ln}\n" if ln else "\n" for ln in lines[1:])
+    return body + "\n" + entry

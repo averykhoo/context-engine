@@ -150,6 +150,34 @@ def build() -> argparse.ArgumentParser:
     ra = r.add_parser("amend")
     ra.add_argument("id")
     ra.add_argument("text")
+    rc = r.add_parser("correct", help="insert [text] after one unique anchor in a stamped record (DEC-13)")
+    rc.add_argument("id")
+    rc.add_argument("--after", required=True, help="the words the insertion goes right after; must occur once")
+    rc.add_argument("--text", required=True, help="the text to insert; it is written as [text]")
+
+    dc = groups.add_parser("decision", help="decision records (FRAMEWORK §6.5)").add_subparsers(dest="op", required=True)
+    ds = dc.add_parser("supersede")
+    ds.add_argument("old")
+    ds.add_argument("new")
+    dl = dc.add_parser("link")
+    dl.add_argument("id")
+    dl.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
+    dl.add_argument("--rel", default="", help="tasks, creates, amends, retires, relaxes, code or refs")
+    df = dc.add_parser("find")
+    df.add_argument("--text", default="")
+    df.add_argument("--tag", default="")
+    df.add_argument("--status", default="")
+    df.add_argument("--links-to", default="")
+    dsh = dc.add_parser("show")
+    dsh.add_argument("id")
+    dsh.add_argument("--section")
+    dc.add_parser("index", help="housekeeping: regenerate the decision index (G-D6)")
+    di = dc.add_parser("import")
+    di.add_argument("path", help="the single-file log, e.g. a copy of docs/decisions.md")
+    di.add_argument("--dry-run", action="store_true")
+
+    wy = groups.add_parser("why", help="the decisions that link a task, criterion or file::symbol")
+    wy.add_argument("target")
 
     rg = groups.add_parser("register", help="the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
     rgs = rg.add_parser("show")
@@ -184,6 +212,14 @@ CLI_OPS = {
     ("record", "new"): "record_new",
     ("record", "stamp"): "record_stamp",
     ("record", "amend"): "record_amend",
+    ("record", "correct"): "record_correct",
+    ("decision", "supersede"): "decision_supersede",
+    ("decision", "link"): "decision_link",
+    ("decision", "find"): "decision_find",
+    ("decision", "show"): "decision_show",
+    ("decision", "index"): "hk_regen_index",
+    ("decision", "import"): "decision_import",
+    ("why", None): "why",
     ("register", "show"): "register_show",
     ("banner", "show"): "banner_show",
     ("banner", "set"): "banner_set",

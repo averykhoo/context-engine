@@ -100,3 +100,17 @@ risks (FRAMEWORK §10: `docs/invariants.md`).
 - **why not eliminated:** the copy in the repo is the adopter's own and may carry its edits, so neither init nor an upgrade may replace it unasked
 - **control:** individual: the kit README § Upgrade step to replace each kit runbook the repo has not edited; G-D0 flags a major.minor change
 - **from:** CE-24, session 2026-10-12d
+
+## INV-14: an imported record's actor and date are read from a free-text heading, so a misread attribution is stamped as fact, and its `session` is the importing session
+
+- **affects:** the owner, whose words in decisions must survive verbatim; the next session, which reads decisions through find, why and the index; every deployed repo (adhoc's import is CE-7); a plain-git human who edits decisions by hand
+- **why not eliminated:** the single-file log has no structured fields, so only a reader can tell a misread
+- **control:** collective: the whole parenthetical is kept in `attribution:` when it says more than actor and date, `imported_from:` marks every imported record, and CE-7 reviews the import diff before cutover
+- **from:** CE-5, session 2026-10-12d
+
+## INV-15: a decision's `code` links (file::symbol) rot when code moves, and why() then answers from stale links
+
+- **affects:** the owner, whose words in decisions must survive verbatim; the next session, which reads decisions through find, why and the index; every deployed repo (adhoc's import is CE-7); a plain-git human who edits decisions by hand
+- **why not eliminated:** an existence guard over decision links is G-T3, not built (CE-14)
+- **control:** collective: `decision link` refuses a file or symbol that does not exist at link time; G-T3 when CE-14 lands
+- **from:** CE-5, session 2026-10-12d

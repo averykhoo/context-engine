@@ -1,0 +1,388 @@
+"""Decision records (CE-5, FRAMEWORK §6.5): bracketed corrections, supersede and link in both
+directions, find, show and why(), the generated index (G-D6), and the single-file log importer
+(AC-38 to AC-42)."""
+
+import datetime as dt
+import json
+import re
+
+import pytest
+
+from context_engine import okf
+from context_engine.cli import main
+from context_engine.errors import Refusal
+from context_engine.working import Engine
+
+from conftest import _toml
+
+S, ACTOR = "2026-10-12d", "claude-code/test"
+W = {"session": S, "actor": ACTOR}
+STATUSES = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"]
+LISTS = {k: "list" for k in ("tags", "supersedes", "superseded_by", "relaxes", "narrowed_by", "creates", "amends", "retires", "tasks", "code", "refs")}
+BOARD = {"enums": {"state": ["open", "closed"], "pri": ["NOW", "NEXT", "LATER", "SOMEDAY"]}, "types": {"created": "date", "moved": "key", "updated": "key", "closed": "key", "deps": "list", "last_asked": "key"}}
+CONFIG = {
+    "engine": {"oplog": "ops.jsonl", "lockfile": ".context/engine.lock", "bundles": ["decisions"]},
+    "kinds": {
+        "task": {"type": "Task", "prefix": "CE", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], **BOARD},
+        "question": {"type": "Question", "prefix": "ASK", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], **BOARD},
+        "decision": {"type": "Decision", "prefix": "D", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": STATUSES}, "types": {"decided": "date", "session": "key", **LISTS}},
+        "story": {"type": "Story", "prefix": "US", "dir": "stories", "mode": "append-only", "required": ["title", "actor"]},
+    },
+    "working": {"board": ["task", "question"], "task": "task", "question": "question", "decision": "decision", "decision_index": "decisions/index.md"},
+}
+WORDS = "The owner said: we meet on Monday at noon.\n\nA second paragraph, with a [bracket] already in it.\n"
+
+
+@pytest.fixture
+def eng(tmp_path):
+    (tmp_path / "context.toml").write_text(_toml(CONFIG), encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "mod.py").write_text("class Store:\n    def lint(self):\n        pass\n", encoding="utf-8")
+    return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+
+
+def dec(e, title="A decision", body=WORDS, status="BUILT", **fields):
+    return e.record_new("decision", title, body, {"actor": "owner", "decision_status": status, **fields}, **W).id
+
+
+def ops(e):
+    return [json.loads(ln) for ln in (e.root / "ops.jsonl").read_text(encoding="utf-8").splitlines()]
+
+
+# -- corrections are bracketed insertions (DEC-13) -----------------------------------------------
+
+
+@pytest.mark.criterion("AC-38")
+def test_a_correction_inserts_brackets_and_stripping_them_gives_back_the_words_byte_for_byte(eng):
+    rid = dec(eng)
+    original = okf.canonical(eng.store.get(rid).doc.body)
+    eng.amend(rid, "an amendment before any correction", **W)
+    eng.correct(rid, "on Monday", "sic: the owner meant Tuesday", **W)
+    eng.correct(rid, "[sic: the", " owner's", **W)  # an insertion inside an earlier one
+    eng.correct(rid, "noon.", "12:00", **W)
+    doc = eng.store.get(rid).doc
+    text = okf.canonical(doc.body)
+    assert "on Monday[sic: the[ owner's] owner meant Tuesday] at noon.[12:00]" in text
+    assert okf.strip_corrections(doc.body) == original  # the words as typed, exactly
+    assert doc.get("body_sha") == okf.body_sha(doc.body)  # re-stamped
+    amendments = okf.get_section(doc.body, "Amendments")
+    assert amendments.count("corrected: at ") == 3 and "an amendment before any correction" in amendments
+    assert [o["op"] for o in ops(eng)].count("correct") == 3
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-38")
+def test_a_correction_applies_to_every_append_only_kind(eng):
+    sid = eng.record_new("story", "A story", "I want it on Monday.\n", {"actor": "owner"}, **W).id
+    eng.correct(sid, "Monday", "sic", **W)
+    assert "Monday[sic]." in eng.store.get(sid).doc.body
+
+
+@pytest.mark.criterion("AC-38")
+@pytest.mark.parametrize(
+    "after, text, match",
+    [
+        ("Thursday", "x", "not in the text"),
+        ("on", "x", "occurs"),  # "on" appears more than once
+        ("Monday", "two\nlines", "one line"),
+        ("", "x", "no anchor"),
+        ("Monday", "  ", "empty correction"),
+    ],
+)
+def test_a_correction_needs_one_unique_anchor_and_one_line_of_text(eng, after, text, match):
+    rid = dec(eng)
+    before = eng.store.get(rid).path.read_bytes()
+    with pytest.raises(Refusal, match=match):
+        eng.correct(rid, after, text, **W)
+    assert eng.store.get(rid).path.read_bytes() == before
+
+
+@pytest.mark.criterion("AC-38")
+def test_a_correction_refuses_unstamped_changed_and_board_records(eng):
+    rid = dec(eng)
+    path = eng.store.get(rid).path
+    path.write_text(path.read_text(encoding="utf-8").replace("noon", "dusk"), encoding="utf-8")
+    with pytest.raises(Refusal, match="changed since it was stamped"):
+        eng.correct(rid, "dusk", "x", **W)
+    tid = eng.new("task", "A task", **W).id
+    with pytest.raises(Refusal, match="replaced record"):
+        eng.correct(tid, "A", "x", **W)
+
+
+@pytest.mark.criterion("AC-38")
+def test_lint_g_d10_fails_when_a_corrected_line_does_not_match_the_body(eng):
+    rid = dec(eng)
+    eng.correct(rid, "on Monday", "sic", **W)
+    path = eng.store.get(rid).path
+    text = path.read_text(encoding="utf-8")
+    pos = int(re.search(r"corrected: at (\d+) ", text).group(1))
+    assert eng.store.lint() == []
+    path.write_text(text.replace(f"corrected: at {pos} ", f"corrected: at {pos - 4} "), encoding="utf-8")  # the log lies about where
+    assert any(f.guard == "G-D10" and "corrected:" in f.message for f in eng.store.lint())
+
+
+# -- supersede and link: both directions under one lock ------------------------------------------
+
+
+@pytest.mark.criterion("AC-39")
+def test_supersede_writes_both_directions_and_derives_okf_status(eng):
+    old, new = dec(eng, "Old way"), dec(eng, "New way")
+    out = eng.supersede(old, new, **W)
+    assert "\n" not in out
+    o, n = eng.store.get(old).doc, eng.store.get(new).doc
+    assert (o.get("decision_status"), o.get("status"), o.get("superseded_by")) == ("SUPERSEDED", "deprecated", [new])
+    assert n.get("supersedes") == [old] and n.get("decision_status") == "BUILT"
+    assert [x["op"] for x in ops(eng) if x["op"] == "supersede"] == ["supersede", "supersede"]
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-39")
+def test_supersede_refuses_itself_a_repeat_and_a_dead_replacement(eng):
+    a, b, c = dec(eng, "A"), dec(eng, "B"), dec(eng, "C", status="REJECTED")
+    with pytest.raises(Refusal, match="itself"):
+        eng.supersede(a, a, **W)
+    with pytest.raises(Refusal, match="REJECTED"):
+        eng.supersede(a, c, **W)
+    eng.supersede(a, b, **W)
+    with pytest.raises(Refusal, match="already superseded"):
+        eng.supersede(a, b, **W)
+    with pytest.raises(Refusal, match="SUPERSEDED"):
+        eng.supersede(b, a, **W)  # a superseded decision replaces nothing, so no cycle
+    tid = eng.new("task", "T", **W).id
+    with pytest.raises(Refusal, match="not a decision"):
+        eng.supersede(a, tid, **W)
+
+
+@pytest.mark.criterion("AC-39")
+def test_relaxes_writes_the_narrowed_by_backlink(eng):
+    a, b = dec(eng, "Strict rule"), dec(eng, "A narrower rule")
+    eng.link(b, a, "relaxes", **W)
+    assert eng.store.get(b).doc.get("relaxes") == [a]
+    assert eng.store.get(a).doc.get("narrowed_by") == [b]
+    with pytest.raises(Refusal, match="decision supersede"):
+        eng.link(b, a, **W)  # a decision target needs --rel
+
+
+# -- link, find, show and why() ------------------------------------------------------------------
+
+
+@pytest.mark.criterion("AC-40")
+def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
+    rid, tid = dec(eng), eng.new("task", "T", **W).id
+    sid = eng.record_new("story", "A story", "words", {"actor": "owner"}, **W).id
+    eng.link(rid, tid, **W)
+    eng.link(rid, "src/mod.py::Store.lint", **W)
+    eng.link(rid, sid, "creates", **W)
+    eng.link(rid, "AC-7", "amends", **W)  # criteria are not records: the id's shape is checked
+    d = eng.store.get(rid).doc
+    assert (d.get("tasks"), d.get("code"), d.get("creates"), d.get("amends")) == ([tid], ["src/mod.py::Store.lint"], [sid], ["AC-7"])
+    for target, rel, match in [
+        ("CE-99", "", "no record CE-99"),
+        ("US-9", "retires", "no record US-9"),
+        ("src/Mod.py", "", "case-exact"),
+        ("src/mod.py::Missing", "", "has no 'Missing'"),
+        ("AC-3", "", "pass --rel"),
+        (tid, "", "already has"),
+        ("x", "supersedes", "not a link this operation writes"),
+    ]:
+        with pytest.raises(Refusal, match=match):
+            eng.link(rid, target, rel, **W)
+
+
+@pytest.mark.criterion("AC-40")
+def test_why_lists_exactly_the_decisions_that_link_a_target_with_the_field(eng):
+    a, b, c = dec(eng, "Uses the lint"), dec(eng, "Uses the file"), dec(eng, "Unrelated")
+    tid = eng.new("task", "T", **W).id
+    eng.link(a, "src/mod.py::Store.lint", **W)
+    eng.link(b, "src/mod.py", **W)
+    eng.link(b, tid, **W)
+    rows = eng.why("src/mod.py::Store.lint")
+    assert [r.split()[0] for r in rows] == [a, b] and all(r.endswith("via code") for r in rows)
+    assert [r.split()[0] for r in eng.why("src/mod.py")] == [a, b]  # a file covers its symbols
+    assert [r.split()[0] for r in eng.why(tid)] == [b] and eng.why(tid)[0].endswith("via tasks")
+    assert eng.why("CE-404") == [] and c not in " ".join(eng.why("src/mod.py"))
+
+
+@pytest.mark.criterion("AC-40")
+def test_find_filters_by_status_tag_link_and_text_and_show_gives_one_section(eng):
+    a = dec(eng, "Alpha", tags="[records]")
+    b = dec(eng, "Beta", body="Mentions the zebra.\n", status="PROVISIONAL", tags="[records, ops]")
+    eng.amend(b, "widened later", **W)
+    ids = lambda rows: [r.split()[0] for r in rows]  # noqa: E731
+    assert ids(eng.find(status="provisional")) == [b]
+    assert ids(eng.find(tag="records")) == [a, b] and ids(eng.find(tag="ops")) == [b]
+    assert ids(eng.find(text="ZEBRA")) == [b]
+    eng.link(a, "src/mod.py", **W)
+    assert ids(eng.find(links_to="src/mod.py::Store")) == [a]
+    shown = eng.decision_show(b, "Amendments")
+    assert shown.startswith(f"{b} · PROVISIONAL · Beta\n") and "widened later" in shown and "zebra" not in shown
+    with pytest.raises(Refusal, match="no `## Nope`"):
+        eng.decision_show(b, "Nope")
+
+
+# -- the generated index (G-D6) ------------------------------------------------------------------
+
+
+@pytest.mark.criterion("AC-41")
+def test_every_decision_write_regenerates_the_index_grouped_by_status_then_tag(eng):
+    index = eng.root / "decisions" / "index.md"
+    a = dec(eng, "Alpha", tags="[zeta, records]")
+    assert f"[{a}](" in index.read_text(encoding="utf-8")
+    b = dec(eng, "Beta", status="PROVISIONAL")
+    c = dec(eng, "Gamma")
+    eng.supersede(b, c, **W)
+    eng.correct(a, "Monday", "sic", **W)
+    q = eng.ask_new("Which?", **W)
+    eng.ask_answer(q.id, "this one", title="Delta", **W)  # a decision made through another operation
+    text = index.read_text(encoding="utf-8")
+    assert text == eng.store.render_index()
+    assert text.index("## BUILT") < text.index("## PROVISIONAL") < text.index("## SUPERSEDED")
+    built = text[text.index("## BUILT") : text.index("## PROVISIONAL")]
+    assert built.index("### zeta") < built.index("### untagged")  # by first tag; untagged last
+    assert f"- [{b}]({b}-beta.md): Beta *(owner, 2026-10-12)*; superseded by {c}" in text
+    assert "D-4" in text and "Delta" in text
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-41")
+def test_lint_g_d6_fails_on_a_hand_edited_or_missing_index_and_decision_index_restores_it(eng):
+    dec(eng)
+    index = eng.root / "decisions" / "index.md"
+    assert eng.reindex(**W).endswith("already current")
+    index.write_text(index.read_text(encoding="utf-8") + "- a line typed by hand\n", encoding="utf-8")
+    assert [f.guard for f in eng.store.lint()] == ["G-D6"]
+    assert eng.reindex(**W).endswith("regenerated") and eng.store.lint() == []
+    index.unlink()
+    assert [(f.guard, "missing" in f.message) for f in eng.store.lint()] == [("G-D6", True)]
+    eng.reindex(**W)
+    assert eng.store.lint() == []
+
+
+def test_no_index_is_written_or_checked_when_none_is_configured(tmp_path):
+    cfg = {**CONFIG, "working": {k: v for k, v in CONFIG["working"].items() if k != "decision_index"}}
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    e = Engine(tmp_path)
+    dec(e)
+    assert not (tmp_path / "decisions" / "index.md").exists() and e.store.lint() == []
+    with pytest.raises(Refusal, match="decision_index"):
+        e.reindex(**W)
+
+
+# -- the single-file log importer (FRAMEWORK §11.4) ----------------------------------------------
+
+LOG = """# Decisions log
+
+Newest first. Append-only.
+
+## Built and rejected, or decided against evidence
+
+| thing | standing verdict | written up under |
+|---|---|---|
+| `tool -x` for three papers | **rejected**: it interleaves the copies (2026-10-09) | D-3 |
+| keeping two duplicates | **removed**: duplicates | D-1 |
+
+## Entries
+
+### D-4 -- the new way *(owner asked + agent, 2026-10-06)* -- **relaxes D-2**
+
+> (owner, 2026-10-06: "start work on it")
+
+- **What it is.** `mod.py::thing`.
+
+### D-3 -- the gate is X *(agent, 2026-10-05)* -- **SUPERSEDED by D-4 (for X); the rest stands**
+
+Body three.
+
+#### a sub-heading inside an entry
+
+More of three.
+
+### D-2 — scope is narrow *(owner, brief added 2026-09-02)* -- **narrowed by D-4: allowed**
+
+> "the owner's words"
+
+### D-1 – the first *(owner, 2026-09-01; amended by evidence)*
+
+Body one.
+
+## Appendix
+
+Not an entry.
+"""
+
+
+def write_log(eng, text=LOG):
+    path = eng.root / "decisions-copy.md"
+    path.write_text(text, encoding="utf-8")
+    return path.name
+
+
+@pytest.mark.criterion("AC-42")
+def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(eng):
+    out = eng.import_log(write_log(eng), **W)
+    assert "\n" not in out and "4 entries (D-1..D-4, ids kept); 2 rejected rows as D-5..D-6; 3 heading notes" in out
+    get = lambda i: eng.store.get(i).doc  # noqa: E731
+    for rid, start in [("D-4", '> (owner, 2026-10-06: "start work on it")\n\n- **What it is.**'), ("D-3", "Body three.\n\n#### a sub-heading inside an entry\n\nMore of three."), ("D-1", "Body one.")]:
+        assert okf.canonical(get(rid).body).startswith(start), rid
+        assert okf.canonical(get(rid).body).strip("\n") in LOG  # a verbatim slice of the log
+    assert "Not an entry" not in get("D-1").body
+    d3, d4, d2, d1 = get("D-3"), get("D-4"), get("D-2"), get("D-1")
+    assert (d3.get("decision_status"), d3.get("status"), d3.get("superseded_by")) == ("SUPERSEDED", "deprecated", ["D-4"])
+    assert (d4.get("supersedes"), d4.get("relaxes"), d4.get("actor"), d4.get("decided")) == (["D-3"], ["D-2"], "owner asked + agent", dt.date(2026, 10, 6))
+    assert d2.get("narrowed_by") == ["D-4"] and d2.get("attribution") == "owner, brief added 2026-09-02" and d2.get("title") == "scope is narrow"
+    assert d1.get("attribution") == "owner, 2026-09-01; amended by evidence" and d1.get("decision_status") == "BUILT"
+    assert "imported heading note: **SUPERSEDED by D-4 (for X); the rest stands**" in okf.get_section(d3.body, "Amendments")
+    assert all(get(f"D-{n}").get("body_sha") == okf.body_sha(get(f"D-{n}").body) for n in range(1, 7))
+    d5, d6 = get("D-5"), get("D-6")
+    assert (d5.get("decision_status"), d5.get("decided"), d5.get("refs"), d5.get("actor")) == ("REJECTED", dt.date(2026, 10, 9), ["D-3"], "agent")
+    assert "| `tool -x` for three papers | **rejected**: it interleaves the copies (2026-10-09) | D-3 |" in d5.body
+    assert d6.get("decided") == dt.date(2026, 9, 1)  # no date in the row: the entry it names
+    assert all(get(f"D-{n}").get("imported_from") == "decisions-copy.md" for n in range(1, 7))
+    assert eng.store.lint() == []
+    assert "## REJECTED" in (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.criterion("AC-42")
+@pytest.mark.parametrize(
+    "edit, match",
+    [
+        (("### D-1 – the first", "### X-1 – the first"), "prefix 'X'"),
+        (("### D-1 – the first", "### D-2 – the first"), "two entries D-2"),
+        (("*(owner, 2026-09-01; amended by evidence)*", "(owner, 2026-09-01)"), "has no `\\*\\(actor, date\\)\\*`"),
+        (("*(agent, 2026-10-05)*", "*(agent, yesterday)*"), "no YYYY-MM-DD date"),
+        (("**relaxes D-2**", "**relaxes D-9**"), "links D-9"),
+        (("| keeping two duplicates | **removed**: duplicates | D-1 |", "| keeping two | duplicates | **removed** | D-1 |"), "has 4 cells"),
+    ],
+)
+def test_import_is_all_or_nothing(eng, edit, match, tmp_path_factory):
+    dec(eng, "Unrelated")  # D-1 exists already: the import refuses before writing anything
+    before = sorted(p.name for p in (eng.root / "decisions").iterdir())
+    with pytest.raises(Refusal, match="D-1 is already a record"):
+        eng.import_log(write_log(eng), **W)
+    assert sorted(p.name for p in (eng.root / "decisions").iterdir()) == before
+    fresh = tmp_path_factory.mktemp("fresh")
+    (fresh / "context.toml").write_text(_toml(CONFIG), encoding="utf-8")
+    e = Engine(fresh)
+    path = write_log(e, LOG.replace(*edit))
+    with pytest.raises(Refusal, match=match):
+        e.import_log(path, **W)
+    assert not (fresh / "decisions").exists() and not (fresh / "ops.jsonl").exists()
+
+
+@pytest.mark.criterion("AC-42")
+def test_import_writes_nothing_when_a_later_record_breaks_the_schema(tmp_path):
+    kinds = {**CONFIG["kinds"], "decision": {**CONFIG["kinds"]["decision"], "enums": {"decision_status": ["BUILT", "SUPERSEDED"]}}}
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "kinds": kinds}), encoding="utf-8")
+    e = Engine(tmp_path)
+    with pytest.raises(Refusal, match="decision_status 'REJECTED'"):
+        e.import_log(write_log(e), **W)  # the entries are valid; the rejected rows, written last, are not
+    assert not (tmp_path / "decisions").exists() and not (tmp_path / "ops.jsonl").exists()
+
+
+@pytest.mark.criterion("AC-42")
+def test_import_dry_run_writes_nothing_and_the_cli_runs_it(eng):
+    path = write_log(eng)
+    assert eng.import_log(path, dry_run=True, **W).startswith("dry run, nothing written: would import 4 entries")
+    assert not (eng.root / "decisions").exists()
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "import", path]) == 0
+    assert len(list((eng.root / "decisions").glob("D-*.md"))) == 6

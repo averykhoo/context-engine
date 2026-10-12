@@ -4,7 +4,7 @@ id: DEC-15
 title: 'One name, context-engine: the CLI command and the MCP server; tools use underscores'
 actor: owner
 decision_status: PROVISIONAL
-tags: '[naming, mcp, cli]'
+tags: [naming, mcp, cli]
 decided: 2026-10-09
 session: 2026-10-09a
 body_sha: sha256:244bb017f30548a2da4b4b1230d4484d9075d4f3f687ca56043c13bffe1da212

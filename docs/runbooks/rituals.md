@@ -15,9 +15,10 @@ achieve, its guards and its reasons; this file says what to do, in what order. E
   the rows.
 - **Engine**: the `context-engine` command (`<engine-python> -m context_engine ...`, with
   `CE_ACTOR` and `CE_SESSION` set). Over MCP the same operation is the tool
-  `mcp__context-engine__<group>_<verb>` (`init` is `mcp__context-engine__init`), except
-  `baton expire`, which is `mcp__context-engine__hk_expire_batons`. `—` means the step is not an
-  engine operation.
+  `mcp__context-engine__<group>_<verb>` (`init` is `mcp__context-engine__init`, `why` is
+  `mcp__context-engine__why`), except `baton expire`, which is
+  `mcp__context-engine__hk_expire_batons`, and `decision index`, which is
+  `mcp__context-engine__hk_regen_index`. `—` means the step is not an engine operation.
 - **By hand**: the same step without the engine, as a link into
   [manual-mode.md](manual-mode.md), which does every operation by hand and says why.
 - **Why**: what the step protects, so a session whose engine erred knows what the right result
@@ -88,7 +89,7 @@ The owner gives intent. Record it before acting on it.
 | 2 | Link it to the charter goals (`goals: [G-n, ...]` on a story); if none fits, ask: it may be a new goal | `context-engine record new story ... --set goals=[G-n]` | [§ record new](manual-mode.md#context-engine-record-new) | every story traces to a goal, or the charter is missing one |
 | 3 | Draft the criteria, live by default; show the owner a digest of three to seven lines, never files. A story marked `sign-off: required` keeps them `planned` until the owner stamps them | — | edit the criteria file | the owner sees what "correct" will mean before it is built |
 | 4 | Every owner-only uncertainty becomes a question on the board; raise it in chat this session | `context-engine ask new "<question>"`; `context-engine ask raised <ids>` | [§ ask new](manual-mode.md#context-engine-ask-new); [§ ask raised](manual-mode.md#context-engine-ask-raised) | never guess at what only the owner can decide (P8) |
-| 5 | If it contradicts an existing decision or criterion, say so at once, and record the outcome as a decision that supersedes or amends the old one | `context-engine record new decision ...`; `context-engine record amend <id> "<text>"` | [§ record new](manual-mode.md#context-engine-record-new); [§ record amend](manual-mode.md#context-engine-record-amend) | a silent contradiction is drift nobody chose |
+| 5 | If it contradicts an existing decision or criterion, say so at once, and record the outcome as a decision that supersedes or amends the old one | `context-engine record new decision ...`, then `context-engine decision supersede <old> <new>`; `context-engine record amend <id> "<text>"` | [§ record new](manual-mode.md#context-engine-record-new); [§ decision supersede](manual-mode.md#context-engine-decision-supersede); [§ record amend](manual-mode.md#context-engine-record-amend) | a silent contradiction is drift nobody chose |
 | 6 | On a design change, run a criteria census (each criterion in scope: KEEP, rewrite or retire, with the work assigned) and keep it as an evidence doc | — | write the evidence doc | criteria staled by a design change are found together, not one red at a time |
 
 An agent's own decision of consequence is recorded the same way, with its own actor from the
@@ -195,4 +196,5 @@ goes into the owner digest.
 | — | Close each item named by a `Closes: <id>` trailer in a commit, citing the commit; anything else housekeeping would close is proposed to the session, never closed by it | `context-engine task close <id> -m "done in <sha> (Closes: trailer)"` | [§ task close](manual-mode.md#context-engine-task-close) | a close needs evidence; a mechanical close without it is someone quietly declining to record a judgement |
 | — | Stamp every append-only record whose body is final | `context-engine record stamp <ids>` | [§ record stamp](manual-mode.md#context-engine-record-stamp) | an unstamped owner's words can still drift (G-D10) |
 | — | Mark items housekeeping updated without progress | `context-engine task touch --mechanical <id>` | [§ task touch](manual-mode.md#context-engine-task-touch) | a mechanical touch must not look like progress |
-| — | Raise floor ratchets and regenerate indexes, where the repo has them, as the guard that names each one says | — | regenerate or raise by hand | a generated file is checked by byte equality, so a stale one is red |
+| — | Regenerate the decision index, where `[working] decision_index` is set (every engine write to a decision already does; a by-hand decision does not) | `context-engine decision index` (MCP: `hk_regen_index`) | [§ decision index](manual-mode.md#context-engine-decision-index) | a generated file is checked by byte equality, so a stale one is red (G-D6) |
+| — | Raise floor ratchets and regenerate any other generated file, where the repo has them, as the guard that names each one says | — | regenerate or raise by hand | as above |

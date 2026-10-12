@@ -55,6 +55,7 @@ class Working:
     baton_max_age: int = 2  # sessions closed after the owning one (G-W3)
     max_pauses: int = 2  # consecutive `kind: pause` entries (G-W2, owner 2026-10-07)
     register: str = ""  # the residual-risk register, one markdown file (FRAMEWORK §7.4, CE-23)
+    decision_index: str = ""  # the generated decision index, e.g. docs/decisions/index.md (FRAMEWORK §6.5, G-D6)
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
 
 
@@ -176,6 +177,8 @@ def from_dict(raw: dict) -> Config:
     for name in named:
         if name not in kinds:
             raise Refusal(f"[working] names kind {name!r}, which is not declared", f"declare [kinds.{name}] or fix [working]")
+    if w.get("decision_index") and not w.get("decision"):
+        raise Refusal("[working] sets `decision_index` but names no `decision` kind", "set `decision = \"<kind>\"` in [working], or drop `decision_index`")
     caps = w.get("caps", {})
     tiers = sorted({p for n in w.get("board", ()) for p in kinds[n].enums.get("pri", ())})
     if tiers:  # a cap names a board tier, so a typo (`NEXTT`) is a red, not an uncapped tier

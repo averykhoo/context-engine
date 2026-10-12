@@ -223,10 +223,70 @@ def original_body(body: str) -> str:
     return norm[: m.start()] if m else norm
 
 
+def canonical(body: str) -> str:
+    """The bytes ``body_sha`` hashes: the original body, LF, stripped of outer newlines, plus one."""
+    return original_body(body).strip("\n") + "\n"
+
+
 def body_sha(body: str) -> str:
     """Hash of the original body, independent of line endings and surrounding blank lines (AC-7)."""
-    canon = original_body(body).strip("\n") + "\n"
-    return "sha256:" + hashlib.sha256(canon.encode("utf-8")).hexdigest()
+    return "sha256:" + hashlib.sha256(canonical(body).encode("utf-8")).hexdigest()
+
+
+# -- corrections: bracketed insertions (DEC-13, FRAMEWORK §6.5) ---------------------------
+
+# An amendment line `- **<key> (<actor>):** corrected: at <offset> (+<length>) inserted "<[text]>" after "<anchor>"`.
+# The offset counts characters of ``canonical(body)`` at the time of the correction, so undoing
+# the corrections newest first gives back the words as typed, exactly.
+CORRECTED_RE = re.compile(r"^- \*\*\S+ \([^\n]*?\):\*\* corrected: at (\d+) \(\+(\d+)\) inserted \"", re.MULTILINE)
+
+
+def corrections(body: str) -> list[tuple[int, str]]:
+    """Every logged insertion, oldest first, as (offset, inserted text including its brackets)."""
+    norm = body.replace("\r\n", "\n")
+    m = AMENDMENTS_HEADING.search(norm)
+    if not m:
+        return []
+    tail = norm[m.start() :]
+    return [(int(c.group(1)), tail[c.end() : c.end() + int(c.group(2))]) for c in CORRECTED_RE.finditer(tail)]
+
+
+def strip_corrections(body: str) -> str:
+    """The original body as first stamped (``canonical`` form): every logged insertion removed,
+    newest first. Raises ValueError when a logged insertion is not where its line says."""
+    text = canonical(body)
+    for pos, ins in reversed(corrections(body)):
+        if not (ins.startswith("[") and ins.endswith("]")) or text[pos : pos + len(ins)] != ins:
+            raise ValueError(f"the correction {ins[:40]!r} logged at {pos} is not in the body there")
+        text = text[:pos] + text[pos + len(ins) :]
+    return text
+
+
+def correction_entry(pos: int, inserted: str, after: str) -> str:
+    return f'corrected: at {pos} (+{len(inserted)}) inserted "{inserted}" after "{after}"'
+
+
+def insert_correction(body: str, after: str, text: str) -> tuple[str, int, str]:
+    """Insert ``[text]`` right after the one place ``after`` occurs in the original body.
+
+    Returns the new body (LF), the offset in ``canonical`` coordinates, and the inserted text.
+    Refuses an anchor that is missing or occurs more than once (overlapping matches count)."""
+    norm = body.replace("\r\n", "\n")
+    m = AMENDMENTS_HEADING.search(norm)
+    head, tail = (norm[: m.start()], norm[m.start() :]) if m else (norm, "")
+    lead = len(head) - len(head.lstrip("\n"))
+    core = head.strip("\n")
+    hits, i = [], core.find(after)
+    while i != -1:
+        hits.append(i)
+        i = core.find(after, i + 1)
+    if not hits:
+        raise Refusal(f"the anchor {after[:60]!r} is not in the text above ## Amendments", "copy the anchor exactly from the record (`decision show <id>`)")
+    if len(hits) > 1:
+        raise Refusal(f"the anchor {after[:60]!r} occurs {len(hits)} times", "give a longer anchor that occurs once")
+    pos = hits[0] + len(after)
+    inserted = f"[{text}]"
+    return head[: lead + pos] + inserted + head[lead + pos :] + tail, pos, inserted
 
 
 # -- body sections (replaced-mode records) ------------------------------------------------

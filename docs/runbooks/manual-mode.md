@@ -87,6 +87,10 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | session start, close, pause | `session.start`, `session.close`, `session.pause` | id = session key, path = the ledger | `["kind"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
+| record correct | `correct` | the record | `["body_sha", "body"]` |
+| decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
+| decision import | `import`, one line per record | the record | every frontmatter key |
+| any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 
 ### Record kinds (the kit's defaults)
@@ -659,6 +663,136 @@ blank).
 
 **Why:** owner intent changes by addition, so the original words and every change stay readable
 in order, and the hash above the heading still holds.
+
+### context-engine record correct
+
+A bracketed insertion into a stamped decision or story (any append-only record): a typo, a
+missing word, a `[sic]`. It only inserts.
+1. The record must be stamped and its hash must match (as `context-engine record amend`).
+2. Take the original text: the body above `## Amendments`, in the body hash's canonical form
+   (LF, outer newlines stripped, one final `\n`; § The two hashes). Find `after` in it: it must
+   occur exactly once (count overlapping matches); if it is missing or occurs twice, stop and
+   pick a longer anchor. The anchor and the text are each one line.
+3. Insert `[text]` right after it. Note the offset: the number of characters (not bytes) of the
+   canonical text before the `[`.
+4. Append an amendment as in § context-engine record amend, with the text
+   `corrected: at <offset> (+<length of [text]>) inserted "[text]" after "<after>"`.
+5. Replace `body_sha` with the hash of the new text. This is the one time a stamp is replaced.
+
+Undoing the corrections newest first (remove `<length>` characters at `<offset>`) gives back
+the original text exactly; lint G-D10 does that and fails a record whose `corrected:` lines do
+not match.
+
+**Why:** a strict body hash would forbid fixing a typo, and a free edit would let anything
+change. An insertion that can always be undone keeps the words as typed readable under the fix
+(FRAMEWORK §6.5); a change of meaning is an amendment, never a correction.
+
+## Decisions
+
+The decision kind is the one `[working] decision` names. Its link fields are lists:
+`supersedes` / `superseded_by`, `relaxes` / `narrowed_by` (each pair written together),
+`creates`, `amends`, `retires`, `tasks`, `code` (`file` or `file::symbol`) and `refs`.
+**Every write to a decision also regenerates the index** (§ context-engine decision index) when
+`[working] decision_index` is set; by hand, do that step after each one.
+
+### context-engine decision supersede
+
+`<new>` replaces `<old>`. Both must be decisions; `<new>` must not be SUPERSEDED or REJECTED
+itself, and must not already supersede `<old>`. Re-read both files, then in one change:
+on `<old>` set `decision_status: SUPERSEDED`, `status: deprecated` and add `<new>` to
+`superseded_by`; on `<new>` add `<old>` to `supersedes`. Log one `supersede` line per file.
+
+**Why:** a link written in one direction only is a half-truth, and the engine writes both under
+one lock. `status: deprecated` is OKF's word for "kept for history, no longer current" (§9.3).
+
+### context-engine decision link
+
+Add `<target>` to one link field of a decision. `--rel` names the field; without it, a board
+item's id goes to `tasks` and anything with `::` or `/` to `code`; a decision needs
+`--rel relaxes` (which also adds this decision to the other's `narrowed_by`). Check the target
+first: a record id must exist; a `code` path must exist with its exact case, and every dotted
+part of its symbol must appear in the file. A target already in the field is a no-op: stop.
+
+**Why:** `why()` answers from these links, so a link to something that does not exist answers
+wrongly. Existence is checked when the link is written; later drift is G-T3's job.
+
+### context-engine decision find
+
+A read. List the decisions matching every filter given: `--status` (case-insensitive),
+`--tag`, `--links-to <target>` (as § context-engine why matches it) and `--text` (in the id,
+title, description or body, case-insensitive). One line each by id:
+`<id> <status> <title> (<actor>, <decided>)  [<tags>]`.
+
+**Why:** "what did we decide about X" is answered by one-line rows, not by opening every file.
+
+### context-engine decision show
+
+A read. Print `<id> · <decision_status> · <title>`, then `actor`, `decided`, `session` and
+every non-empty link field and `tags`, one per line, then the body, or only the
+`## <section>` asked for (e.g. `Amendments`).
+
+**Why:** one decision's status and links come first, so a reader rarely needs the whole file.
+
+### context-engine decision index
+
+Housekeeping (`hk_regen_index`). Rewrite `[working] decision_index` from the decisions'
+frontmatter alone, never their prose:
+1. `# Decisions`, a blank line, then the line
+   ``Generated from each decision's frontmatter by `context-engine decision index`; never edit it by hand (G-D6).``
+2. For each `decision_status` in the kind's enum order (then any other value, alphabetically)
+   that has decisions: a blank line, `## <status>`.
+3. Under it, group by each decision's first tag (`untagged` if none): tags alphabetical,
+   `untagged` last. Per group: a blank line, `### <tag>`, a blank line, then one line per
+   decision by id number:
+   `- [<id>](<file name relative to the index>): <description, else title> *(<actor>, <decided>)*`,
+   followed by `; superseded by <ids, comma-separated>` when `superseded_by` is set.
+4. LF line endings and one final `\n`.
+
+Lint G-D6 compares the file with a regeneration (line endings normalised), and fails a missing
+index while any decision exists.
+
+**Why:** an index built from frontmatter is checked by byte equality, so it cannot drift
+quietly; one line per decision keeps it small as the series grows (FRAMEWORK §6.5).
+
+### context-engine decision import
+
+Turn a single-file decision log (FRAMEWORK §11.4) into one record per entry. Do it on a copy and
+on a branch; nothing is written if any check fails.
+1. The kind's `prefix` must be the log's (`D` for `D-n`), and no id in the log may already be a
+   record.
+2. Each entry starts at a heading `### <id> -- <title> *(<attribution>)*`, optionally followed
+   by ` -- <note>` (`—` and `–` work as the dash), and runs to the next entry heading or the next
+   `#` or `## ` heading. Its text is copied verbatim; an entry with no text stops the import.
+3. Frontmatter: `title`; `actor`, the attribution up to its first comma or semicolon; `decided`,
+   the last `YYYY-MM-DD` in it; `session`, the importing session; `decision_status: BUILT`
+   unless the note says `SUPERSEDED by <id>`; `attribution`, the whole parenthetical, when it
+   says more than `<actor>, <date>`; `imported_from`, the log's path.
+4. The note: `SUPERSEDED by <id>`, `supersedes <id>`, `relaxes <id>`, `relaxed by <id>` and
+   `narrowed by <id>` become links, written on both records (a link to an id not in the log
+   stops the import); a SUPERSEDED record also gets `status: deprecated`. The note itself is
+   kept as an amendment: `imported heading note: <note>`.
+5. A `## ` section whose heading says "rejected" and holds a table: each row becomes a
+   `decision_status: REJECTED` record with the next free id, in row order. Title: the first
+   cell; body: the line *Imported from the table under*, the heading as `` `## <heading>` `` and
+   a colon, then a blank line, the header line, the separator line and the row, verbatim;
+   `actor: agent`; `decided`: the last date in the row's middle cells, else the date of the
+   first entry its last cell names; `refs`: the entry ids in its last cell; `attribution`:
+   which table, and where the reasoning is.
+6. Stamp every record, log one `import` line each, and regenerate the index.
+
+**Why:** "the import keeps every id", so `D-n` citations elsewhere still resolve; verbatim text
+and a stamp make the move checkable line by line; all or nothing means a half-import never
+lands. A rejected row becomes a record so "what was rejected that touches X" is a query.
+
+### context-engine why
+
+A read. The decisions whose link fields (and `answers`) name `<target>`: an id, a file, or a
+`file::symbol`. A file matches its own `file::symbol` links, and a `file::symbol` matches a link
+to the whole file. One line each by id, as § context-engine decision find, ending
+`via <field, ...>`.
+
+**Why:** "why is this code like this?" is answered by the decisions that link it, in one call,
+instead of grepping a log.
 
 ## Bootstrap
 

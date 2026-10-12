@@ -14,7 +14,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
-types = { decided = "date", session = "key" }
+types = { decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
 
 [kinds.story]
 type = "Story"
@@ -75,6 +75,7 @@ pause = "pause"
 orient_max_bytes = 6000                  # provenance: DEC-14
 read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
 register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
+decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
 
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
@@ -112,8 +113,8 @@ note = "AC-n, claimed by @pytest.mark.criterion(\"AC-n\")"
 component = "Decisions"
 path = "docs/decisions"
 pattern = "DEC-n-<slug>.md"
-mode = "append-only: `context-engine record amend`"
-note = "one record each (FRAMEWORK §6.5)"
+mode = "append-only: `context-engine record amend` or `record correct`; links through `context-engine decision supersede|link`"
+note = "one record each (FRAMEWORK §6.5); index.md is generated on every decision write (G-D6)"
 
 [[routes]]
 component = "Tasks and owner questions"

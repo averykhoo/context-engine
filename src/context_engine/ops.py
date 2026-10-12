@@ -275,6 +275,57 @@ def record_amend(e: Engine, c: Caller, id: str, text: str) -> tuple[int, str]:
     return 0, e.amend(id, text, **c.kw)
 
 
+@op(write=True)
+def record_correct(e: Engine, c: Caller, id: str, after: str, text: str) -> tuple[int, str]:
+    """Insert `[text]` right after the one place `after` occurs in a stamped record's text; insert-only, re-stamped, logged. A change of meaning is record_amend."""
+    return 0, e.correct(id, after, text, **c.kw)
+
+
+# -- decisions (FRAMEWORK §6.5) -----------------------------------------------------------
+
+
+@op(write=True)
+def decision_supersede(e: Engine, c: Caller, old: str, new: str) -> tuple[int, str]:
+    """`new` replaces `old`: writes supersedes/superseded_by both ways and marks `old` SUPERSEDED."""
+    return 0, e.supersede(old, new, **c.kw)
+
+
+@op(write=True)
+def decision_link(e: Engine, c: Caller, id: str, target: str, rel: str = "") -> tuple[int, str]:
+    """Link a decision to a task, story, criterion or `file::symbol`; `rel` is tasks, creates, amends, retires, relaxes, code or refs (inferred for tasks and code)."""
+    return 0, e.link(id, target, rel, **c.kw)
+
+
+@op(write=False, rest="narrow it with `status`, `tag`, `links_to` or `text`")
+def decision_find(e: Engine, c: Caller, text: str = "", tag: str = "", status: str = "", links_to: str = "") -> tuple[int, str]:
+    """Decisions matching every filter given, one line each: `text` searches titles and bodies."""
+    return 0, "\n".join(e.find(text, tag, status, links_to)) or "no matching decisions"
+
+
+@op(write=False, rest="ask for one `section`")
+def decision_show(e: Engine, c: Caller, id: str, section: str | None = None) -> tuple[int, str]:
+    """One decision: its status, links and text, or one `section` (e.g. Amendments)."""
+    return 0, e.decision_show(id, section).rstrip("\n")
+
+
+@op(write=False, rest="`context-engine decision find --links-to <target>` in a shell")
+def why(e: Engine, c: Caller, target: str) -> tuple[int, str]:
+    """The decisions that link a task, story, criterion, decision or `file::symbol`, each with the field that links it."""
+    return 0, "\n".join(e.why(target)) or f"no decision links {target}"
+
+
+@op(write=True)
+def hk_regen_index(e: Engine, c: Caller) -> tuple[int, str]:
+    """Housekeeping: regenerate the decision index from the decisions' frontmatter (G-D6)."""
+    return 0, e.reindex(session=c.session, actor=c.actor or "process:housekeep")
+
+
+@op(write=True)
+def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> tuple[int, str]:
+    """Import a single-file decision log (`### D-n -- title *(actor, date)*`): every id and text kept, stamped; all or nothing."""
+    return 0, e.import_log(path, dry_run=dry_run, **c.kw)
+
+
 # -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------
 
 

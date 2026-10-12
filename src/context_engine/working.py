@@ -17,19 +17,21 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
 from . import __version__
+from . import decisions as D
 from . import ledger as L
 from . import okf
 from . import review as R
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
-from .store import ACTOR_RE, Failure, Record, Store, _now, coerce, key_order
+from .store import ACTOR_RE, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
@@ -49,6 +51,7 @@ BOARD_OWNED = {
 }
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
+LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
 
 
@@ -714,6 +717,213 @@ class Engine:
         """Append a dated entry under ``## Amendments``; the text above it never changes."""
         self.store.amend(rid, text, session=session, actor=actor)
         return f"{rid}: amendment added under ## Amendments"
+
+    def correct(self, rid: str, after: str, text: str, *, session: str, actor: str) -> str:
+        """A bracketed insertion into an append-only record (DEC-13): insert-only, re-stamped, logged."""
+        _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
+        return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; body_sha re-stamped, `corrected:` logged under ## Amendments"
+
+    # -- decisions (FRAMEWORK §6.5, CE-5) -----------------------------------------------
+
+    def _decision_kind(self) -> str:
+        return self._role("decision")
+
+    def _is_decision(self, rid: str) -> None:
+        if self.store.config.kind_for_id(rid).name != self._decision_kind():
+            raise Refusal(f"{rid} is not a decision", f"name a {self.store.config.kind(self._decision_kind()).prefix}-n record")
+
+    def supersede(self, old: str, new: str, *, session: str, actor: str) -> str:
+        """``new`` replaces ``old``: both directions are written under one lock, and ``old``
+        becomes SUPERSEDED with the derived OKF ``status: deprecated``."""
+        self._check(session, actor)
+        self._is_decision(old)
+        self._is_decision(new)
+        if old == new:
+            raise Refusal(f"{old} cannot supersede itself", "name the decision that replaces it")
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            o, n = recs[old].doc, recs[new].doc
+            if new in D.as_list(o.get("superseded_by")):
+                raise Refusal(f"{old} is already superseded by {new}", "nothing to do")
+            if str(n.get(D.STATUS_KEY)) in ("SUPERSEDED", "REJECTED"):
+                raise Refusal(f"{new} is {n.get(D.STATUS_KEY)}, so it cannot replace anything", "supersede with a decision that stands, or record a new one first")
+            o.set(D.STATUS_KEY, "SUPERSEDED")
+            o.set("status", "deprecated")
+            o.set("superseded_by", [*D.as_list(o.get("superseded_by")), new])
+            n.set("supersedes", [*dict.fromkeys([*D.as_list(n.get("supersedes")), old])])
+            return {old: [D.STATUS_KEY, "status", "superseded_by"], new: ["supersedes"]}
+
+        self.store.update([old, new], mutate, session=session, actor=actor, op="supersede")
+        return f"{old}: SUPERSEDED by {new} (status: deprecated); {new} supersedes {old}"
+
+    def _link_rel(self, target: str) -> str:
+        if "::" in target or "/" in target:
+            return "code"
+        if ID_RE.fullmatch(target):
+            try:
+                kind = self.store.config.kind_for_id(target).name
+            except Refusal:
+                kind = None
+            if kind in (self.w.board or ()):
+                return "tasks"
+            if kind == self._decision_kind():
+                raise Refusal(f"{target} is a decision", "use `decision supersede`, or `--rel relaxes` for a decision this one narrows")
+        raise Refusal(f"cannot tell how {target!r} is linked", f"pass --rel, one of {', '.join(LINK_RELS)}")
+
+    def _code_exists(self, target: str) -> None:
+        """A `file` or `file::symbol` link: the file exists, case-exact, and names each part of the symbol."""
+        file, _, symbol = target.partition("::")
+        here = self.root
+        for part in Path(file).parts:
+            names = os.listdir(here) if here.is_dir() else []
+            if part not in names:
+                raise Refusal(f"{file} does not exist (case-exact) in the repo", "link a file that exists, with its exact case")
+            here = here / part
+        if symbol:
+            text = here.read_bytes().decode("utf-8", errors="replace") if here.is_file() else ""
+            missing = [p for p in symbol.split(".") if not re.search(rf"\b{re.escape(p)}\b", text)]
+            if missing:
+                raise Refusal(f"{file} has no {missing[0]!r}", "grep for the symbol and link the name that exists")
+
+    def link(self, rid: str, target: str, rel: str = "", *, session: str, actor: str) -> str:
+        """Link a decision to a task, story, criterion, `file::symbol` or another record
+        (`decision.link`). `relaxes` also writes the backlink `narrowed_by` on the other decision."""
+        self._check(session, actor)
+        self._is_decision(rid)
+        target = target.strip()
+        rel = rel or self._link_rel(target)
+        if rel not in LINK_RELS:
+            raise Refusal(f"--rel {rel!r} is not a link this operation writes", f"use one of {', '.join(LINK_RELS)}; `supersedes` is `decision supersede`")
+        if rel == "code":
+            self._code_exists(target)
+        elif not ID_RE.fullmatch(target):
+            raise Refusal(f"{target!r} is not an id", f"--rel {rel} links an id like CE-3, US-2 or AC-7")
+        else:
+            try:
+                kind = self.store.config.kind_for_id(target)
+            except Refusal:
+                kind = None
+            if rel == "relaxes":
+                self._is_decision(target)
+                if target == rid:
+                    raise Refusal(f"{rid} cannot relax itself", "name the decision it narrows")
+            if kind is not None:
+                self.store.find(target)  # refuses an id that is not a record
+        ids = [rid, target] if rel == "relaxes" else [rid]
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            d = recs[rid].doc
+            have = D.as_list(d.get(rel))
+            if target in have:
+                raise Refusal(f"{rid} already has {target} in `{rel}`", "nothing to do")
+            d.set(rel, [*have, target])
+            changed = {rid: [rel]}
+            if rel == "relaxes":
+                t = recs[target].doc
+                t.set("narrowed_by", [*dict.fromkeys([*D.as_list(t.get("narrowed_by")), rid])])
+                changed[target] = ["narrowed_by"]
+            return changed
+
+        self.store.update(ids, mutate, session=session, actor=actor, op="link")
+        return f"{rid}: {rel} + {target}" + (f"; {target}: narrowed_by + {rid}" if rel == "relaxes" else "")
+
+    def _row(self, r: Record) -> str:
+        d = r.doc
+        who = ", ".join(str(x) for x in (d.get("actor"), d.get("decided")) if x)
+        tags = D.as_list(d.get("tags"))
+        return f"{r.id:<7} {str(d.get(D.STATUS_KEY)):<11} {d.get('title')}" + (f" ({who})" if who else "") + (f"  [{', '.join(tags)}]" if tags else "")
+
+    @staticmethod
+    def _links_to(d: Any, target: str) -> list[str]:
+        """The link fields of ``d`` that name ``target``. A file matches its own `file::symbol`
+        links, and `file::symbol` matches a link to the whole file."""
+        out = []
+        for f in (*D.LINK_FIELDS, "answers"):
+            for v in D.as_list(d.get(f)):
+                if v == target or ("::" in target and v == target.split("::")[0]) or ("::" not in target and v.startswith(target + "::")):
+                    out.append(f)
+                    break
+        return out
+
+    def find(self, text: str = "", tag: str = "", status: str = "", links_to: str = "") -> list[str]:
+        """Decisions matching every filter given, one line each, by id (`decision.find`)."""
+        kind = self._decision_kind()
+        out = []
+        recs = self.store.records(kind) if text else self.store.heads(kind)
+        for r in sorted(recs, key=lambda r: int(r.id.rsplit("-", 1)[1])):
+            d = r.doc
+            if status and str(d.get(D.STATUS_KEY)).upper() != status.upper():
+                continue
+            if tag and tag not in D.as_list(d.get("tags")):
+                continue
+            if links_to and not self._links_to(d, links_to):
+                continue
+            if text and text.lower() not in " ".join(str(x) for x in (r.id, d.get("title"), d.get("description") or "", d.body)).lower():
+                continue
+            out.append(self._row(r))
+        return out
+
+    def decision_show(self, rid: str, section: str | None = None) -> str:
+        """One decision: a head line, its links, then its body or one `## section` (`decision.show`)."""
+        self._is_decision(rid)
+        rec = self.store.get(rid)
+        d = rec.doc
+        top = f"{rid} · {d.get(D.STATUS_KEY)} · {d.get('title')}\n"
+        top += "".join(f"{k}: {d.get(k)}\n" for k in ("actor", "decided", "session") if d.get(k))
+        top += "".join(f"{k}: {', '.join(D.as_list(d.get(k)))}\n" for k in (*D.LINK_FIELDS, "tags", "answers") if D.as_list(d.get(k)))
+        body = d.body.replace("\r\n", "\n")
+        if section:
+            got = okf.get_section(body, section)
+            if got is None:
+                raise Refusal(f"{rid} has no `## {section}`", "show the decision without a section to see its headings")
+            return top + f"\n## {section}\n\n{got}\n"
+        return top + body
+
+    def why(self, target: str) -> list[str]:
+        """The decisions that link ``target`` (a task, story, criterion, decision or
+        `file::symbol`), one line each with the field that links it (`why()`)."""
+        target = target.strip()
+        if not target:
+            raise Refusal("why what?", "name a task, criterion, decision or `file::symbol`")
+        out = []
+        for r in sorted(self.store.heads(self._decision_kind()), key=lambda r: int(r.id.rsplit("-", 1)[1])):
+            via = self._links_to(r.doc, target)
+            if via:
+                out.append(f"{self._row(r)}  via {', '.join(via)}")
+        return out
+
+    def reindex(self, *, session: str, actor: str) -> str:
+        changed = self.store.reindex(session=session, actor=actor)
+        return f"{self.w.decision_index}: {'regenerated' if changed else 'already current'}"
+
+    def import_log(self, path: str, *, session: str, actor: str, dry_run: bool = False) -> str:
+        """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its id and its
+        text, stamped; the rejected table's rows become REJECTED records. All or nothing."""
+        self._check(session, actor)
+        kind = self.store.config.kind(self._decision_kind())
+        src = Path(path) if Path(path).is_absolute() else self.root / path
+        if not src.is_file():
+            raise Refusal(f"no file {path}", "give the path of the single-file log (a copy, for a trial)")
+        try:
+            source = src.resolve().relative_to(self.root).as_posix()
+        except ValueError:
+            source = src.name
+        planned, notes = D.plan_import(src.read_bytes().decode("utf-8-sig"), kind.prefix, self.store.ids_in_use(kind), source)
+        items = []
+        for e in planned:
+            f = e.fields
+            fields: dict[str, Any] = {"title": f["title"], "actor": f["actor"], "decided": f["decided"], "session": session, D.STATUS_KEY: f["decision_status"]}
+            if f["decision_status"] == "SUPERSEDED":
+                fields["status"] = "deprecated"
+            fields.update({k: e.links[k] for k in D.LINK_FIELDS if e.links.get(k)})
+            fields.update({k: f[k] for k in ("attribution", "imported_from") if f.get(k)})
+            body = amended(e.body, f"imported heading note: {e.note}", session, actor) if e.note else e.body
+            items.append((e.id, fields, body))
+        summary = "; ".join(notes)
+        if dry_run:
+            return f"dry run, nothing written: would import {summary} into {kind.dir}"
+        self.store.create_many(kind.name, items, session=session, actor=actor, op="import")
+        return f"imported {summary} into {kind.dir}, each stamped" + (f"; index {self.w.decision_index} regenerated" if self.w.decision_index else "")
 
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 

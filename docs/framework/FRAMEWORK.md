@@ -1028,17 +1028,19 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 **Operations:** `record.new` (CLI `record new decision`), `record.amend` (appends an entry under
 `## Amendments`, keyed by session and actor; the only allowed body change), `record.stamp`
 (freezes `body_sha` once and refuses a re-stamp); these three are generic over the append-only
-kinds. Then: `decision.correct` (below), `decision.supersede(old, new)` (sets both directions and
-derives OKF `status`), `decision.link(id, task | story | criterion)`,
-`decision.find(text, tag, status, links_to)` (one-line rows), `decision.show(id, section)`, and
-**`why(target)`**: given a task, criterion or `file::symbol`, the decisions that link it.
-*Not built yet: everything after `record.stamp` (CE-5).* Writing a decision costs only its own
-text; no session opens the log to append to it.
+kinds, and so is `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
+directions under one lock and derives OKF `status`), `decision.link(id, target, rel)` (a task,
+story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
+backlink too), `decision.find(text, tag, status, links_to)` (one-line rows),
+`decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
+task, criterion, decision or `file::symbol`, the decisions that link it, each with the field
+that does. Writing a decision costs only its own text; no session opens the log to append to it.
 
 **Corrections are bracketed insertions.** A strict body hash forbids fixing a typo in place.
 `correct(id, after, text)` inserts `[text]` right after the one place `after` occurs, re-stamps
-`body_sha`, and logs a `corrected:` line under Amendments. It can only insert: removing every
-bracket it added gives back the original body exactly, so the words as typed always survive.
+`body_sha`, and logs a `corrected:` line under Amendments that says where it inserted what. It
+can only insert: removing every bracket it added gives back the original body exactly, so the
+words as typed always survive, and G-D10 fails a record whose `corrected:` lines do not match.
 The aim is the intent, not a bug-for-bug copy of what was typed; verbatim quotes keep the
 flavour and let a later reader check whether they were misread. A change of meaning is an
 `amend`, never a correction. Applies to every append-only kind.
@@ -1055,7 +1057,8 @@ decisions with `reopen_if:`, so "what was rejected that touches X" is a query.
 - `supersedes` / `superseded by`;
 - `relaxes` / `narrowed by`;
 - `creates / amends / retires: S-n, C-n`. These feed the census and trace-check, **not** a
-  freshness guard (P13).
+  freshness guard (P13);
+- `tasks`, `code` (`file` or `file::symbol`) and `refs` (any other record), which `why()` reads.
 
 **Amendments** are dated entries under `## Amendments`, keyed by session and actor, never edits
 to the body.
@@ -1065,16 +1068,23 @@ REJECTED` records. Each says what was tried, the evidence, and in `reopen_if:` w
 reopening it. The generated index lists them in their own group.
 
 **A generated index:** an OKF `docs/decisions/index.md` (no frontmatter, list shape, §9.3)
-built **from frontmatter**, grouped by status and tag. Because nothing parses prose, its check is
-byte equality with a regeneration; the content-from-a-cutoff-id check (G-D6) is needed only for
-migrated historical entries.
+built **from frontmatter**, grouped by status (in the kind's enum order) and then by each
+decision's first tag, one line per decision: id, link, description or title, actor and date, and
+`superseded by` where set. Every engine write to a decision regenerates it under the same lock
+(`[working] decision_index`), and `hk.regen_index` regenerates it on demand. Because nothing
+parses prose, its check (G-D6) is byte equality with a regeneration; the content-from-a-cutoff-id
+check is needed only for indexes that still parse prose.
 
 **No period splits.** One file per decision has no single-file cap to hit. The growing thing is
 the index (DR11); one line per decision keeps it small, and superseded decisions can collapse
 into a group.
 
-**Existing single-file logs** (heading form `### D-n — title *(actor, date)*`) keep working
-through a read adapter until migrated (§11.4).
+**Existing single-file logs** (heading form `### D-n — title *(actor, date)*`, or `--` for the
+dash) migrate with `decision.import` (§11.4): every entry keeps its id and its text verbatim,
+stamped; a heading's trailing note (`SUPERSEDED by D-n`, `relaxes D-n`, ...) becomes links in
+both directions plus an amendment; and a "built and rejected" table becomes one REJECTED record
+per row, with new ids and `refs` to the entries that hold the reasoning. It writes all or
+nothing. Until a repo migrates, its log is read as it is; the read adapter is not built.
 
 ### 6.6 Delegation and build rounds
 
@@ -1471,9 +1481,9 @@ library operations. The CLI spells them `context-engine <noun> <verb>` (`session
 | Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg)`, `reopen`, `section.set(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp` (generic over the append-only kinds); `decision.correct`, `.supersede`, `.link`, `.find`, `.show`; `why(target)` (§6.5; not built yet, CE-5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.link`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
-| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.regen_index`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
+| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
@@ -1525,7 +1535,8 @@ Decisions as records follow once the core holds.
   four allowed forms (P5).
 - **G-D6:** generated indexes match a regeneration **and** are content-complete from a
   configured cutoff id. An index built from record frontmatter needs only the regeneration
-  check; the cutoff check remains for indexes that still parse prose.
+  check; the cutoff check remains for indexes that still parse prose. Built for the decision
+  index (`[working] decision_index`): a missing index fails while any decision exists.
 - **G-D7:** signal budgets: ⚠ ≤N per file, a bold-caps budget, retired glyphs. Signals rank
   only if they are bounded.
 - **G-D8:** the note's banner carries exactly one session key (the layer detector); there is no
@@ -1534,7 +1545,8 @@ Decisions as records follow once the core holds.
   (§8.0).
 - **G-D10:** every append-only record's `body_sha` matches its body above `## Amendments`. This
   turns "append-only" and "owner words are verbatim" into refusals. Line endings are normalised
-  before hashing, because a Windows checkout may rewrite LF as CRLF.
+  before hashing, because a Windows checkout may rewrite LF as CRLF. A corrected record also
+  passes only if undoing its logged `corrected:` insertions finds each where its line says.
 - **G-D11:** each configured OKF bundle directory is conformant: every non-reserved `.md` has
   frontmatter with a `type`; every `index.md` has no frontmatter (except an `okf_version` key at
   the bundle root) and the list shape (*the list shape is not checked yet*). That `status`
@@ -1769,6 +1781,7 @@ G-D11 and G-R1); the rest are checked by hand. *Not built yet: the other guards 
   the schema carries `state` and every moved file has `state: closed`. "Map, don't move" yields
   here because one place is cleaner, and the cost is bounded when the store can find a task by
   id when a path is wrong. Deferred while the framework is being built.
-- **Single-file decision logs migrate to records the same way, later:** every id is kept, so
-  `D-n §k` citations survive; anchor links into the old file break and get a redirect table.
-  Until then the engine reads the old file through an adapter.
+- **Single-file decision logs migrate to records the same way, by trial:** `decision.import`
+  (§6.5) on a copy and a branch first, every id kept, so `D-n §k` citations survive; anchor
+  links into the old file break and get a redirect table. Until then the old file is read as it
+  is (a read adapter is not built).

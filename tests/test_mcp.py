@@ -52,6 +52,14 @@ CALLS = {
     "record_new": (["decision", "T", "--body", "words", "--set", "actor=owner"], {"kind": "decision", "title": "T", "body": "words", "fields": {"actor": "owner"}}),
     "record_stamp": (["DEC-1", "DEC-2"], {"ids": ["DEC-1", "DEC-2"]}),
     "record_amend": (["DEC-1", "more"], {"id": "DEC-1", "text": "more"}),
+    "record_correct": (["DEC-1", "--after", "a", "--text", "b"], {"id": "DEC-1", "after": "a", "text": "b"}),
+    "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
+    "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
+    "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
+    "decision_show": (["DEC-1", "--section", "Amendments"], {"id": "DEC-1", "section": "Amendments"}),
+    "why": (["CE-1"], {"target": "CE-1"}),
+    "hk_regen_index": ([], {}),
+    "decision_import": (["log.md", "--dry-run"], {"path": "log.md", "dry_run": True}),
     "register_show": (["--engine"], {"engine": True}),
     "banner_show": ([], {}),
     "banner_set": (["--seen", "abc", "--text", "new"], {"seen": "abc", "text": "new"}),
@@ -162,6 +170,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("ask_answer", id="ASK-1", words="this way", title="This way")
     w("record_new", kind="decision", title="Kept", body="Owner words.", fields={"actor": "owner", "decision_status": "BUILT"})
     w("record_amend", id="DEC-2", text="widened")
+    w("record_correct", id="DEC-2", after="Owner", text="sic")
+    w("decision_link", id="DEC-2", target="CE-1")
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")
     w("hk_expire_batons")
@@ -170,7 +180,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init"}  # one-line by the same code paths; covered in test_working (init: test_kit)
+    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions)
+    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import"}
 
 
 @pytest.mark.criterion("AC-19")

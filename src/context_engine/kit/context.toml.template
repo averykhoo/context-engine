@@ -40,7 +40,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
-types = { decided = "date", session = "key" }
+types = { decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
 extra_dirs = []
 
 [kinds.story]
@@ -105,6 +105,7 @@ ask_overdue_sessions = 5     # an owner question not raised in this many session
 ask_overdue_days = 7         # ...or in this many days, whichever comes first; provenance: JUDGEMENT, engine default; wrong as above
 baton_max_age = 2            # sessions closed after the owning one before a baton expires (G-W3); provenance: JUDGEMENT, engine default; wrong if batons expire while still being worked
 register = "docs/invariants.md"   # the residual-risk register (FRAMEWORK §7.4); the first `task close` that files a residual creates it
+decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it (FRAMEWORK §6.5)
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # the values a board item's `review:` may take: FRAMEWORK §5.2's design-review threshold, one per clause
 max_pauses = 2               # consecutive pause entries before lint asks for a clean close (G-W2); provenance: JUDGEMENT, engine default; wrong if real work routinely needs more
 

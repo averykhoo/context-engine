@@ -4,7 +4,7 @@ id: DEC-16
 title: 'Several tasks in one session: one subagent per task, the top level only reports'
 actor: owner
 decision_status: PROVISIONAL
-tags: '[delegation, subagents, framework]'
+tags: [delegation, subagents, framework]
 decided: 2026-10-09
 session: 2026-10-09b
 body_sha: sha256:56c15ec83ff97758a5aa8eb2355d85879ac591cc7042ea04c1c2241bdd2a72b1

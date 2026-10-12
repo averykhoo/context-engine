@@ -10,6 +10,8 @@ tags: [records, append-only]
 answers: ASK-2
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T19:00:00+08:00 }
 body_sha: sha256:ad15d21e43a5a1a421efde73e2e15bff7b74a494d41a6fcdf521d308af765a65
+tasks: [CE-5]
+code: [src/context_engine/okf.py::insert_correction]
 ---
 
 Owner, answering ASK-2: *"What sort of correction does ask-2 cover? Just typos? Maybe you can
@@ -33,3 +35,5 @@ and the insert-only check is the agent's way of keeping the typed words intact.
 ## Amendments
 
 - **2026-10-10a (claude-code/claude-opus-5-5):** 2026-10-10 (DEC-22): the push clause is replaced. Ask before every push and push only on a green gate, CI or not.
+
+- **2026-10-12d (claude-code/claude-opus-5-5):** Built in CE-5 as `record correct` (insert-only, re-stamped, undone newest first by G-D10). Not yet used on a real record, so it stays PROVISIONAL.
