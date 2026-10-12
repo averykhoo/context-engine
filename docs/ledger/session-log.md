@@ -7,9 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-12e · kind: open
+## 2026-10-12e · kind: close
 
-- **opened:** 2026-10-12T22:54:12+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-10,CE-30,CE-36,CE-37,CE-6
+- **receipts:**
+  - guards: gate 350 passed (2026-10-13, top level); lint clean
+  - read: orient; git log and stats of this session's commits; rituals.md § Clean close and §
+    Housekeeping; FRAMEWORK §5.5, §6.1; CE-6, CE-30, CE-36
+  - asked: none
+- **summary** (the owner digest):
+  - Adopted and closed by a later conversation (2026-10-13): this session's conversation was cleared
+    after its third commit, leaving its stub open; the owner chose finish-and-close over restart
+  - CE-10 closed after a watched green CI run (gate.yml 38266248305 on 058fee7); BTN-3 done
+  - Owner picked CE-30 for NOW; its design review written (review: [guard]); CE-36 filed (task close
+    warns when NOW would be left empty)
+  - US-16 (owner): open sessions are shown to the owner at session start; CE-37 built and closed
+    (orient heading, rituals row, AC-52, INV-21)
+  - CE-6 comment: the provisional stale-stub rule could not have caught this dead stub; an adopt-
+    and-close route belongs beside abandoned in G-W11
+  - AAR: a cleared conversation does not end its session; only the owner's question found the open
+    stub, which US-16 now puts in front of them
+- **Still owed:**
+  - push: ab0b155..HEAD (this session's 4 commits plus the close), owner approval needed, then a CI
+    watch
 
 ---
 

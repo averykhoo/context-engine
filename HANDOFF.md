@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-12d)
+## Banner (2026-10-12e)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -14,14 +14,18 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   and §13 changelog) is frozen in `FRAMEWORK-v0.5.md`; older records citing §12/§13 mean that file.
 - **The command is `context-engine`** (DEC-15; `ce` before). Older records keep `ce`.
 - **State:** CE-1, CE-2, CE-3, CE-8, CE-15, CE-16, CE-20..23 done; **since 2026-10-12d also
-  CE-24 (rituals runbook), CE-5 (decision records) and CE-14 (guard catalogue)**. CE-10 (CI) is
-  built (`.github/workflows/gate.yml`) but open: it closes after a push and a watched green run
-  (BTN-3, needs the owner's push approval).
-- **Priorities:** NOW CE-10. **NEXT is empty: the owner picks** (candidates: CE-7 adhoc trial,
-  whose deps are now built; CE-25 and CE-30, unblocked by CE-14). The chain that matters is
-  CE-7 -> CE-11. New rows from 2026-10-12d: CE-31 (refuse reopening an answered ASK), CE-32
-  (op to set decision frontmatter), CE-33 (G-D4, G-D5), CE-34 (G-T5 mutation), CE-35 (op to
-  remove or rewrite a decision link).
+  CE-24 (rituals runbook), CE-5 (decision records) and CE-14 (guard catalogue)**; **since
+  2026-10-12e also CE-10 (CI: `.github/workflows/gate.yml`, first run watched green) and CE-37**.
+- **Priorities:** NOW CE-30 (coverage guard; the owner's pick, design review written). **NEXT is
+  empty: the owner picks** (candidates: CE-7 adhoc trial, whose deps are built; CE-25). The
+  chain that matters is CE-7 -> CE-11. Open rows filed since 2026-10-12d: CE-31 (refuse
+  reopening an answered ASK), CE-32 (op to set decision frontmatter), CE-33 (G-D4, G-D5), CE-34
+  (G-T5 mutation), CE-35 (op to remove or rewrite a decision link), CE-36 (task close warns when
+  NOW would be left empty).
+- **Session start shows the owner every other open session** (US-16, CE-37, 2026-10-13): one
+  line each, or "none"; the session stops or closes none without the owner's word. 2026-10-12e
+  was found that way: its conversation was cleared without a close, and a later one adopted the
+  key and closed it. Marking a dead stub `abandoned` is still by hand (CE-6, G-W11).
 - **Rituals: the order lives in `docs/runbooks/rituals.md`** (CE-24, US-15): every ritual's steps,
   engine command and by-hand step side by side; FRAMEWORK §6 keeps rules and reasons, its step
   numbers are stable labels (P3). `manual-mode.md` has the by-hand detail per operation. Both
@@ -41,7 +45,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   the engine's major.minor; the contract path is `[engine] contract` (default `CLAUDE.md`).
 - **Design review and register (CE-23, P17/P18, US-14):** work above the review threshold needs
   a `review:` field and a `## Design review` **before promote** or close; residual risks move to
-  the register on close as `INV-n` (DEC-27; INV-1..20 so far). CE-14 was promoted before its
+  the register on close as `INV-n` (DEC-27; INV-1..21 so far). CE-14 was promoted before its
   review (recorded in its Log; INV-4 covers the risk): check `review:` before promoting.
 - **The MCP server is built (CE-3):** `mcp__context-engine__<group>_<verb>`, one tool per
   operation in `ops.OPS`; exceptions are named in `rituals.md` (e.g. `baton expire` is
@@ -63,7 +67,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
   its id leading the title, a `Session:` trailer on every agent commit (DEC-22, CE-22). The
   engine's major.minor is the framework version (DEC-23, G-D0). Any session closes a baton with
-  evidence (DEC-24). 2026-10-12d's commits (after 6659690) are not pushed yet.
+  evidence (DEC-24). Pushed to 058fee7 (CI green); 2026-10-12e's commits (ab0b155 on) are not pushed yet.
 
 ## Open batons and pause blocks
 

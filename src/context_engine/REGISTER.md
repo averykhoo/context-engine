@@ -149,3 +149,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** dated facts cite session keys mid-sentence and must pass
 - **control:** reduce: G-D1 line and byte caps on the note's route (the backstop, P6)
 - **from:** CE-14, session 2026-10-12d
+
+## INV-21: a repo that copied the kit before this change keeps the old runbook and contract
+
+- **affects:** the owner, who reads one more section at every session start; every repo the kit deploys to, whose copied runbooks and contract gain the step
+- **why not eliminated:** copied runbooks go stale on upgrade by design (INV-13)
+- **control:** collective: the orient heading ships in the engine, so the instruction reaches them anyway
+- **from:** CE-37, session 2026-10-12e

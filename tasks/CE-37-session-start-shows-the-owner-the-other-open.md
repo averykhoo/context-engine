@@ -4,13 +4,15 @@ id: CE-37
 title: Session start shows the owner the other open sessions
 brief: "US-16: the owner sees every other open session at start; the session stops or closes none without the owner's word"
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-12e
 created: 2026-10-13
 moved: 2026-10-12e
 updated: 2026-10-12e
 review: [shipped]
+status: deprecated
+closed: 2026-10-12e
 ---
 
 US-16. orient already lists other open ledger stubs (Working.orient in working.py), but only to the agent: no ritual step shows them to the owner. Add the step to rituals.md § Session start (both copies), the orient heading, manual-mode § orient (both copies), FRAMEWORK §6.1, the kit contract and this repo's CLAUDE.md.
@@ -26,3 +28,7 @@ F: goes stale if orient's section order or the ledger stub format changes; the h
 A: by hand, read `kind: open` headings in the ledger and say them in chat (manual-mode § orient)
 M: one heading string in Working.orient; prose rows in the runbooks, kept byte-equal by the gate
 E: one more line in chat at start, "none" when there are none
+
+## Log
+
+- 2026-10-12e (claude-code/claude-opus-5-5): closed: done in 237a421 (Closes: trailer); AC-52 tested
