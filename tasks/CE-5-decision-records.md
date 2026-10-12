@@ -3,13 +3,13 @@ type: Task
 id: CE-5
 title: "Decision records: amend, correct, supersede, why(), generated index, adhoc importer"
 brief: "Append-only by body_sha; the import keeps every id; the index is built from frontmatter, never parsed prose"
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-1]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-12c
-updated: 2026-10-12c
+moved: 2026-10-12d
+updated: 2026-10-12d
 closed:
 ---
 
