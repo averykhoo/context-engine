@@ -138,6 +138,7 @@ runbook filing. The next session does them (§ Resume).
 | — | `<gate>` green on exactly the commit being pushed | `context-engine lint` | [§ lint](manual-mode.md#context-engine-lint) and the test command | never push red or unverified |
 | — | Push, and note the pushed commit's hash (`git rev-parse HEAD`) | — | `git push` | the watcher finds runs by hash, not "the latest run", which may be another session's |
 | — | Start a background CI watcher: it finds the runs for that hash (allowing about a minute for them to appear), waits for them to finish, and reports a verdict per run, with the failing step and the log lines around the first error for each failure. It writes its report to a file as it goes. It only watches: no fix, no re-run, no cancel, no push | — | the harness's background agent, or the CI web page | a re-run hides a flaky failure; a fix is the session's job, with the gate |
+| — | Without CI (the repo has no workflow, or CI cannot run): do CI's run by hand. The contract's gate names the CI workflow file, if there is one | — | in a fresh environment at the declared Python floor (`requires-python`), clone or check out exactly the pushed commit, install the package with its dev extra only (`pip install -e ".[dev]"`), then `<gate>` | a fresh environment catches what a working one hides: a dependency that was installed by hand and never declared |
 | — | Report the verdict to the owner. The push is not done until the watcher reports, and a red run is never described as done | — | — | a push nobody watched is unverified |
 
 ## Bootstrap (§6.9)
