@@ -9,7 +9,7 @@ deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-08d
+updated: 2026-10-12b
 closed:
 ---
 
@@ -25,3 +25,4 @@ Build step 5 (FRAMEWORK §6.11): baton expiry into tasks; stale `kind: open` stu
 ## Log
 
 - 2026-10-08d (claude-code/claude-opus-5-5): CE-2 left G-W11 here (DEC-14 item 5): marking a dead `kind: open` stub `abandoned` and its window, which needs measured session lengths (G-D9). `ce baton expire` already exists as the first hk_ operation.
+- 2026-10-12b (claude-code/claude-opus-5-5): owns ledger rotation (FRAMEWORK 7.1), by trial (11.4); from the CE-16 coverage map
