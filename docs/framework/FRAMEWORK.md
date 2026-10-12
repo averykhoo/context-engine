@@ -663,8 +663,23 @@ a single revertible cutover commit.
   at which rung of the P17 ladder)* or *residual*; and answers F.A.M.E. in one line each.
   **Threshold:** the task adds a record kind, a guard, an operation that writes or commits, a git
   operation that can lose work, a long-lived process, or anything shipped to other repos. Other
-  tasks skip it. On close, the residual risks move to the register (§7.4). *Not built yet: the
-  section, the promotion refusal and the move on close (CE-23).*
+  tasks skip it (P8).
+  - **The threshold is declared, not computed:** the task's author sets `review: [<trigger>, ...]`
+    (`task set`), each value from `[working] review_triggers`, one per clause above:
+    `record-kind`, `guard`, `write-op`, `git-loss`, `long-lived`, `shipped`. Any other value is
+    refused. No `review` field means below the threshold.
+  - **Line format**, one line each: `affects: <who>`; one or more risk lines
+    `- <class>: <risk> | rung: <rung> | why: <why> | control: <guard or rule>`, class
+    `eliminated`, `reduced` or `residual`, rung from the P17 ladder (`eliminate`, `reduce`,
+    `collective`, `individual`); `reduced` needs a rung, `residual` a rung, `why` and `control`;
+    then `F:`, `A:`, `M:` and `E:` lines. The template is in the runbook (§ task promote); a
+    template line left unchanged counts as missing.
+  - **The refusal:** `task promote <id> NOW` on an item carrying `review` refuses, naming every
+    reason, until the section passes. Lower tiers are not checked. G-W12 re-checks at rest.
+  - **The move on close:** `task close` appends each `residual` line to the register (§7.4) as
+    the next `INV-n`, under the close's lock, and logs a `register.append` op. It is idempotent
+    on (task id, risk text), so a reopen and re-close adds nothing. A close refuses an unready
+    review, and residuals with no register configured. G-W13 re-checks at rest.
 
 **Edit rules (task tree):**
 - frontmatter changes only through operations carrying the session key;
@@ -1289,9 +1304,17 @@ fallback is a runbook section (P16). Not built yet (CE-18).
   guard or rule by name), and where it came from (task, decision or incident). Entries arrive
   from a task's design review when it closes (§5.2), and from any session that notices a risk
   and confirms it (an unverified hazard, once confirmed, below).
-- **The register is handed over with the work:** the engine's own register ships with it to
-  every repo it is deployed to (§11), as the regulation hands the register to whoever next takes
-  the structure over. *Not built yet: this repo has no register file (CE-23).*
+- **Where it lives:** one markdown file named by `[working] register` (a target repo:
+  `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).
+  Each entry is `## INV-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
+  eliminated:**`, `- **control:** <rung>: <guard or rule>` and `- **from:** <task>, session
+  <key>`. `INV-n` ids are never reused. `context-engine register show` prints it; G-W13 checks
+  that every closed reviewed task's residuals are in it and that every entry is whole.
+- **The register is handed over with the work:** the engine's own register is
+  `src/context_engine/REGISTER.md`, shipped as package data, so it travels with the engine to
+  every repo it is pointed at (§11), as the regulation hands the register to whoever next takes
+  the structure over. There, `context-engine register show --engine` reads the installed copy,
+  and `orient` adds one line pointing at it whenever the repo's own register is another file.
 - **Unverified hazards:** volatile suspicions ("do NOT fix blind"). They live in the note or on
   the board. When resolved, they either become an invariant, a fix plus a ledger line, or are
   dismissed with a ledger line.
@@ -1517,6 +1540,10 @@ Decisions as records follow once the core holds.
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window's value is to be measured in the trial
   (§8.0.3) and given provenance (G-D9).
+- **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
+  checks (§5.2). The promotion refuses it first, so this catches a hand edit.
+- **G-W13:** every residual of a closed item carrying `review` is in the register with that task
+  in `from:`; every register entry has its four lines; no two entries share an `INV-n` (§7.4).
 
 ### 8.5 Verification-state guards
 - **G-V1 (run ledger):** which gate phases passed on which content tree id. A commit or push
@@ -1615,7 +1642,7 @@ docs/
   criteria.md            * or criteria/ or features/*.feature
   decisions/D-n-<slug>.md * # one record per decision; generated index.md
   deviations/              # append-only records (+ optional generated open-gaps view)
-  invariants.md            # durable traps; the residual-risk register
+  invariants.md            # durable traps; the residual-risk register (`[working] register`, §7.4)
   runbooks/              * # method, including manual-mode.md (every engine operation by hand)
   evidence/<id>-<topic>-<date>.md *
   ledger/session-log.md  * # session ledger (one file under the engine lock)
@@ -1680,6 +1707,7 @@ G-R1); the rest are checked by hand. *Not built yet: G-D0 (CE-21) and the other 
 | sessions spend context reading files in order to edit them | the engine's MCP server (§8.0.2), after the §8.0.3 trial |
 | housekeeping needs reading, not just rules (commit → task comments, foreign commits) | tier-1 housekeeping agents restricted to `hk_` tools (§6.11); G-W9, G-W10 |
 | `session.start` stubs are in use | G-W11 |
+| a task is above the design-review threshold (§5.2) | `review_triggers` and `register` in `[working]`; G-W12, G-W13 |
 | a bundle directory is declared OKF | G-D11 |
 
 ### 11.4 Migration (existing repos)
