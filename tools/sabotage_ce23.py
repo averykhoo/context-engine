@@ -31,6 +31,25 @@ S = [
  ("AC-29", R, 'PACKAGED = "REGISTER.md"', 'PACKAGED = "REGISTR.md"', T + " -k packaged_register"),
  ("AC-29", R, 'PACKAGED = "REGISTER.md"', 'PACKAGED = "REGISTR.md"', T + " -k foreign_repo"),
  ("AC-29", W, "        if pointer:", "        if False:", T + " -k foreign_repo"),
+ # review fixes, 2026-10-12b
+ ("AC-26", R, '            for k in ("why", "control"):', '            for k in ("control",):', T + " -k residual-without-why"),
+ ("AC-26", R, '        if r.cls in ("reduced", "residual"):', '        if r.cls in ("residual",):', T + " -k reduced-without-rung"),
+ ("AC-26", R, '            elif r.cls == "residual" and rung == "eliminate":', "            elif False:", T + " -k residual-at-eliminate"),
+ ("AC-26", R, '            elif r.cls == "reduced" and rung == "individual":', "            elif False:", T + " -k reduced-at-individual"),
+ ("AC-26", R, "        if unknown:", "        if False:", T + " -k unknown-field"),
+ ("AC-26", R, "        if not r.text:", "        if False:", T + " -k empty-risk"),
+ ("AC-26", R, "    if not rv.risks:", "    if False:", T + " -k no-risk-line"),
+ ("AC-26", W, "and its design review is not ready: {'; '.join(probs)}\",\n", "and its design review is not ready: {probs[0]}\",\n", T + " -k names_every_reason"),
+ ("AC-26", W, "                    self._review_ready_at_now(rec, rec.doc.body, review)", "                    pass", T + " -k set_and_section"),
+ ("AC-26", W, '            self._review_ready_at_now(rec, okf.set_section(rec.doc.body, name, text), rec.doc.get("review"))', "            pass", T + " -k set_and_section"),
+ ("AC-26", R, "- eliminated: <a risk the design cannot produce>", "- eliminated: <a risk>", T + " -k runbook_carries"),
+ ("AC-27", W, "                    self._review_kept(rec)", "                    pass", T + " -k unset_while"),
+ ("AC-27", W, "        if probs:\n            raise Refusal(f\"{rec.id}'s design review", "        if False:\n            raise Refusal(f\"{rec.id}'s design review", T + " -k no_register_and"),
+ ("AC-27", R, '    return (source, " ".join(risk.split()))', "    return (source, risk)", T + " -k reclose"),
+ ("AC-27", W, "floor=self._inv_issued())", "floor=0)", T + " -k deleted_from_the_register"),
+ ("AC-27", R, "    return max([floor, *(e.n for e in es)]) + 1", "    return max([0, *(e.n for e in es)]) + 1", T + " -k deleted_from_the_register"),
+ ("AC-28", R, "        if not e.risk:", "        if False:", T + " -k g_w13"),
+ ("AC-29", W, '            if not self.w.register:\n                raise Refusal("[working] has no', '            if False:\n                raise Refusal("[working] has no', T + " -k without_a_register"),
 ]
 IGNORE = shutil.ignore_patterns(".git", ".scratch", ".context", "__pycache__", "*.egg-info", ".pytest_cache")
 ok = True

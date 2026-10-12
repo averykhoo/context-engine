@@ -79,8 +79,16 @@ def _guards(e, guard):
         (GOOD.replace("affects: the building session, the next session, every deployed repo\n", ""), "no `affects:` line"),
         (GOOD.replace(" | rung: collective", ""), "has no rung"),
         (GOOD.replace("- residual: an actor", "- leftover: an actor"), "not one of eliminated, reduced, residual"),
+        (GOOD.replace(" | why: the OS owns the lock file", ""), "has no `why:`"),
+        ("\n".join(ln for ln in GOOD.splitlines() if not ln.startswith("- ")), "no risk line"),
+        (GOOD.replace(" | rung: reduce | control: the re-read", " | control: the re-read"), "has no rung"),
+        (GOOD.replace("| rung: collective | why: an actor", "| rung: eliminate | why: an actor"), "is at rung eliminate, so it is not residual"),
+        (GOOD.replace(" | control: G-W7", " | control: G-W7 | owner: nobody"), "unknown field 'owner'"),
+        (GOOD.replace("- eliminated: two writers lose each other's change | rung: eliminate", "- eliminated:"), "a eliminated line names no risk"),
+        (GOOD.replace("| rung: reduce | control: the re-read", "| rung: individual | control: the re-read"), "held only at rung individual, so it is residual"),
     ],
-    ids=["no-section", "placeholder", "no-M", "residual-without-control", "no-affects", "no-rung", "bad-class"],
+    ids=["no-section", "placeholder", "no-M", "residual-without-control", "no-affects", "no-rung", "bad-class",
+         "residual-without-why", "no-risk-line", "reduced-without-rung", "residual-at-eliminate", "unknown-field", "empty-risk", "reduced-at-individual"],
 )
 def test_promote_to_now_refuses_a_task_above_the_threshold_without_a_ready_review(eng, text, reason):
     e, key = eng
@@ -92,6 +100,52 @@ def test_promote_to_now_refuses_a_task_above_the_threshold_without_a_ready_revie
     assert e.store.get(rid).doc.get("pri") == "LATER"  # nothing written
     command = re.search(r"`task (section .*?)`", r.value.remedy).group(1).replace('"<text>"', '"F: x"')
     assert main(["--root", str(e.root), "--session", key, "--actor", ACTOR, "task", *_split(command)]) == 0  # the remedy runs as written
+
+
+@pytest.mark.criterion("AC-26")
+def test_the_promote_refusal_names_every_reason(eng):
+    e, key = eng
+    text = GOOD.replace("M: one format, written by one function\n", "").replace("E: one runbook section", "") + "\nA: <how it is read and fixed without the engine>"
+    rid = _reviewed(e, key, text)
+    with pytest.raises(Refusal) as r:
+        e.promote(rid, "NOW", **kw(key))
+    assert all(x in r.value.message for x in ("the template's placeholder text is still there", "no `M:` line", "no `E:` line"))
+
+
+@pytest.mark.criterion("AC-26")
+def test_set_and_section_on_a_now_item_refuse_an_unready_review(eng):
+    """The gate on NOW holds for writes after the promotion, not only for the promotion."""
+    e, key = eng
+    plain = e.new("task", "Promoted before it was reviewed", **kw(key)).id
+    e.promote(plain, "NOW", **kw(key))
+    with pytest.raises(Refusal) as r:
+        e.set(plain, {"review": "[guard]"}, **kw(key))
+    assert "there is no `## Design review` section" in r.value.message and "manual-mode.md" in r.value.remedy
+    assert e.store.get(plain).doc.get("review") is None
+    e.section(plain, R.SECTION, GOOD, **kw(key))
+    e.set(plain, {"review": "[guard]"}, **kw(key))  # a ready review: allowed
+    with pytest.raises(Refusal) as r:
+        e.section(plain, R.SECTION, GOOD.replace("A: a markdown file, fixed by hand\n", ""), **kw(key))
+    assert "no `A:` line" in r.value.message
+    assert "A: a markdown file" in e.store.get(plain).doc.body  # nothing written
+    e.section(plain, "Traps", "- one", **kw(key))  # another section of a ready item: allowed
+    e.promote(plain, "LATER", **kw(key))
+    e.section(plain, R.SECTION, "affects: x", **kw(key))  # below NOW the review is not yet owed
+    assert _guards(e, "G-W12") == []
+
+
+@pytest.mark.criterion("AC-27")
+def test_review_cannot_be_unset_while_the_design_review_lists_residuals(eng):
+    e, key = eng
+    rid = _reviewed(e, key)
+    for how in ({"unset": ("review",)}, {"raw": {"review": "[]"}}):
+        with pytest.raises(Refusal) as r:
+            e.set(rid, how.get("raw", {}), unset=how.get("unset", ()), **kw(key))
+        assert "2 residual risks" in r.value.message and "task section" in r.value.remedy
+        assert e.store.get(rid).doc.get("review") == ["write-op", "long-lived"]
+    assert e.close(rid, "done", **kw(key)).endswith("residuals filed as INV-1, INV-2")
+    none = _reviewed(e, key, "\n".join(ln for ln in GOOD.splitlines() if not ln.startswith("- residual")))
+    assert e.set(none, {}, unset=("review",), **kw(key)) == f"{none}: set review"  # nothing to file: allowed
 
 
 def _split(command: str) -> list[str]:
@@ -143,6 +197,22 @@ def test_close_files_each_residual_once_and_a_reclose_adds_no_duplicate(eng):
     other = _reviewed(e, key, GOOD.replace("an actor is misattributed", "a third risk"))
     assert e.close(other, "done", **kw(key)).endswith("residuals filed as INV-3, INV-4")  # the same text from another task is its own entry
     assert _guards(e, "G-W13") == []
+    _hand_edit(reg, "## INV-2: an actor is misattributed", "## INV-2: an  actor is\tmisattributed")
+    e.reopen(rid, "again", **kw(key))
+    assert "residuals filed" not in e.close(rid, "done", **kw(key))  # whitespace does not make it a new risk
+    assert _guards(e, "G-W13") == []
+
+
+@pytest.mark.criterion("AC-27")
+def test_an_inv_id_deleted_from_the_register_is_not_handed_out_again(eng):
+    e, key = eng
+    first = _reviewed(e, key)
+    e.close(first, "done", **kw(key))
+    reg = e.root / "docs/invariants.md"
+    reg.write_text(reg.read_text(encoding="utf-8").split("\n## INV-2:")[0] + "\n", encoding="utf-8")  # the last entry cut by hand
+    second = _reviewed(e, key, GOOD.replace("a dead process", "a second process").replace("an actor is", "an actor was"))
+    assert e.close(second, "done", **kw(key)).endswith("residuals filed as INV-3, INV-4")
+    assert [x.id for x in R.entries(reg.read_text(encoding="utf-8"))] == ["INV-1", "INV-3", "INV-4"]
 
 
 @pytest.mark.criterion("AC-27")
@@ -198,6 +268,8 @@ def test_g_w13_reports_a_residual_missing_from_the_register_and_a_malformed_entr
     assert [f.message for f in _guards(e, "G-W13")] == ["INV-1 is used by two entries"]
     reg.write_text(good.replace("- **why not eliminated:** the OS owns the lock file\n", ""), encoding="utf-8")
     assert [f.message for f in _guards(e, "G-W13")] == ["INV-1 has no `why not eliminated:` line"]
+    reg.write_text(good.replace("## INV-2: an actor is misattributed", "## INV-2:"), encoding="utf-8")
+    assert "INV-2 names no risk" in [f.message for f in _guards(e, "G-W13")]
 
 
 # -- (d) the handover: the engine's register ships with it -------------------------------------

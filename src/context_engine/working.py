@@ -16,6 +16,7 @@ expiry (CE-6).
 from __future__ import annotations
 
 import datetime as dt
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -243,7 +244,17 @@ class Engine:
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
         if changes.get("review") is not None:
             self._review_triggers(changes["review"])
-        self._board_set(rid, changes, session=session, actor=actor, unset=unset, mechanical=mechanical)
+        check = None
+        if "review" in changes or "review" in unset:
+            review = None if "review" in unset else changes["review"]
+
+            def check(rec: Record) -> None:
+                if not review:
+                    self._review_kept(rec)
+                else:
+                    self._review_ready_at_now(rec, rec.doc.body, review)
+
+        self._board_set(rid, changes, session=session, actor=actor, unset=unset, check=check, mechanical=mechanical)
         return f"{rid}: set {_one([*raw, *unset])}"
 
     def promote(self, rid: str, pri: str, *, session: str, actor: str) -> str:
@@ -259,12 +270,7 @@ class Engine:
             old.append(str(rec.doc.get("pri")))
             self._cap_check(pri, exclude=rid)
             if pri == "NOW" and rec.doc.get("review"):
-                _, probs = R.check(rec.doc.body)
-                if probs:
-                    raise Refusal(
-                        f"{rid} is above the review threshold ({', '.join(map(str, rec.doc.get('review')))}) and its design review is not ready: {'; '.join(probs)}",
-                        f"write it with `task section {rid} \"{R.SECTION}\" \"<text>\"` from the template in docs/runbooks/manual-mode.md § context-engine task promote",
-                    )
+                self._review_ready(rid, rec.doc.body, rec.doc.get("review"))
 
         self._board_set(rid, {"pri": pri, "moved": session}, session=session, actor=actor, check=check, op="promote")
         return f"{rid}: {old[0]} -> {pri}"
@@ -319,6 +325,30 @@ class Engine:
 
     # -- design review and the residual-risk register (FRAMEWORK §5.2, §7.4) ------------
 
+    def _review_ready(self, rid: str, body: str, review: list) -> None:
+        """Refuse unless ``body`` holds a design review that passes (the gate on NOW, AC-26)."""
+        _, probs = R.check(body)
+        if probs:
+            raise Refusal(
+                f"{rid} is above the review threshold ({', '.join(map(str, review))}) and its design review is not ready: {'; '.join(probs)}",
+                f"write it with `task section {rid} \"{R.SECTION}\" \"<text>\"` from the template in docs/runbooks/manual-mode.md § context-engine task promote",
+            )
+
+    def _review_ready_at_now(self, rec: Record, body: str, review: list | None) -> None:
+        """The same gate for a write to an item already at NOW (`task set review=`, `task section`)."""
+        if review and rec.doc.get("state") == "open" and rec.doc.get("pri") == "NOW":
+            self._review_ready(rec.id, body, review)
+
+    def _review_kept(self, rec: Record) -> None:
+        """Refuse to drop `review` from an item whose design review lists residuals: its close
+        would then file nothing, and G-W13 would not look at it."""
+        rv, _ = R.read(rec.doc.body)
+        if rec.doc.get("review") and rv is not None and rv.residuals:
+            raise Refusal(
+                f"{rec.id}'s design review lists {len(rv.residuals)} residual risks, so removing `review` would skip filing them on close",
+                f"close it to file them, or first take the residual lines out of `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" \"<text>\"`",
+            )
+
     def _review_triggers(self, values: list[str]) -> None:
         allowed = self.w.review_triggers
         bad = [str(v) for v in values if str(v) not in allowed]
@@ -336,12 +366,30 @@ class Engine:
             raise Refusal(f"{rec.id} has {len(rv.residuals)} residual risks and no register is configured", "set `register = \"<repo-relative path>\"` in [working] of context.toml (FRAMEWORK §10: docs/invariants.md)")
         path = self.root / self.w.register
         text = path.read_bytes().decode("utf-8") if path.exists() else None
-        new, added = R.append(text, rv, rec.id, session)
+        new, added = R.append(text, rv, rec.id, session, floor=self._inv_issued())
         if added:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, new)
             self.store.log("register.append", rec.id, path, session, actor, added)
         return added
+
+    def _inv_issued(self) -> int:
+        """The highest INV-n any `register.append` op has handed out, so an entry deleted from
+        the register does not give its id to another risk (§7.4: never reused)."""
+        log = self.root / self.store.config.oplog
+        if not log.exists():
+            return 0
+        top = 0
+        for ln in log.read_bytes().decode("utf-8").splitlines():
+            if '"register.append"' not in ln:
+                continue
+            try:
+                entry = json.loads(ln)
+            except ValueError:
+                continue
+            if entry.get("op") == "register.append":
+                top = max([top, *(int(f[4:]) for f in entry.get("fields") or [] if re.fullmatch(r"INV-\d+", str(f)))])
+        return top
 
     def register_show(self, engine: bool = False) -> str:
         """The register's entries: this repo's, or with ``engine`` the one shipped in the package."""
@@ -407,7 +455,11 @@ class Engine:
         self._check(session, actor)
         if name == "Log":
             raise Refusal("## Log is appended to, never replaced", "use `comment`")
-        self._board_set(rid, {}, session=session, actor=actor, body=lambda b: okf.set_section(b, name, text), op="section")
+
+        def check(rec: Record) -> None:
+            self._review_ready_at_now(rec, okf.set_section(rec.doc.body, name, text), rec.doc.get("review"))
+
+        self._board_set(rid, {}, session=session, actor=actor, body=lambda b: okf.set_section(b, name, text), check=check, op="section")
         return f"{rid}: ## {name} replaced"
 
     def list(self, *, state: str | None = "open", pri: str | None = None, label: str | None = None, kinds: tuple[str, ...] | None = None) -> list[str]:

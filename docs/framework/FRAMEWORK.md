@@ -671,11 +671,15 @@ a single revertible cutover commit.
   - **Line format**, one line each: `affects: <who>`; one or more risk lines
     `- <class>: <risk> | rung: <rung> | why: <why> | control: <guard or rule>`, class
     `eliminated`, `reduced` or `residual`, rung from the P17 ladder (`eliminate`, `reduce`,
-    `collective`, `individual`); `reduced` needs a rung, `residual` a rung, `why` and `control`;
+    `collective`, `individual`); `reduced` needs a rung, `residual` a rung, `why` and `control`; a
+    risk held only at `individual` is a `residual`, so it reaches the register (P17);
     then `F:`, `A:`, `M:` and `E:` lines. The template is in the runbook (§ task promote); a
     template line left unchanged counts as missing.
   - **The refusal:** `task promote <id> NOW` on an item carrying `review` refuses, naming every
-    reason, until the section passes. Lower tiers are not checked. G-W12 re-checks at rest.
+    reason, until the section passes. Lower tiers are not checked. On an item already at NOW,
+    `task set review=` and `task section` run the same check on what they would write, and
+    `task set` refuses to remove `review` while the section lists a residual. G-W12 re-checks at
+    rest.
   - **The move on close:** `task close` appends each `residual` line to the register (§7.4) as
     the next `INV-n`, under the close's lock, and logs a `register.append` op. It is idempotent
     on (task id, risk text), so a reopen and re-close adds nothing. A close refuses an unready
@@ -1308,7 +1312,8 @@ fallback is a runbook section (P16). Not built yet (CE-18).
   `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).
   Each entry is `## INV-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
   eliminated:**`, `- **control:** <rung>: <guard or rule>` and `- **from:** <task>, session
-  <key>`. `INV-n` ids are never reused. `context-engine register show` prints it; G-W13 checks
+  <key>`. `INV-n` ids are never reused: the next is one above the highest in the file and in
+  any `register.append` op, so an entry deleted by hand does not give its id to another risk. `context-engine register show` prints it; G-W13 checks
   that every closed reviewed task's residuals are in it and that every entry is whole.
 - **The register is handed over with the work:** the engine's own register is
   `src/context_engine/REGISTER.md`, shipped as package data, so it travels with the engine to
@@ -1541,7 +1546,8 @@ Decisions as records follow once the core holds.
   `close`, `pause` or `abandoned` entry. The window's value is to be measured in the trial
   (§8.0.3) and given provenance (G-D9).
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
-  checks (§5.2). The promotion refuses it first, so this catches a hand edit.
+  checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
+  hand edit.
 - **G-W13:** every residual of a closed item carrying `review` is in the register with that task
   in `from:`; every register entry has its four lines; no two entries share an `INV-n` (§7.4).
 

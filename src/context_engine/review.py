@@ -39,7 +39,7 @@ ENTRY_FIELDS = ("affects", "why not eliminated", "control", "from")
 PACKAGED = "REGISTER.md"  # package data: the engine's own register, handed over with it
 TEMPLATE = """affects: <who can be hurt: the building session, the next session, the owner, a plain-git human, every deployed repo>
 - eliminated: <a risk the design cannot produce>
-- reduced: <risk> | rung: <reduce|collective|individual> | control: <the refusal, guard or rule, by name>
+- reduced: <risk> | rung: <reduce|collective> | control: <the refusal, guard or rule, by name>
 - residual: <risk> | rung: <reduce|collective|individual> | why: <why it was not eliminated> | control: <the guard or rule, by name>
 F: <what will need doing to it later, by whom, how often, and what makes it stale>
 A: <how it is read and fixed without the engine>
@@ -136,6 +136,8 @@ def problems(rv: Review | None, section: str | None = None) -> list[str]:
                 out.append(f"{name} has no rung from the P17 ladder ({', '.join(RUNGS)})")
             elif r.cls == "residual" and rung == "eliminate":
                 out.append(f"{name} is at rung eliminate, so it is not residual")
+            elif r.cls == "reduced" and rung == "individual":
+                out.append(f"{name} is held only at rung individual, so it is residual: write it as `- residual:` with `why:` (P17)")
         if r.cls == "residual":
             for k in ("why", "control"):
                 if not r.fields.get(k):
@@ -190,8 +192,9 @@ def key(source: str, risk: str) -> tuple[str, str]:
     return (source, " ".join(risk.split()))
 
 
-def next_id(es: list[Entry]) -> int:
-    return max((e.n for e in es), default=0) + 1
+def next_id(es: list[Entry], floor: int = 0) -> int:
+    """One above the highest INV-n in the register and ``floor`` (the highest ever issued)."""
+    return max([floor, *(e.n for e in es)]) + 1
 
 
 def render(n: int, risk: Risk, affects: str, source: str, session: str) -> str:
@@ -204,13 +207,14 @@ def render(n: int, risk: Risk, affects: str, source: str, session: str) -> str:
     )
 
 
-def append(text: str | None, rv: Review, source: str, session: str) -> tuple[str, list[str]]:
+def append(text: str | None, rv: Review, source: str, session: str, floor: int = 0) -> tuple[str, list[str]]:
     """The register text with every residual of ``rv`` not already in it, and the new ids.
-    Idempotent: a residual already filed from ``source`` with the same risk text is skipped."""
+    Idempotent: a residual already filed from ``source`` with the same risk text is skipped.
+    New ids start above ``floor``, the highest id ever issued, so none is reused."""
     text = HEADER if text is None or not text.strip() else text.replace("\r\n", "\n")
     es = entries(text)
     have = {key(e.source, e.risk) for e in es}
-    n = next_id(es)
+    n = next_id(es, floor)
     added = []
     for r in rv.residuals:
         if key(source, r.text) in have:

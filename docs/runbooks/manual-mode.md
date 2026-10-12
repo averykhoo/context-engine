@@ -319,7 +319,10 @@ type: an empty value, `null` or `~` means null (so `brief=` clears the brief); a
 comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must look like
 `2026-10-08e`. A set with no fields still bumps `updated`. `review` takes only values from
 `[working] review_triggers` (`record-kind`, `guard`, `write-op`, `git-loss`, `long-lived`,
-`shipped`): set it on an item above the design-review threshold (FRAMEWORK §5.2).
+`shipped`): set it on an item above the design-review threshold (FRAMEWORK §5.2). Setting it on
+an item already at NOW first checks its `## Design review` as in `task promote`. Do not remove it
+from an item whose design review lists a `- residual:` line: close the item to file them, or take
+the residual lines out first.
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule (DEC-14 item 7).
@@ -337,7 +340,7 @@ refused):
 ```
 affects: <who can be hurt: the building session, the next session, the owner, a plain-git human, every deployed repo>
 - eliminated: <a risk the design cannot produce>
-- reduced: <risk> | rung: <reduce|collective|individual> | control: <the refusal, guard or rule, by name>
+- reduced: <risk> | rung: <reduce|collective> | control: <the refusal, guard or rule, by name>
 - residual: <risk> | rung: <reduce|collective|individual> | why: <why it was not eliminated> | control: <the guard or rule, by name>
 F: <what will need doing to it later, by whom, how often, and what makes it stale>
 A: <how it is read and fixed without the engine>
@@ -349,7 +352,7 @@ The checks: no template line left verbatim; an `affects:` line with text; at lea
 line; every line starting `- ` is `- <class>: <risk>` with class `eliminated`, `reduced` or
 `residual`, then ` | key: value` fields from `rung`, `why`, `control`, `affects`; a `reduced`
 or `residual` line has a `rung` from `eliminate`, `reduce`, `collective`, `individual` (a
-residual is never at `eliminate`); a `residual` line has `why` and `control`; and `F:`, `A:`,
+residual is never at `eliminate`; a risk held only at `individual` is a `residual`, P17); a `residual` line has `why` and `control`; and `F:`, `A:`,
 `M:` and `E:` lines, each with text. Any other unindented line is an error.
 
 **Why:** re-ranking is progress on the board, so it bumps `moved`, and it is where the caps are
@@ -389,8 +392,9 @@ Do not move or rename the file.
 check fails, fix the review, do not close. Then copy each `- residual:` line into the register
 (`[working] register`; here `src/context_engine/REGISTER.md`). Skip a residual already there
 with the same risk text and the same task id in its `from:` line. Create the file with the
-heading `# Residual-risk register` if it is missing. Each entry takes the next `INV-n` (the
-highest in the file + 1, never reused), after one blank line:
+heading `# Residual-risk register` if it is missing. Each entry takes the next `INV-n` (one above the
+highest in the file and in any `register.append` line of the op log, so an id is never reused),
+after one blank line:
 
 ```
 ## INV-<n>: <the risk text>
@@ -420,7 +424,8 @@ delete `status`, and set `moved` and `updated`. Append `- <key> (<actor>): reope
 ### context-engine task section
 
 Replace the content under `## <name>` up to the next `## ` heading. Add the section at the end if
-it is missing. Never `## Log`: use `comment`.
+it is missing. Never `## Log`: use `comment`. On an open NOW item carrying `review:`, check the
+result's `## Design review` as in `task promote`, and do not write it while a check fails.
 
 **Why:** Traps and Read first are replaced as they get better. The Log is history, so it is only
 ever appended to.
