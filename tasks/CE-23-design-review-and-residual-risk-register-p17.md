@@ -26,6 +26,7 @@ Design review and residual-risk register (P17, P18): task section, promotion ref
 ## Log
 
 - 2026-10-12b (claude-code/claude-opus-5-5): build: engine, tests, config, runbook, criteria landed in cc9195a (AC-26..29 tested, sabotage ALL RED in a temp copy). FRAMEWORK edits and the CE-3/CE-23 reviews + register seed next.
+- 2026-10-12b (claude-code/claude-opus-5-5): build done, not closed: cc9195a engine+tests+config+runbook+criteria (AC-26..29 tested), 8b0881a FRAMEWORK §5.2/7.4/8.4/10/11.2, 8a938e1 CE-23 + retroactive CE-3 reviews and REGISTER.md INV-1..3 (copied by hand, G-W13 seen red then clean), a770fdf remedy fix. tools/sabotage_ce23.py 14 rows ALL RED in a temp copy. Owed at close: INV prefix into CLAUDE.md id list; ops.jsonl hand register.append line uncommitted; CE-15 qualifies (shipped) and needs review= plus a Design review before close.
 
 ## Design review
 
