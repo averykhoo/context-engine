@@ -16,7 +16,8 @@ the ledger and op log are `docs/ledger/`; `docs/runbooks/manual-mode.md` does ev
 operation by hand.
 
 **Id prefixes** (zero collisions on 2026-10-08, DEC-7): tasks `CE-n`, decisions `DEC-n`,
-stories `US-n`, criteria `AC-n`, owner questions `ASK-n`. Never reuse or renumber an id.
+stories `US-n`, criteria `AC-n`, owner questions `ASK-n`, residual-risk register entries
+`INV-n` (DEC-27). Never reuse or renumber an id.
 OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_status`.
 
 ## Environment
