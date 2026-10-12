@@ -12,8 +12,9 @@ The routing table is `[[routes]]` in `context.toml`; print it with `context-engi
 if a routed path disappears. Record kinds, their directories and schemas are `[kinds.*]` in the
 same file. In short: the spec is `docs/framework/FRAMEWORK.md`; owner words are stories
 (`docs/stories/`) and decisions (`docs/decisions/`), both append-only; the board is `tasks/`;
-the ledger and op log are `docs/ledger/`; `docs/runbooks/manual-mode.md` does every `context-engine`
-operation by hand.
+the ledger and op log are `docs/ledger/`; `docs/runbooks/rituals.md` orders every
+ritual and `docs/runbooks/manual-mode.md` does every `context-engine` operation by hand; both are
+copies of the kit's (`src/context_engine/kit/docs/runbooks/`), kept byte-equal by the gate.
 
 **Id prefixes** (zero collisions on 2026-10-08, DEC-7): tasks `CE-n`, decisions `DEC-n`,
 stories `US-n`, criteria `AC-n`, owner questions `ASK-n`, residual-risk register entries
@@ -63,45 +64,28 @@ old code and passes: a false green, seen 2026-10-08d.
 
 ## Rituals (FRAMEWORK §6, through `context-engine`)
 
-Every step below is a `context-engine` command. **When `context-engine` errors or refuses something it should allow, do
-that step by hand from `docs/runbooks/manual-mode.md` (its section has the same name), then fix
-the engine** (runbook § When the engine and this runbook disagree). A refusal with a sensible
-remedy is not an error: follow the remedy.
-
 **Session start:** `context-engine session start` (prints the key; use it as `CE_SESSION`), then `context-engine orient`.
 Do the batons and pauses it lists first. Raise every question it lists in chat, one line each,
 then `context-engine ask raised <ids>`. Read the NOW item with `context-engine task show <id>`.
 
-**Owner gives intent** (§6.2): record it **verbatim, now**, then tell the owner in one line which
-it became.
-- Behaviour-shaped: `context-engine record new story "<title>" --file <words.md> --set actor=owner --set
-  story_status=live --set goals=[G..]`, or `context-engine record amend US-n "<words>"` on an existing story.
-- Choice-shaped: `context-engine record new decision "<title>" --file <words.md> --set actor=owner --set
-  decision_status=PROVISIONAL`, or a charter edit.
-- An answer to an `ASK-n`: `context-engine ask answer ASK-n "<words>" --title "<decision title>"`.
-- Write owner words to a file with the Write tool, not a heredoc (heredocs here can mangle
-  backslashes and quotes).
+**Every ritual's steps, in order, are `docs/runbooks/rituals.md`, and only there**: intake, clean
+close, pause, resume, push and CI, bootstrap, foreign reconcile, housekeeping. Each step gives its
+`context-engine` command, its by-hand step in `docs/runbooks/manual-mode.md`, and its why. **When
+`context-engine` errors or refuses something it should allow, do that step by hand from the
+runbooks, then fix the engine** (manual-mode § When the engine and this runbook disagree). A
+refusal with a sensible remedy is not an error: follow the remedy.
 
-**Clean close** (§6.3), in this order:
-0. Every owner word from this session is recorded. Then `context-engine lint`, to see what
-   earlier sessions left red before adding to it (§6.3 step 1).
-1. The board: `context-engine task touch|comment|promote|close|section` on every item this session moved
-   (the engine bumps `moved`/`updated` and enforces NOW = 1, NEXT <= 5). `context-engine task list` is the
-   board; HANDOFF keeps no copy.
-2. Anything skipped: `context-engine baton add "<step>" --why "<why>"`.
-3. Durable rules come here; method lessons go into a runbook. Then pre-close housekeeping
-   (§6.3 step 6a): `context-engine baton expire`.
-4. Gate, then `context-engine session close --rows ... --summary ... (one per line, at most 7) --guards
-   "<gate result>" --read "<what was read>" --asked "<ids>" --owed ...`.
-5. The banner: `context-engine banner show`, then `context-engine banner set --seen <hash> --file <banner.md>`. If it
-   refuses, another session wrote it: read theirs, merge, retry.
-6. `context-engine lint` and the gate again, then commit by path. **Ask before every push, and push
-   only on a green gate** (DEC-22). Every push gets a CI watcher (global `CLAUDE.md`).
-7. The digest in chat.
-
-**Pause** (§6.4): owner words recorded, evidence out of `.scratch/`, `context-engine pause open --in-flight
-"<what>" --resume "<first step>"` (it commits its own record), then `context-engine session pause --rows ...
---deferred "<what was skipped>"`; commit the ledger by path.
+This repo's values for those steps:
+- `<gate>` is `<interpreter> -m pytest -q` (§ Gate above); lint runs inside it.
+- Owner intent (rituals § Intake): `context-engine record new story "<title>" --file <words.md>
+  --set actor=owner --set story_status=live --set goals=[G..]`, `context-engine record amend US-n
+  "<words>"`, `context-engine record new decision "<title>" --file <words.md> --set actor=owner
+  --set decision_status=PROVISIONAL`, or `context-engine ask answer ASK-n "<words>" --title
+  "<decision title>"`. Write owner words to a file with the Write tool, not a heredoc (heredocs
+  here can mangle backslashes and quotes).
+- Clean close: `context-engine task list` is the board; HANDOFF keeps no copy. `session close
+  --summary` is repeated once per digest line, at most 7. **Ask before every push, and push only
+  on a green gate** (DEC-22); every push gets a CI watcher (global `CLAUDE.md`).
 
 ## Rules
 

@@ -70,7 +70,7 @@ risks (FRAMEWORK §10: `docs/invariants.md`).
 
 - **affects:** the session adopting a repo, the adopting repo's owner and its plain-git humans, the repo's own environment and files, the next session in that repo with no context, every repo the engine is pointed at
 - **why not eliminated:** de-leaking the runbooks so they can ship is CE-24's scope (CE-7 depends on it)
-- **control:** individual: the kit README § Runbooks and the contract say where to read them (the engine repo at the pinned ref); CE-24
+- **control:** collective: since CE-24 the kit ships both runbooks and `init` copies them (test_init_copies_the_runbooks_and_keeps_an_edited_one), and test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths keeps them free of this repo's ids
 - **from:** CE-15, session 2026-10-12b
 
 ## INV-10: the kit's default prefixes collide with ids the adopting repo already uses outside the engine's record directories
@@ -83,8 +83,8 @@ risks (FRAMEWORK §10: `docs/invariants.md`).
 ## INV-11: a kit file added in a new subdirectory is not shipped in the wheel
 
 - **affects:** the session adopting a repo, the adopting repo's owner and its plain-git humans, the repo's own environment and files, the next session in that repo with no context, every repo the engine is pointed at
-- **why not eliminated:** pyproject package-data lists one glob per kit directory, and the gate does not build a wheel
-- **control:** individual: whoever adds a kit directory adds its glob; the wheel was built and its kit/ checked by hand (CE-15 log)
+- **why not eliminated:** what ships is whatever pyproject's package-data globs match, and a packaging change can still narrow them
+- **control:** collective: since CE-24 the glob is `kit/**/*`, and test_the_wheel_carries_every_kit_file builds a wheel in the gate and checks every kit file is in it
 - **from:** CE-15, session 2026-10-12b
 
 ## INV-12: an edit to CLAUDE.md that lands between init's re-read and its rewrite is lost
@@ -93,3 +93,10 @@ risks (FRAMEWORK §10: `docs/invariants.md`).
 - **why not eliminated:** init runs before the repo has a context.toml naming a lock file, so it takes no lock, and a plain file has no compare-and-swap; the window is one re-read to one write
 - **control:** reduce: bootstrap._write's re-check narrows it to that window; `init --dry-run` first; git shows a lost edit to a tracked CLAUDE.md
 - **from:** CE-15, session 2026-10-12b
+
+## INV-13: an adopter's copied runbooks go stale against a newer engine, because init never overwrites them
+
+- **affects:** a session running a ritual by hand (no engine, or an engine that errs), the session adopting a repo, the adopting repo's owner and its plain-git humans, the next session with no context, every repo the engine is pointed at
+- **why not eliminated:** the copy in the repo is the adopter's own and may carry its edits, so neither init nor an upgrade may replace it unasked
+- **control:** individual: the kit README § Upgrade step to replace each kit runbook the repo has not edited; G-D0 flags a major.minor change
+- **from:** CE-24, session 2026-10-12d

@@ -80,3 +80,10 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | id | criterion | from | status |
 |---|---|---|---|
 | AC-35 | Lint fails G-D0, naming the remedy, when the contract (`[engine] contract`, default `CLAUDE.md`) is missing, has no `framework:` line, has one that is not `major.minor` or `major.minor.*`, has one whose major.minor differs from the installed engine's, or holds a kit block whose begin marker names another version; `0.5` and `0.5.*` both pass against any engine `0.5.N` (DEC-23) | US-9 | tested |
+
+## Rituals runbook (CE-24)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-36 | Every FRAMEWORK §6 subsection has a row in `docs/runbooks/rituals.md`'s map naming its ritual sections, or saying it has no steps; every step row of a ritual names only existing `context-engine` operations, links each one's manual-mode section, resolves every `§` reference and has a Why; and every §6 item number a step is labelled with exists in that subsection (P3) | US-15, US-11 | tested |
+| AC-37 | The kit ships `docs/runbooks/rituals.md` and `docs/runbooks/manual-mode.md`, byte-equal to this repo's; `init` copies them and keeps a copy the repo already has; a wheel built from the source carries every kit file | US-15 | tested |

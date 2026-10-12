@@ -253,9 +253,10 @@ continuity plan for a system it normally runs by machine.
 - The engine, its guards, the housekeeping run and the MCP server are conveniences over rituals,
   not replacements for them. For each one, the framework keeps a written procedure a session can
   do by hand when the programme is missing, broken, or wrong.
-- **The fallback is a section of a runbook, named after the process**
-  (`docs/runbooks/manual-mode.md` is the existing instance). A new engine operation is not done
-  until its fallback section exists.
+- **The fallback is a section of a runbook, named after the process:**
+  `docs/runbooks/manual-mode.md` has one per engine operation, and `docs/runbooks/rituals.md` one
+  per ritual, the housekeeping run included. A new engine operation is not done until its
+  fallback section exists. Both runbooks ship in the adoption kit (§6.9).
 - **Using a fallback is an event, not a workaround:** do the step by hand, then fix the process
   (runbook § When the engine and this runbook disagree), and note it in the session's review
   (§6.12).
@@ -828,8 +829,14 @@ against the questions (CE-19). The channel stays Claude remote control until it 
 ## 6. Rituals
 
 Rituals are written for agents, and their effects are checked by guards, so a skipped ritual
-shows up red. Step numbers are stable (P3). Every ritual is a set of engine operations, and
-each has a by-hand fallback in `docs/runbooks/manual-mode.md` (P16).
+shows up red. This section says what each ritual must achieve, with its guards and reasons.
+**The order of each ritual's steps lives in one place, `docs/runbooks/rituals.md`:** each step
+with its engine command, its by-hand step (a section of `docs/runbooks/manual-mode.md`, P16) and
+its why. A contract points there rather than restating an order.
+
+**Item numbers are stable (P3)** and are labels, not an order: records cite them ("§6.3 item
+6a"), and the runbook tags each step with its number here. A new item takes a new number (or a
+letter suffix); none is renumbered.
 
 ### 6.1 Session start
 
@@ -844,11 +851,11 @@ each has a by-hand fallback in `docs/runbooks/manual-mode.md` (P16).
 5. Read that item's `## Read first` list.
 6. Read the rest of the note **only if needed**, and record which in the `read:` receipt.
 
-**With the engine, steps 2–5 are one call.** `session.start` mints the key (§5.5), then
+**With the engine, items 2–5 are one call.** `session.start` mints the key (§5.5), then
 `orient()` returns, in one size-capped response: the banner; this session's open batons and
 pause records, then other sessions'; the other sessions still open; the NEXT tier; owner
 questions to raise; and the top item's brief, Traps and Read first. Step 1 is unchanged, and
-step 6 is still on demand. A **SessionStart hook** can run start-of-session housekeeping (§6.11)
+item 6 is still on demand (the order: `rituals.md` § Session start). A **SessionStart hook** can run start-of-session housekeeping (§6.11)
 and inject `orient()`'s output, so orientation costs no tool call (hook stdout reaches the
 model's context; verified by a probe in the engine repo).
 
@@ -913,7 +920,8 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 
 ### 6.3 Clean close (a natural stopping point)
 
-Write the records first, then run the gate, then commit. The steps:
+Write the records first, then run the gate, then commit. What a clean close does, numbered for
+citation (the order is below):
 
 0. **Every owner word given this session is recorded** (story, decision, or question answer).
 1. **Run the doc guards first, to see what earlier sessions left red,** before adding to it.
@@ -939,14 +947,11 @@ Write the records first, then run the gate, then commit. The steps:
    then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
-**The order in practice, with the engine:** steps 2–4 and 6 are operations (`session.close`,
-which refuses a malformed receipt; `banner.set`; the board operations; `baton.add`). They run in
-this order: owner words (0); `lint`, to see what earlier sessions left red (1); board operations
-(4); batons (6); durable rules (5); pre-close housekeeping (6a); the gate, then `session close`
-with the gate result as its `guards:` receipt (2); the banner (3); lint and the gate again, then
-commit by path (7); the digest (8). The ledger entry comes after the gate
-because the close receipt carries the gate result, and after the board operations because
-`rows:` names what they touched.
+**The order is not the numbering.** Items 2–4 and 6 are engine operations (`session.close`,
+which refuses a malformed receipt; `banner.set`; the board operations; `baton.add`). The ledger
+entry (2) comes after the gate because the close receipt carries the gate result, and after the
+board operations (4) because `rows:` names what they touched. The steps in order, each with its
+command and by-hand step: `rituals.md` § Clean close.
 
 ### 6.4 Pause (an awkward stopping point; the work continues next session)
 
@@ -966,7 +971,8 @@ cannot be recovered:
 replacement, runbook filing.
 
 **With the engine:** items 2 and 3 are `session.pause(rows, deferred)` plus `pause.open(...)`,
-which captures the branch and uncommitted paths itself and commits its record by path.
+which captures the branch and uncommitted paths itself and commits its record by path. The steps
+in order: `rituals.md` § Pause; picking the work up again: § Resume.
 
 **Enforcement:**
 - **G-W2:** at most N consecutive `kind: pause` ledger entries without a `kind: close`; N = 2.
@@ -1137,6 +1143,8 @@ No `git stash`. Workflows are tracked files.
   the watcher reports;
 - the watcher only watches.
 
+The steps in order: `rituals.md` § Push and CI.
+
 **A push hold**, when the owner imposes one, is a single line at the top of the contract naming
 the hold and where it is recorded.
 
@@ -1145,15 +1153,17 @@ the hold and where it is recorded.
 The engine ships an **adoption kit**: text only, as package data beside the engine's code
 (`kit/`), readable in the engine repo too. It holds the config template (`context.toml.template`,
 which is the config schema), the contract block for `CLAUDE.md`, skeletons for the orientation
-note, charter, criteria and ledger, and a README with the install, bootstrap and upgrade steps.
+note, charter, criteria and ledger, the two runbooks (`rituals.md` and `manual-mode.md`, so the
+repo can run every ritual by hand from its own tree, P16), and a README with the install,
+bootstrap and upgrade steps. The steps in order: `rituals.md` § Bootstrap.
 
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
 2. The agent installs the engine into its own environment, pinned to a release tag or commit
    (the engine runs from its own environment and is never installed into the repo's). The MCP
    server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
    operation, and a repo that wants the server registers it here.
-3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, and the
-   contract block appended to `CLAUDE.md`. It only creates files and never overwrites one; by
+3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
+   runbooks, and the contract block appended to `CLAUDE.md`. It only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the repo
    already uses.
@@ -1172,7 +1182,8 @@ to perform rituals. The agent sessions absorb the cost:
    repo's own, `[kinds.task] prefix`); a commit that finishes the task also carries
    `Closes: <id>` (§6.11). Small tasks may share a session: the gate goes green over all of
    them, then each is committed by path.
-2. **At session start, reconcile foreign commits** since the newest ledger entry:
+2. **At session start, reconcile foreign commits** since the newest ledger entry (the steps and
+   the entry's format: `rituals.md` § Foreign reconcile):
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
    - run the tier-1 trace-check over them (criteria or prose they may have staled);
    - inbox-check them for intent: a commit message or doc edit that states a feature or
@@ -1201,6 +1212,10 @@ any edit agent.
 
 **The rule: housekeeping carries out intent that is already recorded somewhere; it never forms
 new intent** (P11 exception).
+
+**By hand** (no engine, or no housekeeping agents), the main session does every tier's
+mechanical part itself, in the order `rituals.md` § Housekeeping gives, marking each write
+`mechanical` in the op log.
 
 **Closing is the hard case.** No tool auto-closes on its own judgement: a "mechanical" close
 would only ever be someone quietly declining to record that they closed something.
@@ -1329,8 +1344,14 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 Gate, sabotage procedure, fan-out, release, test baselines, and the manual-mode fallback. They
 hold **method**, which survives when the status around it is archived:
+- `docs/runbooks/rituals.md`: every ritual's steps in order, each with its engine command, its
+  by-hand step and its why; the only place a ritual's order is written (§6). A test in the engine
+  repo checks that every §6 subsection has its steps or says why it has none, and that every
+  step names an operation that exists;
 - `docs/runbooks/manual-mode.md`: every engine operation done by hand, each step with its why
   (P16); a test in the engine repo keeps it in step with the CLI;
+- both ship in the adoption kit (§6.9), and `init` copies them into the repo, where they are the
+  repo's own from then on;
 - a testing runbook keeps one dated baseline per suite, and an *unexplained* drop is a blocker.
 
 ---
@@ -1654,7 +1675,7 @@ docs/
   decisions/D-n-<slug>.md * # one record per decision; generated index.md
   deviations/              # append-only records (+ optional generated open-gaps view)
   invariants.md            # durable traps; the residual-risk register (`[working] register`, §7.4)
-  runbooks/              * # method, including manual-mode.md (every engine operation by hand)
+  runbooks/              * # method: rituals.md (every ritual in order) and manual-mode.md (every engine operation by hand), from the kit
   evidence/<id>-<topic>-<date>.md *
   ledger/session-log.md  * # session ledger (one file under the engine lock)
   ledger/ops.jsonl         # engine op log, one JSON line per write
@@ -1683,8 +1704,8 @@ tasks/                   * # flat; open and closed side by side, `state:` in fro
 - decision log with negative results;
 - ledger in its own file;
 - the scratch rule;
-- the fallback runbook: every engine operation by hand (P16). *The kit does not ship it yet
-  (CE-24): until it does, the contract block points at the engine repo's copy at the pinned ref.*
+- the fallback runbooks (P16): every ritual in order (`rituals.md`) and every engine operation
+  by hand (`manual-mode.md`), copied from the kit.
 
 **Rituals:** intake, start/resume, clean close, pause, bootstrap.
 

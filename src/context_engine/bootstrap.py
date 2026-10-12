@@ -35,8 +35,11 @@ FILES = {
     "docs/charter.md": "docs/charter.md",
     "docs/criteria.md": "docs/criteria.md",
     "docs/ledger/session-log.md": "docs/ledger/session-log.md",
+    # the by-hand fallback (P16): every operation, and every ritual in order; the repo's own copy
+    "docs/runbooks/manual-mode.md": "docs/runbooks/manual-mode.md",
+    "docs/runbooks/rituals.md": "docs/runbooks/rituals.md",
 }
-KEEP = ("docs/decisions", "docs/stories", "docs/working", "docs/runbooks", "docs/evidence", "tasks")  # empty dirs get a .gitkeep
+KEEP = ("docs/decisions", "docs/stories", "docs/working", "docs/evidence", "tasks")  # empty dirs get a .gitkeep
 SELF_IGNORING = (".context", ".scratch")  # each holds a .gitignore of `*`
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*$")
 

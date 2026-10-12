@@ -40,12 +40,12 @@ then `context-engine orient`. Do the batons and pauses it lists first, raise eve
 lists in chat, one line each, then `context-engine ask raised <ids>`, and read the top item with
 `context-engine task show <id>`.
 
-Intake, clean close and pause are FRAMEWORK §6.2 to §6.4, each step a `context-engine`
-operation. FRAMEWORK.md and the manual-mode runbook are not installed with the engine: read
-them in the engine repo at the pinned ref (`docs/framework/FRAMEWORK.md` and
-`docs/runbooks/manual-mode.md`), or in this repo's `docs/runbooks/` if a copy is kept there.
-When the engine errors or refuses something it should allow, do that step by hand from the
-manual-mode runbook, then report the engine bug. A refusal with a sensible remedy is not an error: follow the remedy.
+Every other ritual (intake, clean close, pause, resume, push and CI, foreign reconcile,
+housekeeping), in order, each step with its engine command and its by-hand step, is
+`docs/runbooks/rituals.md` in this repo; every operation by hand is `docs/runbooks/manual-mode.md`.
+When the engine errors or refuses something it should allow, do that step by hand from those
+runbooks, then report the engine bug. A refusal with a sensible remedy is not an error: follow the
+remedy.
 
 ### Rules
 

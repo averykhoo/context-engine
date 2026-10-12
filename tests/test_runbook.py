@@ -1,4 +1,6 @@
-"""The manual-mode runbook covers every engine operation, each with its reason (US-11)."""
+"""The manual-mode runbook covers every engine operation, each with its reason (US-11); the
+rituals runbook holds every ritual's order, each step naming a real operation and its by-hand
+section (US-15)."""
 
 import argparse
 import re
@@ -44,3 +46,134 @@ def test_every_cli_operation_has_a_runbook_section_with_its_reason():
     assert missing == [], f"no `### <op>` section in {RUNBOOK.name} for: {missing}"
     no_why = [op for op in ops if "**Why:**" not in sections[op]]
     assert no_why == [], f"sections without a **Why:** line: {no_why}"
+
+
+# -- the rituals runbook: every ritual's order in one place (US-15, CE-24) --------------------
+
+RITUALS = RUNBOOK.with_name("rituals.md")
+FRAMEWORK = RUNBOOK.parents[1] / "framework" / "FRAMEWORK.md"
+MAP_HEADING = "Where each part of FRAMEWORK §6 is done"
+RITUAL_HEADING = re.compile(r"^(?P<name>.+?) \((?P<refs>§6\.\d+(?:, §6\.\d+)*)\)$")
+SECTION_REF = re.compile(r"§ ([A-Z][A-Za-z]*(?: (?:[a-z]+|[A-Z]{2,}))*)")  # `§ Clean close`, `§ Push and CI`
+LINK = re.compile(r"\[[^\]]*\]\(([^)#]*)(?:#([^)]*))?\)")
+NO_STEPS = ("no steps", "not designed")
+
+
+def _text(path: Path) -> str:
+    text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    return re.sub(r"^[ \t]*```.*?^[ \t]*```", "", text, flags=re.MULTILINE | re.DOTALL)
+
+
+def h2_sections(path: Path) -> dict[str, str]:
+    parts = re.split(r"^## (.*)$", _text(path), flags=re.MULTILINE)
+    return {parts[i].strip(): parts[i + 1] for i in range(1, len(parts), 2)}
+
+
+def rituals() -> dict[str, tuple[list[str], str]]:
+    """Ritual name -> (the §6.n it cites, its text), from the `## <name> (§6.n, ...)` headings."""
+    out = {}
+    for heading, body in h2_sections(RITUALS).items():
+        m = RITUAL_HEADING.match(heading)
+        if m:
+            out[m["name"]] = (re.findall(r"6\.\d+", m["refs"]), body)
+    return out
+
+
+def table_rows(body: str) -> list[list[str]]:
+    """The body rows of every table in ``body``: each table's header (the row above its `|---|`
+    line) is dropped."""
+    rows: list[list[str]] = []
+    for ln in body.splitlines():
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if all(re.fullmatch(r":?-+:?", c) for c in cells):
+            rows.pop()  # the header
+        else:
+            rows.append(cells)
+    return rows
+
+
+def framework_six() -> dict[str, str]:
+    """`6.n` -> the text of FRAMEWORK §6.n."""
+    fw = _text(FRAMEWORK)
+    six = fw[fw.index("\n## 6. Rituals") : fw.index("\n## 7. ")]
+    parts = re.split(r"^### (6\.\d+) .*$", six, flags=re.MULTILINE)
+    return {parts[i]: parts[i + 1] for i in range(1, len(parts), 2)}
+
+
+def framework_items(section: str) -> set[str]:
+    """The stable item numbers of one §6 subsection: `1. ...` at the margin, and `**6a. ...**`."""
+    return set(re.findall(r"^(\d+)\. ", section, re.MULTILINE)) | set(re.findall(r"\*\*(\d+[a-z])\. ", section))
+
+
+def slug(heading: str) -> str:
+    """GitHub's anchor for a heading."""
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+
+
+def section_refs(text: str) -> list[str]:
+    return SECTION_REF.findall(LINK.sub("", text))
+
+
+@pytest.mark.criterion("AC-36")
+def test_every_framework_ritual_has_a_rituals_section():
+    six, have = framework_six(), rituals()
+    assert len(six) >= 13 and len(have) >= 9, (list(six), list(have))
+    rows = {r[0].split(" ", 1)[0]: r for r in table_rows(h2_sections(RITUALS)[MAP_HEADING])}
+    missing = [f"§{n}" for n in six if f"§{n}" not in rows]
+    assert missing == [], f"{RITUALS.name} § {MAP_HEADING} has no row for FRAMEWORK {missing}"
+    for ref, (_, steps) in rows.items():
+        assert ref[1:] in six, f"the map names {ref}, which FRAMEWORK §6 does not have"
+        if steps.startswith(NO_STEPS):
+            continue
+        names = section_refs(steps)
+        assert names, f"the map row for {ref} names no section and does not say `no steps`"
+        assert [n for n in names if n not in have] == [], f"the map row for {ref} names a section that is not a ritual: {names}"
+    for name, (cited, _) in have.items():
+        assert all(c in six for c in cited), f"§ {name} cites {cited}, not all in FRAMEWORK §6"
+        assert any(name in section_refs(r[1]) for r in rows.values()), f"§ {name} is not in the map"
+
+
+@pytest.mark.criterion("AC-36")
+def test_every_ritual_step_names_an_existing_operation_and_its_by_hand_section():
+    ops = sorted(cli_operations(), key=len, reverse=True)
+    anchors = {slug(h) for h in re.findall(r"^#{2,3} (.*)$", _text(RUNBOOK), flags=re.MULTILINE)}
+    have = rituals()
+    for name, (_, body) in have.items():
+        rows = table_rows(body)
+        assert rows, f"§ {name} has no step table"
+        for row in rows:
+            where = f"§ {name}, step {row[:2]}"
+            assert len(row) == 5, f"{where}: a step is `| § | Do | Engine | By hand | Why |`, got {len(row)} cells"
+            label, _, engine, by_hand, why = row
+            assert re.fullmatch(r"—|\d+[a-z]?(?:–\d+)?", label), f"{where}: bad § label {label!r}"
+            assert why and why != "—", f"{where}: no Why"
+            named = []
+            for span in re.findall(r"`(context-engine [^`]*)`", engine):
+                op = next((o for o in ops if span == o or span.startswith(o + " ")), None)
+                assert op, f"{where}: `{span}` is not an engine operation"
+                named.append(op)
+                anchor = slug(op)
+                assert f"manual-mode.md#{anchor})" in by_hand, f"{where}: names `{op}` but its By hand does not link manual-mode.md#{anchor}"
+            refs = section_refs(engine)
+            assert engine.startswith("—") or named or refs, f"{where}: Engine is neither `—` (with an optional note), an operation nor a § reference"
+            assert [r for r in section_refs(engine + " " + by_hand) if r not in have] == [], f"{where}: a § reference names no ritual"
+    for target, anchor in LINK.findall(_text(RITUALS)):
+        if target == "manual-mode.md" and anchor:
+            assert anchor in anchors, f"{RITUALS.name} links manual-mode.md#{anchor}, which is no heading there"
+
+
+@pytest.mark.criterion("AC-36")
+def test_every_framework_step_a_ritual_cites_exists():
+    six = framework_six()
+    for name, (cited, body) in rituals().items():
+        labels = [r[0] for r in table_rows(body) if r[0] != "—"]
+        if not labels:
+            continue
+        assert len(cited) == 1, f"§ {name} labels its steps but cites {cited}: which subsection do they number?"
+        items = framework_items(six[cited[0]])
+        for label in labels:
+            lo, _, hi = label.partition("–")
+            want = [str(i) for i in range(int(lo), int(hi) + 1)] if hi else [lo]
+            assert set(want) <= items, f"§ {name} step {label}: FRAMEWORK §{cited[0]} has items {sorted(items)}"

@@ -12,9 +12,11 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 | `docs/charter.md` | `docs/charter.md` | the charter, goals with `G-n` ids |
 | `docs/criteria.md` | `docs/criteria.md` | the criteria table and how a test claims one |
 | `docs/ledger/session-log.md` | `docs/ledger/session-log.md` | the empty session ledger |
+| `docs/runbooks/rituals.md` | `docs/runbooks/rituals.md` | every ritual's steps in order, the engine command and the by-hand step side by side |
+| `docs/runbooks/manual-mode.md` | `docs/runbooks/manual-mode.md` | every engine operation by hand, each step with its why |
 
-`init` also creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/runbooks/`,
-`docs/evidence/` and `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
+`init` also creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
+`tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
 (each with a `.gitignore` holding `*`, so they ignore themselves).
 
 ## 1. Install and pin the engine
@@ -78,7 +80,8 @@ Copy each kit file to where the table above says, with `contract.md` appended to
 (create it if absent). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
 and `.scratch/.gitignore` each holding the single line `*`. To change an id prefix, edit `prefix`
 in that kind's `[kinds.<name>]` table; no two kinds may share one. Then follow steps 1 to 4
-above, doing each operation by hand from the engine repo's `docs/runbooks/manual-mode.md`.
+above, in the order `docs/runbooks/rituals.md` gives, doing each operation by hand from
+`docs/runbooks/manual-mode.md` (both copied with the kit).
 
 ## 3. An existing repo: map, don't move (FRAMEWORK §11.4)
 
@@ -96,7 +99,9 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
 
 1. Reinstall the engine in its own environment at the new ref.
 2. Bump `framework:` in `CLAUDE.md` if the engine's major.minor moved, and replace the block
-   between the kit markers with the new kit's `contract.md`.
+   between the kit markers with the new kit's `contract.md`. Replace `docs/runbooks/rituals.md` and
+   `docs/runbooks/manual-mode.md` with the new kit's copies, unless the repo edited its own (then
+   merge by hand): `init` never overwrites them, so an upgrade is the only time they move.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line or kit block the new engine does not match).
 4. Write a ledger line naming the new ref (in the session's close summary).
@@ -109,10 +114,15 @@ run yet are checked by hand (FRAMEWORK §11.1).
 
 ## Runbooks
 
-The by-hand fallback for every engine operation is `docs/runbooks/manual-mode.md` in the engine
-repo, at the pinned ref; copy it into `docs/runbooks/` if the repo must work without the engine.
-The kit does not ship it yet. The ritual order is FRAMEWORK §6.1 to §6.4. Neither file is
-installed with the engine: read them in the engine repo at the pinned ref.
+The kit ships the two by-hand runbooks, and `init` copies them into the repo's `docs/runbooks/`,
+so a repo can run the framework from its own tree with no engine (FRAMEWORK P16):
+- `rituals.md`: the order of every ritual (session start, intake, clean close, pause, resume,
+  push and CI, bootstrap, foreign reconcile, housekeeping), each step with its engine command, its
+  by-hand step and its why. It is the only place the order is written.
+- `manual-mode.md`: every engine operation by hand, with its why; the reference for what the
+  engine should have done when it errs.
+
+They are the repo's own copies from then on (see § 4 for upgrades).
 
 ## Skills, workflows and agents
 

@@ -226,6 +226,59 @@ def test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths():
     assert {k: v for k, v in found.items() if v} == {}
 
 
+# -- the runbooks ship in the kit (CE-24) ----------------------------------------------------
+
+RUNBOOKS = ("manual-mode.md", "rituals.md")
+
+
+@pytest.mark.criterion("AC-37")
+def test_the_kit_runbooks_are_this_repos_runbooks():
+    """The kit ships the runbooks this repo runs on: one text, so a fix lands in both or the gate is red."""
+    kit = B.KIT / "docs" / "runbooks"
+    assert sorted(p.name for p in kit.iterdir()) == sorted(RUNBOOKS)
+    for name in RUNBOOKS:
+        assert B.FILES[f"docs/runbooks/{name}"] == f"docs/runbooks/{name}"
+        ours = (REPO / "docs" / "runbooks" / name).read_bytes()
+        assert (kit / name).read_bytes() == ours, f"kit/docs/runbooks/{name} differs from docs/runbooks/{name}: copy one onto the other"
+
+
+@pytest.mark.criterion("AC-37")
+def test_init_copies_the_runbooks_and_keeps_an_edited_one(tmp_path):
+    (tmp_path / "docs" / "runbooks").mkdir(parents=True)
+    ours = b"# our own rituals\n"
+    (tmp_path / "docs" / "runbooks" / "rituals.md").write_bytes(ours)
+    out = B.init(tmp_path)
+    assert "docs/runbooks/manual-mode.md" in out.split("; skipped")[0], out
+    assert (tmp_path / "docs" / "runbooks" / "manual-mode.md").read_bytes() == (B.KIT / "docs" / "runbooks" / "manual-mode.md").read_bytes()
+    assert (tmp_path / "docs" / "runbooks" / "rituals.md").read_bytes() == ours
+    assert "docs/runbooks/rituals.md" in out.split("; skipped")[1], out
+
+
+@pytest.mark.criterion("AC-37")
+def test_the_wheel_carries_every_kit_file(tmp_path):
+    """Build the wheel from a copy of the source and check every kit file is in it (package-data
+    globs miss a new subdirectory silently)."""
+    import shutil
+    import subprocess
+    import sys
+    import zipfile
+
+    src = tmp_path / "src"
+    shutil.copy2(REPO / "pyproject.toml", src.parent / "pyproject.toml")
+    shutil.copytree(REPO / "src", src, ignore=shutil.ignore_patterns("__pycache__", "*.egg-info"))
+    out = tmp_path / "dist"
+    r = subprocess.run(
+        [sys.executable, "-m", "pip", "wheel", str(tmp_path), "--no-deps", "--no-build-isolation", "--no-cache-dir", "-q", "-w", str(out)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    (wheel,) = out.glob("context_engine-*.whl")
+    names = set(zipfile.ZipFile(wheel).namelist())
+    kit = {"context_engine/kit/" + p.relative_to(B.KIT).as_posix() for p in B.KIT.rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+    assert kit and kit - names == set(), f"missing from the wheel: {sorted(kit - names)}"
+    assert "context_engine/REGISTER.md" in names
+
+
 # -- bootstrap end to end, on the CLI and the MCP server -------------------------------------
 
 
@@ -242,7 +295,7 @@ ACTOR, KEY = "claude-code/test", "2026-10-12a"
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 14")
+    assert _cli(tmp_path, "init").startswith("init: created 15")
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)

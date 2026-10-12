@@ -1,7 +1,7 @@
 ---
 type: Runbook
 title: "Manual mode: every engine operation done by hand, and why each step exists"
-source: US-11
+source: FRAMEWORK P16, §7.5
 created: 2026-10-08
 ---
 
@@ -9,7 +9,7 @@ created: 2026-10-08
 
 Every operation the engine (`context-engine`, `python -m context_engine`) performs, written as steps a person
 or an agent can follow with a text editor, git and a SHA-256 tool. It exists for two reasons
-(US-11):
+(FRAMEWORK P16):
 
 1. **Fallback.** A repo with no Python can still run the framework: slowly, by hand, with the
    same files and the same rules.
@@ -17,8 +17,9 @@ or an agent can follow with a text editor, git and a SHA-256 tool. It exists for
    oddly or writes something that looks wrong, this is the statement of what the right result
    was, so the agent can finish the job by hand *and* fix the engine.
 
-A guard keeps it whole: `tests/test_runbook.py` fails the gate if any `context-engine` subcommand has no
-`### context-engine <group> <op>` section here, or a section has no **Why** (AC-21).
+In the engine repo, a test fails the gate if any `context-engine` subcommand has no
+`### context-engine <group> <op>` section here, or a section has no **Why**. The order in which
+a ritual runs these operations is the companion runbook, [rituals.md](rituals.md).
 
 ## When the engine and this runbook disagree
 
@@ -27,16 +28,16 @@ A guard keeps it whole: `tests/test_runbook.py` fails the gate if any `context-e
   have been allowed.
 - **The engine is wrong** (it wrote what this runbook says it must not, or refused what it must
   allow): finish the step by hand from this runbook, then fix the engine with a test that fails
-  first (sabotage rule, DEC-11), and name the step here in the commit message.
+  first (break the code, watch the test go red, restore), and name the step here in the commit message.
 - **This runbook is wrong** (the engine is right and the text is stale): fix the text in the same
   commit as the code it describes. The Why is the tiebreaker: whichever side serves it wins.
-- **Neither is clearly right:** it is a decision. Record it (`DEC-n`), or ask the owner if it
+- **Neither is clearly right:** it is a decision. Record it as a decision, or ask the owner if it
   changes what they asked for.
 
 ## When the MCP tools are missing
 
-The MCP server (CE-3) is a thin layer over the same functions the CLI calls, so nothing is lost
-without it (DEC-25):
+The MCP server is a thin layer over the same functions the CLI calls, so nothing is lost
+without it:
 
 1. Run every operation as `<interpreter> -m context_engine ...` for the rest of the session.
 2. Register the server once for this machine: `claude mcp add --scope local context-engine --
@@ -47,7 +48,7 @@ without it (DEC-25):
 brings the tools in. The local registration carries the interpreter's absolute path outside the
 repo, so the checked-in `.mcp.json` stays machine-neutral. Its `${CE_PYTHON}` works only if the
 variable was in Claude Code's starting environment; an `env` block in
-`.claude/settings.local.json` reaches the agent's shell but not `.mcp.json` (tested 2026-10-10d).
+`.claude/settings.local.json` reaches the agent's shell but not `.mcp.json`.
 
 ## What every write does
 
@@ -55,21 +56,21 @@ These hold for every operation below. The per-operation sections only list what 
 
 | Rule | By hand | Why |
 |---|---|---|
-| **Take the lock** | No lock exists by hand. Instead: re-read the file immediately before editing it, and run `git status` and `git log -3` before committing. | Several sessions share one checkout. The engine's OS lock stops two writers losing each other's change (AC-9); by hand, re-reading is the only defence. |
+| **Take the lock** | No lock exists by hand. Instead: re-read the file immediately before editing it, and run `git status` and `git log -3` before committing. | Several sessions share one checkout. The engine's OS lock stops two writers losing each other's change; by hand, re-reading is the only defence. |
 | **Check the caller** | Know your session key (like `2026-10-08e`) and your actor (`human:<id>`, `process:<id>`, or `<producer>/<version>` such as `claude-code/<model-id>`). Every write below records them. | Each write has to say which session made it and who did it. Without that, nobody can find a change or trace it back (OKF §7). |
-| **Validate before writing** | Check the result against its kind's schema (table below). If it fails, do not save it. | A bad record that reaches disk breaks every later reader. The engine checks before writing any byte (AC-5). |
-| **Change only your own lines** | Edit only the frontmatter keys the operation names. Keep every other line exactly as it was: order, quoting, comments, unknown keys. Keep the file's line endings. | Byte-stable writes keep diffs reviewable and keep keys that other tools own (AC-1, AC-2). |
-| **YAML shapes** | Lists in flow style: `deps: [CE-2, CE-3]`. Dates unquoted: `created: 2026-10-08`. Null is the bare key: `closed:`. Quote any value with `: ` in it. | Quoted dates fail the `date` type, and an unquoted colon broke DEC-6 once (`CLAUDE.md` § Gate). |
+| **Validate before writing** | Check the result against its kind's schema (table below). If it fails, do not save it. | A bad record that reaches disk breaks every later reader. The engine checks before writing any byte. |
+| **Change only your own lines** | Edit only the frontmatter keys the operation names. Keep every other line exactly as it was: order, quoting, comments, unknown keys. Keep the file's line endings. | Byte-stable writes keep diffs reviewable and keep keys that other tools own (OKF §4.1). |
+| **YAML shapes** | Lists in flow style: `deps: [T-2, T-3]`. Dates unquoted: `created: 2026-10-08`. Null is the bare key: `closed:`. Quote any value with `: ` in it. | Quoted dates fail the `date` type, and an unquoted colon makes the YAML mean something else or fail to parse. |
 | **New keys go last** | A key the record does not have yet (`status`, `closed`, `answered`, `done`, `evidence`, `resumed`, `expired_to`, `body_sha`) is added after the last key. An existing key is replaced where it stands, keeping an end-of-line comment. | Keeps every untouched line in place, so the diff shows only the change. |
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
-| **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session (AC-6). G-W7 will read it. |
+| **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 will read it. |
 | **Engine-owned keys** | Never hand-edit `type`, `id` or `body_sha` on an existing record. | Ids are never reused or renumbered (P3). `body_sha` pins an owner's words (G-D10). |
 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
 
 ```json
-{"at": "2026-10-08T18:10:28+08:00", "session": "2026-10-08e", "actor": "claude-code/<model-id>", "op": "close", "id": "CE-8", "path": "tasks/CE-8-dogfood-adoption.md", "fields": ["state", "status", "closed", "moved", "updated", "body"], "mechanical": false}
+{"at": "2026-10-08T18:10:28+08:00", "session": "2026-10-08e", "actor": "claude-code/<model-id>", "op": "close", "id": "T-8", "path": "tasks/T-8-dogfood-adoption.md", "fields": ["state", "status", "closed", "moved", "updated", "body"], "mechanical": false}
 ```
 
 `at` is local time with its offset. `fields` lists the keys changed, plus `"body"` if the body
@@ -80,7 +81,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | any new record (task, question, decision, baton, pause) | `new` | the record | every frontmatter key, `type`, `id` and `body_sha` included |
 | task set, promote, dep, comment, touch, close, reopen, section | `set`, `promote`, `dep`, `comment`, `touch`, `close`, `reopen`, `section` | the item | the changed keys, then `updated`, then `body` if the body changed |
 | ask raised | `ask.raised` | one line per question, then one with id = session key, path = the ledger | `["last_asked", "updated"]`; the ledger line `["asked"]` |
-| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `DEC-n`) | the question | the changed keys, `updated`, `body` |
+| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `D-n`) | the question | the changed keys, `updated`, `body` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | session start, close, pause | `session.start`, `session.close`, `session.pause` | id = session key, path = the ledger | `["kind"]` |
@@ -88,16 +89,20 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 
-### Record kinds here (from `context.toml`)
+### Record kinds (the kit's defaults)
 
 | Kind | Id | Directory | Mode | Required keys | Enums and types |
 |---|---|---|---|---|---|
-| decision | `DEC-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key |
-| story | `US-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals list |
-| task | `CE-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels lists |
+| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key |
+| story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals list |
+| task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
 | baton | `BTN-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
 | pause | `PAU-n` | `docs/working` | stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
+
+The repo's own `context.toml` is the authority: its `[kinds.<name>]` tables set each kind's
+prefix, directory, required keys and types, and a repo may have changed any of them. Read it
+before writing a record by hand.
 
 Every record also has `type:` (Decision, Story, Task, Question, Baton, Pause) and `id:` matching
 its file name. OKF `status`, if present, is `draft`, `stable` or `deprecated`; record states use
@@ -158,7 +163,7 @@ Match that by hand.
 
 **Why:** two sessions minting a key at the same time could otherwise collide. The stub reserves
 the key the moment it is minted, shows the session is live (`orient` lists open stubs), and
-leaves evidence if the session dies (G-W11) (FRAMEWORK §5.5 rule 1, AC-10). The banner key
+leaves evidence if the session dies (G-W11) (FRAMEWORK §5.5 rule 1). The banner key
 counts too, because a session may have written the banner before its ledger entry.
 
 ### context-engine session close
@@ -179,7 +184,7 @@ counts too, because a session may have written the banner before its ledger entr
    ```
    ## <key> · kind: close
 
-   - **rows:** CE-8 (runbook written); US-11 (amended)
+   - **rows:** T-8 (runbook written); S-11 (amended)
    - **receipts:**
      - guards: gate pytest -q green, N passed; context-engine lint: ...
      - read: ...
@@ -192,8 +197,7 @@ counts too, because a session may have written the banner before its ledger entr
    Leave out the `asked:` line if it is empty. Op log: `session.close`, fields `["kind"]`.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
-what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8,
-AC-11). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
+what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
 
 ### context-engine session pause
 
@@ -228,7 +232,7 @@ not fit, cut it at a line and say where the rest is:
 7. in a repo whose `[working] register` is not the engine's own `REGISTER.md`: one line,
    `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
-**Why:** one bounded read at session start replaces opening a dozen files (US-1, AC-17). The
+**Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: carried work and live sessions come before new work.
 
 ### context-engine routes
@@ -277,7 +281,7 @@ Check every record, then the working state. `--working` does only the second hal
   and that major.minor, and the version in any `<!-- context-engine kit X.Y begin -->` marker,
   equal the first two numbers of the installed engine's version (`<engine-python> -m pip show
   context-engine`, or `context_engine.__version__`). *Why: the pin says which engine the repo's
-  rules were written for; a stale one means the rules and the tool disagree (DEC-23).*
+  rules were written for; a stale one means the rules and the tool disagree.*
 
 **Why:** lint is the at-rest check. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).
@@ -286,7 +290,7 @@ records that were valid when written but stale now. A non-empty result is a fail
 
 ### context-engine task new
 
-1. Pick the kind: task (`CE-n`) or question (`ASK-n`; prefer `context-engine ask new`).
+1. Pick the kind: task (`T-n`) or question (`ASK-n`; prefer `context-engine ask new`).
 2. The brief is at most 120 characters. Every named dep must exist. The tier's cap must have room
    (NOW 1, NEXT 5, counting open items of both kinds). Otherwise, demote something first.
 3. Id: the highest number in the series + 1. Count file names *and* `id:` keys, open and closed.
@@ -332,7 +336,7 @@ from an item whose design review lists a `- residual:` line: close the item to f
 the residual lines out first.
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
-`moved` meaning real progress. A raw edit would skip that rule (DEC-14 item 7).
+`moved` meaning real progress. A raw edit would skip that rule.
 
 ### context-engine task promote
 
@@ -399,7 +403,7 @@ Do not move or rename the file.
 
 **If the item carries `review:`**, first check its `## Design review` as in `task promote`; if a
 check fails, fix the review, do not close. Then copy each `- residual:` line into the register
-(`[working] register`; here `src/context_engine/REGISTER.md`). Skip a residual already there
+(`[working] register`; the kit's default is `docs/invariants.md`). Skip a residual already there
 with the same risk text and the same task id in its `from:` line. Create the file with the
 heading `# Residual-risk register` if it is missing. Each entry takes the next `INV-n` (one above the
 highest in the file and in any `register.append` line of the op log, so an id is never reused),
@@ -418,7 +422,7 @@ Log one op line per close that added entries: `op: register.append`, `id` the ta
 register, `fields` the new INV ids. With residuals and no register configured, stop: configure
 one first.
 
-**Why:** closed items stay in place as records, so links never break (US-5, AC-12). `status:
+**Why:** closed items stay in place as records, so links never break. `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
 A question closed by `task close` would carry no decision in the owner's words, and the agent
 would in effect have answered its own question (FRAMEWORK §5.3).
@@ -445,11 +449,11 @@ ever appended to.
 
 From frontmatter only: open items by default (`--state closed|all`), optionally filtered by
 `--pri` or `--label`. Sort by tier (NOW, NEXT, LATER, SOMEDAY), then prefix alphabetically (ASK
-before CE), then number. One line each: pri and id each padded to 7 characters, the title, then
+before T), then number. One line each: pri and id each padded to 7 characters, the title, then
 `  (closed <key>)` and `  [deps: a, b]` where they apply. No match prints `no matching items`.
 
 **Why:** the board view comes from the records, never the other way round (board size 2). Reading
-frontmatter only keeps it cheap (AC-13).
+frontmatter only keeps it cheap.
 
 ### context-engine task show
 
@@ -509,12 +513,12 @@ or demoted to LATER.
 ### context-engine ask answer
 
 1. The question must be open, and you need the owner's words verbatim.
-2. New decision `DEC-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
+2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
    `decision_status: PROVISIONAL`, `answers: ASK-n`. Body:
    `Owner, answering ASK-n: *"<words>"*`. Stamp its `body_sha` at once.
 3. On the question, set `state: closed`, `status: deprecated`, `closed: <key>`,
-   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: DEC-n}` and `updated`.
-   Append `- <key> (<actor>): answered by the owner: DEC-n`.
+   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` and `updated`.
+   Append `- <key> (<actor>): answered by the owner: D-n`.
 4. Report what it unblocks: open items whose deps include it and whose deps are now all closed,
    plus everything in its `blocks`.
 
@@ -553,7 +557,7 @@ pause from a session with 2 or more closes/pauses after it:
 Both writes are `mechanical: true` in the op log.
 
 **Why:** carried work must not drift for ever, and turning it into a task keeps it without
-blocking orientation (G-W3, AC-15).
+blocking orientation (G-W3).
 
 ### context-engine pause open
 
@@ -566,11 +570,11 @@ blocking orientation (G-W3, AC-15).
 3. Commit that file alone, at once: `git add -- <path>`, then
    `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" -m "Session: <key>" -- <path>`.
    (`--only` on a file git has never seen fails without the `add`. The second `-m` is the
-   `Session:` trailer every agent commit ends with, DEC-22.)
+   `Session:` trailer every agent commit ends with, FRAMEWORK §6.10.)
 
 **Why:** the next session needs the exact state of the tree, which comes from git, not from
 memory. Committing at once keeps another session's close from sweeping it away (FRAMEWORK §5.5
-rule 4, AC-14).
+rule 4).
 
 ### context-engine pause resume
 
@@ -582,7 +586,7 @@ The pause must be open. Set `state: done`, `resumed: <key>`.
 
 ### context-engine register show
 
-Read the register file named by `[working] register` (here `src/context_engine/REGISTER.md`).
+Read the register file named by `[working] register` (the kit's default is `docs/invariants.md`).
 Print `register <path>: <N> residual risks`, then for each `## INV-n: <risk>` entry, a blank
 line, `INV-n: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
 indented two spaces. With `--engine`, read instead the `REGISTER.md` inside the installed
@@ -615,14 +619,14 @@ If the note has no `## Banner (<key>)` heading yet (or there is no note), the ha
    append it after a blank line. Create the note if it does not exist.
 
 **Why:** the banner carries exactly one session key, and a later close must not silently erase
-another session's truth (FRAMEWORK §5.5 rule 2, AC-16).
+another session's truth (FRAMEWORK §5.5 rule 2).
 
 ## Append-only records (decisions and stories)
 
 ### context-engine record new
 
-1. Take the next free id in the kind's series (as `context-engine task new`): `DEC-n` in `docs/decisions`,
-   `US-n` in `docs/stories`, file `<id>-<slug>.md`.
+1. Take the next free id in the kind's series (as `context-engine task new`): `D-n` in `docs/decisions`,
+   `S-n` in `docs/stories`, file `<id>-<slug>.md`.
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if it can mean nothing but now: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else
@@ -667,19 +671,21 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
 2. Otherwise copy `context.toml.template` to `context.toml`; to change a kind's id prefix, edit
    `prefix` in its `[kinds.<name>]` table (no two kinds may share one, and none may collide with
    ids the repo already uses).
-3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md` and `docs/ledger/session-log.md`
-   from the kit to the same paths, skipping any that exist.
+3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md`, `docs/ledger/session-log.md`,
+   `docs/runbooks/manual-mode.md` and `docs/runbooks/rituals.md` from the kit to the same paths,
+   skipping any that exist.
 4. `CLAUDE.md`: if it holds no `<!-- context-engine kit <version> begin -->` marker, append the
    kit's `contract.md` after a blank line (create the file with a `# <repo>: contract` title if
    it is absent), keeping the file's line endings. If it holds an older version's block, leave it
    for the upgrade to replace (kit README § Upgrade); never add a second block.
-5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/runbooks`,
-   `docs/evidence` and `tasks` that does not exist, create it with an empty `.gitkeep`. Create
+5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/evidence` and `tasks`
+   that does not exist, create it with an empty `.gitkeep`. Create
    `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.
 6. Report in one line what you created and what you skipped. Never overwrite an existing file,
    and never install anything into the repo's environment.
 
-**Why:** a new repo should get every file the rituals expect in one step, and an existing repo
+**Why:** a new repo should get every file the rituals expect in one step, the two runbooks
+included, so it can run every ritual by hand from its own tree, and an existing repo
 must not lose a byte of what it has: it maps its components onto the routes instead of moving
 them (FRAMEWORK §11.4). The engine also refuses a file that appears while it runs (it creates
 each one only if it is still absent) and a `CLAUDE.md` that changed since it read it; by hand,

@@ -145,8 +145,8 @@ mode = "append-only, written by the engine"
 [[routes]]
 component = "Runbooks"
 path = "docs/runbooks"
-mode = "replaced; AC-21 keeps manual-mode.md in step with the CLI"
-note = "manual-mode.md does every engine operation by hand, with its Why (US-11)"
+mode = "replaced only through the kit copy: both files equal src/context_engine/kit/docs/runbooks/ byte for byte (AC-37); AC-21 and AC-36 keep them in step with the CLI and FRAMEWORK §6"
+note = "rituals.md: every ritual in order (US-15); manual-mode.md: every engine operation by hand, with its Why (US-11)"
 
 [[routes]]
 component = "Adoption kit"

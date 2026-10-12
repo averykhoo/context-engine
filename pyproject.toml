@@ -22,7 +22,7 @@ dev = ["pytest>=8"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-context_engine = ["REGISTER.md", "kit/*", "kit/docs/*", "kit/docs/ledger/*"]  # the residual-risk register (FRAMEWORK §7.4) and the adoption kit `init` copies (§6.9) ship with it
+context_engine = ["REGISTER.md", "kit/**/*"]  # the residual-risk register (FRAMEWORK §7.4) and the adoption kit `init` copies (§6.9), every subdirectory included, ship with it
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
