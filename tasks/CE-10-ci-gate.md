@@ -3,12 +3,12 @@ type: Task
 id: CE-10
 title: "Run the gate in GitHub Actions on push"
 brief: "Its own commit; CI changes stay out of feature work"
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
+moved: 2026-10-12c
 updated: 2026-10-12c
 closed:
 ---
