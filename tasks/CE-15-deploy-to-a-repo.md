@@ -4,14 +4,15 @@ id: CE-15
 title: "Deploy path: how any repo gets the system, as text Claude Code manages"
 brief: "Bootstrap (§6.9) and adoption (§11) after dogfooding here; no server the owner starts (anti-goal, DEC-10)"
 pri: NOW
-state: open
+state: closed
 deps: [CE-8]
 source: session 2026-10-08b
 created: 2026-10-08
-moved: 2026-10-11a
+moved: 2026-10-12b
 updated: 2026-10-12b
-closed:
+closed: 2026-10-12b
 review: [shipped, write-op, guard]
+status: deprecated
 ---
 
 The owner: *"lets start with it in here and dogfood it, then we'll figure out how to adopt it in
@@ -40,6 +41,7 @@ than move (§11.4). Feeds CE-7 and CE-11.
 - 2026-10-12b (claude-code/claude-opus-5-5): build landed: 02973b6 FRAMEWORK de-leak; a1e2cd3 kit + bootstrap.init; faf37ae init on CLI/MCP (no config needed), config refuses unknown [engine]/[working]/[kinds.*] keys, first banner via --seen none, package-data, Adoption kit route, manual-mode § init, AC-30..34 tested. Gate 228 passed, lint clean, tools/sabotage_ce15.py 31 rows red. Not done: shipping runbooks de-leaked (CE-24), no release tag (owner), G-D0 (CE-21).
 - 2026-10-12b (claude-code/claude-opus-5-5): review-correctness: gate 228 green; sabotage_ce15 31/31 red re-run in an archive copy; wheel ships kit/. Must-fix: lint G-W1 now silent when sessions have closed but the note has no banner (find_banner returns None; working.py::Engine.lint_working 'if closes and b'). Should-fix: CLAUDE.md append separator untested; init refuses forever once context.toml is edited or run with other --prefix; unknown top-level tables/[working.caps] keys accepted.
 - 2026-10-12b (claude-code/claude-opus-5-5): review fixes: G-W1 red when a session closed and the note has no banner; init never doubles an older kit block, keeps an existing context.toml that loads (BOM ok, --prefix must agree) and writes only what it points at; config refuses unknown top-level tables, unknown caps tiers and mistyped values; kit contract carries session start + orient, MCP optional (matches 11.1), says where FRAMEWORK/manual-mode live; skills sentence (10, kit README); shipping runbooks moved to CE-24 scope, CE-7 deps CE-24. sabotage_ce15 43 rows red.
+- 2026-10-12b (claude-code/claude-opus-5-5): closed: Adoption kit, init, config schema, de-leaked FRAMEWORK (02973b6..7aabb38); design review 488220d; gate 259 passed first-hand
 
 ## Design review
 
