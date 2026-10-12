@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-12a)
+## Banner (2026-10-12b)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -13,48 +13,45 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   the why goes in a decision or story. The pre-trim text (with the old §11.3, §12 owner answers
   and §13 changelog) is frozen in `FRAMEWORK-v0.5.md`; older records citing §12/§13 mean that file.
 - **The command is `context-engine`** (DEC-15; `ce` before). Older records keep `ce`.
-- **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption) and CE-3 (MCP server) are
-  done. The CLI runs sessions, the board, questions, batons, pauses, the banner, `orient`,
-  `lint`, `routes`, and decisions and stories (`record new|stamp|amend`). AC-1 to AC-19 and
-  AC-21 to AC-25 `tested`.
+- **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption), CE-3 (MCP server), and since
+  2026-10-12b CE-15 (deploy path), CE-16 (coverage map) and CE-23 (design review) are done.
+  The CLI runs sessions, the board, questions, batons, pauses, the banner, `orient`, `lint`,
+  `routes`, `init`, `register show`, and decisions and stories (`record new|stamp|amend`).
+- **Deploy path (CE-15):** the adoption kit is package data at `src/context_engine/kit/`;
+  `context-engine init` writes it into a target repo, never overwrites, never touches the target
+  env (DEC-1). Config refuses unknown keys. Gaps: the kit ships no runbooks (CE-24), there is no
+  release tag yet (owner's call; docs say `@<tag-or-commit-sha>`), G-D0 is CE-21.
+- **Design review and register (CE-23, P17/P18, US-14):** work above the review threshold needs
+  a `review:` field and a `## Design review` before promote or close; residual risks move to the
+  register on close as `INV-n` (DEC-27; INV-1..12 so far). Lint guards G-W12/G-W13.
+- **Coverage map (CE-16):** `docs/evidence/framework-coverage-2026-10-12.md` maps every
+  FRAMEWORK component, ritual and guard to a task, prose-only, or deferred.
 - **The MCP server is built (CE-3):** `mcp__context-engine__<group>_<verb>`, one tool per
   operation in `ops.OPS`, the same function the CLI calls. Set up on the owner's machine by a
   local-scope `claude mcp add` (DEC-25). Missing tools at session start: register it, use the
   CLI, ask the owner to restart (`CLAUDE.md` § Environment). Call `session_start` first.
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
-  gate: every decision and story is stamped, and the routing table is `[[routes]]` in
-  `context.toml`.
-- **One source of truth for rituals (US-15, 2026-10-12a):** FRAMEWORK.md plus the fallback
-  runbook, pasted into a repo, must be all an agent needs. The paste test
-  (`docs/evidence/framework-paste-test-2026-10-12.md`) found day-to-day ops fine, but no
-  by-hand section for any whole ritual, little housekeeping fallback, and ritual order written in
-  three drifting places. **CE-24** builds a rituals runbook (engine command and by-hand step side
-  by side; FRAMEWORK §6 keeps rules, `CLAUDE.md` points); the kit gaps (config schema, install,
-  skeletons, this repo's ids leaking) are on CE-15.
-- **Several tasks in one request → one subagent per task; the top level only reports**
-  (DEC-16; FRAMEWORK §6.6). **Ultracode has standing approval when it keeps the session's
-  tokens down** (DEC-17). Both are framework rules: CE-15 ships them.
-- **History was rewritten on 2026-10-09c** (survey notes and reviews moved out of the repo).
-  A checkout made before it must `git fetch origin && git reset --hard origin/main`; old SHAs
-  quoted in text no longer resolve.
-- **NOW is CE-15** (deploy path). NEXT: CE-16, CE-23, CE-24. **The adhoc baseline is done
-  (CE-4):** `docs/evidence/adhoc-baseline-2026-10-11.md` (start 48,540 B required; 14,095
-  tiktoken / 15,745 Gemma proxy tokens; close W-write median 3,352 B).
-  `tools/count_context.py` regenerates it. CE-7 is scored against it and waits only on CE-5.
+  gate.
+- **One source of truth for rituals (US-15):** FRAMEWORK.md plus the fallback runbook, pasted
+  into a repo, must be all an agent needs. **CE-24 (NOW)** builds the rituals runbook (engine
+  command and by-hand step side by side) and strips this repo's ids from the runbooks so the kit
+  can ship them.
+- **Several tasks in one request → the top level coordinates, it does not do** (DEC-16, amended
+  2026-10-12b with owner words: trial run; if it works out it gets encoded). 2026-10-12b ran
+  CE-15/16/23 as one workflow; lessons are in that session's ledger summary. Ultracode has
+  standing approval when it keeps the session's tokens down (DEC-17).
+- **History was rewritten on 2026-10-09c.** A checkout made before it must
+  `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **No owner questions are open.** Rollback and close (US-13) is FRAMEWORK §6.13, CE-18 LATER.
 - **Owner rules in force:** no `fable` subagents unless asked or really necessary (DEC-18);
   every programmatic process has a ritual fallback (DEC-20, P16); an after-action review per
-  session is a first note, not designed (US-12, §6.12). Still owed: AAR design; the per-ritual
-  fallback sections are now CE-24.
+  session is a first note, not designed (US-12, §6.12).
 - **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
   its id leading the title, a `Session:` trailer on every agent commit (DEC-22). The engine's
   major.minor is the framework version (DEC-23); G-D0 build is CE-21. Any session closes a
   baton with evidence (DEC-24). CE-22: engine commits need the trailer too.
-- **Design for safety and maintainability (US-14):** FRAMEWORK P17 (hierarchy of controls;
-  residual risks to a register that travels with the work) and P18 (F.A.M.E.). Use them at a
-  project's design stage, and re-derive intent from them when a process breaks. Build is CE-23.
 
 ## Open batons and pause blocks
 

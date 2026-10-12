@@ -3,12 +3,12 @@ type: Task
 id: CE-24
 title: "Rituals runbook: every ritual's steps in one file, engine command and by-hand step side by side"
 brief: Single source of truth for ritual order (US-15); FRAMEWORK §6 keeps rules and reasons only; CLAUDE.md points
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-12a
 created: 2026-10-12
-moved: 2026-10-12a
+moved: 2026-10-12b
 updated: 2026-10-12b
 ---
 

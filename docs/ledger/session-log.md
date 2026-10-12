@@ -7,9 +7,25 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-12b · kind: open
+## 2026-10-12b · kind: close
 
-- **opened:** 2026-10-12T08:02:31+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-15,CE-16,CE-23,CE-24,CE-6
+- **receipts:**
+  - guards: gate 259 passed; lint clean (2026-10-12b)
+  - read: orient; workflow results; agent reports
+  - asked: none (INV prefix asked in chat, answered DEC-27)
+- **summary** (the owner digest):
+  - CE-15 closed: adoption kit, init (refuses mid-run files), config schema, de-leaked FRAMEWORK;
+    design review, 6 residuals INV-7..12
+  - CE-16 closed: coverage map docs/evidence/framework-coverage-2026-10-12.md; 6 gap items filed
+  - CE-23 closed: design-review gate on promote, residual register on close, G-W12/G-W13; INV-n
+    prefix (DEC-27)
+  - CE-24 promoted to NOW; DEC-16 amended with owner words on a coordinator-only top level
+  - AAR: one workflow (15 agents, plan/build/2-lens review/fix) ran 3 tasks concurrently in one
+    tree; commit-by-path held; build agents lacked Agent/Workflow tools so could not sub-delegate;
+    concurrent gates went red on each other's uncommitted work
+- **Still owed:**
+  - kit ships no runbooks (CE-24); no release tag (owner); G-D0 (CE-21)
 
 ---
 
