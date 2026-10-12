@@ -262,6 +262,13 @@ def strip_corrections(body: str) -> str:
     return text
 
 
+def typed_sha(body: str) -> str:
+    """Hash of the words as typed: the original body with every logged correction undone. A
+    stamp is never replaced, so this must equal ``body_sha`` for as long as the record lives
+    (G-D10). Raises ValueError like ``strip_corrections``."""
+    return "sha256:" + hashlib.sha256(strip_corrections(body).encode("utf-8")).hexdigest()
+
+
 def correction_entry(pos: int, inserted: str, after: str) -> str:
     return f'corrected: at {pos} (+{len(inserted)}) inserted "{inserted}" after "{after}"'
 

@@ -123,9 +123,10 @@ then by letter count, then alphabetically, so `z` comes before `aa`.
   frontmatter's closing `---` line). Cut it at the first line that is exactly `## Amendments`
   (trailing spaces allowed) if there is one. Convert CRLF to LF, strip leading and trailing
   newline characters (only `\n`: a line of spaces stays in), and add one `\n`. Then
-  `sha256:` + the full hex SHA-256 of those UTF-8 bytes. *Why: it makes "verbatim" checkable.
-  Rewriting an owner's words changes the hash (G-D10), and amendments sit below the cut so they
-  never break it.*
+  `sha256:` + the full hex SHA-256 of those UTF-8 bytes. A record with `corrected:` lines is
+  hashed with its corrections undone first (§ context-engine record correct), so the hash always
+  pins the words as typed. *Why: it makes "verbatim" checkable. Rewriting an owner's words
+  changes the hash (G-D10), and amendments sit below the cut so they never break it.*
 - **Banner hash**: take the `## Banner (<key>)` heading line through to the next `## ` heading,
   or to the end of the file if there is none. Convert to LF and strip leading and trailing `\n` characters. Then `sha256:` + the **first 16** hex
   characters. *Why: `banner set` must refuse when another session rewrote the banner since you
@@ -255,8 +256,10 @@ Check every record, then the working state. `--working` does only the second hal
 - **schema**: every record in a kind's directory whose name starts with its id parses (valid
   YAML, a closing `---`), has the right `type` and `id`, every required key, enum values in
   range, values of the declared type, and an OKF `status` from draft/stable/deprecated.
-- **G-D10**: every append-only record (decision, story) has `body_sha`, and it matches the body
-  hash above. *Why: owner words are verbatim, so a rewrite must show up.*
+- **G-D10**: every append-only record (decision, story) has `body_sha`; its `corrected:` lines
+  each match the body; and with them undone, the body hash above matches `body_sha`. *Why:
+  owner words are verbatim, so a rewrite must show up, and so must a bracket whose `corrected:`
+  line was dropped.*
 - **G-D11**: every `.md` in a bundle directory (`docs/decisions`, `docs/stories`, `tasks`, and
   each kind's directory), subdirectories included, parses and has frontmatter with a `type`. The exceptions are `log.md` and
   `index.md`, and `index.md` may carry no frontmatter key but `okf_version`. *Why: a typeless file is invisible to
@@ -677,11 +680,12 @@ missing word, a `[sic]`. It only inserts.
    canonical text before the `[`.
 4. Append an amendment as in § context-engine record amend, with the text
    `corrected: at <offset> (+<length of [text]>) inserted "[text]" after "<after>"`.
-5. Replace `body_sha` with the hash of the new text. This is the one time a stamp is replaced.
+5. Leave `body_sha` alone: it pins the words as typed, and a stamp is never replaced.
 
 Undoing the corrections newest first (remove `<length>` characters at `<offset>`) gives back
-the original text exactly; lint G-D10 does that and fails a record whose `corrected:` lines do
-not match.
+the original text exactly; lint G-D10 does that, fails a record whose `corrected:` lines do not
+match, and hashes the result against `body_sha`, so a bracket whose `corrected:` line was
+deleted fails too.
 
 **Why:** a strict body hash would forbid fixing a typo, and a free edit would let anything
 change. An insertion that can always be undone keeps the words as typed readable under the fix
@@ -710,8 +714,10 @@ one lock. `status: deprecated` is OKF's word for "kept for history, no longer cu
 Add `<target>` to one link field of a decision. `--rel` names the field; without it, a board
 item's id goes to `tasks` and anything with `::` or `/` to `code`; a decision needs
 `--rel relaxes` (which also adds this decision to the other's `narrowed_by`). Check the target
-first: a record id must exist; a `code` path must exist with its exact case, and every dotted
-part of its symbol must appear in the file. A target already in the field is a no-op: stop.
+first: a record id must exist; a criterion id must be a row (`| AC-n |`) of the criteria file
+`[working] criteria` names; any other id is refused; a `code` path must exist with its exact
+case, and every dotted part of its symbol must appear in the file. A target already in the
+field is a no-op: stop.
 
 **Why:** `why()` answers from these links, so a link to something that does not exist answers
 wrongly. Existence is checked when the link is written; later drift is G-T3's job.

@@ -28,7 +28,7 @@ CONFIG = {
         "decision": {"type": "Decision", "prefix": "D", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": STATUSES}, "types": {"decided": "date", "session": "key", **LISTS}},
         "story": {"type": "Story", "prefix": "US", "dir": "stories", "mode": "append-only", "required": ["title", "actor"]},
     },
-    "working": {"board": ["task", "question"], "task": "task", "question": "question", "decision": "decision", "decision_index": "decisions/index.md"},
+    "working": {"board": ["task", "question"], "task": "task", "question": "question", "decision": "decision", "decision_index": "decisions/index.md", "criteria": "criteria.md"},
 }
 WORDS = "The owner said: we meet on Monday at noon.\n\nA second paragraph, with a [bracket] already in it.\n"
 
@@ -38,6 +38,7 @@ def eng(tmp_path):
     (tmp_path / "context.toml").write_text(_toml(CONFIG), encoding="utf-8")
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "mod.py").write_text("class Store:\n    def lint(self):\n        pass\n", encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| id | criterion |\n| --- | --- |\n| AC-7 | a criterion |\n\nAC-8 is named in prose, not a row.\n", encoding="utf-8")
     return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
 
 
@@ -56,6 +57,7 @@ def ops(e):
 def test_a_correction_inserts_brackets_and_stripping_them_gives_back_the_words_byte_for_byte(eng):
     rid = dec(eng)
     original = okf.canonical(eng.store.get(rid).doc.body)
+    stamp = eng.store.get(rid).doc.get("body_sha")
     eng.amend(rid, "an amendment before any correction", **W)
     eng.correct(rid, "on Monday", "sic: the owner meant Tuesday", **W)
     eng.correct(rid, "[sic: the", " owner's", **W)  # an insertion inside an earlier one
@@ -64,7 +66,7 @@ def test_a_correction_inserts_brackets_and_stripping_them_gives_back_the_words_b
     text = okf.canonical(doc.body)
     assert "on Monday[sic: the[ owner's] owner meant Tuesday] at noon.[12:00]" in text
     assert okf.strip_corrections(doc.body) == original  # the words as typed, exactly
-    assert doc.get("body_sha") == okf.body_sha(doc.body)  # re-stamped
+    assert doc.get("body_sha") == stamp == okf.typed_sha(doc.body)  # never re-stamped: it pins the words as typed
     amendments = okf.get_section(doc.body, "Amendments")
     assert amendments.count("corrected: at ") == 3 and "an amendment before any correction" in amendments
     assert [o["op"] for o in ops(eng)].count("correct") == 3
@@ -121,6 +123,24 @@ def test_lint_g_d10_fails_when_a_corrected_line_does_not_match_the_body(eng):
     assert any(f.guard == "G-D10" and "corrected:" in f.message for f in eng.store.lint())
 
 
+@pytest.mark.criterion("AC-38")
+@pytest.mark.parametrize("edit", ["drop the corrected line", "drop the bracket", "stamp the bracketed text"])
+def test_lint_g_d10_fails_a_correction_passed_off_as_the_words_as_typed(eng, edit):
+    rid = dec(eng)
+    eng.correct(rid, "on Monday", "not Monday: Friday", **W)
+    path = eng.store.get(rid).path
+    text = path.read_text(encoding="utf-8")
+    assert eng.store.lint() == []
+    if edit == "drop the corrected line":  # the bracket would read as typed, with nothing logging it
+        text = "\n".join(ln for ln in text.splitlines() if "corrected: at" not in ln) + "\n"
+    elif edit == "drop the bracket":  # the log names a bracket that is not there
+        text = text.replace("Monday[not Monday: Friday] at", "Monday at")
+    else:  # a hand stamp over the corrected text: undoing the log no longer gives the stamped words
+        text = re.sub(r"body_sha: \S+", "body_sha: " + okf.body_sha(eng.store.get(rid).doc.body), text)
+    path.write_text(text, encoding="utf-8")
+    assert [f.guard for f in eng.store.lint()] == ["G-D10"]
+
+
 # -- supersede and link: both directions under one lock ------------------------------------------
 
 
@@ -173,7 +193,7 @@ def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
     eng.link(rid, tid, **W)
     eng.link(rid, "src/mod.py::Store.lint", **W)
     eng.link(rid, sid, "creates", **W)
-    eng.link(rid, "AC-7", "amends", **W)  # criteria are not records: the id's shape is checked
+    eng.link(rid, "AC-7", "amends", **W)  # a criterion: a table row of the [working] criteria file
     d = eng.store.get(rid).doc
     assert (d.get("tasks"), d.get("code"), d.get("creates"), d.get("amends")) == ([tid], ["src/mod.py::Store.lint"], [sid], ["AC-7"])
     for target, rel, match in [
@@ -182,11 +202,27 @@ def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
         ("src/Mod.py", "", "case-exact"),
         ("src/mod.py::Missing", "", "has no 'Missing'"),
         ("AC-3", "", "pass --rel"),
+        ("AC-999", "creates", "not a record or a criterion in criteria.md"),
+        ("AC-8", "amends", "not a record or a criterion"),  # named in prose, not a table row
+        ("ZZ-404", "refs", "not a record or a criterion"),  # no record kind has this prefix
+        ("D-404", "refs", "no record D-404"),
         (tid, "", "already has"),
         ("x", "supersedes", "not a link this operation writes"),
     ]:
         with pytest.raises(Refusal, match=match):
             eng.link(rid, target, rel, **W)
+
+
+@pytest.mark.criterion("AC-40")
+def test_link_refuses_a_criterion_id_when_no_criteria_file_is_set(tmp_path):
+    cfg = {**CONFIG, "working": {k: v for k, v in CONFIG["working"].items() if k != "criteria"}}
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| AC-7 | a criterion |\n", encoding="utf-8")
+    e = Engine(tmp_path)
+    rid = dec(e)
+    with pytest.raises(Refusal, match=r"no `\[working\] criteria` file"):
+        e.link(rid, "AC-7", "amends", **W)
+    assert e.store.get(rid).doc.get("amends") is None
 
 
 @pytest.mark.criterion("AC-40")

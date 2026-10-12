@@ -37,3 +37,5 @@ and the insert-only check is the agent's way of keeping the typed words intact.
 - **2026-10-10a (claude-code/claude-opus-5-5):** 2026-10-10 (DEC-22): the push clause is replaced. Ask before every push and push only on a green gate, CI or not.
 
 - **2026-10-12d (claude-code/claude-opus-5-5):** Built in CE-5 as `record correct` (insert-only, re-stamped, undone newest first by G-D10). Not yet used on a real record, so it stays PROVISIONAL.
+
+- **2026-10-12d (claude-code/claude-opus-5-5):** Review of CE-5 (2026-10-12d): `record correct` no longer re-stamps `body_sha`, the one point above where the build departs from this text. The stamp keeps pinning the words as typed, and G-D10 hashes the body with its logged corrections undone. A re-stamp let a deleted `corrected:` line pass a bracket off as the owner's words with lint clean; now that goes red.

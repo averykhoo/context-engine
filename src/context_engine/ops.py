@@ -277,7 +277,7 @@ def record_amend(e: Engine, c: Caller, id: str, text: str) -> tuple[int, str]:
 
 @op(write=True)
 def record_correct(e: Engine, c: Caller, id: str, after: str, text: str) -> tuple[int, str]:
-    """Insert `[text]` right after the one place `after` occurs in a stamped record's text; insert-only, re-stamped, logged. A change of meaning is record_amend."""
+    """Insert `[text]` right after the one place `after` occurs in a stamped record's text; insert-only and logged; body_sha keeps pinning the words as typed. A change of meaning is record_amend."""
     return 0, e.correct(id, after, text, **c.kw)
 
 

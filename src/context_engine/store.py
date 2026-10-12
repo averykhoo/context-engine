@@ -213,23 +213,25 @@ class Store:
         return out
 
     def body_problem(self, kind: Kind, doc: okf.Document) -> tuple[str, str] | None:
-        """G-D10: an append-only record's original body still matches its stamped hash."""
+        """G-D10: an append-only record's words as typed still match its stamp. ``body_sha`` is
+        never replaced, and it hashes the body above ``## Amendments`` with every logged
+        correction undone, so dropping a `corrected:` line cannot pass a bracket off as typed."""
         if kind.mode != "append-only" or not okf.has_frontmatter(doc):
             return None
         stamped = doc.get("body_sha")
         if not stamped:
             return ("append-only record has no body_sha", "stamp it once its body is final (`context-engine record stamp`)")
-        if stamped != okf.body_sha(doc.body):
-            return (
-                "body above `## Amendments` changed since it was stamped",
-                "restore the original text from git (`git log -p` on the file) and record the change with `context-engine record amend`",
-            )
         try:
-            okf.strip_corrections(doc.body)
+            typed = okf.typed_sha(doc.body)
         except ValueError as exc:
             return (
                 f"a `corrected:` line under ## Amendments does not match the body: {exc}",
                 "restore the file from git (`git log -p` on it); a correction is made only with `context-engine record correct`",
+            )
+        if stamped != typed:
+            return (
+                "body above `## Amendments` changed since it was stamped (logged corrections undone, it is not the words as typed)",
+                "restore the original text from git (`git log -p` on the file); record a change with `context-engine record amend`, a fix with `context-engine record correct`",
             )
         return None
 
@@ -503,9 +505,10 @@ class Store:
         return rec
 
     def correct(self, record_id: str, after: str, text: str, *, session: str, actor: str) -> tuple[Record, str]:
-        """Insert ``[text]`` after the one place ``after`` occurs in the original body, re-stamp
-        ``body_sha`` and log a ``corrected:`` amendment (DEC-13). Insert-only: undoing the logged
-        insertions gives back the words as typed (``okf.strip_corrections``)."""
+        """Insert ``[text]`` after the one place ``after`` occurs in the original body and log a
+        ``corrected:`` amendment (DEC-13). Insert-only: undoing the logged insertions gives back
+        the words as typed (``okf.strip_corrections``), which ``body_sha`` still pins, so the
+        stamp is never replaced (G-D10)."""
         self._check_caller(session, actor)
         if not after:
             raise Refusal("no anchor", "give the words the insertion goes right after")
@@ -524,10 +527,9 @@ class Store:
                 raise Refusal(f"{record_id} {bp[0]}", bp[1])
             body, pos, inserted = okf.insert_correction(rec.doc.body, after, text)
             rec.doc.set_body(amended(body, okf.correction_entry(pos, inserted, after), session, actor))
-            rec.doc.set("body_sha", okf.body_sha(rec.doc.body))
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
-            self._log("correct", record_id, rec.path, session, actor, ["body_sha", "body"], False)
+            self._log("correct", record_id, rec.path, session, actor, ["body"], False)
             self._reindex(rec.kind, session, actor)
         return rec, inserted
 

@@ -1027,7 +1027,8 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 
 **Operations:** `record.new` (CLI `record new decision`), `record.amend` (appends an entry under
 `## Amendments`, keyed by session and actor; the only allowed body change), `record.stamp`
-(freezes `body_sha` once and refuses a re-stamp); these three are generic over the append-only
+(freezes `body_sha` once and refuses a re-stamp; nothing ever replaces it, not even
+`record.correct`); these three are generic over the append-only
 kinds, and so is `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
 directions under one lock and derives OKF `status`), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
@@ -1037,10 +1038,12 @@ task, criterion, decision or `file::symbol`, the decisions that link it, each wi
 that does. Writing a decision costs only its own text; no session opens the log to append to it.
 
 **Corrections are bracketed insertions.** A strict body hash forbids fixing a typo in place.
-`correct(id, after, text)` inserts `[text]` right after the one place `after` occurs, re-stamps
-`body_sha`, and logs a `corrected:` line under Amendments that says where it inserted what. It
-can only insert: removing every bracket it added gives back the original body exactly, so the
-words as typed always survive, and G-D10 fails a record whose `corrected:` lines do not match.
+`correct(id, after, text)` inserts `[text]` right after the one place `after` occurs and logs
+a `corrected:` line under Amendments that says where it inserted what. It can only insert:
+removing every bracket it added gives back the original body exactly, so the words as typed
+always survive. `body_sha` is not re-stamped: it keeps pinning the words as typed, and G-D10
+hashes the body with the logged insertions undone, so a record whose `corrected:` lines do not
+match fails, and so does a bracket whose `corrected:` line was deleted.
 The aim is the intent, not a bug-for-bug copy of what was typed; verbatim quotes keep the
 flavour and let a later reader check whether they were misread. A change of meaning is an
 `amend`, never a correction. Applies to every append-only kind.
@@ -1413,7 +1416,7 @@ modes (P2):
 
 | Change mode | Kinds | The engine enforces |
 |---|---|---|
-| **append-only** | decisions, stories, deviations | a `body_sha` over the original body; `amend` appends a dated entry and is the only body change (`correct` is the logged exception for every append-only kind, §6.5); G-D10 recomputes the hash |
+| **append-only** | decisions, stories, deviations | a `body_sha` over the original body; `amend` appends a dated entry and is the only body change (`correct` is the logged exception for every append-only kind, §6.5, and keeps the stamp); G-D10 recomputes the hash with logged corrections undone |
 | **replaced body, tool-owned frontmatter** | tasks, owner questions (`ASK-n`) | frontmatter changes only through operations carrying the session key; bodies are hand-edited or set one section at a time (`section.set`) |
 | **stamped** | batons, pause records | a session key on creation; expiry after two sessions; housekeeping converts the expired ones |
 
@@ -1543,10 +1546,11 @@ Decisions as records follow once the core holds.
   session history in the note; an inline board, if present, starts within the first K lines.
 - **G-D9:** tuned config values carry a provenance note, and spec-example values are refused
   (§8.0).
-- **G-D10:** every append-only record's `body_sha` matches its body above `## Amendments`. This
-  turns "append-only" and "owner words are verbatim" into refusals. Line endings are normalised
-  before hashing, because a Windows checkout may rewrite LF as CRLF. A corrected record also
-  passes only if undoing its logged `corrected:` insertions finds each where its line says.
+- **G-D10:** every append-only record's `body_sha` matches its body above `## Amendments`, with
+  its logged `corrected:` insertions undone. This turns "append-only" and "owner words are
+  verbatim" into refusals. Line endings are normalised before hashing, because a Windows
+  checkout may rewrite LF as CRLF. Undoing a logged insertion must find it where its line says,
+  and a bracket whose `corrected:` line is gone fails the hash.
 - **G-D11:** each configured OKF bundle directory is conformant: every non-reserved `.md` has
   frontmatter with a `type`; every `index.md` has no frontmatter (except an `okf_version` key at
   the bundle root) and the list shape (*the list shape is not checked yet*). That `status`

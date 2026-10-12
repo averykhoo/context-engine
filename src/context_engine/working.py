@@ -34,6 +34,7 @@ from .errors import Refusal
 from .store import ACTOR_RE, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
+CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
@@ -719,9 +720,10 @@ class Engine:
         return f"{rid}: amendment added under ## Amendments"
 
     def correct(self, rid: str, after: str, text: str, *, session: str, actor: str) -> str:
-        """A bracketed insertion into an append-only record (DEC-13): insert-only, re-stamped, logged."""
+        """A bracketed insertion into an append-only record (DEC-13): insert-only and logged; the
+        stamp is kept, since it pins the words as typed."""
         _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
-        return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; body_sha re-stamped, `corrected:` logged under ## Amendments"
+        return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
 
     # -- decisions (FRAMEWORK §6.5, CE-5) -----------------------------------------------
 
@@ -785,6 +787,13 @@ class Engine:
             if missing:
                 raise Refusal(f"{file} has no {missing[0]!r}", "grep for the symbol and link the name that exists")
 
+    def _criteria(self) -> set[str]:
+        """The criterion ids: the first cell of each table row of ``[working] criteria``."""
+        path = self.root / self.w.criteria if self.w.criteria else None
+        if path is None or not path.is_file():
+            return set()
+        return set(CRITERION_ROW_RE.findall(path.read_bytes().decode("utf-8", errors="replace")))
+
     def link(self, rid: str, target: str, rel: str = "", *, session: str, actor: str) -> str:
         """Link a decision to a task, story, criterion, `file::symbol` or another record
         (`decision.link`). `relaxes` also writes the backlink `narrowed_by` on the other decision."""
@@ -809,6 +818,10 @@ class Engine:
                     raise Refusal(f"{rid} cannot relax itself", "name the decision it narrows")
             if kind is not None:
                 self.store.find(target)  # refuses an id that is not a record
+            elif target not in self._criteria():
+                crit = f" or a criterion in {self.w.criteria}" if self.w.criteria else " (no `[working] criteria` file is set, so no criterion id can be checked)"
+                series = ", ".join(k.prefix + "-n" for k in self.store.config.kinds.values())
+                raise Refusal(f"{target} is not a record{crit}", f"link an id that exists: a record ({series}) or a criterion row of the criteria file")
         ids = [rid, target] if rel == "relaxes" else [rid]
 
         def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:

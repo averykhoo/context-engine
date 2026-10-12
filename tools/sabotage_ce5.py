@@ -15,12 +15,15 @@ W = "src/context_engine/working.py"
 D = "src/context_engine/decisions.py"
 T = "tests/test_decisions.py"
 S = [
-    # AC-38: corrections only insert, re-stamp, and can be undone byte for byte
+    # AC-38: corrections only insert, keep the stamp, and can be undone byte for byte
     ("AC-38", O, "return head[: lead + pos] + inserted + head[lead + pos :] + tail, pos, inserted", "return head[: lead + pos] + inserted + head[lead + pos + 1 :] + tail, pos, inserted", T + " -k byte_for_byte"),
     ("AC-38", O, "        i = core.find(after, i + 1)", "        i = -1", T + " -k one_unique_anchor"),
-    ("AC-38", ST, '            rec.doc.set("body_sha", okf.body_sha(rec.doc.body))\n            self._validate(rec.kind, rec.doc, rec.path)\n            self._write(rec.path, rec.doc)\n            self._log("correct"', '            self._validate(rec.kind, rec.doc, rec.path)\n            self._write(rec.path, rec.doc)\n            self._log("correct"', T + " -k byte_for_byte"),
+    # a re-stamp (the 2026-10-12d build) would let a dropped `corrected:` line pass a bracket off as typed
+    ("AC-38", ST, "            rec.doc.set_body(amended(body, okf.correction_entry(pos, inserted, after), session, actor))\n", '            rec.doc.set_body(amended(body, okf.correction_entry(pos, inserted, after), session, actor))\n            rec.doc.set("body_sha", okf.body_sha(rec.doc.body))\n', T + " -k byte_for_byte"),
     ("AC-38", ST, 'if any(c in after + text for c in "\\r\\n"):', "if False:", T + " -k one_unique_anchor"),
-    ("AC-38", ST, "            okf.strip_corrections(doc.body)\n        except ValueError", "            pass\n        except ValueError", T + " -k corrected_line"),
+    ("AC-38", O, 'if not (ins.startswith("[") and ins.endswith("]")) or text[pos : pos + len(ins)] != ins:', 'if not (ins.startswith("[") and ins.endswith("]")):', T + " -k corrected_line"),
+    ("AC-38", ST, "        if stamped != typed:", "        if False:", T + " -k passed_off"),
+    ("AC-38", O, '    return "sha256:" + hashlib.sha256(strip_corrections(body).encode("utf-8")).hexdigest()', "    strip_corrections(body)\n    return body_sha(body)", T + " -k passed_off"),
     # AC-39: supersede and relaxes write both directions
     ("AC-39", W, '            n.set("supersedes", [*dict.fromkeys([*D.as_list(n.get("supersedes")), old])])', "            pass", T + " -k both_directions"),
     ("AC-39", W, '            o.set("status", "deprecated")', "            pass", T + " -k both_directions"),
@@ -29,6 +32,9 @@ S = [
     # AC-40: link checks its target; why() and find() answer exactly
     ("AC-40", W, '("::" in target and v == target.split("::")[0])', "False", T + " -k why_lists"),
     ("AC-40", W, '            if missing:\n                raise Refusal(f"{file} has no', '            if False:\n                raise Refusal(f"{file} has no', T + " -k checks_the_target"),
+    ("AC-40", W, "            elif target not in self._criteria():", "            elif False:", T + " -k checks_the_target"),
+    ("AC-40", W, 'CRITERION_ROW_RE = re.compile(r"^\\|\\s*([A-Z]+-\\d+)\\s*\\|", re.MULTILINE)', 'CRITERION_ROW_RE = re.compile(r"\\b([A-Z]+-\\d+)\\b")', T + " -k checks_the_target"),
+    ("AC-40", W, "        path = self.root / self.w.criteria if self.w.criteria else None", '        path = self.root / (self.w.criteria or "criteria.md")', T + " -k no_criteria_file"),
     ("AC-40", W, "if status and str(d.get(D.STATUS_KEY)).upper() != status.upper():", "if False:", T + " -k find_filters"),
     # AC-41: the index is regenerated on every write, in its order, and G-D6 checks it
     ("AC-41", ST, "            self._reindex(kind, session, actor)\n        return Record(rid, kind, path, doc)", "        return Record(rid, kind, path, doc)", T + " -k regenerates_the_index"),

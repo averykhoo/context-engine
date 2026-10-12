@@ -57,6 +57,7 @@ class Working:
     register: str = ""  # the residual-risk register, one markdown file (FRAMEWORK §7.4, CE-23)
     decision_index: str = ""  # the generated decision index, e.g. docs/decisions/index.md (FRAMEWORK §6.5, G-D6)
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
+    criteria: str = ""  # the criteria file, one `| AC-n | ... |` table row per criterion; `decision link` checks criterion ids against it
 
 
 @dataclass(frozen=True)

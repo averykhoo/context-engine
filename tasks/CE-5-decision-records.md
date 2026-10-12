@@ -39,6 +39,7 @@ becomes `decision_status: REJECTED`). Test the importer on a copy; the import it
 - 2026-10-12d (claude-code/claude-opus-5-5): design review written; review: guard, write-op, shipped. Building record correct, decision supersede/link/find/show, why, the generated index (G-D6) and the importer.
 - 2026-10-12d (claude-code/claude-opus-5-5): built: record correct (all append-only kinds), decision supersede/link/find/show/import, why, the generated index (decision index = hk_regen_index; G-D6) and G-D10 over corrections; AC-38..AC-42 tested, tools/sabotage_ce5.py all red (20 rows); trial import of a copy of adhoc's log: 58 records, 0 lines lost (docs/evidence/decision-import-trial-2026-10-12.md). CE-7 owns the real import and the D-27 partial-supersession call.
 - 2026-10-12d (claude-code/claude-opus-5-5): closed: done: decision ops, index (G-D6), corrections (G-D10) and importer built, sabotaged, trial-imported on a copy; gate green
+- 2026-10-12d (claude-code/claude-opus-5-5): Post-close review fixes (2026-10-12d): G-D10 could be beaten by deleting a `corrected:` line (correct re-stamped body_sha); now body_sha is never re-stamped and G-D10 hashes the body with corrections undone (okf.py::typed_sha). decision link wrote unknown-prefix ids and AC-n unchecked; now refused unless a record or a row of `[working] criteria`. FRAMEWORK §6.5/§8.3 say so. Missing decision frontmatter op filed as CE-32.
 
 ## Design review
 

@@ -76,6 +76,7 @@ orient_max_bytes = 6000                  # provenance: DEC-14
 read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
 register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
 decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it
+criteria = "docs/criteria.md"               # `decision link` checks a criterion id is a row here
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
 
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it

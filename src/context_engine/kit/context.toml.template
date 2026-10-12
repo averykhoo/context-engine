@@ -106,6 +106,7 @@ ask_overdue_days = 7         # ...or in this many days, whichever comes first; p
 baton_max_age = 2            # sessions closed after the owning one before a baton expires (G-W3); provenance: JUDGEMENT, engine default; wrong if batons expire while still being worked
 register = "docs/invariants.md"   # the residual-risk register (FRAMEWORK §7.4); the first `task close` that files a residual creates it
 decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it (FRAMEWORK §6.5)
+criteria = "docs/criteria.md"               # one `| AC-n | ... |` row per criterion; `decision link` refuses an AC-n id that is not a row
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # the values a board item's `review:` may take: FRAMEWORK §5.2's design-review threshold, one per clause
 max_pauses = 2               # consecutive pause entries before lint asks for a clean close (G-W2); provenance: JUDGEMENT, engine default; wrong if real work routinely needs more
 
