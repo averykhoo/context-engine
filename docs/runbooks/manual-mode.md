@@ -553,8 +553,9 @@ blocking orientation (G-W3, AC-15).
    `branch`, `uncommitted: [...]`, `resume_step`, `evidence` (or `none`), `deferred: [...]`. Body:
    `**In flight:** ...` + blank line + `**Resume step:** ...`.
 3. Commit that file alone, at once: `git add -- <path>`, then
-   `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" -- <path>`.
-   (`--only` on a file git has never seen fails without the `add`.)
+   `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" -m "Session: <key>" -- <path>`.
+   (`--only` on a file git has never seen fails without the `add`. The second `-m` is the
+   `Session:` trailer every agent commit ends with, DEC-22.)
 
 **Why:** the next session needs the exact state of the tree, which comes from git, not from
 memory. Committing at once keeps another session's close from sweeping it away (FRAMEWORK §5.5

@@ -637,7 +637,8 @@ class Engine:
         rec = self.store.new(self._role("pause"), fields, body, session=session, actor=actor)
         rel = rec.path.relative_to(self.root).as_posix()
         self._git("add", "--", rel)
-        self._git("commit", "-q", "--only", "-m", f"pause {rec.id} ({session}): {fields['title'][:60]}", "--", rel)
+        # every agent commit ends with a `Session:` trailer (DEC-22); the second -m is its own paragraph
+        self._git("commit", "-q", "--only", "-m", f"pause {rec.id} ({session}): {fields['title'][:60]}", "-m", f"Session: {session}", "--", rel)
         sha = self._git("rev-parse", "--short", "HEAD").strip()
         return f"{rec.id}: pause recorded on {branch} ({len(dirty)} uncommitted paths), committed {sha}"
 

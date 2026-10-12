@@ -346,6 +346,30 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     assert rec.id in out and "committed" in out
 
 
+def test_the_pause_commit_ends_with_a_session_trailer(eng):
+    """Every agent commit ends with `Session: <key>` (DEC-22, CE-22), the engine's own included."""
+    root = eng.root
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+    key = started(eng)
+    eng.pause_open("half-built parser", "run the gate", **kw(key))
+    message = _git(root, "log", "-1", "--format=%B")
+    trailers = subprocess.run(["git", "interpret-trailers", "--parse"], cwd=root, input=message, check=True, capture_output=True, text=True).stdout
+    assert trailers.splitlines() == [f"Session: {key}"], message
+
+
+def test_the_runbook_pause_commit_carries_the_same_trailer():
+    """manual-mode § pause open is the hand fallback of the same commit (CE-22): it must not drift."""
+    from pathlib import Path
+
+    runbook = (Path(__file__).resolve().parents[1] / "docs" / "runbooks" / "manual-mode.md").read_text(encoding="utf-8")
+    section = runbook.split("### context-engine pause open", 1)[1].split("\n### ", 1)[0]
+    assert '-m "Session: <key>"' in section
+
+
 @pytest.mark.criterion("AC-15")
 def test_a_baton_older_than_two_sessions_fails_lint_and_housekeeping_files_a_task(eng):
     k1 = started(eng)
