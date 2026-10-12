@@ -3,7 +3,7 @@
 Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-12b)
+## Banner (2026-10-12c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -13,23 +13,30 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   the why goes in a decision or story. The pre-trim text (with the old §11.3, §12 owner answers
   and §13 changelog) is frozen in `FRAMEWORK-v0.5.md`; older records citing §12/§13 mean that file.
 - **The command is `context-engine`** (DEC-15; `ce` before). Older records keep `ce`.
-- **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption), CE-3 (MCP server), and since
-  2026-10-12b CE-15 (deploy path), CE-16 (coverage map) and CE-23 (design review) are done.
+- **State:** CE-1 (core), CE-2 (working state), CE-8 (adoption), CE-3 (MCP server), CE-15
+  (deploy path), CE-16 (coverage map), CE-23 (design review) are done; since 2026-10-12c also
+  CE-22 (engine commits carry `Session:`), CE-20 (`task close ASK-n` refused) and CE-21 (G-D0).
   The CLI runs sessions, the board, questions, batons, pauses, the banner, `orient`, `lint`,
   `routes`, `init`, `register show`, and decisions and stories (`record new|stamp|amend`).
+- **Priorities (owner-approved 2026-10-12c):** NOW CE-24; NEXT CE-5, CE-14, CE-10. The chain
+  that matters is CE-24 + CE-5 -> CE-7 (adhoc trial) -> CE-11. CE-14 unblocks CE-25 and CE-30.
 - **Deploy path (CE-15):** the adoption kit is package data at `src/context_engine/kit/`;
   `context-engine init` writes it into a target repo, never overwrites, never touches the target
   env (DEC-1). Config refuses unknown keys. Gaps: the kit ships no runbooks (CE-24), there is no
-  release tag yet (owner's call; docs say `@<tag-or-commit-sha>`), G-D0 is CE-21.
+  release tag yet (owner's call; docs say `@<tag-or-commit-sha>`).
+- **G-D0 (CE-21):** lint checks the contract's `framework:` line(s) and kit-block marker against
+  the engine's major.minor; the contract path is `[engine] contract` (default `CLAUDE.md`). An
+  Engine test fixture without a matching `CLAUDE.md` now lints red on G-D0.
 - **Design review and register (CE-23, P17/P18, US-14):** work above the review threshold needs
   a `review:` field and a `## Design review` before promote or close; residual risks move to the
-  register on close as `INV-n` (DEC-27; INV-1..12 so far). Lint guards G-W12/G-W13.
-- **Coverage map (CE-16):** `docs/evidence/framework-coverage-2026-10-12.md` maps every
+  register on close as `INV-n` (DEC-27; INV-1..12 so far; INV-7's text is stale, BTN-1).
+- **Coverage map (CE-16):** `docs/evidence/framework-coverage-2026-10-12.md` (frozen) maps every
   FRAMEWORK component, ritual and guard to a task, prose-only, or deferred.
 - **The MCP server is built (CE-3):** `mcp__context-engine__<group>_<verb>`, one tool per
   operation in `ops.OPS`, the same function the CLI calls. Set up on the owner's machine by a
   local-scope `claude mcp add` (DEC-25). Missing tools at session start: register it, use the
   CLI, ask the owner to restart (`CLAUDE.md` § Environment). Call `session_start` first.
+  Actors must be plain `<producer>/<version>` (a subagent suffix is refused).
 - **Rituals are `context-engine` commands** (`CLAUDE.md` § Rituals). When it errors, do the
   step by hand from `docs/runbooks/manual-mode.md` and fix the engine (US-11). `lint` is in the
   gate.
@@ -39,8 +46,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   can ship them.
 - **Several tasks in one request → the top level coordinates, it does not do** (DEC-16, amended
   2026-10-12b with owner words: trial run; if it works out it gets encoded). 2026-10-12b ran
-  CE-15/16/23 as one workflow; lessons are in that session's ledger summary. Ultracode has
-  standing approval when it keeps the session's tokens down (DEC-17).
+  a workflow; 2026-10-12c ran CE-22/20/21 as sequential subagents (same file), which worked.
+  Ultracode has standing approval when it keeps the session's tokens down (DEC-17).
 - **History was rewritten on 2026-10-09c.** A checkout made before it must
   `git fetch origin && git reset --hard origin/main`; old SHAs quoted in text no longer resolve.
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
@@ -49,9 +56,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   every programmatic process has a ritual fallback (DEC-20, P16); an after-action review per
   session is a first note, not designed (US-12, §6.12).
 - **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
-  its id leading the title, a `Session:` trailer on every agent commit (DEC-22). The engine's
-  major.minor is the framework version (DEC-23); G-D0 build is CE-21. Any session closes a
-  baton with evidence (DEC-24). CE-22: engine commits need the trailer too.
+  its id leading the title, a `Session:` trailer on every agent commit, engine ones included
+  (DEC-22, CE-22). The engine's major.minor is the framework version (DEC-23, enforced by G-D0).
+  Any session closes a baton with evidence (DEC-24).
 
 ## Open batons and pause blocks
 

@@ -7,9 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-12c · kind: open
+## 2026-10-12c · kind: close
 
-- **opened:** 2026-10-12T12:16:41+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-22, CE-20, CE-21 closed; CE-5, CE-14, CE-10 to NEXT; CE-19, CE-13 closed as not
+  needed; CE-18 citation note
+- **receipts:**
+  - guards: pytest -q 278 passed; context-engine lint clean
+  - read: orient, task list, census of all open tasks (subagent), diffs of ad3c47f/f0064ff/3048e85,
+    config.py::Config.kind_for_id
+  - asked: none
+- **summary** (the owner digest):
+  - Board prioritised with the owner: NOW CE-24; NEXT CE-5, CE-14, CE-10 (CE-22/20/21 done this
+    session).
+  - CE-22: pause open's commit ends with a Session: trailer; runbook in lockstep (ad3c47f).
+  - CE-20: task close refuses an ASK-n; remedy names ask answer / ask later (f0064ff).
+  - CE-21: lint G-D0 checks the contract's framework: line and kit marker against the engine's
+    major.minor; new [engine] contract key, AC-35 (3048e85).
+  - CE-19, CE-13 closed as not needed; CE-18's §12.3 means FRAMEWORK-v0.5.md.
+  - AAR: sequential subagents per task worked well for same-file work; subagent actors must be plain
+    claude-code/<model> (engine refuses suffixes).
+  - Batons: BTN-1 INV-7 register text stale after G-D0; BTN-2 reopen of an answered ASK leaves
+    answered:.
+- **Still owed:**
+  - BTN-1: update INV-7 in REGISTER.md
+  - BTN-2: decide reopen-on-answered-ASK behaviour
 
 ---
 
