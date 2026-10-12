@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-08b
-updated: 2026-10-08b
+updated: 2026-10-12b
 closed:
 ---
 
@@ -34,3 +34,5 @@ register, archive and runbooks; stories, criteria and charter tooling.
 - `docs/framework/FRAMEWORK.md` §2 (components at a glance), §6, §8, §11
 
 ## Log
+
+- 2026-10-12b (claude-code/claude-opus-5-5): Map: docs/evidence/framework-coverage-2026-10-12.md (FROZEN 2026-10-12b), 76 rows (23 components, 14 rituals, 39 guards incl. schema); filed CE-25..CE-30. Date renamed from the body's 2026-10-08 to the census day 2026-10-12. Id coverage checked by a one-off diff against FRAMEWORK.md (sabotaged: dropping the G-W5 row was reported). Deviations from plan: bootstrap §6.9 maps to CE-15 (its brief names it); §6.5 to CE-5; deviation register, law/NFRs and G-T7 DEFERRED on their §11.2 triggers; §6.10 to CE-12.
