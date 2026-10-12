@@ -111,8 +111,8 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 ## INV-15: a decision's `code` links (file::symbol) rot when code moves, and why() then answers from stale links
 
 - **affects:** the owner, whose words in decisions must survive verbatim; the next session, which reads decisions through find, why and the index; every deployed repo (adhoc's import is CE-7); a plain-git human who edits decisions by hand
-- **why not eliminated:** an existence guard over decision links is G-T3, not built (CE-14)
-- **control:** collective: `decision link` refuses a file or symbol that does not exist at link time; G-T3 when CE-14 lands
+- **why not eliminated:** code moves on purpose, and no operation rewrites a decision's link yet (CE-35)
+- **control:** collective: `decision link` refuses a file or symbol that does not exist at link time; G-T3 fails a current decision's `code:` link that stops resolving, in every gate (lint, AC-47); a superseded decision's links are not checked
 - **from:** CE-5, session 2026-10-12d
 
 ## INV-16: G-D3 and G-T3 grep each dotted part of a symbol as a word, so a renamed symbol whose old name still appears elsewhere in the file passes

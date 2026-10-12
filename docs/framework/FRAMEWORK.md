@@ -1519,7 +1519,8 @@ Decisions as records follow once the core holds.
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
   **normative** text of a story, criterion, law doc or invariant exists in the code; history
   notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
-  lists, and the names in backticks there; HTTP routes are not checked.
+  lists, and the names in backticks there, and the `code:` links of every current decision;
+  HTTP routes are not checked.
 - **G-T4:** structural-claim anchors resolve and their body hashes match the pins; re-pinning
   is an explicit, reviewed act.
 - **G-T5 (mutation per criterion):** runs as a scheduled routine, or as the one slow background

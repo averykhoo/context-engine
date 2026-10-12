@@ -305,8 +305,11 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-T3**: in each file `[guards] existence` lists, skipping fenced code, blockquotes and lines
   with `*HISTORY —*`: every backticked name of a file (a path with a `/`, or a name ending in a
   text extension such as `.py` or `.md`) exists case-exact, and every `file::symbol` resolves as
-  for G-D3. Spans with spaces, `*`, `<`, or a leading `.` or `/` are not names. *Why: normative
-  text that names a file which is gone states a rule nobody can follow.*
+  for G-D3. Spans with spaces, `*`, `<`, or a leading `.` or `/` are not names. Also, every
+  `code:` link of a decision that is not `status: deprecated` names a file that exists
+  case-exact from the repo root and has each dotted part of its symbol as a word. *Why:
+  normative text that names a file which is gone states a rule nobody can follow, and `why()`
+  answers from decision links.*
 - **G-D7**: in each file `[guards] signals` lists, outside fenced code: at most `warn_max` ⚠, at
   most `bold_caps_max` bold spans with a run of four capitals and no lower case (`**NEVER**`),
   and none of `retired_glyphs`. *Why: a signal ranks only while it is rare.*
@@ -756,7 +759,9 @@ case, and every dotted part of its symbol must appear in the file. A target alre
 field is a no-op: stop.
 
 **Why:** `why()` answers from these links, so a link to something that does not exist answers
-wrongly. Existence is checked when the link is written; later drift is G-T3's job.
+wrongly. Existence is checked when the link is written; G-T3 fails a current decision's link
+that later stops resolving. No operation removes or rewrites a link yet: restore what
+the link names, and do not hand-edit `code:`.
 
 ### context-engine decision find
 

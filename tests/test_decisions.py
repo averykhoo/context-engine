@@ -186,6 +186,25 @@ def test_relaxes_writes_the_narrowed_by_backlink(eng):
 # -- link, find, show and why() ------------------------------------------------------------------
 
 
+@pytest.mark.criterion("AC-47")
+def test_lint_g_t3_fails_a_current_decisions_code_link_that_no_longer_resolves(eng):
+    rid, gone = dec(eng), dec(eng, "Superseded")
+    eng.link(rid, "src/mod.py::Store.lint", **W)
+    eng.link(rid, "src/mod.py", **W)
+    eng.link(gone, "src/mod.py::Store", **W)
+    eng.supersede(gone, rid, **W)
+    t3 = lambda: [f"{f.path}: {f.message}" for f in eng.lint() if f.guard == "G-T3"]
+    assert t3() == []
+    path = eng.store.find(rid).relative_to(eng.root).as_posix()
+    (eng.root / "src" / "mod.py").write_text("class Store:\n    def check(self):\n        pass\n", encoding="utf-8")
+    assert t3() == [f"{path}: `code:` links `src/mod.py::Store.lint`, but `src/mod.py` has no `lint`"]
+    (eng.root / "src" / "mod.py").unlink()
+    assert t3() == [  # the superseded decision's link to the same file is history, so it is not red
+        f"{path}: `code:` links `src/mod.py::Store.lint`, but `src/mod.py` does not exist (case-exact)",
+        f"{path}: `code:` links `src/mod.py`, but `src/mod.py` does not exist (case-exact)",
+    ]
+
+
 @pytest.mark.criterion("AC-40")
 def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
     rid, tid = dec(eng), eng.new("task", "T", **W).id

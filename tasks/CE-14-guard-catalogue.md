@@ -34,6 +34,7 @@ this repo actually hits. Part of G7 (DEC-10).
 
 - 2026-10-12d (claude-code/claude-opus-5-5): built G-D1, G-D2 (at rest), G-D3, G-D7, G-D8, G-D9, G-T3, G-W7 and [guards] switches in src/context_engine/guards.py; tests/test_guards.py (AC-43..AC-51); tools/sabotage_ce14.py 32 rows all red; split G-D4+G-D5 to CE-33 and G-T5 to CE-34; G-I/G-T1/T2/T6 stay CE-25
 - 2026-10-12d (claude-code/claude-opus-5-5): closed: done in d999bc3: G-D1, G-D2, G-D3, G-D7, G-D8, G-D9, G-T3, G-W7 and [guards] switches built and sabotaged; G-D4/G-D5 split to CE-33, G-T5 to CE-34; intent-chain guards stay CE-25
+- 2026-10-12d (claude-code/claude-opus-5-5): Review found (2026-10-12d): the ## Design review was written retroactively. CE-14 adds guards, so it was above the FRAMEWORK §5.2 threshold, but it was promoted to NOW at 19:25 (ops.jsonl) with no review, and the review and review: [guard] were set at 20:12, after the build. G-W12 could not catch it because review was unset. Also fixed after close: G-T3 now checks current decisions' code: links (INV-15 said G-T3 would; it did not), and the frontmatter exemption is pinned.
 
 ## Design review
 

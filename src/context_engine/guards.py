@@ -6,6 +6,7 @@ check (P7). ``lint`` runs them all; ``Engine.lint`` drops the ids ``[guards] off
 
 What a doc guard reads is configured, never guessed: G-D1's caps sit on ``[[routes]]``, and G-D3,
 G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty checks nothing.
+G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records.
 
 Not here (FRAMEWORK §8, with their homes): G-D4 liveness and G-D5 typed numbers, G-T5 mutation
 per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
@@ -21,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
+from . import decisions as D
 from . import ledger as L
 from .config import CONFIG_NAME
 from .store import Failure, key_order
@@ -351,6 +353,35 @@ def existence(e: Engine) -> list[Failure]:
                 if p:
                     bad.append(f"line {n}: {p}")
         out += [Failure("G-T3", rel, b, "point the text at what exists, or mark a line that is history `*HISTORY —*`") for b in bad]
+    return out + decision_code(e, files)
+
+
+def decision_code(e: Engine, files: Files) -> list[Failure]:
+    """G-T3 over the `code:` links of every current decision (`[working] decision`; a
+    `status: deprecated` one is history): each file exists case-exact from the repo root and
+    names every dotted part of its symbol, as `decision link` checked when it wrote the link.
+
+    Not checked: a superseded decision's links, and the other link fields (ids: `decision link`
+    refuses one that is not a record, and ids are never reused)."""
+    if not e.w.decision:
+        return []
+    out: list[Failure] = []
+    st = e.store
+    for path in st._files(st.config.kind(e.w.decision)):
+        try:
+            doc = st.read(path)
+        except Exception:
+            continue  # the schema check reports an unreadable record
+        if doc.get("status") == "deprecated":
+            continue
+        rel = st._rel(path)
+        for link in D.as_list(doc.get("code")):
+            file, _, symbol = link.partition("::")
+            hit = files.case_exact(file)
+            missing = symbol_missing(hit, symbol) if hit is not None and symbol else None
+            problem = "does not exist (case-exact)" if hit is None else f"has no `{missing}`" if missing else ""
+            if problem:
+                out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but `{file}` {problem}", "restore what the link names; no operation rewrites a link yet, so do not hand-edit `code:`"))
     return out
 
 

@@ -178,6 +178,9 @@ def test_g_t3_files_and_symbols_named_in_normative_text_exist_and_history_is_exe
     ]
     write(tmp_path, "docs/criteria.md", CRITERIA.replace("| AC-2 |", "| AC-2 | *HISTORY —*"))
     assert reds(e, "G-T3") == []
+    # frontmatter is data, not prose: a record's `code:` links are checked as links (decision_code)
+    write(tmp_path, "docs/criteria.md", "---\ntitle: `src/gone.py`\n---\n" + CRITERIA.replace("| AC-2 |", "| AC-2 | *HISTORY —*"))
+    assert reds(e, "G-T3") == []
 
 
 # -- G-D7 ----------------------------------------------------------------------------------
