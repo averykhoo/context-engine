@@ -33,3 +33,14 @@ F: goes stale when the charter's goal table, the criteria table's columns or a r
 A: five functions in `src/context_engine/guards.py`, each done by hand from manual-mode.md § context-engine lint (list the charter's goal ids, the criterion rows and the `criterion("AC-n")` markers, and diff the sets); `[guards] off` silences any one with no code change; the criteria stay one markdown table a human can edit
 M: one criterion-row parser (`src/context_engine/working.py::CRITERION_ROW_RE`, already used by `decision link`) shared by the guards and the write op; each write-time refusal is the twin of a rest-time guard and calls the same check; sources scoped through `[guards]` paths as CE-14 and CE-30 did
 E: reuses the guards frame, `Failure`, `[guards]` path scoping and the sabotage table; criteria stay rows of `docs/criteria.md`, not a new record kind; one manual-mode section per new op; each remedy names the exact id and the op that fixes it
+
+## Read first
+
+- ASK-3: five owner calls, open; build nothing they decide before they are answered
+- `## Design review` above (written 2026-10-13a, review: guard, write-op, shipped)
+- `docs/evidence/framework-coverage-2026-10-12.md`; FRAMEWORK §3.1 to §3.4, §6.2, §8.1, §8.2
+
+## Traps
+
+- G-D3 can check a bare file name against a stale `build/` copy (CE-41): cite `src/context_engine/...` paths in full
+- Landing G-T1 turns the gate red at once (US-10, US-12, US-13 have no criterion): land the guard and the fixes in one commit
