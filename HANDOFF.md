@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-13c)
+## Banner (2026-10-13d)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -22,8 +22,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   once; every other write rides along. Commit your own work through `context-engine commit
   <paths> -m ...` (it sweeps the riding op lines); close a task after its work is committed, with
   `task close <id> -m ... --body-file <Sabotage: lines>`, which carries `Closes:`.
-- **State:** CE-1..3, CE-5, CE-8, CE-10, CE-14..16, CE-20..26, CE-30..33, CE-35..38, CE-45, CE-49
-  and CE-55 done. **Since 2026-10-13c:** method runbooks (CE-26), engine commits (CE-45, CE-55),
+- **State:** CE-1..3, CE-5, CE-8, CE-10, CE-14..16, CE-20..26, CE-30..33, CE-35..38, CE-45, CE-49,
+  CE-55 and CE-67 done. **Since 2026-10-13c:** method runbooks (CE-26), engine commits (CE-45, CE-55),
   `record retire` (CE-49), G-D4 liveness and G-D5 typed counts (CE-33). AC-60..64 and AC-71..78
   are agent-drafted criteria the owner has not read.
 - **Priorities:** NOW CE-7, the adhoc trial: adhoc's live session has ended, ASK-5 is answered
@@ -44,6 +44,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Guards:** `src/context_engine/guards.py` runs G-D0..D5/D7/D8/D9/D12, G-I1/I2, G-T1/T2/T3/T6
   and G-W7 in lint; `[guards]` in `context.toml` switches them off or scopes their paths. G-D5 is
   on here: write a count of the tree in one of P5's forms (dated, quoted, bounded, backticked).
+- **CI is Linux, this machine is Windows (CE-67):** before every push run `tools/linux_gate.py`
+  too (CI's job in a runner-shaped container under WSL docker); tests read no machine git config
+  and patch no stdlib module. Footguns: `docs/evidence/ci-divergence-2026-10-13.md`.
 - **Deploy path (CE-15):** the kit is package data at `src/context_engine/kit/`; `init` writes it
   into a target repo, never overwrites, never touches the target env (DEC-1). No release tag yet.
 - **Design review and register (CE-23, US-14):** work above the review threshold needs `review:`
@@ -59,7 +62,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Owner rules in force:** `fable` only when the owner asks, or for the arbiter role (DEC-18);
   every programmatic process has a ritual fallback (DEC-20, P16).
 - **The repo is PUBLIC. Ask before every push; push only on a green gate.** One task per commit,
-  a `Session:` trailer on every agent commit (DEC-22). Pushed through the 2026-10-13b close.
+  a `Session:` trailer on every agent commit (DEC-22). Pushed through the 2026-10-13d close.
 
 ## Open batons and pause blocks
 
