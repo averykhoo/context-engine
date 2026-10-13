@@ -26,6 +26,8 @@ in its `CLAUDE.md`.
   work. Only an agent that can write files can persist (not `Explore`).
 - **On return,** check the file exists and is not short; if it is, write the returned report to
   it before doing anything else with it.
+- **An agent that delegates waits for its own agents** before it hands back: an agent left
+  running in the background can die with its parent's return, its report unwritten.
 - **A report is evidence, not a finding.** What heads for a record, a commit or a golden is
   verified first-hand by the session; reports that contradict each other are reconciled, never
   averaged. Agents audit; the session decides and deletes.
