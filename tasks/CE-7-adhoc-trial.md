@@ -5,7 +5,7 @@ title: "Adhoc trial cutover on a worktree branch, scored against the CE-4 rubric
 brief: "One revertible commit; adhoc keeps its paths and ids; stop if adhoc has a live session"
 pri: NOW
 state: open
-deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38]
+deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-13b
