@@ -1573,8 +1573,9 @@ Decisions as records follow once the core holds.
 
 The intent chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,
-the criterion id), and the criteria file. A guard is off while a source it needs is unset. A set
-path that does not exist is red, and so is a source that yields nothing (no goal row, no
+the criterion id), and the criteria file. A guard is off while a source it needs is unset, but a
+half-set pair is red, as G-D12's is: `charter` without `stories`, or `tests` without a criteria
+file, would otherwise switch a guard off under a clean lint. A set path that does not exist is red, and so is a source that yields nothing (no goal row, no
 criterion row, no claim), so a reworded table or a claim pattern that does not fit the repo's
 test syntax cannot pass by finding nothing. So is a row of a goal or criteria table that is not
 led by an id (`G 3`, `**C-4**`), so one reworded row cannot pass unread either. An id at rest

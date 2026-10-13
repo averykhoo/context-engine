@@ -900,12 +900,15 @@ def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
 def goals(e: Engine) -> list[Failure]:
     """G-I1: every goal of the charter (`[guards] charter`) is named by a story that is not
     retired, and every such story names at least one goal, each a goal of the charter (a legacy
-    `G3` reads as `G-3`). Off while `charter` or `stories` is unset; red when the charter is
-    missing or yields no goal rows, and on a charter goal id not in the one form.
+    `G3` reads as `G-3`). Off while `charter` is unset; red when `charter` is set without
+    `stories` (half set, as G-D12's pair), when the charter is missing or yields no goal rows,
+    and on a charter goal id not in the one form.
 
     Not checked: whether a story really serves the goal it names (judgement, at intake), the
     charter's own prose (its `Stories` column included), and retired stories (history)."""
     g = e.store.config.guards
+    if g.charter and not g.stories:  # half set: the guard would be off under a clean lint
+        return [Failure("G-I1", CONFIG_NAME, "[guards] charter is set but `stories` is not, so no story is checked against the charter", "set [guards] stories to the kind holding the stories, or unset charter to switch G-I1 off")] + known_goals(e)[1]
     if not (g.charter and g.stories):
         return []
     known, out = known_goals(e)
@@ -986,14 +989,17 @@ def specified(e: Engine) -> list[Failure]:
 def claims(e: Engine) -> list[Failure]:
     """G-T2: every `tested` or `manual` criterion is claimed by a test or driver (the `[guards]
     claim` pattern, in the files under `[guards] tests`), every claim names a criterion row, and
-    every row's status is from the vocabulary. Off while `tests` or `[working] criteria` is
-    unset; red when a listed path is missing, the criteria file yields no rows, or the pattern
+    every row's status is from the vocabulary. Off while `tests` is unset; red when it is set
+    without `[working] criteria` (half set), a listed path is missing, the criteria file yields no rows, or the pattern
     finds no claim at all (it does not fit the repo's test syntax).
 
     Not checked: that a claiming test checks its criterion (a skipped test, an assert that cannot
     fail): the sabotage rule (P7) covers that by hand, mutation (G-T5) later; and tests that claim
     nothing (a test may be internal, FRAMEWORK §3.4)."""
     g = e.store.config.guards
+    if g.tests and not e.w.criteria:  # half set: the guard would be off under a clean lint
+        missing = [rel for rel in g.tests if not (e.root / rel).exists()]
+        return [Failure("G-T2", CONFIG_NAME, "[guards] tests is set but [working] criteria is not, so no claim is traced", f"set [working] criteria to the criteria file, or {INTENT_OFF}")] + [Failure("G-T2", CONFIG_NAME, f"[guards] tests names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}") for rel in missing]
     if not (g.tests and e.w.criteria):
         return []
     rows, out = _criteria(e, "G-T2")

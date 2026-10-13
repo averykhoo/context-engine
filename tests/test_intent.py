@@ -123,7 +123,11 @@ def test_g_i1_reds_a_charter_goal_id_not_in_the_one_form_twice_or_missing_and_a_
     assert reds(make(chain), "G-I1") == ["docs/charter.md: no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked"]
     assert reds(make(chain, charter="docs/gone.md"), "G-I1") == ["context.toml: [guards] charter names docs/gone.md, which does not exist"]
     assert reds(make(chain, charter=""), "G-I1") == []  # off while unset
-    assert all_reds(make(chain, stories="")) == {}  # stories unset: G-I1, G-I2, G-T1 and G-T6 are off
+    write(chain, "docs/charter.md", CHARTER)
+    half = "context.toml: [guards] charter is set but `stories` is not, so no story is checked against the charter"
+    assert all_reds(make(chain, stories="")) == {"G-I1": [half]}  # half set: red, not a silent off; G-I2, G-T1 and G-T6 are off
+    assert all_reds(make(chain, stories="", charter="docs/NOPE.md")) == {"G-I1": [half, "context.toml: [guards] charter names docs/NOPE.md, which does not exist"]}
+    assert all_reds(make(chain, stories="", charter="", tests=[])) == {}  # all unset: off
 
 
 # -- G-I2 and the write-time twins ---------------------------------------------------------
@@ -314,4 +318,7 @@ def test_g_t2_is_red_on_a_missing_tests_path_or_no_claim_and_off_while_tests_is_
     write(chain, "tests/test_a.py", "def test_a():\n    pass\n")
     assert reds(make(chain), "G-T2") == ["context.toml: [guards] claim matched nothing under tests, so no test is traced"]
     assert reds(make(chain, tests=[]), "G-T2") == []
-    assert all_reds(make(chain, working={"criteria": ""})) == {}  # no criteria file: the trace guards are off
+    half = "context.toml: [guards] tests is set but [working] criteria is not, so no claim is traced"
+    assert all_reds(make(chain, working={"criteria": ""})) == {"G-T2": [half]}  # half set: red; G-T1 and G-T6 are off
+    assert all_reds(make(chain, working={"criteria": ""}, tests=["nope"])) == {"G-T2": [half, "context.toml: [guards] tests names nope, which does not exist"]}
+    assert all_reds(make(chain, working={"criteria": ""}, tests=[])) == {}  # no criteria file, no tests: the trace guards are off
