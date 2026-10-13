@@ -4,13 +4,15 @@ id: CE-33
 title: Doc liveness and typed numbers as lint guards (G-D4, G-D5)
 brief: Measure false reds on this repo before choosing the exemptions; frozen provenance is never edited
 pri: NEXT
-state: open
+state: closed
 deps: [CE-14]
 source: session 2026-10-12d
 created: 2026-10-12
-moved: 2026-10-13a
+moved: 2026-10-13c
 updated: 2026-10-13c
 review: [guard, shipped]
+status: deprecated
+closed: 2026-10-13c
 ---
 
 Split from CE-14 (2026-10-12d), which built the rest of the §8.3 doc guards in `src/context_engine/guards.py` with `[guards]` path lists in context.toml. Both are §11.2-triggered here: the repo keeps evidence docs ("the repo measures things").
@@ -31,6 +33,7 @@ Split from CE-14 (2026-10-12d), which built the rest of the §8.3 doc guards in 
 ## Log
 
 - 2026-10-13c (claude-code/claude-opus-5-5): Built 2026-10-13c in worktree ce-33 (measure; build; false-pass, false-red/deploy and spec-fidelity lenses; a skeptic; fix): 8797518, 4ad8e13, fast-forwarded onto main. Measured first (docs/evidence/ce33-false-reds-2026-10-13.md): G-D4's shipped form gave 15 reds over 37 docs, all true; G-D5 fell from 3524 hits (every digit run) to 3 with a census of counted nouns plus P5's forms and a bound escape. G-D4: a block-opening line led by LIVING, ACTIVE-PLAN or FROZEN, a frontmatter liveness key, or ARCHIVED <date>, in the first 10 lines; docs whose top the repo does not own get [guards] liveness_given; history dirs (docs/evidence, spike) must be FROZEN or name an open item. G-D5 on here, off in the kit. FROZEN banners added to two evidence docs and spike/FINDINGS.md (bodies unchanged); AC-74, AC-75 added. Gate on main: 586 passed. First-hand sabotage: guards.py::liveness returning [] -> 5 G-D4 tests in tests/test_guards.py red. Closed through the CLI, whose engine commits carry no Closes: trailer yet (CE-55); the pre-restart MCP server refuses this repo's new [guards] keys.
+- 2026-10-13c (claude-code/claude-opus-5-5): closed: done in 8797518..4ad8e13 (G-D4 doc liveness and G-D5 typed counts, measured first; reviewed by three lenses and a skeptic; gate 586 passed)
 
 ## Design review
 

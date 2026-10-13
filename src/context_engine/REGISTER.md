@@ -373,3 +373,66 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** no mirror guard exists
 - **control:** individual: record retire writes both directions; a mirror guard is the follow-up
 - **from:** CE-49, session 2026-10-13c
+
+## INV-53: G-D5 misses counts outside its census form (another adjective, as in "four method runbooks"; `**23**`; spelled numbers above twenty; singulars; a count split across lines)
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** the measurement showed wider patterns are noise (27 hits, 25 not counts)
+- **control:** individual: the numbers docstring's Not checked list; review
+- **from:** CE-33, session 2026-10-13c
+
+## INV-54: G-D5 is red on a label or a rule value without a bound word (`Step 3 checks`, `the last 5 entries`)
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** telling a label from a count needs judgement, and a wider bound escape is a false-pass hole
+- **control:** individual: the remedy names backticks
+- **from:** CE-33, session 2026-10-13c
+
+## INV-55: a YYYY-MM-DD anywhere on a line (a link target too) exempts every count on it
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** P5's form is a key on the line, and a narrower rule cannot be followed by hand
+- **control:** individual: review
+- **from:** CE-33, session 2026-10-13c
+
+## INV-56: G-D5 trusts a FROZEN or ACTIVE-PLAN word G-D4 does not check when a numbers doc is not under liveness
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** both lists are config
+- **control:** individual: §8.3 says to list each numbers doc under liveness too, and this repo does
+- **from:** CE-33, session 2026-10-13c
+
+## INV-57: a liveness_given glob wide enough to cover every listed doc passes them all
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** reviewed config; only a stale glob is checked
+- **control:** individual: review of context.toml changes
+- **from:** CE-33, session 2026-10-13c
+
+## INV-58: a declaration may be false (a LIVING doc gone stale)
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** no mechanical check (DR9)
+- **control:** individual: housekeeping and review
+- **from:** CE-33, session 2026-10-13c
+
+## INV-59: an adopting repo is red after init until its own docs declare liveness
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** P2 asks every doc to declare, so hiding them would be a false green
+- **control:** individual: kit README §3, the remedy text
+- **from:** CE-33, session 2026-10-13c
+
+## INV-60: banner set and other writes can store text G-D5 reds, and the engine commits it
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** no write-time check for G-D5 (G-D8 has the same gap)
+- **control:** individual: lint in the gate before the next commit
+- **from:** CE-33, session 2026-10-13c
+
+## INV-61: the shared prose() reads a leading `---` break as frontmatter and lets `~~~` close a ``` fence, hiding lines from G-D5 (and G-D3, G-D7)
+
+- **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
+- **why not eliminated:** pre-existing in the shared reader
+- **control:** individual: none yet; a follow-up
+- **from:** CE-33, session 2026-10-13c
