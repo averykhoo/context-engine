@@ -734,6 +734,7 @@ CLAIMED = ("tested", "manual")  # the statuses G-T2 requires a claim for
 AGENT_ACTOR_RE = re.compile(r"agent \([^()]*reconstructed from .+\)")
 STORY_ACTOR_RE = re.compile(rf"owner|human:\S+|{AGENT_ACTOR_RE.pattern}")  # FRAMEWORK §3.2
 RETIRE_BY_RE = re.compile(r"owner|human:\S+|agent")  # whose call a `record retire` is (FRAMEWORK §3.2)
+RETIRE_KEYS = ("supersedes", "superseded_by")  # a story's links: only `record retire` writes them
 SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
 INTENT_OFF = "unset it in [guards] to switch the guard off"
 
@@ -949,9 +950,9 @@ def logged_retires(e: Engine) -> dict[str, dict]:
 def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[tuple[str, str, str, str]]:
     """G-I2 on retires, as (id, path, message, remedy): a retired story was retired by `record
     retire` (a logged `retire` line), so who retired it and why are recorded; a story a logged
-    retire retired is still `retired` and `status: deprecated` (a retire is never undone); and
-    each id in a story's `superseded_by` or `supersedes` is a story, `superseded_by` only on a
-    retired one."""
+    retire retired is still `retired` and `status: deprecated` (a retire is never undone); only
+    a retired story is `status: deprecated` (FRAMEWORK §9.3's one mapping); and each id in a
+    story's `superseded_by` or `supersedes` is a story, `superseded_by` only on a retired one."""
     done = logged_retires(e)
     known = {rid for rid, _, _ in stories}
     out = []
@@ -965,7 +966,10 @@ def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[t
             now = f"`story_status: {status}`" if status != "retired" else f"`status: {doc.get('status') or ''}`, not `deprecated`"
             out.append((rid, rel, f"was retired by `record retire` in session {op.get('session')}, but its frontmatter now says {now}",
                         "a retire is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record it as a new story (`record new story`)"))
-        for key in ("superseded_by", "supersedes"):
+        elif op is None and status != "retired" and doc.get("status") == "deprecated":
+            out.append((rid, rel, f"is `status: deprecated` but `{status}`: only a retired story is deprecated, so readers would skip it as history",
+                        f"restore `status` from git; to retire {rid}, `record retire {rid}` (it writes both)"))
+        for key in RETIRE_KEYS:
             for ref in D.as_list(doc.get(key)):
                 if str(ref) not in known:
                     out.append((rid, rel, f"`{key}` names {ref}, which is no story", "restore the link from git; story links are written only by `record retire`"))
@@ -983,8 +987,10 @@ def story_fields(e: Engine) -> list[Failure]:
 
     Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), `via`, a hand
     edit between the standing statuses (live, unspecified, unconfirmed: no operation owns those
-    moves yet, and the op log records which keys a write changed, not their values), that the
-    amendment a retire wrote is still there, and that `supersedes` mirrors `superseded_by`."""
+    moves yet, and the op log records which keys a write changed, not their values), a retired
+    story's frontmatter after the retire (history), that the amendment a retire wrote is still
+    there, that `supersedes` mirrors `superseded_by`, and an op log line written by hand (it is
+    trusted as written, as G-W7 trusts it)."""
     if not e.store.config.guards.stories:
         return []
     stories = _stories(e)
@@ -1035,7 +1041,10 @@ def specified(e: Engine) -> list[Failure]:
     for rid, rel, doc in _stories(e):
         status = doc.get("story_status")
         if status == "live" and rid not in sourced:
-            out.append(Failure("G-T1", rel, f"{rid} is live but no criterion comes from it", f"draft its criteria as `planned` rows of {e.w.criteria} with `from` {rid} (FRAMEWORK §6.2 step 3)"))
+            old = [str(s) for s in D.as_list(doc.get("supersedes")) if str(s) in sourced]
+            remedy = (f"it replaced {', '.join(old)}: add {rid} to the `from` cell of the criteria that come from {', '.join(old)} in {e.w.criteria}, or draft its own"
+                      if old else f"draft its criteria as `planned` rows of {e.w.criteria} with `from` {rid} (FRAMEWORK §6.2 step 3)")
+            out.append(Failure("G-T1", rel, f"{rid} is live but no criterion comes from it", remedy))
         elif status == "unspecified":
             board = _board_open(e) if board is None else board
             if not any(re.search(rf"(?<![\w-]){re.escape(rid)}(?![\w-])", t) for t in board):

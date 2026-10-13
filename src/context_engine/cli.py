@@ -260,7 +260,7 @@ def _params(args: argparse.Namespace) -> dict:
         a["ids"] = _ids(" ".join(a["ids"]))
     if a.get("file") is not None:
         into = ("why" if a.get("op") == "retire" else "body") if args.group == "record" else "text"
-        a[into] = a["file"].read_text(encoding="utf-8")
+        a[into] = a["file"].read_text(encoding="utf-8-sig")  # a BOM (PowerShell 5.1 writes one) is no part of the words
     return a
 
 

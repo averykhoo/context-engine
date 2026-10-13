@@ -89,7 +89,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body_sha", "body"]` |
-| record retire | `retire`: one line for the story, then one for its successor | the record | the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor); the successor: `["supersedes"]` |
+| record retire | `retire`: one line for the successor, then one for the story | the record | the successor: `["supersedes"]`; the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor) |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
@@ -102,7 +102,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | Kind | Id | Directory | Mode | Required keys | Enums and types |
 |---|---|---|---|---|---|
 | decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key |
-| story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals list |
+| story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
 | task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
 | baton | `BTN-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
@@ -343,14 +343,16 @@ Check every record, then the working state. `--working` does only the second hal
   Then: **G-I1**, every story that is not `retired` names at least one goal and only goals of the
   charter, and every goal is named by one such story; no goal id leads two rows. **G-I2**, every
   story that is not `retired` has an `actor` of `owner`, `human:<id>` or `agent (reconstructed
-  from ...)`, a `date` of YYYY-MM-DD, a `story_status` of live, unspecified, unconfirmed or
-  retired, and `unconfirmed` goes with an agent's actor only; every `retired` story has a
-  `retire` line in the op log (§ context-engine record retire), and every story such a line
-  retired is still `retired` with `status: deprecated`; every id in a story's `superseded_by` or
-  `supersedes` is a story, and only a retired story has `superseded_by`. **G-T1**, every `live`
-  story's id is in the `from` cell of a criterion that is not `retired`, and every
-  `unspecified` story's id is a whole word in an open board item. **G-T2**, every `tested` or `manual` criterion is claimed, every claimed id is a
-  criterion, and every status is planned, tested, manual, deviates or retired. **G-T6**, every
+  from ...)`, a `date` of YYYY-MM-DD, a `story_status` of live, unspecified or unconfirmed, and
+  `unconfirmed` goes with an agent's actor only; every `retired` story has a `retire` line in
+  the op log (§ context-engine record retire), and every story such a line retired is still
+  `retired` with `status: deprecated`; only a `retired` story has `status: deprecated`; every id
+  in a story's `superseded_by` or `supersedes` is a story, and only a retired story has
+  `superseded_by`. Not read: a retired story's frontmatter after its retire, its amendments, and
+  whether `supersedes` mirrors `superseded_by`; the op log is trusted as written. **G-T1**, every
+  `live` story's id is in the `from` cell of a criterion that is not `retired`, and every
+  `unspecified` story's id is a whole word in an open board item. **G-T2**, every `tested` or
+  `manual` criterion is claimed, every claimed id is a criterion, and every status is planned, tested, manual, deviates or retired. **G-T6**, every
   `from` cell names at least one id, each a story or decision that exists (a criterion's actor is
   its source's). *Why: the chain from goal to test is what makes correct checkable; a link that
   points at nothing looks traced and is not, and a criterion marked tested whose test was deleted
@@ -768,8 +770,9 @@ another session's truth (FRAMEWORK §5.5 rule 2).
    required, `actor` above all, must be given; if it is missing, stop. For a story (the kind
    `[guards] stories` names), stop too unless it passes G-I2 and G-I1 of § context-engine lint:
    `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
-   vocabulary but not `retired` (§ context-engine record retire sets that), and `goals` names at
-   least one goal of the charter, each written `G-n`.
+   vocabulary but not `retired`, there is no `status: deprecated`, `supersedes` or
+   `superseded_by` (§ context-engine record retire writes those), and `goals` names at least one
+   goal of the charter, each written `G-n`.
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
@@ -828,28 +831,36 @@ again to replace a broken record (the wrong goal, actor or status at birth: lint
 name this step). `record retire <id> --by <who> --why "<words>" [--superseded-by <new id>]`.
 1. Say whose call it is. `--by owner` (or `human:<id>`): the owner withdrew it, and `--why` is
    their words, verbatim (or written to a file and passed with `--file`). `--by agent`: only
-   with `--superseded-by`, the story recorded again (§ context-engine record new, the owner's
-   words as they are, the right fields); `--why` says what was wrong. An agent never withdraws
-   owner intent on its own: stop, and ask the owner.
+   with `--superseded-by`, the story recorded again (§ context-engine record new, with the
+   story's body as it is and the right fields; redo a `corrected:` insertion with § context-engine
+   record correct); `--why` says what was wrong. An agent never withdraws owner intent on its
+   own: stop, and ask the owner.
 2. Check before any change. The story's hash must match (as § context-engine record amend). A
-   successor must be a story, not the same one, and not retired. A story an earlier `retire`
-   line of the op log retired is final: stop; to bring its intent back, record a new story. A
-   story already `retired` with no such line was retired by hand: retire it again here, so who
-   and why are recorded.
-3. On the story: set `story_status: retired`, set `status: deprecated` (a new key goes last),
-   and with a successor add it to `superseded_by` (a list). On the successor: add the story to
-   `supersedes`. Then append an amendment as in § context-engine record amend, with the text
-   `retired (by <who>): <why>`, or `retired (by <who>; superseded by <new id>): <why>`.
-4. Log one `retire` line for the story, then one for the successor (table above), and commit
-   them together.
+   successor must be a story, not the same one, and not retired; for `--by agent`, its words as
+   typed must be the story's: the body hash of both (§ The two hashes, corrections undone) is
+   the same. A story an earlier `retire` line of the op log retired is final, even if a hand
+   edit has since undone it: stop; restore it from git, and to bring its intent back, record a
+   new story. A story already `retired` with no such line was retired by hand: retire it here,
+   so who and why are recorded.
+3. On the successor: add the story to `supersedes` (a list; a new key goes last). On the story:
+   set `story_status: retired`, set `status: deprecated`, and with a successor add it to
+   `superseded_by` (a list), each new key going last in that order. Then append an amendment
+   as in § context-engine record amend, with the text `retired (by <who>): <why>`, or
+   `retired (by <who>; superseded by <new id>): <why>`.
+4. Log one `retire` line for the successor, then one for the story (table above), and commit
+   them together. The successor goes first because its change can be made twice: if the story's
+   write fails, the step can be run again.
+5. With a successor, the criteria that came from the story still name it in their `from` cells,
+   and lint G-T1 says the successor has none: add the successor's id to those cells.
 
 **Why:** a story is the owner's words, so retiring one is owner intent, as recording it is: who
 decided and why are kept with the story, under its amendments, and the op log line is what lint
 reads. G-I2 fails a retired story no logged `retire` retired (a hand edit of `story_status`),
 and a story a logged `retire` retired that is no longer `retired` with `status: deprecated`: a
-retire is never undone, so the history stays readable. `status: deprecated` is OKF's word for
-"kept for history, no longer current" (FRAMEWORK §9.3); a retired story serves no goal (G-I1)
-and needs no criterion (G-T1).
+retire is never undone, so the history stays readable. An agent's retire needs the story's own
+words on the successor, so it moves a record and never drops owner intent. `status: deprecated`
+is OKF's word for "kept for history, no longer current" (FRAMEWORK §9.3); a retired story
+serves no goal (G-I1) and needs no criterion (G-T1).
 
 ## Decisions
 

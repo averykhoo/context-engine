@@ -10,8 +10,9 @@ import pytest
 from context_engine import mcp, ops
 from context_engine.cli import main
 from context_engine.errors import Refusal
+from context_engine.store import Store
 
-from test_intent import W, all_reds, chain, edit, make, reds, story, write  # noqa: F401 (chain is a fixture)
+from test_intent import W, chain, edit, make, reds, story, write  # noqa: F401 (chain is a fixture)
 
 OK = {"actor": "owner", "date": "2026-10-13", "story_status": "live", "goals": "[G-1]"}
 STORIES = "docs/stories"
@@ -19,6 +20,10 @@ STORIES = "docs/stories"
 
 def doc(root, sid: str) -> str:
     return next((root / STORIES).glob(f"{sid}-*.md")).read_text(encoding="utf-8")
+
+
+def rel(root, sid: str) -> str:
+    return next((root / STORIES).glob(f"{sid}-*.md")).relative_to(root).as_posix()
 
 
 def oplog(root) -> list[dict]:
@@ -41,11 +46,12 @@ def test_record_retire_writes_the_status_the_links_and_the_reason_in_one_write(c
     line = e.retire("US-1", "it named the wrong goal", by="agent", superseded_by="US-3", **W)
     assert line.startswith("US-1: retired by agent (status: deprecated); superseded by US-3, which now supersedes US-1; the reason is under ## Amendments"), line
     old, new = doc(chain, "US-1"), doc(chain, "US-3")
-    assert "story_status: retired\n" in old and "status: deprecated\n" in old and "superseded_by: [US-3]\n" in old
+    head = old.split("\n---\n", 1)[0]
+    assert head.endswith("story_status: retired\ngoals: [G-1]\nstatus: deprecated\nsuperseded_by: [US-3]"), head  # new keys last, in the runbook's order
     assert old.endswith("\n## Amendments\n\n- **2026-10-13a (claude-code/test):** retired (by agent; superseded by US-3): it named the wrong goal\n")
     assert "supersedes: [US-1]\n" in new and "story_status: live\n" in new and "## Amendments" not in new
     log = [(o["op"], o["id"], o["fields"]) for o in oplog(chain)][-2:]
-    assert log == [("retire", "US-1", ["story_status", "status", "superseded_by", "body"]), ("retire", "US-3", ["supersedes"])]
+    assert log == [("retire", "US-3", ["supersedes"]), ("retire", "US-1", ["story_status", "status", "superseded_by", "body"])]  # the successor first
     assert reds(e, "G-I1") == [] and reds(e, "G-I2") == [] and not [f for f in e.lint() if f.guard == "G-D10" and "US-3" in f.path]
     # the owner withdraws a story: their words, no successor; the goal it served is now served by none
     words = "we don't need this one\nafter all"
@@ -57,44 +63,113 @@ def test_record_retire_writes_the_status_the_links_and_the_reason_in_one_write(c
     assert e.retire("US-3", "a person's call", by="human:avery", **W).startswith("US-3: retired by human:avery")
 
 
-@pytest.mark.criterion("AC-72")
-def test_record_retire_refuses_before_writing_anything(chain):
+@pytest.fixture
+def refusing(chain):
+    """US-1 and US-2 live; US-3 recorded again with US-1's words; US-4 other words; US-5
+    retired by the op; US-6 retired by the op and then made live again by hand; DEC-1."""
     e = make(chain)
     e.record_new("story", "Again", "words", OK, **W)  # US-3, stamped
-    e.retire("US-2", "drop it", by="owner", **W)
+    e.record_new("story", "Other", "other words", OK, **W)  # US-4
+    e.record_new("story", "Gone", "words", OK, **W)  # US-5
+    e.record_new("story", "Undone", "words", OK, **W)  # US-6
+    e.retire("US-5", "drop it", by="owner", **W)
+    e.retire("US-6", "drop it", by="owner", **W)
+    edit(chain, rel(chain, "US-6"), "story_status: retired", "story_status: live")
+    return e
+
+
+REFUSALS = {
+    "by-vocabulary": ({"by": "claude"}, r"`by: claude` is none of `owner`, `human:<id>` or `agent`"),
+    "by-agent-with-a-model": ({"by": "agent (claude-x)", "superseded_by": "US-3"}, r"`by: agent \(claude-x\)` is none of"),
+    "no-reason": ({"why": " \n"}, r"no reason"),
+    "agent-without-successor": ({"by": "agent"}, r"an agent retires a story only when it was recorded again.*Remedy: record it again with `record new story`"),
+    "agent-other-words": ({"by": "agent", "superseded_by": "US-4"}, r"US-4 does not carry US-1's words as typed.*Remedy: record US-1 again with its body as it is"),
+    "self": ({"superseded_by": "US-1"}, r"US-1 cannot supersede itself"),
+    "successor-not-a-story": ({"superseded_by": "DEC-1"}, r"DEC-1 is not a story, so it cannot replace US-1"),
+    "successor-missing": ({"superseded_by": "US-9"}, r"no record US-9"),
+    "successor-retired": ({"superseded_by": "US-5"}, r"US-5 is retired, so it cannot replace US-1"),
+    "not-a-story": ({"id": "DEC-1"}, r"DEC-1 is not a story.*decision supersede"),
+    "already-retired": ({"id": "US-5"}, r"US-5 is already retired \(`record retire` in session 2026-10-13a\).*a retire is final"),
+    "undone-by-hand": ({"id": "US-6"}, r"US-6 was retired by `record retire` in session 2026-10-13a, and a hand edit has since made it `live`.*restore `story_status: retired`"),
+}
+
+
+@pytest.mark.criterion("AC-72")
+@pytest.mark.parametrize("case", sorted(REFUSALS))
+def test_record_retire_refuses_before_writing_anything(refusing, chain, case):
     write(chain, "docs/decisions/DEC-1-x.md", "---\ntype: Decision\nid: DEC-1\ntitle: t\n---\n\nwhy\n")
+    kw, match = REFUSALS[case]
+    args = {"id": "US-1", "why": "a reason", "by": "owner", **kw}
     before = snapshot(chain)
-    for kw, match in [
-        ({"by": "claude"}, r"`by: claude` is none of `owner`, `human:<id>` or `agent`"),
-        ({"by": "agent (claude-x)", "superseded_by": "US-3"}, r"is none of"),
-        ({"why": " \n"}, r"no reason"),
-        ({"by": "agent"}, r"an agent retires a story only when it was recorded again.*Remedy: record it again with `record new story`"),
-        ({"superseded_by": "US-1"}, r"US-1 cannot supersede itself"),
-        ({"superseded_by": "DEC-1"}, r"DEC-1 is not a story, so it cannot replace US-1"),
-        ({"superseded_by": "US-9"}, r"no record US-9"),
-        ({"superseded_by": "US-2"}, r"US-2 is retired, so it cannot replace US-1"),
-        ({"id": "DEC-1"}, r"DEC-1 is not a story.*decision supersede"),
-        ({"id": "US-2"}, r"US-2 is already retired \(`record retire` in session 2026-10-13a\).*a retire is final"),
-    ]:
-        args = {"id": "US-1", "why": "a reason", "by": "owner", **kw}
-        with pytest.raises(Refusal, match=match):
-            e.retire(args.pop("id"), args.pop("why"), **args, **W)
-        assert snapshot(chain) == before, kw
-    edit(chain, next((chain / STORIES).glob("US-3-*.md")).relative_to(chain).as_posix(), "words", "other words")
+    with pytest.raises(Refusal, match=match):
+        refusing.retire(args.pop("id"), args.pop("why"), **args, **W)
+    assert snapshot(chain) == before
+
+
+@pytest.mark.criterion("AC-72")
+def test_record_retire_refuses_a_hash_mismatch_a_record_that_fails_its_schema_and_a_repo_with_no_stories(chain):
+    e = make(chain)
+    e.record_new("story", "Again", "words", OK, **W)  # US-3, stamped
+    edit(chain, rel(chain, "US-3"), "words", "other words")
     before = snapshot(chain)
     with pytest.raises(Refusal, match=r"US-3 body above `## Amendments` changed since it was stamped"):
         e.retire("US-3", "a reason", by="owner", **W)
     assert snapshot(chain) == before
-    with pytest.raises(Refusal, match=r"no kind holds the stories.*Remedy: set `stories = \"story\"`"):
+    # the story fails its schema once changed, so neither record is written, not even the successor
+    write(chain, "docs/stories/US-4-x.md", "---\ntype: Story\nid: US-4\nactor: owner\ndate: 2026-10-13\nstory_status: live\ngoals: [G-1]\n---\n\nwords\n")
+    write(chain, "docs/stories/US-5-x.md", "---\ntype: Story\nid: US-5\ntitle: t\nactor: owner\ndate: 2026-10-13\nstory_status: live\ngoals: [G-1]\n---\n\nwords\n")
+    before = snapshot(chain)
+    with pytest.raises(Refusal, match=r"US-4-x\.md has no `title`"):
+        e.retire("US-4", "a reason", by="agent", superseded_by="US-5", **W)
+    assert snapshot(chain) == before
+    with pytest.raises(Refusal, match=r"no kind holds the stories.*Remedy: set `stories` in \[guards\] of context\.toml to the kind holding the stories"):
         make(chain, stories="", charter="").retire("US-1", "a reason", by="owner", **W)
 
 
 @pytest.mark.criterion("AC-72")
-def test_a_story_is_never_born_retired(chain):
-    with pytest.raises(Refusal, match=r"the story would be born `retired`, which only `record retire` sets"):
-        make(chain).record_new("story", "Born retired", "words", {**OK, "story_status": "retired"}, **W)
+def test_a_retire_whose_second_write_fails_is_completed_by_a_retry(chain, monkeypatch):
+    e = make(chain)
+    e.record_new("story", "Again", "words", OK, **W)  # US-3
+    real = Store._write
+
+    def fails_on_us1(self, path, d):
+        if path.name.startswith("US-1-"):
+            raise Refusal("could not replace docs/stories/US-1-words.md", "close whatever has the file open, then retry")
+        return real(self, path, d)
+
+    monkeypatch.setattr(Store, "_write", fails_on_us1)
+    with pytest.raises(Refusal, match="could not replace"):
+        e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)
+    assert "supersedes: [US-1]" in doc(chain, "US-3") and "story_status: live" in doc(chain, "US-1")  # half done: the successor only
+    monkeypatch.setattr(Store, "_write", real)
+    e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)  # the retry the remedy asks for
+    assert "supersedes: [US-1]\n" in doc(chain, "US-3") and "superseded_by: [US-3]" in doc(chain, "US-1")
+    assert reds(e, "G-I2") == []
+
+
+@pytest.mark.criterion("AC-72")
+def test_the_store_amends_only_append_only_records_and_never_with_nothing(chain):
+    e = make(chain)
+    write(chain, "tasks/CE-1-x.md", "---\ntype: Task\nid: CE-1\ntitle: t\npri: LATER\nstate: open\n---\n\nbody\n")
+    with pytest.raises(Refusal, match=r"CE-1 is a replaced record.*only append-only records take amendments"):
+        e.store.update(["CE-1"], lambda recs: {}, op="x", amend={"CE-1": "why"}, **W)
+    with pytest.raises(Refusal, match=r"empty amendment"):
+        e.store.update(["US-1"], lambda recs: {}, op="x", amend={"US-1": " \n"}, **W)
+    assert oplog(chain) == []
+
+
+@pytest.mark.criterion("AC-72")
+@pytest.mark.parametrize("field, value, match", [
+    ("story_status", "retired", r"would be born `retired`, which only `record retire` sets"),
+    ("status", "deprecated", r"would be born with `status: deprecated`, which only `record retire` writes"),
+    ("superseded_by", "[US-1]", r"would be born with `superseded_by`, which only `record retire` writes"),
+    ("supersedes", "[US-1]", r"would be born with `supersedes`, which only `record retire` writes"),
+], ids=["retired", "deprecated", "superseded_by", "supersedes"])
+def test_a_story_is_never_born_retired_deprecated_or_linked(chain, field, value, match):
+    with pytest.raises(Refusal, match=match):
+        make(chain).record_new("story", "Born", "words", {**OK, field: value}, **W)
     assert sorted(p.name for p in (chain / STORIES).iterdir()) == ["US-1-words.md", "US-2-words.md"]
-    assert make(chain, off=["G-I2"]).record_new("story", "Off", "words", {**OK, "story_status": "retired"}, **W).id == "US-3"
+    assert make(chain, off=["G-I2"]).record_new("story", "Off", "words", {**OK, field: value}, **W).id == "US-3"
 
 
 # -- G-I2 on retires -----------------------------------------------------------------------
@@ -116,11 +191,17 @@ def test_g_i2_reds_a_retire_made_or_undone_by_hand_and_a_story_link_that_resolve
     assert reds(e, "G-I2") == ["docs/stories/US-3-words.md: US-3 was retired by `record retire` in session 2026-10-13a, but its frontmatter now says `status: `, not `deprecated`"]
     edit(chain, "docs/stories/US-3-words.md", "story_status: retired", "story_status: retired\nstatus: deprecated\nsuperseded_by: [US-9]")
     edit(chain, "docs/stories/US-2-words.md", "goals: [G2]", "goals: [G2]\nsuperseded_by: [US-1]\nsupersedes: [DEC-1]")
+    got = "\n".join(reds(e, "G-I2"))
+    assert "US-3 `superseded_by` names US-9, which is no story" in got and "US-2 `supersedes` names DEC-1, which is no story" in got
+    assert "US-2 has `superseded_by` but is `live`, not retired" in got
     assert reds(e, "G-I2") == [
         "docs/stories/US-2-words.md: US-2 `supersedes` names DEC-1, which is no story",
         "docs/stories/US-2-words.md: US-2 has `superseded_by` but is `live`, not retired",
         "docs/stories/US-3-words.md: US-3 `superseded_by` names US-9, which is no story",
     ]
+    edit(chain, "docs/stories/US-2-words.md", "superseded_by: [US-1]\nsupersedes: [DEC-1]", "status: deprecated")  # deprecated, not retired
+    edit(chain, "docs/stories/US-3-words.md", "superseded_by: [US-9]\n", "")
+    assert reds(e, "G-I2") == ["docs/stories/US-2-words.md: US-2 is `status: deprecated` but `live`: only a retired story is deprecated, so readers would skip it as history"]
 
 
 @pytest.mark.criterion("AC-73")
@@ -139,6 +220,18 @@ def test_the_g_i1_and_g_i2_remedies_name_record_retire_and_following_them_clears
     assert reds(e, "G-I1") == [] and reds(e, "G-I2") == []
 
 
+@pytest.mark.criterion("AC-73")
+def test_g_t1_tells_a_successor_to_take_over_the_criteria_of_the_story_it_replaced(chain):
+    e = make(chain)
+    e.record_new("story", "Again", "words", OK, **W)  # US-3
+    e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)
+    t1 = [f for f in e.lint() if f.guard == "G-T1"]
+    assert [f.message for f in t1] == ["US-3 is live but no criterion comes from it"]
+    assert t1[0].remedy.startswith("it replaced US-1: add US-3 to the `from` cell of the criteria that come from US-1 in docs/criteria.md"), t1[0].remedy
+    edit(chain, "docs/criteria.md", "| AC-1 | a | US-1 | tested |", "| AC-1 | a | US-1, US-3 | tested |")
+    assert reds(e, "G-T1") == []
+
+
 # -- the entry points and the commit -------------------------------------------------------
 
 
@@ -154,14 +247,14 @@ def test_the_cli_and_the_mcp_tool_retire_and_commit_by_path(chain, capsys):
     git(chain, "add", "-A")
     git(chain, "commit", "-q", "-m", "base")
     (chain / "wip.md").write_text("untracked work\n", encoding="utf-8")
-    (chain / "words.md").write_bytes(b"the owner's words\r\nover two lines\r\n")  # as an editor on Windows saves it
+    (chain / "words.md").write_bytes("﻿the owner's words\r\nover two lines\r\n".encode())  # as PowerShell 5.1 saves it: a BOM, CRLF
     argv = ["--root", str(chain), "--session", "2026-10-13a", "--actor", "claude-code/test"]
     assert main([*argv, "record", "retire", "US-2", "--by", "owner", "--file", str(chain / "words.md")]) == 0
     out = capsys.readouterr().out.strip()
     sha = git(chain, "rev-parse", "--short", "HEAD").strip()
     assert out.endswith(f"; committed {sha}"), out
     assert sorted(git(chain, "show", "--name-only", "--format=", "HEAD").split()) == ["docs/stories/US-2-words.md", "ops.jsonl"]
-    assert doc(chain, "US-2").endswith("retired (by owner): the owner's words\n  over two lines\n")
+    assert doc(chain, "US-2").endswith("**2026-10-13a (claude-code/test):** retired (by owner): the owner's words\n  over two lines\n")
     assert git(chain, "log", "-1", "--format=%s").strip() == "engine: retire US-2"
     state = ops.Caller("2026-10-13a", "claude-code/test")
     line = mcp.make_tool(ops.OPS["record_new"], chain, state)(kind="story", title="Again", body="words", fields=OK)

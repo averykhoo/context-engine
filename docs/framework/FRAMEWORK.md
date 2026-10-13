@@ -461,19 +461,29 @@ The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words g
 `record.retire(id, why, by, superseded_by)` (CLI `record retire`).
 - **Whose call:** `by: owner` (or `human:<id>`), with their words verbatim as `why`; or `by:
   agent`, only for a story recorded again to replace a broken record (the wrong goal, actor or
-  status at birth), named in `superseded_by`. An agent never withdraws owner intent on its own.
+  status at birth), named in `superseded_by`, which must carry the story's words as typed (the
+  body above `## Amendments`, logged corrections undone; a correction is redone on the new
+  record). An agent never withdraws owner intent on its own.
 - **What it writes, in one write:** `story_status: retired` and the derived `status: deprecated`
   (§9.3); `superseded_by` on the story and `supersedes` on its successor, both directions as
-  `decision.supersede` writes them; and the reason as an amendment (`retired (by <who>; superseded
-  by <id>): <why>`), so the why lives with the story; one op log line per record.
+  `decision.supersede` writes them; and the reason as an amendment (`retired (by <who>): <why>`,
+  or `retired (by <who>; superseded by <id>): <why>`), so the why lives with the story. One op log
+  line per record, the successor's first: its `supersedes` is idempotent, so a write that fails
+  between the two is completed by a retry.
 - **It refuses** a successor that is not a story, is the story itself or is retired; a story
-  whose hash does not match; and a story a logged retire already retired.
+  whose hash does not match; and a story a logged retire retired, even when a hand edit has
+  since undone it.
 - **A retire is final.** No operation undoes it: to bring the intent back, record a new story. A
-  story retired by hand (no logged retire) may be retired again by the operation, which records
-  who and why. `record.new` refuses a story born `retired`.
-- **Lint (G-I2)** fails a retired story no logged retire retired, and a story a logged retire
-  retired that is no longer `retired` with `status: deprecated`. A retired story is history: G-I1,
-  G-I2's provenance checks and G-T1 do not read it.
+  story retired by hand (no logged retire) may be retired by the operation, which records who
+  and why; an adopting repo's stories retired before the engine are retired so, with the owner's
+  words from the one batched answer of §11.4. `record.new` refuses a story born `retired`, with
+  `status: deprecated`, or with a story link (`supersedes`, `superseded_by`: lists of story ids,
+  written only by `record.retire`).
+- **Lint (G-I2)** fails a retired story no logged retire retired, a story a logged retire retired
+  that is no longer `retired` with `status: deprecated`, and a story that is deprecated but not
+  retired. A retired story is history: G-I1, G-I2's provenance checks and G-T1 do not read it.
+  When a live story replaced one that criteria come from, G-T1's remedy says to add it to their
+  `from` cells.
 
 PRD sections are not separate files, so a PRD-form repo maps stories onto PRD sections through
 `context.toml` and keeps G-D10 off for them until it adopts story files.
@@ -1665,12 +1675,15 @@ Decisions as records follow once the core holds.
   leads one row, in the one form (P3).
 - **G-I2:** every story that is not retired has an actor, a date and a status from the
   vocabulary. `unconfirmed` requires `actor: agent (reconstructed from …)`. `record.new` of a
-  story refuses what G-I2 and G-I1 would fail, by the same checks, and a story born `retired`.
-  Every retired story was retired by `record.retire` (a logged retire, so who and why are
-  recorded), and every story it retired is still `retired` with `status: deprecated`; each id in
-  a story's `superseded_by` or `supersedes` is a story, and only a retired story has
-  `superseded_by`. Not checked: a hand edit between the standing statuses (no operation owns
-  those moves, and the op log records which keys changed, not their values).
+  story refuses what G-I2 and G-I1 would fail, by the same checks, and a story born with what
+  only `record.retire` writes (§3.2). Every retired story was retired by `record.retire` (a
+  logged retire, so who and why are recorded), and every story it retired is still `retired`
+  with `status: deprecated`; only a retired story is deprecated; each id in a story's
+  `superseded_by` or `supersedes` is a story, and only a retired story has `superseded_by`. Not
+  checked: a hand edit between the standing statuses (no operation owns those moves, and the op
+  log records which keys changed, not their values), a retired story's frontmatter after the
+  retire (history), that the retire's amendment is still there, that `supersedes` mirrors
+  `superseded_by`, and an op log line written by hand (trusted as written, as G-W7 trusts it).
 
 The intent chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,
@@ -1990,7 +2003,9 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   becoming a refusal.
 - **Back-filled stories are reconstructions, never the owner's words:**
   `actor: agent (reconstructed from D-n / PRD § / commit …)`, `story_status: unconfirmed`. The
-  owner confirms them through **one batched digest question**, not one question per story.
+  owner confirms them through **one batched digest question**, not one question per story. A
+  story the repo had already retired by hand is red under G-I2 until `record.retire --by owner`
+  retires it, with the owner's words from that same batched answer (§3.2).
 - Adopt structural changes (board size, ledger rotation) **by trial**, with a single
   revertible cutover commit.
 - **Closed-task directories may migrate:** `tasks/closed/*` moves into the flat `tasks/` once
