@@ -28,3 +28,9 @@ Before CE-7, so adhoc adopts this shape and does not migrate twice.
 ## Log
 
 - 2026-10-13a (claude-code/claude-opus-5-5): docs checked: docs/evidence/claude-code-hooks-2026-10-13.md. In-repo @-imports load at launch with no prompt (4 hops max; missing target not documented: probe it). SessionStart stdout reaches context on startup/resume/clear/compact/fork, is not trust-gated, and cannot block (a failing hook is quiet, so keep the orient fallback). Project allow rules need workspace trust. ultracode and workflowSizeGuideline are real settings; the inline keyword works only in prompts the owner types.
+
+## Read first
+
+- US-17 (the owner's words) and DEC-30 (grants stay in owner-loaded files; asking may come from MCP)
+- `docs/evidence/claude-code-hooks-2026-10-13.md`: what Claude Code documents about @-imports, SessionStart hooks, MCP instructions, subagents and permissions
+- `src/context_engine/bootstrap.py` (the inline contract block today) and G-D0 in `src/context_engine/working.py`
