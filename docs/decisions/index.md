@@ -76,6 +76,9 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-25](DEC-25-if-the-mcp-server-is-not-set-up-the-agent-sets.md): If the MCP server is not set up, the agent sets it up, falls back to the CLI, and asks the owner to restart *(owner, 2026-10-10)*
 - [DEC-26](DEC-26-framework-md-holds-the-framework-only-history.md): FRAMEWORK.md holds the framework only; history and owner answers archived *(owner, 2026-10-11)*
 - [DEC-27](DEC-27-inv-n-is-the-id-prefix-for-residual-risk.md): INV-n is the id prefix for residual-risk register entries *(claude-code/claude-opus-5-5, 2026-10-12)*
+- [DEC-28](DEC-28-ce-7-imports-adhoc-d-27-as-built-narrowed-by-d.md): CE-7 imports adhoc D-27 as BUILT, narrowed by D-29 *(owner, 2026-10-13)*
+- [DEC-29](DEC-29-abandoning-a-stale-session-stub-stays-a-by-hand.md): Abandoning a stale session stub stays a by-hand rule for now; the window moves to 3 later sessions counted from last activity *(owner, 2026-10-13)*
+- [DEC-30](DEC-30-ultracode-stays-a-judgement-grant-in-the.md): Ultracode stays a judgement grant in the contract, not the setting; the MCP instructions tell agents to ask for it when it would help *(owner, 2026-10-13)*
 
 ## REJECTED
 
