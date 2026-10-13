@@ -4,13 +4,15 @@ id: CE-32
 title: "decision set: an op for a decision's own frontmatter (decision_status, reopen_if, tags)"
 brief: No op changes a decision's status, reopen_if or tags; Engine.set refuses decisions, so they are hand-edited
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-12d
 created: 2026-10-12
 moved: 2026-10-13a
 updated: 2026-10-13a
 review: [write-op, shipped]
+status: deprecated
+closed: 2026-10-13a
 ---
 
 Found reviewing CE-5 (2026-10-12d). `working.py::Engine.set` refuses a decision ("not a board item"), and `decision supersede` / `decision link` touch only their own fields. So moving a decision PROVISIONAL -> BUILT, adding `reopen_if:` to a REJECTED one, or fixing `tags` has no operation. In 2026-10-12d DEC-15 and DEC-16 had `tags` fixed by hand, with hand-written op-log lines (docs/ledger/ops.jsonl, op `set`, fields [tags]) recording an op the engine cannot perform for that kind. The op log is append-only, so those lines stay; this row closes the gap. Shape to decide: a `decision set` (or `record set` over append-only kinds) that takes only frontmatter keys, never body_sha/id/type, refuses `decision_status: SUPERSEDED` (that is `decision supersede`), regenerates the index, and has a manual-mode section.
@@ -35,3 +37,4 @@ E: mirrors `task set` (same `--set`/`--unset` shape, same one-line return, op `s
 ## Log
 
 - 2026-10-13a (claude-code/claude-opus-5-5): built: `decision set <id> --set k=v --unset k` (working.py::Engine.decision_set over Store.set, refusals in working.py::DECISION_OWNED; ops.py::decision_set; manual-mode § decision set; FRAMEWORK §6.5, §8.0.2; AC-53). Shape: decisions only, not `record set` (the refusals are decision-specific); stories' `story_status` still has no op. Awaiting review.
+- 2026-10-13a (claude-code/claude-opus-5-5): closed: decision set built and reviewed: refuses links, provenance, verified, SUPERSEDED moves and reopen_if off REJECTED (9a30916)
