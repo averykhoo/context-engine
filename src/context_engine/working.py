@@ -57,11 +57,11 @@ _FIXED = "it is fixed at birth (provenance of the decision); note a correction w
 DECISION_OWNED = {
     "status": "use `decision supersede <id> <new>`: OKF status is derived from SUPERSEDED",
     "answers": "it is written by `ask answer` and never changes",
-    "actor": _FIXED,
-    "decided": _FIXED,
-    "session": _FIXED,
+    **{k: _FIXED for k in ("actor", "decided", "session", "attribution", "imported_from", "generated")},
+    "verified": "an owner's endorsement is the owner's words, which no operation can read: record them with `record amend <id> \"<the owner's words>\"`",
     **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
-    **{k: "use `decision link <id> <target> --rel <field>`; no operation removes a link yet" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by")},
+    "narrowed_by": "it is the backlink `relaxes` writes: run `decision link <other> <id> --rel relaxes` on the decision that narrows this one",
+    **{k: "use `decision link <id> <target> --rel <field>`; no operation removes a link yet" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by", "narrowed_by")},
 }
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
@@ -813,8 +813,9 @@ class Engine:
 
     def decision_set(self, rid: str, raw: dict[str, str], *, session: str, actor: str, unset: tuple[str, ...] = ()) -> str:
         """Set or unset a decision's own frontmatter (`decision.set`, CE-32): `decision_status`
-        (never to or from SUPERSEDED), `reopen_if`, `tags`, `title`, `description` and keys no
-        operation owns. Links, provenance and `answers` belong to other operations."""
+        (never to or from SUPERSEDED), `reopen_if` (a REJECTED decision only), `tags`, `title`,
+        `description` and keys no operation owns. Links, provenance and `answers` belong to other
+        operations."""
         self._check(session, actor)
         self._is_decision(rid)
         owned = [k for k in (*raw, *unset) if k in DECISION_OWNED]
@@ -830,6 +831,13 @@ class Engine:
             if was == "SUPERSEDED" and (D.STATUS_KEY in changes or D.STATUS_KEY in unset):
                 later = ", ".join(D.as_list(rec.doc.get("superseded_by"))) or "<DEC>"
                 raise Refusal(f"{rid} is SUPERSEDED by {later}, so its status is history", f"a superseded decision stays superseded; to bring it back, record a new decision and `decision supersede {later} <new>`")
+            if "reopen_if" in changes or D.STATUS_KEY in changes or D.STATUS_KEY in unset:
+                status = None if D.STATUS_KEY in unset else changes.get(D.STATUS_KEY, rec.doc.get(D.STATUS_KEY))
+                reopen = None if "reopen_if" in unset else changes.get("reopen_if", rec.doc.get("reopen_if"))
+                if reopen not in (None, "") and str(status) != "REJECTED":
+                    if "reopen_if" in changes:
+                        raise Refusal(f"`reopen_if` is for a REJECTED decision, and {rid} would be {status}", "set it with `decision_status=REJECTED`; a live decision's caveat is an amendment (`record amend`)")
+                    raise Refusal(f"{rid} carries `reopen_if`, which only a REJECTED decision has", "unset it in the same call (`--unset reopen_if`): it named what would reopen a rejection that no longer stands")
 
         self.store.set(rid, changes, session=session, actor=actor, unset=unset, check=check)
         return f"{rid}: set {_one([*raw, *unset])}"

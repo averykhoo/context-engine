@@ -191,10 +191,10 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
     rid = dec(eng, "Provisional call", status="PROVISIONAL")
     before = eng.store.get(rid).doc
     sha, body = before.get("body_sha"), before.body
-    out = eng.decision_set(rid, {"decision_status": "BUILT", "tags": "storage, index", "reopen_if": "plain files get slow"}, **W)
+    out = eng.decision_set(rid, {"decision_status": "REJECTED", "tags": "storage, index", "reopen_if": "plain files get slow"}, **W)
     assert out == f"{rid}: set decision_status, tags, reopen_if"
     d = eng.store.get(rid).doc
-    assert (d.get("decision_status"), d.get("tags"), d.get("reopen_if")) == ("BUILT", ["storage", "index"], "plain files get slow")
+    assert (d.get("decision_status"), d.get("tags"), d.get("reopen_if")) == ("REJECTED", ["storage", "index"], "plain files get slow")
     assert (d.get("body_sha"), d.body) == (sha, body)  # the words and their stamp are untouched
     sets = [o for o in ops(eng) if o["op"] == "set"]
     assert [(o["id"], o["fields"], o["session"], o["actor"]) for o in sets] == [(rid, ["decision_status", "tags", "reopen_if"], S, ACTOR)]
@@ -218,10 +218,14 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
         ("actor", "fixed at birth"),
         ("decided", "fixed at birth"),
         ("session", "fixed at birth"),
+        ("attribution", "fixed at birth"),
+        ("imported_from", "fixed at birth"),
+        ("generated", "fixed at birth"),
+        ("verified", "record amend"),
         ("supersedes", "decision supersede"),
         ("superseded_by", "decision supersede"),
         ("relaxes", "decision link"),
-        ("narrowed_by", "decision link"),
+        ("narrowed_by", "--rel relaxes"),
         ("creates", "decision link"),
         ("amends", "decision link"),
         ("retires", "decision link"),
@@ -262,6 +266,37 @@ def test_decision_set_never_marks_or_unmarks_superseded_and_names_the_operation_
             eng.decision_set(other, {"tags": "x"}, **W)
     with pytest.raises(Refusal, match="has decision_status 'MAYBE'"):
         eng.decision_set(b, {"decision_status": "MAYBE"}, **W)  # the kind's enum still holds
+
+
+@pytest.mark.criterion("AC-53")
+def test_decision_set_narrowed_by_remedy_is_a_command_that_writes_it(eng):
+    a, b = dec(eng, "Broad rule"), dec(eng, "Narrower rule")
+    with pytest.raises(Refusal, match=rf"run `decision link <other> <id> --rel relaxes`"):
+        eng.decision_set(a, {"narrowed_by": b}, **W)
+    # the remedy, followed through the CLI on the decision that narrows `a`, writes the backlink
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "link", b, a, "--rel", "relaxes"]) == 0
+    assert eng.store.get(a).doc.get("narrowed_by") == [b]
+
+
+@pytest.mark.criterion("AC-53")
+def test_decision_set_allows_reopen_if_only_on_a_rejected_decision(eng):
+    built = dec(eng, "Built call")
+    path = eng.store.get(built).path
+    before = path.read_bytes()
+    with pytest.raises(Refusal, match=rf"`reopen_if` is for a REJECTED decision, and {built} would be BUILT"):
+        eng.decision_set(built, {"reopen_if": "never"}, **W)
+    assert path.read_bytes() == before
+    rid = dec(eng, "Tried and dropped", status="PROVISIONAL")
+    eng.decision_set(rid, {"decision_status": "REJECTED", "reopen_if": "it gets slow"}, **W)  # together: allowed
+    eng.decision_set(rid, {"tags": "storage"}, **W)  # a call that touches neither still writes
+    before = path.read_bytes(), eng.store.get(rid).path.read_bytes()
+    with pytest.raises(Refusal, match=r"--unset reopen_if"):
+        eng.decision_set(rid, {"decision_status": "PROVISIONAL"}, **W)  # moving off REJECTED keeps a stale reopen_if
+    assert (path.read_bytes(), eng.store.get(rid).path.read_bytes()) == before
+    eng.decision_set(rid, {"decision_status": "PROVISIONAL"}, unset=("reopen_if",), **W)
+    d = eng.store.get(rid).doc
+    assert (d.get("decision_status"), d.get("reopen_if")) == ("PROVISIONAL", None)
+    assert eng.store.lint() == []
 
 
 @pytest.mark.criterion("AC-53")

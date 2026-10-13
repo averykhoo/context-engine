@@ -764,17 +764,24 @@ one lock. `status: deprecated` is OKF's word for "kept for history, no longer cu
 
 ### context-engine decision set
 
-Set or unset a decision's own frontmatter keys: `decision_status`, `reopen_if` (for a REJECTED
-decision: what would justify reopening it), `tags`, `title`, `description`, and any key no
+Set or unset a decision's own frontmatter keys: `decision_status`, `reopen_if` (a REJECTED
+decision only: what would justify reopening it), `tags`, `title`, `description`, and any key no
 operation owns. Values take the kind's declared types, as in § context-engine task set
 (`tags=a, b` is a list; an empty value means null). Refuse, and write nothing, when:
 - the key is `type`, `id` or `body_sha` (engine-owned, never changed);
 - the key is `status`, `supersedes` or `superseded_by`: use `decision supersede`, which writes
   both directions and the derived OKF status;
-- the key is a link field (`relaxes`, `narrowed_by`, `creates`, `amends`, `retires`, `tasks`,
-  `code`, `refs`): use `decision link`; no operation removes a link yet;
-- the key is `answers` (written once by `ask answer`) or `actor`, `decided` or `session` (who
-  decided, when, and in which session are fixed at birth; note a correction with `record amend`);
+- the key is a link field (`relaxes`, `creates`, `amends`, `retires`, `tasks`, `code`, `refs`):
+  use `decision link`; no operation removes a link yet;
+- the key is `narrowed_by`: it is the backlink `relaxes` writes, so run `decision link <other>
+  <id> --rel relaxes` on the decision that narrows this one;
+- the key is `answers` (written once by `ask answer`), or provenance: `actor`, `decided`,
+  `session`, `attribution`, `imported_from` or `generated` (who decided, when, in which session
+  and from what source are fixed at birth; note a correction with `record amend`);
+- the key is `verified` (the owner endorsed it): an endorsement is the owner's words, so record
+  them with `record amend <id> "<the owner's words>"`;
+- the key is `reopen_if` and the decision would not be REJECTED after the change, or the change
+  moves a decision off REJECTED and keeps its `reopen_if` (unset it in the same call);
 - the new `decision_status` is `SUPERSEDED`: use `decision supersede <id> <new>`;
 - the decision is already SUPERSEDED and the change touches `decision_status`: a superseded
   decision stays superseded; to bring it back, record a new decision and supersede the one that

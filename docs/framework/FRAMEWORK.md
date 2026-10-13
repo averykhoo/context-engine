@@ -1039,9 +1039,10 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 kinds, and so is `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
 directions under one lock and derives OKF `status`), `decision.set(id, fields, unset)` (a
 decision's own keys: `decision_status`, `reopen_if`, `tags`, `title`, `description`; it refuses
-`SUPERSEDED`, any status change on a superseded decision, the link fields, `status`, `answers`, and
-the provenance `actor`, `decided` and `session`, so it never writes half a link or re-attributes a
-decision; CE-32), `decision.link(id, target, rel)` (a task,
+`SUPERSEDED`, any status change on a superseded decision, `reopen_if` on a decision that is not
+REJECTED, the link fields, `status`, `answers`, the provenance `actor`, `decided`, `session`,
+`attribution`, `imported_from` and `generated`, and `verified` (an endorsement is owner words), so
+it never writes half a link or re-attributes a decision; CE-32), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
 backlink too), `decision.find(text, tag, status, links_to)` (one-line rows),
 `decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
