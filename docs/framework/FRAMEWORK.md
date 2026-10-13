@@ -715,7 +715,10 @@ into the flat directory once the schema carries `state` (§11.4).
 - **Each question states:**
   - the question, answerable in one line;
   - why it is owner-only (the "who decides" test, P8);
-  - the options, with the agent's recommendation;
+  - the options, with the agent's **recommendation**: one the agent holds with reasonable
+    confidence, and the why in a line. Reach it only as far as is cheap: reading, a quick
+    probe, a short subagent. Not a long `fable` session, and not building and testing a
+    feature to find out. Where no recommendation is cheap, say so and why;
   - what it blocks: the blocked tasks declare `deps: [ASK-n]`, and closing the question
     unblocks them.
 - **Rationing:**

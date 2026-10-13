@@ -189,6 +189,12 @@ def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     assert eng.read_ledger().get(key).receipt("asked") == q.id  # carried from the stub
 
 
+def test_a_new_question_asks_for_a_recommendation(eng):
+    key = started(eng)
+    q = eng.ask_new("Pick a colour?", **kw(key))
+    assert "**Recommendation:**" in q.path.read_text(encoding="utf-8")
+
+
 @pytest.mark.criterion("AC-11")
 def test_close_refuses_while_an_overdue_question_is_unraised(eng):
     key = started(eng)

@@ -608,7 +608,7 @@ class Engine:
         extra: dict[str, Any] = {"last_asked": None}
         if blocks:
             extra["blocks"] = list(blocks)
-        text = body if body.strip() else f"**Question:** {title}\n\n**Why owner-only:**\n\n**Options:**\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
+        text = body if body.strip() else f"**Question:** {title}\n\n**Why owner-only:**\n\n**Options:**\n\n**Recommendation:** <the option, and why in a line; or \"none cheap: <why>\" (FRAMEWORK §5.3)>\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
         return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra)
 
     def _is_question(self, rid: str) -> None:

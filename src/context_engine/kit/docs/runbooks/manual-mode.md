@@ -574,6 +574,8 @@ As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null)
 
 **Options:**
 
+**Recommendation:** <the option, and why in a line; or "none cheap: <why>" (FRAMEWORK §5.3)>
+
 **Blocks:** <ids or none>
 
 ## Log
