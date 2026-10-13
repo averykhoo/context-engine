@@ -31,3 +31,5 @@ PROVISIONAL until the owner confirms, which the board does not block on.
 - **2026-10-08b (owner, DEC-10):** this repo is dogfooded first (CE-8); adhoc stays the first
   *other* repo, but its trial (CE-7) now waits on CE-8. The choice of adhoc is still
   PROVISIONAL.
+
+- **2026-10-13b (claude-code/claude-opus-5-5):** Owner, 2026-10-13b (confirms adhoc): "Adhoc is a good repo yes, we'll do a quick trial there, but I'm hoping to get this into the audio workspace repo soon, since that's a better testing ground"

@@ -80,6 +80,9 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-29](DEC-29-abandoning-a-stale-session-stub-stays-a-by-hand.md): Abandoning a stale session stub stays a by-hand rule for now; the window moves to 3 later sessions counted from last activity *(owner, 2026-10-13)*
 - [DEC-30](DEC-30-ultracode-stays-a-judgement-grant-in-the.md): Ultracode stays a judgement grant in the contract, not the setting; the MCP instructions tell agents to ask for it when it would help *(owner, 2026-10-13)*
 - [DEC-31](DEC-31-a-session-closes-by-default-when-its-requested.md): A session closes by default when its requested work is done *(owner, 2026-10-13)*
+- [DEC-32](DEC-32-the-sessionstart-hook-goes-in-the-machine-local.md): The SessionStart hook goes in the machine-local settings file; init merges it into an existing one after asking *(owner, 2026-10-13)*
+- [DEC-33](DEC-33-ce-25-design-criteria-are-rows-one-id-form-a-z.md): CE-25 design: criteria are rows; one id form [A-Z]+-[1-9][0-9]* so goals become G-n; a criterion's actor is its source's; draft planned criteria for US-10, US-12, US-13; split CE-25, guards first *(owner, 2026-10-13)*
+- [DEC-34](DEC-34-every-owner-question-carries-a-recommendation.md): Every owner question carries a recommendation, when one is cheap to reach *(owner, 2026-10-13)*
 
 ## REJECTED
 

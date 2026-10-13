@@ -4,14 +4,17 @@ id: ASK-3
 title: 'CE-25 design: criteria home, goal id form, G-T6 actor, G-T1 landing red, split'
 brief: Five design calls CE-25's review left to the owner; each has a recommendation
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-13a
 created: 2026-10-13
 moved: 2026-10-13a
-updated: 2026-10-13a
-last_asked: 2026-10-13a
+updated: 2026-10-13b
+last_asked: 2026-10-13b
 blocks: [CE-25]
+status: deprecated
+closed: 2026-10-13b
+answered: {on: 2026-10-13, session: 2026-10-13b, decision: DEC-33}
 ---
 
 Raised in chat 2026-10-13a from CE-25's design review (commit 2c7b951). The session's recommendation follows each question.
@@ -21,3 +24,7 @@ Raised in chat 2026-10-13a from CE-25's design review (commit 2c7b951). The sess
 3. **G-T6 actor match:** `docs/criteria.md` has no actor column. Add one, or amend FRAMEWORK §8.2 so a criterion's actor is its source's and G-T6 checks only that references resolve? Recommended: the actor comes from the source.
 4. **G-T1 lands red:** US-10, US-12 and US-13 are live with no criterion. Draft planned criteria for them, or mark them `unspecified` with a board task (needs a new op for a story's frontmatter)? Recommended: draft planned criteria.
 5. **Split CE-25?** (a) the five guards (G-I1, G-I2, G-T1, G-T2, G-T6; the §11.1 minimum-set ones among them), (b) the criterion write op and intake steps. Recommended: split; (a) first, which drops the `write-op` trigger from it.
+
+## Log
+
+- 2026-10-13b (claude-code/claude-opus-5-5): answered by the owner: DEC-33
