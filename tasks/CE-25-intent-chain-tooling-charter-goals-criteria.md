@@ -4,13 +4,15 @@ id: CE-25
 title: 'Intent-chain guards: G-I1, G-I2, G-T1, G-T2, G-T6, and goal ids as G-n'
 brief: The guards half of the DEC-33 split; lands with planned criteria for US-10, US-12, US-13 so no commit is red
 pri: NEXT
-state: open
+state: closed
 deps: [CE-14]
 source: session 2026-10-12b
 created: 2026-10-12
 moved: 2026-10-13b
 updated: 2026-10-13b
 review: [guard, shipped]
+status: deprecated
+closed: 2026-10-13b
 ---
 
 Filed by CE-16 from the coverage map (docs/evidence/framework-coverage-2026-10-12.md): components 1 (charter) and 3 (criteria), ritual §6.2 (intake), guards G-I1, G-I2, G-T1, G-T2, G-T6 (FRAMEWORK §3.1 to §3.4, §6.2, §8.1, §8.2). Stories are already a record kind (record new / amend / stamp); charter goals and the criteria in docs/criteria.md are prose that no tool reads. Intake step 1 (record verbatim) is built; steps 2 to 6 (goal link, criteria drafted planned, ASK rows, contradiction check, criteria census) have no tool support. Most of G-I2 and G-T1 are in the §11.1 minimum set.
@@ -48,3 +50,6 @@ E: reuses the guards frame, `Failure`, `[guards]` path scoping and the sabotage 
 ## Log
 
 - 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.
+- 2026-10-13b (claude-code/claude-opus-5-5): Built 2026-10-13b by an ultracode workflow in worktree ce-25-wt (build, three adversarial lenses, a skeptic per lens, fix): efbc7a4 then five review-fix commits, rebased onto main and fast-forwarded (main d22f0a2). Review: 15 findings, 12 confirmed (10 distinct), 8 fixed, 1 partial (retire remedies; the op is CE-48), 1 deferred (CE-49). Gate on the merged tree: 478 passed. First-hand sabotage: guards.py::specified returning nothing -> 3 tests in tests/test_intent.py red. AC-60 to AC-64 are agent-drafted planned criteria from US-10, US-12, US-13 (owner to read). Stamped stories keep goals: [G1] verbatim; the guards read G<n> as G-n.
+- 2026-10-13b (claude-code/claude-opus-5-5): closed: done in efbc7a4..d22f0a2 (built, reviewed by three lenses, fixed; gate 478 passed)
+- 2026-10-13b (claude-code/claude-opus-5-5): Correction to the line above: the retire-a-story op is CE-49 and the G-T1 counted-item item is CE-48.

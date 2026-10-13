@@ -233,3 +233,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** equality with the installed kit is what makes "the framework owns the file" mechanical
 - **control:** collective: the red's remedy is one copy, the same step as the upgrade ritual (kit README § Upgrade)
 - **from:** CE-38, session 2026-10-13b
+
+## INV-33: a test that carries the marker but does not check its criterion (a skipped test, an assert that cannot fail) satisfies G-T2
+
+- **affects:** every later session, since lint runs in the gate (AC-23) and a false red stops all work; the owner, whose charter and stories the guards read and who answers the open questions below; every repo the kit deploys to, since G-I2, G-T1 and G-T2 are in the §11.1 minimum set and ship with `[guards]` defaults; a plain-git human who edits `docs/criteria.md` or a test by hand
+- **why not eliminated:** the guard sees annotations, not coverage (FRAMEWORK §3.4); proving a test checks its claim is mutation, which is CE-34
+- **control:** individual: the sabotage rule (DEC-11), under which a criterion moves to tested only after its claiming test was seen red; G-T5 (CE-34) mechanises it later
+- **from:** CE-25, session 2026-10-13b
+
+## INV-34: G-T1's `unspecified` with a board task is satisfied by any board file that mentions the story id, a passing mention included
+
+- **affects:** every later session, since lint runs in the gate (AC-23) and a false red stops all work; the owner, whose charter and stories the guards read and who answers the open questions below; every repo the kit deploys to, since G-I2, G-T1 and G-T2 are in the §11.1 minimum set and ship with `[guards]` defaults; a plain-git human who edits `docs/criteria.md` or a test by hand
+- **why not eliminated:** telling a task that specifies the story from one that mentions it needs judgement, as with G-D12
+- **control:** individual: the session reads the named item at intake; the guard's message names the item it counted
+- **from:** CE-25, session 2026-10-13b
+
+## INV-35: intake steps 5 (contradiction check) and 6 (criteria census) get no tool, so a session can skip them
+
+- **affects:** every later session, since lint runs in the gate (AC-23) and a false red stops all work; the owner, whose charter and stories the guards read and who answers the open questions below; every repo the kit deploys to, since G-I2, G-T1 and G-T2 are in the §11.1 minimum set and ship with `[guards]` defaults; a plain-git human who edits `docs/criteria.md` or a test by hand
+- **why not eliminated:** finding a contradiction or classing a criterion KEEP, rewrite or retire is judgement no lint can make (P8)
+- **control:** individual: rituals.md § Intake steps 5 and 6 and the census evidence doc; the next coverage map marks them deliberately prose-only, so G7 counts them
+- **from:** CE-25, session 2026-10-13b
