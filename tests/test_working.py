@@ -334,6 +334,52 @@ def test_task_close_refuses_a_question_and_names_ask_answer(eng):
     assert eng.store.get(q.id).doc.get("state") == "closed"
 
 
+def test_task_reopen_refuses_an_answered_question_and_names_the_decision_ops(eng):
+    """CE-31: an answered question never reopens; its answer is a decision, so the remedy is
+    to amend or supersede that decision, or ask a new question. `answered:` is never cleared."""
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
+    dec = eng.store.get(q.id).doc.get("answered")["decision"]
+    before = q.path.read_bytes()
+    with pytest.raises(Refusal, match=f"{q.id} was answered by the owner") as exc:
+        eng.reopen(q.id, "the owner changed their mind", **kw(key))
+    for op in (f"record amend {dec}", f"decision supersede {dec}", "ask new"):
+        assert op in exc.value.remedy
+    assert q.path.read_bytes() == before  # nothing written, `answered:` kept
+
+
+def test_task_set_cannot_clear_answered_to_get_round_the_reopen_refusal(eng):
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
+    for call in ({"raw": {"answered": ""}}, {"raw": {}, "unset": ("answered",)}):
+        with pytest.raises(Refusal, match="`answered` is changed by an operation"):
+            eng.set(q.id, call["raw"], unset=call.get("unset", ()), **kw(key))
+    assert eng.store.get(q.id).doc.get("answered")
+
+
+def test_task_reopen_still_repairs_a_question_closed_without_an_answer(eng):
+    """A pre-CE-20 `task close ASK-n` (audit A20) left no `answered:`: reopening it is the repair."""
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    eng.store.set(q.id, {"state": "closed", "status": "deprecated", "closed": key}, **kw(key))  # the old close
+    assert eng.reopen(q.id, "closed without an answer (A20)", **kw(key)) == f"{q.id}: reopened"
+    assert eng.store.get(q.id).doc.get("state") == "open"
+
+
+def test_an_open_question_carrying_answered_fails_lint(eng):
+    """G-W4 at rest (CE-31): a by-hand reopen of an answered question leaves it open and answered."""
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert [f.path for f in found] == [q.path.relative_to(eng.root).as_posix()]
+    assert "carries `answered:`" in found[0].message and "decision supersede" in found[0].remedy
+
+
 # -- batons and pauses (AC-14, AC-15) ------------------------------------------------------
 
 

@@ -169,7 +169,7 @@ def task_close(e: Engine, c: Caller, id: str, msg: str = "") -> tuple[int, str]:
 
 @op(write=True)
 def task_reopen(e: Engine, c: Caller, id: str, msg: str = "") -> tuple[int, str]:
-    """Reopen a closed item; `msg` says why."""
+    """Reopen a closed item; `msg` says why. An answered owner question never reopens: change its decision, or `ask_new`."""
     return 0, e.reopen(id, msg, **c.kw)
 
 

@@ -733,6 +733,9 @@ into the flat directory once the schema carries `state` (§11.4).
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
   recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
   `ask answer` (CE-20).
+- **An answered question never reopens:** `task reopen` refuses a question carrying `answered:`
+  and never clears it; the answer changes through its decision (amend or supersede), and a
+  follow-up is a new question citing both (CE-31). A question closed without an answer may reopen.
 - **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
   receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, owner_words)` records
   the words verbatim as a decision with `actor: owner`, closes the question, and reports which
@@ -1586,7 +1589,7 @@ Decisions as records follow once the core holds.
 - **G-W3:** no baton or pause record older than two sessions: two `close` or `pause` entries
   after the owning session. Housekeeping repairs it.
 - **G-W4:** closed ids do not appear on the open board; `state` and the derived OKF `status`
-  agree on every task, and the board query reads `state`.
+  agree on every task, and the board query reads `state`; no open question carries `answered:`.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists. The engine checks `asked:` when the entry is written; the lint re-checks

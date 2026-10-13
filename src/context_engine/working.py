@@ -49,11 +49,23 @@ BOARD_OWNED = {
     "pri": "promote",
     "deps": "dep",
     "last_asked": "ask raised or ask later",
+    "answered": "ask answer; an answer changes only through its decision (`record amend`, `decision supersede`)",
 }
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
+
+
+def answered_remedy(rid: str, dec: str) -> str:
+    """What to do instead of reopening an answered question (CE-31): the answer is a decision."""
+    return (f"the owner's answer is {dec}: change it with `record amend {dec} \"<words>\"` or replace it "
+            f"with `decision supersede {dec} <new DEC>`; for a follow-up, `ask new \"<question>\"` citing {rid} and {dec}")
+
+
+def _answered_by(answered: Any) -> str:
+    """The decision id in a question's `answered:` mapping, or a placeholder."""
+    return str(answered.get("decision") or "<DEC>") if isinstance(answered, dict) else "<DEC>"
 
 
 def _one(items) -> str:
@@ -461,6 +473,12 @@ class Engine:
         def check(rec: Record) -> None:
             if rec.doc.get("state") != "closed":
                 raise Refusal(f"{rid} is not closed", "nothing to reopen")
+            answered = rec.doc.get("answered")
+            if self.w.question and rec.kind.name == self.w.question and answered:
+                # CE-31: refuse, never clear `answered:` (that would orphan the decision whose
+                # `answers:` names this question). A question closed without an answer (a
+                # pre-CE-20 `task close`, audit A20) carries no `answered:` and may reopen.
+                raise Refusal(f"{rid} was answered by the owner, and an answered question never reopens (FRAMEWORK §5.3)", answered_remedy(rid, _answered_by(answered)))
 
         self._board_set(rid, {"state": "open", "closed": None, "moved": session}, session=session, actor=actor, unset=("status",), check=check, body=self._log_line(session, actor, f"reopened: {msg.strip()}"), op="reopen")
         return f"{rid}: reopened"
@@ -1094,6 +1112,10 @@ class Engine:
                 rel = r.path.relative_to(self.root).as_posix()
                 if (state == "closed") != (status == "deprecated"):
                     out.append(Failure("G-W4", rel, f"state {state!r} disagrees with OKF status {status!r}", "close and reopen set both; for a closed item set `status: deprecated`"))
+                if state == "open" and r.doc.get("answered") and r.kind.name == self.w.question:
+                    # CE-31: nothing is open and answered at once (a by-hand reopen of an answered question)
+                    dec = _answered_by(r.doc.get("answered"))
+                    out.append(Failure("G-W4", rel, f"{r.id} is open but carries `answered:` ({dec})", f"restore `state: closed` and `status: deprecated` from git: {answered_remedy(r.id, dec)}"))
                 if state == "open":
                     open_.append(r)
             for pri, cap in self.w.caps.items():

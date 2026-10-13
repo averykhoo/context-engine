@@ -271,7 +271,8 @@ Check every record, then the working state. `--working` does only the second hal
   top-down; G-W1 compares keys).
 - **G-W3**: no open baton or pause from a session with 2 or more closes/pauses after it. *Why:
   carried work must be done or become a task, not drift.*
-- **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`.
+- **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`; and no
+  open question carries `answered:` (an answered question never reopens, § task reopen).
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt.
 - **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
@@ -371,8 +372,8 @@ board a ranking, not a pile (G-W5). The brief is a constraint, not a summary (FR
 
 Change any key except the ones operations own. `state`, `status` and `closed` change by
 `close`/`reopen`. `moved` changes by `touch`/`promote`. `pri` by `promote`. `deps` by `dep`.
-`last_asked` by `ask raised`/`ask later`. `updated` changes on every write. `type`, `id` and
-`body_sha` never change. The brief stays at most 120 characters. Values take the kind's declared
+`last_asked` by `ask raised`/`ask later`. `answered` by `ask answer` only. `updated` changes on
+every write. `type`, `id` and `body_sha` never change. The brief stays at most 120 characters. Values take the kind's declared
 type: an empty value, `null` or `~` means null (so `brief=` clears the brief); a list is
 comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must look like
 `2026-10-08e`. A set with no fields still bumps `updated`. `review` takes only values from
@@ -478,10 +479,18 @@ register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 c
 
 ### context-engine task reopen
 
-A message is required, and the item must be closed. Set `state: open`, set `closed:` to null,
-delete `status`, and set `moved` and `updated`. Append `- <key> (<actor>): reopened: <message>`.
+A message is required, and the item must be closed. **Never reopen an owner question that
+carries `answered:`**, and never delete its `answered:`: its answer is a decision (the one
+`answered: {decision: D-n}` names). To change the answer, `record amend D-n` or
+`decision supersede D-n <new>`; for a follow-up, `ask new` citing ASK-n and D-n. A question
+closed without `answered:` (by a `task close` from before close refused questions) may be
+reopened: that is its repair. Set `state: open`, set `closed:` to null, delete `status`, and set `moved` and `updated`.
+Append `- <key> (<actor>): reopened: <message>`.
 
-**Why:** the mirror of close, keeping G-W4 true.
+**Why:** the mirror of close, keeping G-W4 true. Reopening an answered question would leave it
+open while claiming an answer; clearing `answered:` instead would orphan the decision whose
+`answers:` names it, and a second `ask answer` would make two decisions answer one question
+(FRAMEWORK §5.3).
 
 ### context-engine task section
 
