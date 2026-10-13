@@ -3,13 +3,13 @@ type: Task
 id: CE-31
 title: task reopen refuses an answered owner question
 brief: 'An answered ASK never reopens: its answer is a decision; revise that decision or ask a new question'
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 source: session 2026-10-12d
 created: 2026-10-12
-moved: 2026-10-12d
-updated: 2026-10-12d
+moved: 2026-10-13a
+updated: 2026-10-13a
 ---
 
 Found during CE-20 (BTN-2, decided 2026-10-12d). `working.py::Engine.reopen` accepts an `ASK-n` and leaves `answered:` behind, so an open question claims an answer (the CE-20 asymmetry: `Engine.close` refuses a question, reopen does not).
