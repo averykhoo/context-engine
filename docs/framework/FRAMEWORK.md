@@ -699,7 +699,9 @@ ranking. Do not re-rank at session start; re-rank at clean close.
 a pointer row.
 
 **Closing:** a closed item leaves the board, with a `closed:` line in its own `## Log` and its id
-in the session's ledger `rows:`. Nothing is open and done at once.
+in the session's ledger `rows:`. Nothing is open and done at once. Closing the NOW item while
+others stay open leaves G-W5 red: the close still succeeds, and its line says so and asks the
+owner which item to promote (the engine picks none).
 
 **Closing does not move the file.** Close sets `state: closed`, and the engine derives OKF
 `status: deprecated` from it (§9.3). `list --state closed` shows closed items apart, and a path

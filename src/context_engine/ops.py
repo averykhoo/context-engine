@@ -163,7 +163,7 @@ def task_touch(e: Engine, c: Caller, id: str, mechanical: bool = False) -> tuple
 
 @op(write=True)
 def task_close(e: Engine, c: Caller, id: str, msg: str = "") -> tuple[int, str]:
-    """Close an item; `msg` says what finished it and is required."""
+    """Close an item; `msg` says what finished it and is required. Closing the NOW item while others stay open says G-W5 is red until the owner picks one to promote."""
     return 0, e.close(id, msg, **c.kw)
 
 

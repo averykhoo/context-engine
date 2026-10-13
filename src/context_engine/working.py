@@ -231,6 +231,15 @@ class Engine:
 
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------
 
+    def _now_short(self, open_: list[Record]) -> str | None:
+        """G-W5's NOW rule: while anything is open, NOW holds exactly its cap. The failure's
+        message when ``open_`` breaks it, else None (read by G-W5 and by `close`, CE-36)."""
+        cap = self.w.caps.get("NOW")
+        if cap is None or not open_:
+            return None
+        holders = [r.id for r in open_ if r.doc.get("pri") == "NOW"]
+        return None if len(holders) == cap else f"NOW holds {len(holders)} ({_one(holders)}); the cap is exactly {cap}"
+
     def _cap_check(self, pri: str, exclude: str | None = None) -> None:
         cap = self.w.caps.get(pri)
         if cap is None:
@@ -353,17 +362,33 @@ class Engine:
             )
 
         filed: list[str] = []
+        was: list[str] = []
 
         def check(rec: Record) -> None:
             if rec.doc.get("state") == "closed":
                 raise Refusal(f"{rid} is already closed", "nothing to do; `reopen` it if it is not done")
+            was.append(str(rec.doc.get("pri")))
             if rec.doc.get("review"):
                 filed.extend(self._file_residuals(rec, session, actor))
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
         self._board_set(rid, changes, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"closed: {msg.strip()}"), op="close")
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
-        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}"
+        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
+
+    def _now_left(self, was: list[str]) -> str:
+        """CE-36: closing a NOW item can leave NOW short while items stay open, which G-W5 reds at
+        the next gate. Say so on the close's line, with the remedy; never refuse, never promote:
+        the next NOW item is the owner's call."""
+        if was != ["NOW"]:
+            return ""
+        open_ = self._open_board()
+        short = self._now_short(open_)
+        if not short:
+            return ""
+        nxt = [r.id for r in open_ if r.doc.get("pri") == "NEXT"]
+        where = f"NEXT holds {_one(nxt)}" if nxt else "NEXT is empty; `task list` shows the rest"
+        return f"; G-W5 is red until NOW is refilled: {short}; ask the owner which item to `task promote <id> NOW` ({where})"
 
     # -- design review and the residual-risk register (FRAMEWORK §5.2, §7.4) ------------
 
@@ -1214,9 +1239,12 @@ class Engine:
                     open_.append(r)
             for pri, cap in self.w.caps.items():
                 holders = [r.id for r in open_ if r.doc.get("pri") == pri]
-                if len(holders) > cap or (pri == "NOW" and open_ and len(holders) != cap):
-                    rule = f"exactly {cap}" if pri == "NOW" else f"at most {cap}"
-                    out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, f"{pri} holds {len(holders)} ({_one(holders)}); the cap is {rule}", "re-rank with `promote`"))
+                if pri == "NOW":
+                    short = self._now_short(open_)  # shared with `close`'s warning (CE-36)
+                else:
+                    short = f"{pri} holds {len(holders)} ({_one(holders)}); the cap is at most {cap}" if len(holders) > cap else None
+                if short:
+                    out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, "re-rank with `promote`"))
             out += self.lint_review()
         return out
 

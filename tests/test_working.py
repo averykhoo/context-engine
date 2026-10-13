@@ -239,6 +239,56 @@ def test_close_without_a_message_is_refused(eng, msg):
     assert rec.path.read_bytes() == before
 
 
+@pytest.mark.criterion("AC-55")
+@pytest.mark.parametrize("next_", [2, 0])
+def test_closing_the_only_now_item_closes_and_says_g_w5_is_red_with_the_promote_remedy(eng, next_):
+    """CE-36: the close succeeds; its line says what G-W5 will say and names NEXT, or that NEXT is
+    empty. It promotes nothing: the next NOW item is the owner's call."""
+    key = started(eng)
+    now = task(eng, key, "Now", pri="NOW")
+    nxt = [task(eng, key, f"Next {i}", pri="NEXT").id for i in range(next_)]
+    later = task(eng, key, "Later")
+    out = eng.close(now.id, "done in abc123", **kw(key))
+    assert eng.store.get(now.id).doc.get("state") == "closed"
+    assert "\n" not in out  # a write's text is one line (AC-19)
+    short = "NOW holds 0 (none); the cap is exactly 1"
+    assert out.startswith(f"{now.id}: closed (done in abc123); G-W5 is red until NOW is refilled: {short}; ")
+    assert "ask the owner which item to `task promote <id> NOW`" in out
+    assert out.endswith(f"(NEXT holds {', '.join(nxt)})" if nxt else "(NEXT is empty; `task list` shows the rest)")
+    assert [f.message for f in guards(eng, "G-W5")] == [short]  # the close and the guard agree
+    assert [eng.store.get(i).doc.get("pri") for i in [*nxt, later.id]] == ["NEXT"] * next_ + ["LATER"]  # nothing promoted
+    eng.promote((nxt or [later.id])[0], "NOW", **kw(key))
+    assert guards(eng, "G-W5") == []
+
+
+@pytest.mark.criterion("AC-55")
+def test_a_close_that_leaves_g_w5_as_it_was_says_nothing_of_it(eng):
+    """CE-36: no warning when NOW stays full, when nothing is left open, or when the closed item
+    was not at NOW (an empty NOW then was not this close's doing). Each agrees with G-W5."""
+    key = started(eng)
+    now = task(eng, key, "Now", pri="NOW")
+    nxt = task(eng, key, "Next", pri="NEXT")
+    assert eng.close(nxt.id, "done", **kw(key)) == f"{nxt.id}: closed (done)"  # NOW still holds one
+    assert guards(eng, "G-W5") == []
+    assert eng.close(now.id, "done", **kw(key)) == f"{now.id}: closed (done)"  # nothing left open
+    assert guards(eng, "G-W5") == []
+    a, b = task(eng, key, "A"), task(eng, key, "B")
+    assert eng.close(a.id, "done", **kw(key)) == f"{a.id}: closed (done)"  # NOW was already empty
+    assert guards(eng, "G-W5")[0].message == "NOW holds 0 (none); the cap is exactly 1"
+
+
+@pytest.mark.criterion("AC-55")
+def test_cli_close_of_the_only_now_item_exits_zero_and_prints_the_warning(eng, capsys):
+    key = started(eng)
+    now = task(eng, key, "Now", pri="NOW")
+    nxt = task(eng, key, "Next", pri="NEXT")
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    capsys.readouterr()
+    assert main([*base, "task", "close", now.id, "-m", "done"]) == 0
+    out = capsys.readouterr().out
+    assert "G-W5 is red until NOW is refilled" in out and f"`task promote <id> NOW` (NEXT holds {nxt.id})" in out
+
+
 @pytest.mark.criterion("AC-12")
 def test_state_and_status_disagreeing_fails_lint(eng):
     key = started(eng)

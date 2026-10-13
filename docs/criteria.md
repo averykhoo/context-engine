@@ -37,6 +37,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-15 | A baton older than two sessions is reported by lint (G-W3) and converted into a task by housekeeping | US-8, US-3 | tested |
 | AC-16 | `banner.set(text, seen_hash)` refuses when the banner has changed since `seen_hash` | US-8 | tested |
 | AC-17 | `orient()` stays under its configured size cap and contains: the banner, open batons and pauses (own first), other open sessions, the NEXT tier, overdue owner questions, and the top item's brief, Traps and Read first | US-1 | tested |
+| AC-55 | Closing the NOW item while other items stay open succeeds and its one line says G-W5 is red, with G-W5's own message, and asks the owner which item to `task promote <id> NOW`, naming the NEXT items or saying NEXT is empty; it promotes nothing. A close that leaves NOW full, leaves nothing open, or closes an item not at NOW says nothing of G-W5 (CE-36) | US-5 | tested |
 
 ## MCP (CE-3)
 

@@ -473,12 +473,21 @@ Log one op line per close that added entries: `op: register.append`, `id` the ta
 register, `fields` the new INV ids. With residuals and no register configured, stop: configure
 one first.
 
+**If the item was at NOW**, count the open items at NOW once it is closed. If NOW holds fewer
+than its cap (`[working.caps]`, 1 by default) while any item stays open, G-W5 is red from now
+on: tell the owner, naming the NEXT items (or saying NEXT is empty), and ask which one to
+promote (§ task promote) before you run the gate. Do not pick it yourself. The engine closes
+anyway and says the same at the end of its close line.
+
 **Why:** closed items stay in place as records, so links never break. `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
 A question closed by `task close` would carry no decision in the owner's words, and the agent
 would in effect have answered its own question (FRAMEWORK §5.3).
 The residuals move to the register at close because that is when the design is final, and the
 register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
+An empty NOW is said at close, not refused: refusing would block a close the owner wants, and
+the next NOW item is the owner's call; said only at the next gate, it turns the gate red before
+anything can be committed.
 
 ### context-engine task reopen
 
