@@ -455,8 +455,27 @@ intent only once accepted.
 **As records:** a story file is an append-only record (§8.0.1). `record.new` (CLI
 `record new story`) writes the owner's words with `actor` and `via`; `record.amend` appends an
 entry under `## Amendments`, keyed by session and actor; `record.stamp` freezes `body_sha` once.
-The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words goes red. PRD
-sections are not separate files, so a PRD-form repo maps stories onto PRD sections through
+The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words goes red.
+
+**Retiring a story** is owner intent too, so it is an operation that records who and why:
+`record.retire(id, why, by, superseded_by)` (CLI `record retire`).
+- **Whose call:** `by: owner` (or `human:<id>`), with their words verbatim as `why`; or `by:
+  agent`, only for a story recorded again to replace a broken record (the wrong goal, actor or
+  status at birth), named in `superseded_by`. An agent never withdraws owner intent on its own.
+- **What it writes, in one write:** `story_status: retired` and the derived `status: deprecated`
+  (§9.3); `superseded_by` on the story and `supersedes` on its successor, both directions as
+  `decision.supersede` writes them; and the reason as an amendment (`retired (by <who>; superseded
+  by <id>): <why>`), so the why lives with the story; one op log line per record.
+- **It refuses** a successor that is not a story, is the story itself or is retired; a story
+  whose hash does not match; and a story a logged retire already retired.
+- **A retire is final.** No operation undoes it: to bring the intent back, record a new story. A
+  story retired by hand (no logged retire) may be retired again by the operation, which records
+  who and why. `record.new` refuses a story born `retired`.
+- **Lint (G-I2)** fails a retired story no logged retire retired, and a story a logged retire
+  retired that is no longer `retired` with `status: deprecated`. A retired story is history: G-I1,
+  G-I2's provenance checks and G-T1 do not read it.
+
+PRD sections are not separate files, so a PRD-form repo maps stories onto PRD sections through
 `context.toml` and keeps G-D10 off for them until it adopts story files.
 
 **Intake classification (§6.2):**
@@ -985,7 +1004,8 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
    `planned` until the owner stamps them.
 4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them.
 5. If the new intent contradicts an existing decision or criterion, say so at once, and record
-   the outcome as a decision that supersedes or amends the old one.
+   the outcome as a decision that supersedes or amends the old one. A story the owner withdraws,
+   or one a new story replaces, is retired with the owner's words (`record retire`, §3.2).
 6. **On a design change, run a criteria census:** every existing criterion in scope is
    classified KEEP / rewrite / retire, with the work assigned to tasks or slices. The census
    is an evidence doc.
@@ -1618,7 +1638,7 @@ library operations. The CLI spells them `context-engine <noun> <verb>` (`session
 | Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg)`, `reopen`, `section.set(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 
@@ -1643,9 +1663,14 @@ Decisions as records follow once the core holds.
 - **G-I1:** every charter goal has at least one story; every story names at least one goal,
   and only goals of the charter. Retired stories are history and are not read. Each goal id
   leads one row, in the one form (P3).
-- **G-I2:** every story has an actor, a date and a status from the vocabulary. `unconfirmed`
-  requires `actor: agent (reconstructed from …)`. `record.new` of a story refuses what G-I2 and
-  G-I1 would fail, by the same checks.
+- **G-I2:** every story that is not retired has an actor, a date and a status from the
+  vocabulary. `unconfirmed` requires `actor: agent (reconstructed from …)`. `record.new` of a
+  story refuses what G-I2 and G-I1 would fail, by the same checks, and a story born `retired`.
+  Every retired story was retired by `record.retire` (a logged retire, so who and why are
+  recorded), and every story it retired is still `retired` with `status: deprecated`; each id in
+  a story's `superseded_by` or `supersedes` is a story, and only a retired story has
+  `superseded_by`. Not checked: a hand edit between the standing statuses (no operation owns
+  those moves, and the op log records which keys changed, not their values).
 
 The intent chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,

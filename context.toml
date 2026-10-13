@@ -110,7 +110,7 @@ note = "confirmed 2026-10-08, DEC-10"
 component = "Stories (owner's words)"
 path = "docs/stories"
 pattern = "US-n-<slug>.md"
-mode = "append-only: `context-engine record amend`, never rewrite"
+mode = "append-only: `context-engine record amend`; retired only by `context-engine record retire`; never rewrite"
 
 [[routes]]
 component = "Criteria"

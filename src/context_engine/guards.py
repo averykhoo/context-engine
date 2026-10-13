@@ -733,6 +733,7 @@ CRITERION_STATUSES = ("planned", "tested", "manual", "deviates", "retired")  # F
 CLAIMED = ("tested", "manual")  # the statuses G-T2 requires a claim for
 AGENT_ACTOR_RE = re.compile(r"agent \([^()]*reconstructed from .+\)")
 STORY_ACTOR_RE = re.compile(rf"owner|human:\S+|{AGENT_ACTOR_RE.pattern}")  # FRAMEWORK §3.2
+RETIRE_BY_RE = re.compile(r"owner|human:\S+|agent")  # whose call a `record retire` is (FRAMEWORK §3.2)
 SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
 INTENT_OFF = "unset it in [guards] to switch the guard off"
 
@@ -821,7 +822,11 @@ def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
 
 def story_problems(doc) -> list[str]:
     """G-I2 on one story's frontmatter: an actor of the vocabulary, a date, a status of the
-    vocabulary, and `unconfirmed` only from an agent's reconstruction. `record new` calls it too."""
+    vocabulary, and `unconfirmed` only from an agent's reconstruction. `record new` calls it too.
+    A retired story is history: its provenance is not read (`record retire` replaced a story
+    with bad provenance by one recorded again), and its retire is `retire_problems`' to check."""
+    if str(doc.get("story_status") or "") == "retired":
+        return []
     out = []
     actor = str(doc.get("actor") or "")
     if not STORY_ACTOR_RE.fullmatch(actor):
@@ -919,24 +924,76 @@ def goals(e: Engine) -> list[Failure]:
         if doc.get("story_status") == "retired":
             continue
         for p in goal_problems(doc.get("goals"), known):
-            out.append(Failure("G-I1", rel, f"{rid} {p}", "a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again (`record new story`) and file a task to retire this one: no op or runbook step retires a story yet"))
+            out.append(Failure("G-I1", rel, f"{rid} {p}", f"a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again with the right goals and the owner's words as they are (`record new story`), then retire this one: {retire_hint(rid)}"))
         served |= {goal_id(v) for v in D.as_list(doc.get("goals"))}
     for gid in sorted(known - served, key=lambda x: int(x[2:])):
         out.append(Failure("G-I1", g.charter, f"goal {gid} is served by no story", f"record the owner's story for it (`record new story ... --set goals=[{gid}]`), or ask the owner whether the goal still stands (FRAMEWORK §3.1)"))
     return out
 
 
-def story_fields(e: Engine) -> list[Failure]:
-    """G-I2: every story (`[guards] stories`) has an actor from the vocabulary (`owner`,
-    `human:<id>`, `agent (reconstructed from ...)`), a date and a `story_status` from the
-    vocabulary, and `unconfirmed` only with an agent's actor (`story_problems`). Off while
-    `stories` is unset.
+def retire_hint(rid: str) -> str:
+    """The command that retires a story recorded again (G-I1's and G-I2's remedies)."""
+    return f"`record retire {rid} --by agent --superseded-by <new id> --why \"<what was wrong>\"`"
 
-    Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), and `via`."""
+
+def logged_retires(e: Engine) -> dict[str, dict]:
+    """The newest logged `record retire` of each story, by id (the line that set its
+    `story_status`; the successor's `supersedes` line is not one)."""
+    out: dict[str, dict] = {}
+    for _, op in _ops(e):
+        if isinstance(op, dict) and op.get("op") == "retire" and "story_status" in (op.get("fields") or ()):
+            out[str(op.get("id"))] = op
+    return out
+
+
+def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[tuple[str, str, str, str]]:
+    """G-I2 on retires, as (id, path, message, remedy): a retired story was retired by `record
+    retire` (a logged `retire` line), so who retired it and why are recorded; a story a logged
+    retire retired is still `retired` and `status: deprecated` (a retire is never undone); and
+    each id in a story's `superseded_by` or `supersedes` is a story, `superseded_by` only on a
+    retired one."""
+    done = logged_retires(e)
+    known = {rid for rid, _, _ in stories}
+    out = []
+    for rid, rel, doc in stories:
+        status = str(doc.get("story_status") or "")
+        op = done.get(rid)
+        if status == "retired" and op is None:
+            out.append((rid, rel, "is `retired`, but no `record retire` of it is logged, so nothing records who retired it or why",
+                        f"if it was retired, record who and why: `record retire {rid} --by owner --why \"<their words>\"` (or `--by agent --superseded-by <id>` for a story recorded again); if it was not, restore `story_status` from git (`git log -p` on the file)"))
+        elif op is not None and (status != "retired" or doc.get("status") != "deprecated"):
+            now = f"`story_status: {status}`" if status != "retired" else f"`status: {doc.get('status') or ''}`, not `deprecated`"
+            out.append((rid, rel, f"was retired by `record retire` in session {op.get('session')}, but its frontmatter now says {now}",
+                        "a retire is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record it as a new story (`record new story`)"))
+        for key in ("superseded_by", "supersedes"):
+            for ref in D.as_list(doc.get(key)):
+                if str(ref) not in known:
+                    out.append((rid, rel, f"`{key}` names {ref}, which is no story", "restore the link from git; story links are written only by `record retire`"))
+        if D.as_list(doc.get("superseded_by")) and status != "retired":
+            out.append((rid, rel, f"has `superseded_by` but is `{status}`, not retired", "restore the story from git; `record retire --superseded-by` writes the link and the retire together"))
+    return out
+
+
+def story_fields(e: Engine) -> list[Failure]:
+    """G-I2: every story (`[guards] stories`) that is not retired has an actor from the
+    vocabulary (`owner`, `human:<id>`, `agent (reconstructed from ...)`), a date and a
+    `story_status` from the vocabulary, and `unconfirmed` only with an agent's actor
+    (`story_problems`); every retired story was retired by `record retire`, and stays retired
+    (`retire_problems`). Off while `stories` is unset.
+
+    Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), `via`, a hand
+    edit between the standing statuses (live, unspecified, unconfirmed: no operation owns those
+    moves yet, and the op log records which keys a write changed, not their values), that the
+    amendment a retire wrote is still there, and that `supersedes` mirrors `superseded_by`."""
     if not e.store.config.guards.stories:
         return []
-    remedy = "a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status (`record new story`) and file a task to retire this one: no op or runbook step retires a story yet"
-    return [Failure("G-I2", rel, f"{rid}: {p}", remedy) for rid, rel, doc in _stories(e) for p in story_problems(doc)]
+    stories = _stories(e)
+
+    def remedy(rid: str) -> str:
+        return f"a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status and the owner's words as they are (`record new story`), then retire this one: {retire_hint(rid)}"
+
+    out = [Failure("G-I2", rel, f"{rid}: {p}", remedy(rid)) for rid, rel, doc in stories for p in story_problems(doc)]
+    return out + [Failure("G-I2", rel, f"{rid} {msg}", rem) for rid, rel, msg, rem in retire_problems(e, stories)]
 
 
 def _criteria(e: Engine, guard: str) -> tuple[list[Criterion], list[Failure]]:

@@ -614,26 +614,49 @@ class Store:
             self._reindex(rec.kind, session, actor)
         return rec, inserted
 
-    def update(self, ids: list[str], mutate: Callable[[dict[str, Record]], dict[str, list[str]]], *, session: str, actor: str, op: str) -> dict[str, Record]:
+    def update(
+        self,
+        ids: list[str],
+        mutate: Callable[[dict[str, Record]], dict[str, list[str]]],
+        *,
+        session: str,
+        actor: str,
+        op: str,
+        amend: dict[str, str] | None = None,
+    ) -> dict[str, Record]:
         """Change the frontmatter of several records as one write: under one lock, every record
         is re-read, changed by ``mutate`` (which may refuse, and returns id -> changed keys), and
-        validated before any of them is written. Bodies never change here."""
+        validated before any of them is written. ``mutate`` never changes a body; ``amend`` (id ->
+        text) appends a dated entry under ``## Amendments`` of an append-only record in the same
+        write, checked as ``amend`` checks it, so the change and its reason land together."""
         self._check_caller(session, actor)
+        amend = amend or {}
         with self._lock():
-            recs = {i: self.get(i) for i in dict.fromkeys(ids)}
+            recs = {i: self.get(i) for i in dict.fromkeys([*ids, *amend])}
             bodies = {i: r.doc.body for i, r in recs.items()}
             changed = mutate(recs)
             for i, r in recs.items():
                 if r.doc.body != bodies[i]:
                     raise Refusal(f"an update tried to change the body of {i}", "bodies change only through their own operations")
+            for i, text in amend.items():
+                r = recs[i]
+                if r.kind.mode != "append-only":
+                    raise Refusal(f"{i} is a {r.kind.mode} record", "only append-only records take amendments")
+                if not text.strip():
+                    raise Refusal("empty amendment", "say what changed and why")
+                bp = self.body_problem(r.kind, r.doc)
+                if bp and r.doc.get("body_sha"):
+                    raise Refusal(f"{i} {bp[0]}", bp[1])
+                r.doc.set_body(amended(r.doc.body, text, session, actor))
+            for i, r in recs.items():
                 owned = [k for k in changed.get(i, ()) if k in TOOL_OWNED]
                 if owned:
                     raise Refusal(f"`{owned[0]}` is owned by the engine", "ids, types and body_sha never change this way")
                 self._validate(r.kind, r.doc, r.path)
             for i, r in recs.items():
-                if changed.get(i):
+                if changed.get(i) or i in amend:
                     self._write(r.path, r.doc)
-                    self._log(op, i, r.path, session, actor, list(changed[i]), False)
+                    self._log(op, i, r.path, session, actor, list(changed.get(i) or ()) + (["body"] if i in amend else []), False)
             for kind in {r.kind.name: r.kind for r in recs.values()}.values():
                 self._reindex(kind, session, actor)
         return recs

@@ -304,6 +304,12 @@ def record_correct(e: Engine, c: Caller, id: str, after: str, text: str) -> tupl
     return 0, e.correct(id, after, text, **c.kw)
 
 
+@op(write=True)
+def record_retire(e: Engine, c: Caller, id: str, why: str, by: str, superseded_by: str = "") -> tuple[int, str]:
+    """Retire a story: story_status retired, status deprecated, `why` as an amendment. `by` is `owner` or `human:<id>` (then `why` is their words, verbatim) or `agent` (only with `superseded_by`, the story recorded again; it gets `supersedes`). Final: a retire is never undone."""
+    return 0, e.retire(id, why, by=by, superseded_by=superseded_by, **c.kw)
+
+
 # -- decisions (FRAMEWORK §6.5) -----------------------------------------------------------
 
 

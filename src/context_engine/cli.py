@@ -156,6 +156,13 @@ def build() -> argparse.ArgumentParser:
     rc.add_argument("id")
     rc.add_argument("--after", required=True, help="the words the insertion goes right after; must occur once")
     rc.add_argument("--text", required=True, help="the text to insert; it is written as [text]")
+    rr = r.add_parser("retire", help="retire a story: who retired it and why, recorded with it; never undone")
+    rr.add_argument("id")
+    rr.add_argument("--by", required=True, help="owner or human:<id> (why is their words), or agent (only with --superseded-by)")
+    rr.add_argument("--superseded-by", default="", help="the story recorded again to replace it")
+    why = rr.add_mutually_exclusive_group(required=True)
+    why.add_argument("--why", help="the owner's words verbatim, or what was wrong with the story")
+    why.add_argument("--file", type=Path, help="read `why` from a file (owner words keep their line breaks)")
 
     dc = groups.add_parser("decision", help="decision records (FRAMEWORK §6.5)").add_subparsers(dest="op", required=True)
     ds = dc.add_parser("supersede")
@@ -223,6 +230,7 @@ CLI_OPS = {
     ("record", "stamp"): "record_stamp",
     ("record", "amend"): "record_amend",
     ("record", "correct"): "record_correct",
+    ("record", "retire"): "record_retire",
     ("decision", "supersede"): "decision_supersede",
     ("decision", "set"): "decision_set",
     ("decision", "link"): "decision_link",
@@ -251,7 +259,8 @@ def _params(args: argparse.Namespace) -> dict:
     if isinstance(a.get("ids"), list):
         a["ids"] = _ids(" ".join(a["ids"]))
     if a.get("file") is not None:
-        a["body" if args.group == "record" else "text"] = a["file"].read_text(encoding="utf-8")
+        into = ("why" if a.get("op") == "retire" else "body") if args.group == "record" else "text"
+        a[into] = a["file"].read_text(encoding="utf-8")
     return a
 
 

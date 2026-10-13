@@ -797,13 +797,15 @@ class Engine:
         vocabulary, and goals that are the charter's, in the one id form (`G-n`)."""
         off = self.store.config.guards.off
         problems = [] if "G-I2" in off else G.story_problems(fields)
+        if "G-I2" not in off and str(fields.get("story_status")) == "retired":
+            problems.insert(0, "would be born `retired`, which only `record retire` sets (it records who retired a story and why)")
         known, bad = G.known_goals(self)
         if known is not None and "G-I1" not in off:
             if not known:  # the charter is missing or yields no goal: no story's goals can be checked
                 raise Refusal(f"no story can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
             problems += G.goal_problems(fields.get("goals"), known, legacy=False)  # the charter's own reds are lint's (G-I1)
         if problems:
-            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed, retired, and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
+            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed (`retired` is `record retire`'s), and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""
@@ -830,6 +832,57 @@ class Engine:
         stamp is kept, since it pins the words as typed."""
         _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
         return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
+
+    def retire(self, rid: str, why: str, *, by: str, superseded_by: str = "", session: str, actor: str) -> str:
+        """Retire a story (FRAMEWORK §3.2): `story_status: retired` with the derived OKF
+        `status: deprecated`, `superseded_by` on it and `supersedes` on its successor when one
+        replaces it, and the reason as an amendment, all in one write. ``by`` says whose call it
+        is: `owner` or `human:<id>`, whose words ``why`` is, or `agent`, only for a story recorded
+        again (``superseded_by``). A retire is never undone; a story retired by hand, with no
+        logged retire, may be retired here to record who and why."""
+        self._check(session, actor)
+        kind = self.store.config.guards.stories
+        if not kind:
+            raise Refusal("no kind holds the stories ([guards] stories is unset)", 'set `stories = "story"` in [guards] of context.toml; `record retire` retires a story')
+        prefix = self.store.config.kind(kind).prefix
+        not_story = f"`record retire` retires a story ({prefix}-n); a decision is replaced with `decision supersede`, a criterion is retired in the criteria file"
+        if self.store.config.kind_for_id(rid).name != kind:
+            raise Refusal(f"{rid} is not a story", not_story)
+        by, why, new = by.strip(), why.strip("\n"), superseded_by.strip()
+        if not G.RETIRE_BY_RE.fullmatch(by):
+            raise Refusal(f"`by: {by}` is none of `owner`, `human:<id>` or `agent`", "say whose call it is: `owner` (or `human:<id>`), with their words verbatim in `why`; or `agent`, for a story recorded again, with `superseded_by`")
+        if not why.strip():
+            raise Refusal("no reason", "pass `why`: the owner's words verbatim (`by owner`), or what was wrong with the story (`by agent`)")
+        if by == "agent" and not new:
+            raise Refusal(f"an agent retires a story only when it was recorded again, and no `superseded_by` names the story that replaces {rid}",
+                          f"record it again with `record new story` (the owner's words as they are, the right fields), then pass `superseded_by`; withdrawing {rid} is the owner's call: `by owner` with their words")
+        if new:
+            if new == rid:
+                raise Refusal(f"{rid} cannot supersede itself", "name the story that replaces it")
+            if self.store.config.kind_for_id(new).name != kind:
+                raise Refusal(f"{new} is not a story, so it cannot replace {rid}", f"name the {prefix}-n story that replaces it")
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            o = recs[rid].doc
+            done = G.logged_retires(self).get(rid)
+            if done is not None and o.get("story_status") == "retired":
+                raise Refusal(f"{rid} is already retired (`record retire` in session {done.get('session')})", "a retire is final: to bring the intent back, record it as a new story (`record new story`) with the owner's words")
+            keys = {rid: ["story_status", "status"]}
+            if new:
+                n = recs[new].doc
+                if n.get("story_status") == "retired":
+                    raise Refusal(f"{new} is retired, so it cannot replace {rid}", "name a story that stands, or record the new story first (`record new story`)")
+                o.set("superseded_by", [*dict.fromkeys([*D.as_list(o.get("superseded_by")), new])])
+                n.set("supersedes", [*dict.fromkeys([*D.as_list(n.get("supersedes")), rid])])
+                keys = {rid: [*keys[rid], "superseded_by"], new: ["supersedes"]}
+            o.set("story_status", "retired")
+            o.set("status", "deprecated")
+            return keys
+
+        head = f"retired (by {by}" + (f"; superseded by {new}" if new else "") + "): "
+        self.store.update([rid, *([new] if new else [])], mutate, session=session, actor=actor, op="retire", amend={rid: head + why})
+        tail = f"; superseded by {new}, which now supersedes {rid}" if new else ""
+        return f"{rid}: retired by {by} (status: deprecated){tail}; the reason is under ## Amendments"
 
     # -- decisions (FRAMEWORK §6.5, CE-5) -----------------------------------------------
 

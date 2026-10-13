@@ -89,6 +89,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body_sha", "body"]` |
+| record retire | `retire`: one line for the story, then one for its successor | the record | the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor); the successor: `["supersedes"]` |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
@@ -341,11 +342,14 @@ Check every record, then the working state. `--working` does only the second hal
   its `status` or source column, or no claim at all is red: the format changed under the pattern.
   Then: **G-I1**, every story that is not `retired` names at least one goal and only goals of the
   charter, and every goal is named by one such story; no goal id leads two rows. **G-I2**, every
-  story's `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, its `date` is
-  YYYY-MM-DD, its `story_status` is live, unspecified, unconfirmed or retired, and `unconfirmed`
-  goes with an agent's actor only. **G-T1**, every `live` story's id is in the `from` cell of a
-  criterion that is not `retired`, and every `unspecified` story's id is a whole word in an open
-  board item. **G-T2**, every `tested` or `manual` criterion is claimed, every claimed id is a
+  story that is not `retired` has an `actor` of `owner`, `human:<id>` or `agent (reconstructed
+  from ...)`, a `date` of YYYY-MM-DD, a `story_status` of live, unspecified, unconfirmed or
+  retired, and `unconfirmed` goes with an agent's actor only; every `retired` story has a
+  `retire` line in the op log (§ context-engine record retire), and every story such a line
+  retired is still `retired` with `status: deprecated`; every id in a story's `superseded_by` or
+  `supersedes` is a story, and only a retired story has `superseded_by`. **G-T1**, every `live`
+  story's id is in the `from` cell of a criterion that is not `retired`, and every
+  `unspecified` story's id is a whole word in an open board item. **G-T2**, every `tested` or `manual` criterion is claimed, every claimed id is a
   criterion, and every status is planned, tested, manual, deviates or retired. **G-T6**, every
   `from` cell names at least one id, each a story or decision that exists (a criterion's actor is
   its source's). *Why: the chain from goal to test is what makes correct checkable; a link that
@@ -764,7 +768,8 @@ another session's truth (FRAMEWORK §5.5 rule 2).
    required, `actor` above all, must be given; if it is missing, stop. For a story (the kind
    `[guards] stories` names), stop too unless it passes G-I2 and G-I1 of § context-engine lint:
    `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
-   vocabulary, and `goals` names at least one goal of the charter, each written `G-n`.
+   vocabulary but not `retired` (§ context-engine record retire sets that), and `goals` names at
+   least one goal of the charter, each written `G-n`.
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
@@ -815,6 +820,36 @@ deleted fails too.
 **Why:** a strict body hash would forbid fixing a typo, and a free edit would let anything
 change. An insertion that can always be undone keeps the words as typed readable under the fix
 (FRAMEWORK §6.5); a change of meaning is an amendment, never a correction.
+
+### context-engine record retire
+
+Retire a story (the kind `[guards] stories` names): the owner withdrew it, or it was recorded
+again to replace a broken record (the wrong goal, actor or status at birth: lint G-I1 and G-I2
+name this step). `record retire <id> --by <who> --why "<words>" [--superseded-by <new id>]`.
+1. Say whose call it is. `--by owner` (or `human:<id>`): the owner withdrew it, and `--why` is
+   their words, verbatim (or written to a file and passed with `--file`). `--by agent`: only
+   with `--superseded-by`, the story recorded again (§ context-engine record new, the owner's
+   words as they are, the right fields); `--why` says what was wrong. An agent never withdraws
+   owner intent on its own: stop, and ask the owner.
+2. Check before any change. The story's hash must match (as § context-engine record amend). A
+   successor must be a story, not the same one, and not retired. A story an earlier `retire`
+   line of the op log retired is final: stop; to bring its intent back, record a new story. A
+   story already `retired` with no such line was retired by hand: retire it again here, so who
+   and why are recorded.
+3. On the story: set `story_status: retired`, set `status: deprecated` (a new key goes last),
+   and with a successor add it to `superseded_by` (a list). On the successor: add the story to
+   `supersedes`. Then append an amendment as in § context-engine record amend, with the text
+   `retired (by <who>): <why>`, or `retired (by <who>; superseded by <new id>): <why>`.
+4. Log one `retire` line for the story, then one for the successor (table above), and commit
+   them together.
+
+**Why:** a story is the owner's words, so retiring one is owner intent, as recording it is: who
+decided and why are kept with the story, under its amendments, and the op log line is what lint
+reads. G-I2 fails a retired story no logged `retire` retired (a hand edit of `story_status`),
+and a story a logged `retire` retired that is no longer `retired` with `status: deprecated`: a
+retire is never undone, so the history stays readable. `status: deprecated` is OKF's word for
+"kept for history, no longer current" (FRAMEWORK §9.3); a retired story serves no goal (G-I1)
+and needs no criterion (G-T1).
 
 ## Decisions
 

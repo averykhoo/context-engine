@@ -165,7 +165,7 @@ note = "goals carry G-n ids; a story's `goals` names them"
 component = "Stories (owner's words)"
 path = "docs/stories"
 pattern = "<id>-<slug>.md"
-mode = "append-only: `context-engine record amend`, never rewrite"
+mode = "append-only: `context-engine record amend`; retired only by `context-engine record retire`; never rewrite"
 
 [[routes]]
 component = "Criteria"
