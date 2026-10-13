@@ -7,10 +7,40 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-13c · kind: open
+## 2026-10-13c · kind: close
 
-- **opened:** 2026-10-13T14:31:46+08:00 by claude-code/claude-opus-5-5
-- **asked:** ASK-5
+- **rows:** CE-26, CE-45, CE-49, CE-33, CE-55 closed (INV-36..69); CE-50..66 filed; CE-7, CE-26,
+  CE-27, CE-45, CE-55 commented; ASK-5 answered (DEC-37); DEC-36, DEC-38 recorded
+- **receipts:**
+  - guards: pytest -q: 626 passed in 179.13s (rc=0), lint inside it clean, on main 29b7662 plus the
+    close's records and the fan-out.md line
+  - read: orient + task show CE-45, CE-49, CE-33, CE-26, ASK-5 + FRAMEWORK §5.2, §5.5 + rituals §
+    Clean close
+  - asked: ASK-5
+- **summary** (the owner digest):
+  - Owner: DEC-36 (the engine commits at milestones, not every write), DEC-37 (ASK-5: rename
+    imported ids, keep the number, old id an alias), DEC-38 (standard prefixes DEC, STORY, AC, ASK,
+    RISK, GOAL, BATON, PAUSE; EXP, HAZ reserved; per-repo task prefix; CE-56).
+  - Built, each by a task agent in its own worktree (build, review lenses, a skeptic, fix), merged
+    and sabotaged first-hand: CE-26 method runbooks, CE-45 engine commits, CE-49 record retire,
+    CE-33 G-D4/G-D5 (measured first), CE-55 milestone commits with Closes: on task close.
+  - For the owner: CLAUDE.md § Gate and § Rules still say git commit -o and gate every commit; the
+    kit contract now says commit through context-engine commit, with the engine's milestone commits
+    the one ungated exception. CLAUDE.md wins where they differ: the owner to pick the wording.
+  - For the owner: restart Claude Code; the running MCP server refuses this repo's new [guards]
+    keys, so this session ran on the CLI. Agent-drafted criteria AC-71..78 unread.
+  - Found: agent commits put Session: outside git's trailer block (CE-64, NEXT); foreign reconcile's
+    baseline drifts under milestones (CE-65); the MCP stdio test is a false red in worktrees
+    (CE-62).
+  - CE-7 (adhoc trial) is unblocked: adhoc's session ended; the owner runs it in a new session.
+  - AAR: review agents must run in the foreground (a background child died with its parent's return,
+    CE-45 round 1; now in fan-out.md); a stale MCP server goes from refusing writes to refusing
+    every call when config keys are added.
+- **Still owed:**
+  - CLAUDE.md § Gate and § Rules wording after CE-55: the owner's call (the kit contract changed;
+    CLAUDE.md wins where they differ)
+  - .scratch/ holds older sessions' files (private-surveys, redaction-2026-10-09, w-*.md, banner-*):
+    not swept this session; needs an audit agent before any delete
 
 ---
 
