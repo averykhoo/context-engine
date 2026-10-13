@@ -79,6 +79,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-28](DEC-28-ce-7-imports-adhoc-d-27-as-built-narrowed-by-d.md): CE-7 imports adhoc D-27 as BUILT, narrowed by D-29 *(owner, 2026-10-13)*
 - [DEC-29](DEC-29-abandoning-a-stale-session-stub-stays-a-by-hand.md): Abandoning a stale session stub stays a by-hand rule for now; the window moves to 3 later sessions counted from last activity *(owner, 2026-10-13)*
 - [DEC-30](DEC-30-ultracode-stays-a-judgement-grant-in-the.md): Ultracode stays a judgement grant in the contract, not the setting; the MCP instructions tell agents to ask for it when it would help *(owner, 2026-10-13)*
+- [DEC-31](DEC-31-a-session-closes-by-default-when-its-requested.md): A session closes by default when its requested work is done *(owner, 2026-10-13)*
 
 ## REJECTED
 

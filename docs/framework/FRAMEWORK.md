@@ -930,6 +930,10 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 
 ### 6.3 Clean close (a natural stopping point)
 
+**A session closes by default when the work it was asked for is done**, without waiting to be
+told. It stays open only when the owner says so; an awkward stopping point is a pause (§6.4), not
+an open stub. More work asked for after a close starts a new session.
+
 Write the records first, then run the gate, then commit. What a clean close does, numbered for
 citation (the order is below):
 

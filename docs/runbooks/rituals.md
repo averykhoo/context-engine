@@ -99,8 +99,10 @@ agent's own call.
 
 ## Clean close (§6.3)
 
-A natural stopping point. The records come first, then the gate, then the ledger entry that
-carries the gate's result, then the commit.
+A natural stopping point. **Close by default when the work you were asked for is done**, without
+waiting to be told; stay open only when the owner says so, and pause (§ Pause) at an awkward stop.
+More work asked for after the close starts a new session (§ Session start). The records come
+first, then the gate, then the ledger entry that carries the gate's result, then the commit.
 
 | § | Do | Engine | By hand | Why |
 |---|---|---|---|---|
