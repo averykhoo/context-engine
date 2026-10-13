@@ -54,6 +54,7 @@ CALLS = {
     "record_amend": (["DEC-1", "more"], {"id": "DEC-1", "text": "more"}),
     "record_correct": (["DEC-1", "--after", "a", "--text", "b"], {"id": "DEC-1", "after": "a", "text": "b"}),
     "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
+    "decision_set": (["DEC-1", "--set", "tags=a", "--unset", "reopen_if"], {"id": "DEC-1", "fields": {"tags": "a"}, "unset": ["reopen_if"]}),
     "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
     "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
     "decision_show": (["DEC-1", "--section", "Amendments"], {"id": "DEC-1", "section": "Amendments"}),
@@ -172,6 +173,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("record_amend", id="DEC-2", text="widened")
     w("record_correct", id="DEC-2", after="Owner", text="sic")
     w("decision_link", id="DEC-2", target="CE-1")
+    w("decision_set", id="DEC-2", fields={"tags": "a, b"}, unset=["reopen_if"])
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")
     w("hk_expire_batons")

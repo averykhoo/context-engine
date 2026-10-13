@@ -291,6 +291,12 @@ def decision_supersede(e: Engine, c: Caller, old: str, new: str) -> tuple[int, s
 
 
 @op(write=True)
+def decision_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None, unset: list[str] | None = None) -> tuple[int, str]:
+    """Set or unset a decision's own frontmatter: decision_status (not SUPERSEDED: decision_supersede), reopen_if, tags, title, description. Links, actor, decided, session and answers are refused."""
+    return 0, e.decision_set(id, fields or {}, unset=tuple(unset or ()), **c.kw)
+
+
+@op(write=True)
 def decision_link(e: Engine, c: Caller, id: str, target: str, rel: str = "") -> tuple[int, str]:
     """Link a decision to a task, story, criterion or `file::symbol`; `rel` is tasks, creates, amends, retires, relaxes, code or refs (inferred for tasks and code)."""
     return 0, e.link(id, target, rel, **c.kw)

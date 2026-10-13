@@ -51,6 +51,18 @@ BOARD_OWNED = {
     "last_asked": "ask raised or ask later",
     "answered": "ask answer; an answer changes only through its decision (`record amend`, `decision supersede`)",
 }
+# A decision's keys that `decision set` refuses (CE-32), each with the remedy. The engine-owned
+# `type`, `id` and `body_sha` are refused by Store.set itself.
+_FIXED = "it is fixed at birth (provenance of the decision); note a correction with `record amend <id> \"<text>\"`"
+DECISION_OWNED = {
+    "status": "use `decision supersede <id> <new>`: OKF status is derived from SUPERSEDED",
+    "answers": "it is written by `ask answer` and never changes",
+    "actor": _FIXED,
+    "decided": _FIXED,
+    "session": _FIXED,
+    **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
+    **{k: "use `decision link <id> <target> --rel <field>`; no operation removes a link yet" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by")},
+}
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
@@ -798,6 +810,29 @@ class Engine:
 
         self.store.update([old, new], mutate, session=session, actor=actor, op="supersede")
         return f"{old}: SUPERSEDED by {new} (status: deprecated); {new} supersedes {old}"
+
+    def decision_set(self, rid: str, raw: dict[str, str], *, session: str, actor: str, unset: tuple[str, ...] = ()) -> str:
+        """Set or unset a decision's own frontmatter (`decision.set`, CE-32): `decision_status`
+        (never to or from SUPERSEDED), `reopen_if`, `tags`, `title`, `description` and keys no
+        operation owns. Links, provenance and `answers` belong to other operations."""
+        self._check(session, actor)
+        self._is_decision(rid)
+        owned = [k for k in (*raw, *unset) if k in DECISION_OWNED]
+        if owned:
+            raise Refusal(f"`decision set` does not change a decision's `{owned[0]}`", DECISION_OWNED[owned[0]])
+        kind = self.store.config.kind_for_id(rid)
+        changes = {k: coerce(kind, k, v) for k, v in raw.items()}
+        if str(changes.get(D.STATUS_KEY)) == "SUPERSEDED":
+            raise Refusal(f"`decision set` does not mark {rid} SUPERSEDED", f"use `decision supersede {rid} <new>`: it writes `superseded_by`, `supersedes` and `status: deprecated` with it")
+
+        def check(rec: Record) -> None:
+            was = str(rec.doc.get(D.STATUS_KEY))
+            if was == "SUPERSEDED" and (D.STATUS_KEY in changes or D.STATUS_KEY in unset):
+                later = ", ".join(D.as_list(rec.doc.get("superseded_by"))) or "<DEC>"
+                raise Refusal(f"{rid} is SUPERSEDED by {later}, so its status is history", f"a superseded decision stays superseded; to bring it back, record a new decision and `decision supersede {later} <new>`")
+
+        self.store.set(rid, changes, session=session, actor=actor, unset=unset, check=check)
+        return f"{rid}: set {_one([*raw, *unset])}"
 
     def _link_rel(self, target: str) -> str:
         if "::" in target or "/" in target:

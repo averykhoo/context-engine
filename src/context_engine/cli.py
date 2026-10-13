@@ -159,6 +159,10 @@ def build() -> argparse.ArgumentParser:
     ds = dc.add_parser("supersede")
     ds.add_argument("old")
     ds.add_argument("new")
+    dset = dc.add_parser("set", help="a decision's own frontmatter: decision_status, reopen_if, tags, title, description")
+    dset.add_argument("id")
+    dset.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
+    dset.add_argument("--unset", action="append", default=[])
     dl = dc.add_parser("link")
     dl.add_argument("id")
     dl.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
@@ -214,6 +218,7 @@ CLI_OPS = {
     ("record", "amend"): "record_amend",
     ("record", "correct"): "record_correct",
     ("decision", "supersede"): "decision_supersede",
+    ("decision", "set"): "decision_set",
     ("decision", "link"): "decision_link",
     ("decision", "find"): "decision_find",
     ("decision", "show"): "decision_show",

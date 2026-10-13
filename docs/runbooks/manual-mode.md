@@ -89,6 +89,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body_sha", "body"]` |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
+| decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
@@ -760,6 +761,34 @@ on `<old>` set `decision_status: SUPERSEDED`, `status: deprecated` and add `<new
 
 **Why:** a link written in one direction only is a half-truth, and the engine writes both under
 one lock. `status: deprecated` is OKF's word for "kept for history, no longer current" (§9.3).
+
+### context-engine decision set
+
+Set or unset a decision's own frontmatter keys: `decision_status`, `reopen_if` (for a REJECTED
+decision: what would justify reopening it), `tags`, `title`, `description`, and any key no
+operation owns. Values take the kind's declared types, as in § context-engine task set
+(`tags=a, b` is a list; an empty value means null). Refuse, and write nothing, when:
+- the key is `type`, `id` or `body_sha` (engine-owned, never changed);
+- the key is `status`, `supersedes` or `superseded_by`: use `decision supersede`, which writes
+  both directions and the derived OKF status;
+- the key is a link field (`relaxes`, `narrowed_by`, `creates`, `amends`, `retires`, `tasks`,
+  `code`, `refs`): use `decision link`; no operation removes a link yet;
+- the key is `answers` (written once by `ask answer`) or `actor`, `decided` or `session` (who
+  decided, when, and in which session are fixed at birth; note a correction with `record amend`);
+- the new `decision_status` is `SUPERSEDED`: use `decision supersede <id> <new>`;
+- the decision is already SUPERSEDED and the change touches `decision_status`: a superseded
+  decision stays superseded; to bring it back, record a new decision and supersede the one that
+  replaced it.
+
+Re-read the file, then change only the named keys in place (a new key goes last). The body and
+`body_sha` do not change. Log one `set` line with the changed keys, then regenerate the index
+(§ context-engine decision index). **Move an owner's decision's status (PROVISIONAL to BUILT, or
+to REJECTED or DEFERRED) only on the owner's words, recorded first** (`record amend <id>
+"<words>"`): the engine cannot tell whether the owner said so, so this rule is the only control.
+
+**Why:** a decision's status, tags and `reopen_if` are not covered by `body_sha`, so they can be
+kept current without touching the words; but the keys other operations own carry a rule
+(both directions of a link, the derived OKF status, who decided), and a raw edit would skip it.
 
 ### context-engine decision link
 

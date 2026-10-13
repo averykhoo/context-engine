@@ -1037,7 +1037,11 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 (freezes `body_sha` once and refuses a re-stamp; nothing ever replaces it, not even
 `record.correct`); these three are generic over the append-only
 kinds, and so is `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
-directions under one lock and derives OKF `status`), `decision.link(id, target, rel)` (a task,
+directions under one lock and derives OKF `status`), `decision.set(id, fields, unset)` (a
+decision's own keys: `decision_status`, `reopen_if`, `tags`, `title`, `description`; it refuses
+`SUPERSEDED`, any status change on a superseded decision, the link fields, `status`, `answers`, and
+the provenance `actor`, `decided` and `session`, so it never writes half a link or re-attributes a
+decision; CE-32), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
 backlink too), `decision.find(text, tag, status, links_to)` (one-line rows),
 `decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
@@ -1493,7 +1497,7 @@ library operations. The CLI spells them `context-engine <noun> <verb>` (`session
 | Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg)`, `reopen`, `section.set(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.link`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.set`, `.link`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 

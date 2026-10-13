@@ -1,6 +1,6 @@
 """Decision records (CE-5, FRAMEWORK §6.5): bracketed corrections, supersede and link in both
-directions, find, show and why(), the generated index (G-D6), and the single-file log importer
-(AC-38 to AC-42)."""
+directions, decision set (CE-32), find, show and why(), the generated index (G-D6), and the
+single-file log importer (AC-38 to AC-42, AC-53)."""
 
 import datetime as dt
 import json
@@ -181,6 +181,98 @@ def test_relaxes_writes_the_narrowed_by_backlink(eng):
     assert eng.store.get(a).doc.get("narrowed_by") == [b]
     with pytest.raises(Refusal, match="decision supersede"):
         eng.link(b, a, **W)  # a decision target needs --rel
+
+
+# -- decision set: a decision's own frontmatter (CE-32) ------------------------------------------
+
+
+@pytest.mark.criterion("AC-53")
+def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_index(eng):
+    rid = dec(eng, "Provisional call", status="PROVISIONAL")
+    before = eng.store.get(rid).doc
+    sha, body = before.get("body_sha"), before.body
+    out = eng.decision_set(rid, {"decision_status": "BUILT", "tags": "storage, index", "reopen_if": "plain files get slow"}, **W)
+    assert out == f"{rid}: set decision_status, tags, reopen_if"
+    d = eng.store.get(rid).doc
+    assert (d.get("decision_status"), d.get("tags"), d.get("reopen_if")) == ("BUILT", ["storage", "index"], "plain files get slow")
+    assert (d.get("body_sha"), d.body) == (sha, body)  # the words and their stamp are untouched
+    sets = [o for o in ops(eng) if o["op"] == "set"]
+    assert [(o["id"], o["fields"], o["session"], o["actor"]) for o in sets] == [(rid, ["decision_status", "tags", "reopen_if"], S, ACTOR)]
+    assert ops(eng)[-1]["op"] == "index"  # regenerated in the same write
+    text = (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+    assert "## PROVISIONAL" not in text and f"### storage\n\n- [{rid}]" in text
+    assert eng.decision_set(rid, {}, unset=("reopen_if",), **W) == f"{rid}: set reopen_if"
+    assert eng.store.get(rid).doc.get("reopen_if") is None
+    assert eng.store.lint() == []  # schema, G-D10 and G-D6 (the index equals a regeneration)
+
+
+@pytest.mark.criterion("AC-53")
+@pytest.mark.parametrize(
+    "key, match",
+    [
+        ("type", "owned by the engine"),
+        ("id", "owned by the engine"),
+        ("body_sha", "owned by the engine"),
+        ("status", "decision supersede"),
+        ("answers", "ask answer"),
+        ("actor", "fixed at birth"),
+        ("decided", "fixed at birth"),
+        ("session", "fixed at birth"),
+        ("supersedes", "decision supersede"),
+        ("superseded_by", "decision supersede"),
+        ("relaxes", "decision link"),
+        ("narrowed_by", "decision link"),
+        ("creates", "decision link"),
+        ("amends", "decision link"),
+        ("retires", "decision link"),
+        ("tasks", "decision link"),
+        ("code", "decision link"),
+        ("refs", "decision link"),
+    ],
+)
+def test_decision_set_refuses_keys_another_operation_or_birth_owns(eng, key, match):
+    rid = dec(eng)
+    path = eng.store.get(rid).path
+    before = path.read_bytes()
+    for raw, unset in (({key: "x"}, ()), ({}, (key,))):
+        with pytest.raises(Refusal) as got:
+            eng.decision_set(rid, raw, unset=unset, **W)
+        assert match in str(got.value)
+    assert path.read_bytes() == before
+
+
+@pytest.mark.criterion("AC-53")
+def test_decision_set_never_marks_or_unmarks_superseded_and_names_the_operation_that_does(eng):
+    a, b = dec(eng, "Old way"), dec(eng, "New way")
+    with pytest.raises(Refusal, match=rf"use `decision supersede {a} <new>`"):
+        eng.decision_set(a, {"decision_status": "SUPERSEDED"}, **W)
+    assert eng.store.get(a).doc.get("decision_status") == "BUILT"
+    # the remedy's command works as named, through the CLI
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "supersede", a, b]) == 0
+    for raw, unset in (({"decision_status": "BUILT"}, ()), ({}, ("decision_status",))):
+        with pytest.raises(Refusal, match=rf"{a} is SUPERSEDED by {b}"):
+            eng.decision_set(a, raw, unset=unset, **W)
+    assert eng.store.get(a).doc.get("decision_status") == "SUPERSEDED"
+    eng.decision_set(a, {"tags": "history"}, **W)  # its own other keys still change
+    assert eng.store.get(a).doc.get("tags") == ["history"]
+    tid = eng.new("task", "T", **W).id
+    sid = eng.record_new("story", "A story", "words", {"actor": "owner"}, **W).id
+    for other in (tid, sid):
+        with pytest.raises(Refusal, match="not a decision"):
+            eng.decision_set(other, {"tags": "x"}, **W)
+    with pytest.raises(Refusal, match="has decision_status 'MAYBE'"):
+        eng.decision_set(b, {"decision_status": "MAYBE"}, **W)  # the kind's enum still holds
+
+
+@pytest.mark.criterion("AC-53")
+def test_decision_set_runs_from_the_cli_with_set_and_unset(eng):
+    rid = dec(eng, status="REJECTED")
+    argv = ["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "set", rid]
+    assert main([*argv, "--set", "reopen_if=it gets slow", "--set", "tags=[storage]"]) == 0
+    assert (eng.store.get(rid).doc.get("reopen_if"), eng.store.get(rid).doc.get("tags")) == ("it gets slow", ["storage"])
+    assert main([*argv, "--unset", "tags"]) == 0
+    assert eng.store.get(rid).doc.get("tags") is None
+    assert main([*argv, "--set", "actor=owner"]) == 2  # a refusal exits 2
 
 
 # -- link, find, show and why() ------------------------------------------------------------------
