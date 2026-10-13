@@ -148,6 +148,12 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
   ritual step numbers, guard check numbers and the section numbers of this document.
 - Cite stable keys, never line numbers.
 - Code is cited as `file::symbol`.
+- **One id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
+  questions, register entries): `[A-Z]+-[1-9][0-9]*`, a prefix of capitals, a dash, and a number
+  with no leading zero (`G-3`, `S-12`). The prefixes are per-repo config (`[kinds.*].prefix`);
+  the form is not. Guard and drift names (`G-D3`, `DR1`) belong to this document, not to a
+  repo. A record stamped before a repo took up the form keeps its old ids verbatim (owner words
+  are never rewritten), and the guards read a legacy goal id `G3` as `G-3`.
 
 **P4. Provenance on anything that can go stale:**
 - **who:** the actor vocabulary in §6.5, with the model id for agents;
@@ -407,6 +413,9 @@ from them, not from the broken process.
 **Rule:** one charter per repo, owner-stamped. Agents change it only through an owner question,
 then a decision, then the edit. Every goal is served by at least one story (G-I1).
 
+**Goal ids:** each goal leads a row of the charter's goal table with its id, `G-n` (P3), so the
+guards can read it: `| G-1 | <goal> | <how it is measured> |`.
+
 **Bootstrapping cost to the owner:** about one page, given in chat (§6.9).
 
 ### 3.2 Stories: the owner's voice
@@ -436,7 +445,7 @@ template is ever imposed on the owner, and the agent never rewrites the owner's 
   `direct edit`;
 - a status, `story_status: live | unspecified | unconfirmed | retired` (OKF reserves `status`,
   §9.3.1);
-- `goals:` the charter goal(s) it serves (G-I1).
+- `goals:` the charter goal(s) it serves, by id (`[G-1, G-3]`; G-I1).
 
 **Owner words are verbatim.** Agent text inside a story is labelled `AGENT:` and becomes owner
 intent only once accepted.
@@ -465,7 +474,8 @@ believe it is still open.
 
 Each criterion has:
 - an id, or a scenario tag;
-- the story section or decision it derives from, **with its actor carried along**;
+- the story section or decision it derives from (its `from`). **Its actor is its source's:**
+  no actor column is kept, and G-T6 checks that the source resolves;
 - a status:
 
 | status | meaning | requirement |
@@ -564,7 +574,7 @@ charter goal ─► story (owner) ─► criterion (agent) ─► test (agent) �
 |---|---|---|
 | goal → story | hand (intake) | G-I1 |
 | story → criterion | hand (agent) | G-T1: every `live` story has at least one criterion, or is `unspecified` **with a board task to specify it** (an owner question only if the agent cannot tell what the story means). G-T6: every criterion's story ref resolves |
-| criterion → test | hand: an annotation in the test or driver | G-T2: every non-`planned`, non-`retired` criterion is claimed by a test or driver, and every annotation resolves. The guard sees annotations, not coverage. **Not required:** that every test name a criterion. Tests may be internal |
+| criterion → test | hand: an annotation in the test or driver | G-T2: every `tested` or `manual` criterion is claimed by a test or driver, and every annotation resolves. The guard sees annotations, not coverage. **Not required:** that every test name a criterion. Tests may be internal |
 | test → code | **derived** from coverage or imports | **proven, not declared:** G-T5 mutation per criterion |
 | design change → criteria | census (§6.2 step 6) | the census output is an evidence doc. Retirements carry the decision id |
 
@@ -1220,8 +1230,8 @@ Procedure may come from any of the three; a grant may not.
    runbooks, the bootloader appended to `CLAUDE.md`, the contract it imports, and the hook. It
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
-   config, with a provenance note on every cap, and checks the id prefixes against ids the repo
-   already uses.
+   config, with a provenance note on every cap, sets the intent chain's sources in `[guards]`
+   (§8.1), and checks the id prefixes against ids the repo already uses.
 4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
 5. First clean close: the guards are green, the ledger entry is `kind: close`, and the first
    `banner set` (with `--seen none`) writes the banner heading.
@@ -1554,14 +1564,25 @@ concurrent sessions. The hand-run baseline is an evidence doc measured before th
 Decisions as records follow once the core holds.
 
 ### 8.1 Intent guards
-- **G-I1:** every charter goal has at least one story; every story names at least one goal.
+- **G-I1:** every charter goal has at least one story; every story names at least one goal,
+  and only goals of the charter. Retired stories are history and are not read. Each goal id
+  leads one row, in the one form (P3).
 - **G-I2:** every story has an actor, a date and a status from the vocabulary. `unconfirmed`
-  requires `actor: agent (reconstructed from …)`.
+  requires `actor: agent (reconstructed from …)`. `record.new` of a story refuses what G-I2 and
+  G-I1 would fail, by the same checks.
+
+The intent chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
+charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,
+the criterion id), and the criteria file. A guard is off while a source it needs is unset. A set
+path that does not exist is red, and so is a source that yields nothing (no goal row, no
+criterion row, no claim), so a reworded table or a claim pattern that does not fit the repo's
+test syntax cannot pass by finding nothing.
 
 ### 8.2 Trace and existence guards
-- **G-T1:** every `live` story has a criterion, or is `unspecified` with a board task.
-- **G-T2:** every `tested` or `manual` criterion is claimed by a test or driver, and every
-  annotation resolves.
+- **G-T1:** every `live` story has a criterion that is not retired, or is `unspecified` and an
+  open board item names it. Which item specifies it is judgement; the guard counts any mention.
+- **G-T2:** every `tested` or `manual` criterion is claimed by a test or driver, every
+  annotation resolves, and every status is from the vocabulary (§3.3).
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
   **normative** text of a story, criterion, law doc or invariant exists in the code; history
   notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
@@ -1575,8 +1596,8 @@ Decisions as records follow once the core holds.
   job, keyed on the hash, with results in a tracked evidence doc; it does not apply to formal
   theorems, where G-T4 substitutes. It mechanises the hand sabotage of P7. *Not built yet
   (CE-34).*
-- **G-T6:** every criterion's story or decision ref resolves, and its actor matches the
-  source's.
+- **G-T6:** every criterion's `from` names a story or decision, and each resolves to a record.
+  A criterion's actor is its source's (§3.3), so resolving the source is the whole check.
 - **G-T7:** every `deviates` criterion references a deviation-register entry; every `retired`
   one references a decision.
 
@@ -1816,9 +1837,10 @@ from the repo root before every commit that touches code, tests or records, and 
 push. The kit's contract (§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
-`context-engine lint` runs G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-W1, G-W2, G-W4 and G-W6 (plus
-the record schemas, G-D11, G-R1 and the other built guards of §8); G-I2, G-T1 and G-T2 are
-checked by hand. *Not built yet: G-I2, G-T1 and G-T2 (CE-25).*
+`context-engine lint` runs every one (plus the record schemas, G-D11, G-R1 and the other built
+guards of §8). G-I2, G-T1 and G-T2 read the sources `[guards]` names (§8.1), which the kit leaves
+unset because a fresh repo has no goals, stories or tests yet; bootstrap sets them once the
+charter holds the owner's goals (§6.9), and until then they are checked by hand.
 
 ### 11.2 Add when needed
 

@@ -18,7 +18,8 @@ FIELD_TYPES = ("str", "date", "key", "list", "int")  # `key` is a session key, e
 CONFIG_NAME = "context.toml"
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
-    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1", "G-T3",
+    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
+    "G-I1", "G-I2", "G-T1", "G-T2", "G-T3", "G-T6",
     "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W12", "G-W13",
 )
 
@@ -80,6 +81,10 @@ class Route:
     max_width: int = 0  # characters per line; table rows are exempt
 
 
+# G-T2's default claim: a pytest marker `criterion("AC-n")`, or a comment `criterion: AC-n` in any language.
+CLAIM = r"""criterion(?:\(\s*["']|:\s*)([A-Z]+-[1-9][0-9]*)"""
+
+
 @dataclass(frozen=True)
 class Guards:
     """``[guards]``: which guards lint reports and what the doc guards read (FRAMEWORK §8.0, §8.2,
@@ -94,6 +99,10 @@ class Guards:
     retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
     coverage_spec: str = ""  # G-D12: the framework spec whose components, rituals and G-ids must be owned; unset (with coverage_maps) is off
     coverage_maps: str = ""  # G-D12: a repo-relative glob of dated coverage maps; the newest by the date and session letters in its file name is read
+    charter: str = ""  # G-I1: the charter, whose table rows led by a goal id (`G-n`) are the goals a story's `goals` may name; unset is off
+    stories: str = ""  # G-I1, G-I2, G-T1, G-T6: the record kind holding the stories; unset turns all four off
+    tests: tuple[str, ...] = ()  # G-T2: files and directories whose claims trace tests and drivers to criteria; empty is off
+    claim: str = CLAIM  # G-T2: a regex whose one group is the criterion id a test or driver claims
 
 
 @dataclass(frozen=True)
@@ -231,6 +240,14 @@ def from_dict(raw: dict) -> Config:
     unknown = [x for x in g.get("off", ()) if x not in LINT_IDS]
     if unknown:
         raise Refusal(f"[guards] `off` names {unknown[0]!r}, which lint does not report", f"use guard ids lint reports: {', '.join(LINT_IDS)}")
+    if g.get("stories") and g["stories"] not in kinds:
+        raise Refusal(f"[guards] `stories` names kind {g['stories']!r}, which is not declared", f"name the stories' kind ({', '.join(sorted(kinds))}), or unset it")
+    try:
+        groups = re.compile(g.get("claim", CLAIM)).groups
+    except re.error as err:
+        raise Refusal(f"[guards] `claim` is not a regular expression ({err})", "fix the pattern; its one group is the claimed criterion id") from None
+    if groups != 1:
+        raise Refusal(f"[guards] `claim` has {groups} groups", "give it exactly one group, the claimed criterion id (make others `(?:...)`)")
     guards = Guards(**{k: (tuple(v) if isinstance(v, list) else v) for k, v in g.items()})
     return Config(
         kinds=kinds,

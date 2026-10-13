@@ -9,9 +9,14 @@ G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty c
 G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while neither is set.
 G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records.
 
+The intent chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] charter``, ``stories``,
+``tests`` and ``claim`` with ``[working] criteria``: a guard is off while a source it needs is unset,
+and red when a set path is missing or a source yields nothing (no goal row, no criterion row, no
+claim), so a reworded table or a pattern that does not fit cannot pass by finding nothing.
+
 Not here (FRAMEWORK §8, with their homes): G-D4 liveness and G-D5 typed numbers, G-T5 mutation
 per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
-G-V3 (the run ledger), and the intent chain (G-I1, G-I2, G-T1, G-T2, G-T6).
+G-V3 (the run ledger).
 """
 
 from __future__ import annotations
@@ -52,7 +57,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", "__pycache__", "node_modules", ".ve
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e)
+    return caps(e) + ids(e) + links(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -711,3 +716,318 @@ def coverage(e: Engine) -> list[Failure]:
             if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):
                 out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
     return out
+
+
+# -- the intent chain: G-I1, G-I2, G-T1, G-T2, G-T6 (CE-25) -------------------------------
+
+ID_FORM = r"[A-Z]+-[1-9][0-9]*"  # every id the framework mints: a capital prefix, a dash, a number (FRAMEWORK P3)
+ID_RE = re.compile(rf"(?<![\w-]){ID_FORM}(?![\w-])")
+CRITERION_ROW_RE = re.compile(rf"^\|\s*({ID_FORM})\s*\|", re.MULTILINE)  # a criteria table row, by its first cell
+GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the one id form
+STORY_STATUSES = ("live", "unspecified", "unconfirmed", "retired")  # FRAMEWORK §3.2
+CRITERION_STATUSES = ("planned", "tested", "manual", "deviates", "retired")  # FRAMEWORK §3.3
+CLAIMED = ("tested", "manual")  # the statuses G-T2 requires a claim for
+AGENT_ACTOR_RE = re.compile(r"agent \([^()]*reconstructed from .+\)")
+STORY_ACTOR_RE = re.compile(rf"owner|human:\S+|{AGENT_ACTOR_RE.pattern}")  # FRAMEWORK §3.2
+SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
+INTENT_OFF = "unset it in [guards] to switch the guard off"
+
+
+def goal_id(text: str) -> str | None:
+    """A goal id in the one id form (`G-3`), from `G-3` or the legacy `G3`; None if it is not one."""
+    m = GOAL_RE.fullmatch(text.strip().strip("*`").strip())
+    return f"G-{m.group(1)}" if m else None
+
+
+def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]:
+    """Each markdown table outside fenced code: (its header cells, lower-cased; its body rows as
+    (line number, stripped cells)). The `|---|` separator is skipped."""
+    header: list[str] | None = None
+    body: list[tuple[int, list[str]]] = []
+    last = -2
+    for n, line in prose(text):
+        row = line.strip()
+        if not row.startswith("|") or n != last + 1:
+            if header is not None:
+                yield header, body
+            header, body = None, []
+        last = n
+        if not row.startswith("|"):
+            continue
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        if header is None:
+            header = [c.lower() for c in cells]
+        elif not all(set(c) <= set("-: ") for c in cells):
+            body.append((n, cells))
+    if header is not None:
+        yield header, body
+
+
+def charter_goals(text: str) -> list[tuple[int, str, str]]:
+    """(line number, goal id, the cell as written) for each table row the charter leads with a
+    goal id, in the one form or the legacy one (`goal_id`)."""
+    return [(n, gid, cells[0]) for _, body in tables(text) for n, cells in body if (gid := goal_id(cells[0]))]
+
+
+@dataclass(frozen=True)
+class Criterion:
+    """One row of the criteria file: its id, line, source cell (`from`) and status, lower-cased."""
+
+    id: str
+    line: int
+    source: str
+    status: str
+
+
+def criteria_rows(text: str) -> tuple[list[Criterion], list[str]]:
+    """The criterion rows (a table row whose first cell is an id, `CRITERION_ROW_RE`), and the
+    problems that stop a row being read: a table of criteria with no `status` column or no
+    source column (`from`, `story` or `source`)."""
+    rows: list[Criterion] = []
+    problems: list[str] = []
+    for header, body in tables(text):
+        mine = [(n, cells) for n, cells in body if CRITERION_ROW_RE.match(f"| {cells[0]} |")]
+        if not mine:
+            continue
+        src = next((header.index(c) for c in SOURCE_COLUMNS if c in header), None)
+        status = header.index("status") if "status" in header else None
+        if src is None or status is None:
+            missing = "source column (`from`, `story` or `source`)" if src is None else "`status` column"
+            problems.append(f"line {mine[0][0]}: a table of criteria has no {missing}, so its {len(mine)} rows cannot be read")
+            continue
+        for n, cells in mine:
+            src_cell = cells[src] if src < len(cells) else ""
+            status_cell = cells[status] if status < len(cells) else ""
+            rows.append(Criterion(cells[0], n, src_cell, status_cell.strip("`*").strip().lower()))
+    return rows, problems
+
+
+def story_problems(doc) -> list[str]:
+    """G-I2 on one story's frontmatter: an actor of the vocabulary, a date, a status of the
+    vocabulary, and `unconfirmed` only from an agent's reconstruction. `record new` calls it too."""
+    out = []
+    actor = str(doc.get("actor") or "")
+    if not STORY_ACTOR_RE.fullmatch(actor):
+        out.append(f"`actor: {actor}` is none of `owner`, `human:<id>` or `agent (reconstructed from ...)`")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(doc.get("date") or "")):
+        out.append(f"`date: {doc.get('date') or ''}` is not a date (YYYY-MM-DD)")
+    status = str(doc.get("story_status") or "")
+    if status not in STORY_STATUSES:
+        out.append(f"`story_status: {status}` is none of {', '.join(STORY_STATUSES)}")
+    elif status == "unconfirmed" and not AGENT_ACTOR_RE.fullmatch(actor):
+        out.append(f"`unconfirmed` is for a story an agent reconstructed, but its actor is `{actor}`")
+    return out
+
+
+def goal_problems(goals, known: set[str], legacy: bool = True) -> list[str]:
+    """G-I1 on one story's `goals`: at least one, each a goal of the charter (`known`). A legacy
+    `G3` reads as `G-3` at rest (``legacy``); a new write must use the one form. `record new`
+    calls it too."""
+    values = D.as_list(goals)
+    if not values:
+        return ["names no goal (`goals` is empty)"]
+    out = []
+    for v in values:
+        gid = goal_id(v)
+        if gid is None:
+            out.append(f"`{v}` in `goals` is not a goal id (G-n)")
+        elif not legacy and v != gid:
+            out.append(f"`{v}` in `goals` is not in the one id form; write {gid}")
+        elif gid not in known:
+            out.append(f"`goals` names {gid}, which is not a goal of the charter")
+    return out
+
+
+def _stories(e: Engine) -> list[tuple[str, str, object]]:
+    """(id, repo-relative path, frontmatter) of each story record (`[guards] stories`)."""
+    st = e.store
+    kind = st.config.kind(st.config.guards.stories)
+    out = []
+    for path in st._files(kind):
+        rid = st._id_of(kind, path)
+        if rid is None:
+            continue
+        try:
+            out.append((rid, st._rel(path), st.read(path)))
+        except Exception:
+            continue  # the schema check reports an unreadable record
+    return out
+
+
+def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
+    """The charter's goal ids (None when `[guards] charter` is unset), and G-I1's reds on the
+    charter itself: missing, no goal rows (the table changed under the pattern), a legacy id, a
+    goal id leading two rows."""
+    rel = e.store.config.guards.charter
+    if not rel:
+        return None, []
+    path = e.root / rel
+    if not path.is_file():
+        return set(), [Failure("G-I1", CONFIG_NAME, f"[guards] charter names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}")]
+    out: list[Failure] = []
+    found = charter_goals(_text(path))
+    if not found:
+        out.append(Failure("G-I1", rel, "no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked", f"give each goal a row led by its id, G-n (FRAMEWORK §3.1), or {INTENT_OFF}"))
+    seen: set[str] = set()
+    for n, gid, raw in found:
+        if raw.strip("*`").strip() != gid:
+            out.append(Failure("G-I1", rel, f"line {n}: goal id {raw} is not in the one id form", f"write it {gid} (FRAMEWORK P3); a story's `goals` may keep the legacy {raw}, which reads as {gid}"))
+        if gid in seen:
+            out.append(Failure("G-I1", rel, f"line {n}: goal id {gid} leads two rows", "give the newer goal the next free id (ids are never reused, P3)"))
+        seen.add(gid)
+    return seen, out
+
+
+def goals(e: Engine) -> list[Failure]:
+    """G-I1: every goal of the charter (`[guards] charter`) is named by a story that is not
+    retired, and every such story names at least one goal, each a goal of the charter (a legacy
+    `G3` reads as `G-3`). Off while `charter` or `stories` is unset; red when the charter is
+    missing or yields no goal rows, and on a charter goal id not in the one form.
+
+    Not checked: whether a story really serves the goal it names (judgement, at intake), the
+    charter's own prose (its `Stories` column included), and retired stories (history)."""
+    g = e.store.config.guards
+    if not (g.charter and g.stories):
+        return []
+    known, out = known_goals(e)
+    if not known:
+        return out
+    served: set[str | None] = set()
+    for rid, rel, doc in _stories(e):
+        if doc.get("story_status") == "retired":
+            continue
+        for p in goal_problems(doc.get("goals"), known):
+            out.append(Failure("G-I1", rel, f"{rid} {p}", "a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again and retire this one"))
+        served |= {goal_id(v) for v in D.as_list(doc.get("goals"))}
+    for gid in sorted(known - served, key=lambda x: int(x[2:])):
+        out.append(Failure("G-I1", g.charter, f"goal {gid} is served by no story", f"record the owner's story for it (`record new story ... --set goals=[{gid}]`), or ask the owner whether the goal still stands (FRAMEWORK §3.1)"))
+    return out
+
+
+def story_fields(e: Engine) -> list[Failure]:
+    """G-I2: every story (`[guards] stories`) has an actor from the vocabulary (`owner`,
+    `human:<id>`, `agent (reconstructed from ...)`), a date and a `story_status` from the
+    vocabulary, and `unconfirmed` only with an agent's actor (`story_problems`). Off while
+    `stories` is unset.
+
+    Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), and `via`."""
+    if not e.store.config.guards.stories:
+        return []
+    remedy = "a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status, and retire this one"
+    return [Failure("G-I2", rel, f"{rid}: {p}", remedy) for rid, rel, doc in _stories(e) for p in story_problems(doc)]
+
+
+def _criteria(e: Engine, guard: str) -> tuple[list[Criterion], list[Failure]]:
+    """The criterion rows of `[working] criteria`, and ``guard``'s reds when the file is missing,
+    a table of criteria cannot be read, or it yields no rows (the table changed under the pattern)."""
+    rel = e.w.criteria
+    path = e.root / rel
+    if not path.is_file():
+        return [], [Failure(guard, CONFIG_NAME, f"[working] criteria names {rel}, which does not exist", "fix the path, or create the criteria file (FRAMEWORK §3.3)")]
+    rows, problems = criteria_rows(_text(path))
+    out = [Failure(guard, rel, p, "give the table its `status` and `from` columns (FRAMEWORK §3.3)") for p in problems]
+    if not rows and not problems:
+        out.append(Failure(guard, rel, "no criterion rows: no table row starts with an id (`| AC-1 | ... |`), so nothing is traced", "write the criteria as table rows led by their ids, with `from` and `status` columns (FRAMEWORK §3.3)"))
+    return rows, out
+
+
+def _board_open(e: Engine) -> list[str]:
+    """The text of every open board item (tasks and questions may share a directory)."""
+    paths = sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})
+    return [t for t in (_text(p) for p in paths) if not _deprecated(t)]
+
+
+def specified(e: Engine) -> list[Failure]:
+    """G-T1: every `live` story is the source (`from`) of at least one criterion that is not
+    retired; every `unspecified` story is named by an open board item (the task to specify it).
+    Off while `stories` or `[working] criteria` is unset; red when the criteria file is missing or
+    yields no rows.
+
+    Not checked: whether the board item that names an `unspecified` story is the task to specify
+    it or a passing mention (judgement; the session reads the item at intake), and stories in
+    other statuses (`unconfirmed` waits on the owner, `retired` is history)."""
+    if not (e.store.config.guards.stories and e.w.criteria):
+        return []
+    rows, out = _criteria(e, "G-T1")
+    if not rows:
+        return out  # no criterion could be read: one red for the file, not one per story
+    sourced = {rid for r in rows if r.status != "retired" for rid in ID_RE.findall(r.source)}
+    board: list[str] | None = None
+    for rid, rel, doc in _stories(e):
+        status = doc.get("story_status")
+        if status == "live" and rid not in sourced:
+            out.append(Failure("G-T1", rel, f"{rid} is live but no criterion comes from it", f"draft its criteria as `planned` rows of {e.w.criteria} with `from` {rid} (FRAMEWORK §6.2 step 3)"))
+        elif status == "unspecified":
+            board = _board_open(e) if board is None else board
+            if not any(re.search(rf"(?<![\w-]){re.escape(rid)}(?![\w-])", t) for t in board):
+                out.append(Failure("G-T1", rel, f"{rid} is unspecified and no open board item names it", f"`task new` the work to specify {rid}; an owner question only if what the story means is unclear (FRAMEWORK §3.4)"))
+    return out
+
+
+def claims(e: Engine) -> list[Failure]:
+    """G-T2: every `tested` or `manual` criterion is claimed by a test or driver (the `[guards]
+    claim` pattern, in the files under `[guards] tests`), every claim names a criterion row, and
+    every row's status is from the vocabulary. Off while `tests` or `[working] criteria` is
+    unset; red when a listed path is missing, the criteria file yields no rows, or the pattern
+    finds no claim at all (it does not fit the repo's test syntax).
+
+    Not checked: that a claiming test checks its criterion (a skipped test, an assert that cannot
+    fail): the sabotage rule (P7) covers that by hand, mutation (G-T5) later; and tests that claim
+    nothing (a test may be internal, FRAMEWORK §3.4)."""
+    g = e.store.config.guards
+    if not (g.tests and e.w.criteria):
+        return []
+    rows, out = _criteria(e, "G-T2")
+    pattern = re.compile(g.claim)
+    found: dict[str, tuple[str, int]] = {}
+    for rel in g.tests:
+        p = e.root / rel
+        if not p.exists():
+            out.append(Failure("G-T2", CONFIG_NAME, f"[guards] tests names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}"))
+            continue
+        files = [p] if p.is_file() else sorted(f for f in p.rglob("*") if f.is_file() and f.suffix != ".pyc" and not SKIP_DIRS.intersection(f.relative_to(e.root).parts))
+        for f in files:
+            for n, line in enumerate(_text(f).split("\n"), 1):
+                for m in pattern.finditer(line):
+                    found.setdefault(m.group(1), (f.relative_to(e.root).as_posix(), n))
+    if not found and not out:
+        out.append(Failure("G-T2", CONFIG_NAME, f"[guards] claim matched nothing under {', '.join(g.tests)}, so no test is traced", "fit the pattern to the repo's test syntax (one group: the criterion id), or fix the paths"))
+    ids = {r.id for r in rows}
+    for r in rows:
+        if r.status not in CRITERION_STATUSES:
+            out.append(Failure("G-T2", e.w.criteria, f"line {r.line}: {r.id} has status `{r.status}`, none of {', '.join(CRITERION_STATUSES)}", "use a status from the vocabulary (FRAMEWORK §3.3)"))
+        elif r.status in CLAIMED and found and r.id not in found:
+            out.append(Failure("G-T2", e.w.criteria, f"line {r.line}: {r.id} is `{r.status}` but no test or driver claims it", "claim it in the test that checks it, once that test has been seen red with the behaviour broken (P7), or set the row back to `planned`"))
+    for cid, (where, n) in sorted(found.items()):
+        if rows and cid not in ids:
+            out.append(Failure("G-T2", where, f"line {n}: claims {cid}, which is not a row of {e.w.criteria}", "claim an id that is a row, or add the row (ids are never reused, P3)"))
+    return out
+
+
+def sources(e: Engine) -> list[Failure]:
+    """G-T6: every criterion's source cell (`from`) names at least one id, and each is a story
+    (`[guards] stories`) or a decision (`[working] decision`). A criterion's actor is its
+    source's, so resolving the source is the whole check. Off while `stories` or `[working]
+    criteria` is unset; red when the criteria file is missing or yields no rows.
+
+    Not checked: whether the criterion follows from its source (judgement, at intake), and text in
+    the source cell that is not an id."""
+    if not (e.store.config.guards.stories and e.w.criteria):
+        return []
+    rows, out = _criteria(e, "G-T6")
+    st = e.store
+    kinds = [st.config.kind(st.config.guards.stories)] + ([st.config.kind(e.w.decision)] if e.w.decision else [])
+    known = {rid for k in kinds for p in st._files(k) if (rid := st._id_of(k, p))}
+    names = " or ".join(f"{k.prefix}-n" for k in kinds)
+    for r in rows:
+        refs = ID_RE.findall(r.source)
+        if not refs:
+            out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} names no source (`{r.source}`)", f"name the story or decision it comes from ({names}) in its `from` cell"))
+        for ref in refs:
+            if ref not in known:
+                out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} comes from {ref}, which is no story or decision", f"name a {names} that exists"))
+    return out
+
+
+def intent(e: Engine) -> list[Failure]:
+    return goals(e) + story_fields(e) + specified(e) + claims(e) + sources(e)

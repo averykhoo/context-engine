@@ -35,7 +35,7 @@ from .errors import Refusal
 from .store import ACTOR_RE, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
-CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)
+CRITERION_ROW_RE = G.CRITERION_ROW_RE  # one criterion-row parser, shared with G-T1, G-T2 and G-T6 (CE-25)
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
@@ -782,12 +782,25 @@ class Engine:
             raise Refusal("an empty body", "pass the owner's words verbatim (for a story) or the decision and its reason")
         fields: dict[str, Any] = {"title": title}
         fields.update({key: coerce(k, key, v) for key, v in raw.items()})
+        if kind == self.store.config.guards.stories:
+            self._story_checks(fields)
         for key in k.required:
             if key not in fields and k.types.get(key) == "date":
                 fields[key] = self.today()
             elif key not in fields and k.types.get(key) == "key":
                 fields[key] = session
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
+
+    def _story_checks(self, fields: dict[str, Any]) -> None:
+        """The write-time twins of G-I2 and G-I1, by the same checks: a story's provenance from the
+        vocabulary, and goals that are the charter's, in the one id form (`G-n`)."""
+        off = self.store.config.guards.off
+        problems = [] if "G-I2" in off else G.story_problems(fields)
+        known, bad = G.known_goals(self)
+        if known is not None and "G-I1" not in off:
+            problems += [b.message for b in bad] + G.goal_problems(fields.get("goals"), known, legacy=False)
+        if problems:
+            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), `story_status` from live, unspecified, unconfirmed, retired, and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""

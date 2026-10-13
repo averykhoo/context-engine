@@ -203,3 +203,6 @@ bold_caps_max = 5  # G-D7; provenance: JUDGEMENT, engine default; FRAMEWORK hold
 retired_glyphs = []
 coverage_spec = "docs/framework/FRAMEWORK.md"           # G-D12 (CE-30): every component, ritual and G-id it names is owned by the newest map or a board item
 coverage_maps = "docs/evidence/framework-coverage-*.md"  # G-D12: the frozen, dated coverage maps (CE-16); the newest by file-name date is read
+charter = "docs/charter.md"   # G-I1 (CE-25): its goal table's `G-n` rows are the goals a story's `goals` may name
+stories = "story"             # G-I1, G-I2, G-T1, G-T6: the kind holding the stories
+tests = ["tests"]             # G-T2: where tests claim criteria, as `@pytest.mark.criterion("AC-n")` (the default `claim` pattern)

@@ -327,6 +327,28 @@ Check every record, then the working state. `--working` does only the second hal
   of § context-engine decision link. *Why:
   normative text that names a file which is gone states a rule nobody can follow, and `why()`
   answers from decision links.*
+- **The intent chain** (G-I1, G-I2, G-T1, G-T2, G-T6). Each is off while a source it needs is
+  unset: `[guards] charter` (G-I1), `[guards] stories`, the kind holding the stories (G-I1, G-I2,
+  G-T1, G-T6), `[working] criteria` (G-T1, G-T2, G-T6) and `[guards] tests` (G-T2). A set path
+  that does not exist is red. List three things: the charter's goals (each table row whose first
+  cell is a goal id, `G-n`; a legacy `G3` is red there, but reads as `G-3` in a story's `goals`),
+  the criteria (each table row whose first cell is an id, with its `from` and `status` cells by the
+  table's header; a source column may be headed `from`, `story` or `source`), and the claims (each
+  match of the `[guards] claim` pattern, by default `criterion("AC-n")` or `criterion: AC-n`, in
+  every file under `[guards] tests`). No goal row, no criterion row, a table of criteria missing
+  its `status` or source column, or no claim at all is red: the format changed under the pattern.
+  Then: **G-I1**, every story that is not `retired` names at least one goal and only goals of the
+  charter, and every goal is named by one such story; no goal id leads two rows. **G-I2**, every
+  story's `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, its `date` is
+  YYYY-MM-DD, its `story_status` is live, unspecified, unconfirmed or retired, and `unconfirmed`
+  goes with an agent's actor only. **G-T1**, every `live` story's id is in the `from` cell of a
+  criterion that is not `retired`, and every `unspecified` story's id is a whole word in an open
+  board item. **G-T2**, every `tested` or `manual` criterion is claimed, every claimed id is a
+  criterion, and every status is planned, tested, manual, deviates or retired. **G-T6**, every
+  `from` cell names at least one id, each a story or decision that exists (a criterion's actor is
+  its source's). *Why: the chain from goal to test is what makes correct checkable; a link that
+  points at nothing looks traced and is not, and a criterion marked tested whose test was deleted
+  keeps reading as tested.*
 - **G-D12** (only when `[guards]` sets `coverage_spec` or `coverage_maps`; red if only one is
   set, if the spec is missing, or if the `coverage_maps` glob is absolute or has a `..`, matches
   no file, or matches a file with no `YYYY-MM-DD` in its name): outside fenced code in the spec,
@@ -734,7 +756,10 @@ another session's truth (FRAMEWORK §5.5 rule 2).
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if it can mean nothing but now: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else
-   required, `actor` above all, must be given; if it is missing, stop.
+   required, `actor` above all, must be given; if it is missing, stop. For a story (the kind
+   `[guards] stories` names), stop too unless it passes G-I2 and G-I1 of § context-engine lint:
+   `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
+   vocabulary, and `goals` names at least one goal of the charter, each written `G-n`.
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 

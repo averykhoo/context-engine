@@ -3,8 +3,9 @@
 LIVING. The definition of correct for the engine (FRAMEWORK §3.3). The engine is a library, so
 the criteria are properties, checked by pytest. **A test claims a criterion with
 `@pytest.mark.criterion("AC-n")`** (the marker is registered in `pyproject.toml`); once the
-engine exists, G-T2 checks that every `tested` criterion is claimed and every claim resolves.
-Not every test needs to name a criterion. **A criterion becomes `tested` only after its claiming
+engine's lint checks the chain (CE-25): G-T2 that every `tested` criterion is claimed and every
+claim resolves, G-T6 that every `from` names a story or decision, G-T1 that every live story has a
+row here. A criterion's actor is its source's. Not every test needs to name a criterion. **A criterion becomes `tested` only after its claiming
 test has been sabotaged red** (DEC-11, `CLAUDE.md § Sabotage rule`).
 
 Statuses: `planned` (no test yet) · `tested` (a claiming test exists) · `manual` ·
@@ -124,3 +125,27 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-51 | G-W7 fails a board item whose `moved`, `updated`, `closed` or `last_asked` differs from the session of the newest logged operation that wrote that key, a value no logged operation wrote unless it predates the log, and an op log line that does not parse | US-2 | tested |
 | AC-52 | `orient`'s other-open-sessions section is headed as an instruction to show the owner each one, one line each; it lists every other `kind: open` stub with when it opened, never the session's own, and says `none` when there are none | US-16 | tested |
 | AC-56 | G-D12 (CE-30) fails each component of §2's table, `§5.6`/`§6.n` ritual heading and G-id the `[guards] coverage_spec` names, outside fenced code, that no table row of the newest `[guards] coverage_maps` map (by the date and session letters in its file name, ordered as session keys: `z` before `aa`) names in its class's key column (`Component`; `§` in a table with a `Ritual` column; `Guard`; only a component's cell may add ` (...)`) and no board item, open or closed, names as a whole word (`XG-D7` and `G-D70` do not name G-D7, nor are `XG-D99` and `G-D98x` G-ids in the spec); it fails a class extracted under its floor (its remedy naming how a repo switches G-D12 off), one of the two keys set without the other, a missing spec, a glob that is absolute or has a `..`, a glob matching nothing and a matching map with no date, and is off while neither key is set | US-2 | tested |
+
+## Intent chain (CE-25)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-65 | With `[guards] charter` and `stories` set, G-I1 fails a charter goal no story that is not retired names, a story naming no goal or a goal the charter lacks (a legacy `G3` reads as `G-3`), a charter goal id not in the `G-n` form or leading two rows, a missing charter and a charter with no row led by a goal id; it is off while either key is unset | US-2, DEC-33 | tested |
+| AC-66 | G-I2 fails a story whose actor is not `owner`, `human:<id>` or `agent (reconstructed from ...)`, whose date is not a date, whose `story_status` is outside live, unspecified, unconfirmed, retired, or that is `unconfirmed` without an agent's actor; `record new` of a story refuses each of those, and a goal the charter lacks or not in the `G-n` form, by the same checks, writing nothing | US-2, DEC-33 | tested |
+| AC-67 | G-T1 fails a live story that is the `from` of no criterion row that is not retired, and an unspecified story that no open board item names as a whole word | US-2 | tested |
+| AC-68 | G-T2 fails a `tested` or `manual` criterion that no claim under `[guards] tests` names, a claim naming no row, and a status outside the vocabulary; the `[guards] claim` pattern defaults to a pytest `criterion("AC-n")` marker or a `criterion: AC-n` comment, and one without exactly one group is refused when the config loads | US-2 | tested |
+| AC-69 | G-T6 fails a criterion whose `from` cell names no id, or an id that is no story or decision record | US-2, DEC-33 | tested |
+| AC-70 | G-T1, G-T2 and G-T6 each fail a missing criteria file, a table of criteria with no `status` or source column, and a file with no row led by an id; G-T2 fails a `[guards] tests` path that does not exist and a claim pattern that matches nothing; each is off while a source it needs is unset | US-2 | tested |
+
+## Drafted for live stories with none (CE-25, DEC-33)
+
+Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push
+back through the digest (FRAMEWORK §3.3).
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-60 | A long gate phase can be split into tiles run separately (in parallel where they allow it), and each tile's result is recorded against a hash of the code it tests | US-10 | planned |
+| AC-61 | A new session can tell which tiles are already tested for the current code and which are not, without re-running them | US-10 | planned |
+| AC-62 | A session can leave a short after-action review (what worked well, what could be improved), kept where a later stocktake of the framework finds every one | US-12 | planned |
+| AC-63 | Besides a clean close, a session can be rolled back and closed: what it changed is undone and the session ends | US-13 | planned |
+| AC-64 | Rolling a session back leaves the work of other humans and agents in the same checkout (a shared directory, not a worktree) untouched | US-13 | planned |
