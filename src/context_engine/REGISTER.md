@@ -289,3 +289,66 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** an allow-list of framework id forms is not built
 - **control:** individual: tests/test_kit.py::LEAK, extended when a leak is found
 - **from:** CE-26, session 2026-10-13c
+
+## INV-41: a hook slower than lock_timeout (30s) makes other sessions' writes refuse while it runs
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** a commit hook's time is the repo's, not the engine's
+- **control:** individual: they refuse before writing; the git call times out at 120s
+- **from:** CE-45, session 2026-10-13c
+
+## INV-42: another session's hand edit in progress to a file an op names (HANDOFF.md via banner set, a task body) is committed as it stands
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** telling an op's change from a hand edit in the same file is not cheap; the engine already rewrote the whole file before
+- **control:** individual: the op's line names the sessions whose lines it carried
+- **from:** CE-45, session 2026-10-13c
+
+## INV-43: an error other than a Refusal partway through a multi-write op commits a half-made change silently
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** the commit runs on the lock's exit whatever ended the op
+- **control:** individual: lint reports the half-made state
+- **from:** CE-45, session 2026-10-13c
+
+## INV-44: G-W7 cannot see an op line whose record is missing at HEAD, which a by-hand commit can make
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** no guard checks op lines against paths at rest
+- **control:** individual: the engine never makes such a commit; manual-mode § Commit the write
+- **from:** CE-45, session 2026-10-13c
+
+## INV-45: a pause's uncommitted list is read before its own commit, so it can list paths that commit then sweeps in
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** the list is reported before the commit runs
+- **control:** individual: the op's line names the commit's sha
+- **from:** CE-45, session 2026-10-13c
+
+## INV-46: merge=union can reorder or duplicate op lines from two branches, and G-W7 takes newest from file order
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** union merge does not order lines
+- **control:** individual: lint after a merge; rituals § Foreign reconcile
+- **from:** CE-45, session 2026-10-13c
+
+## INV-47: every write is a commit, so history grows fast and each write costs about 0.5s under the lock on Windows
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** FRAMEWORK §5.5 rule 4 chooses a commit per write over a dirty tree
+- **control:** individual: [engine] commit = false turns it off (a pause still commits)
+- **from:** CE-45, session 2026-10-13c
+
+## INV-48: an older engine refuses a context.toml carrying [engine] commit
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** kit version skew between repos
+- **control:** individual: kit README upgrade step
+- **from:** CE-45, session 2026-10-13c
+
+## INV-49: under git's reftable format HEAD falls back to symbolic-ref, a path no test covers
+
+- **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
+- **why not eliminated:** no reftable repo in the test matrix
+- **control:** individual: none beyond the detached-HEAD skip
+- **from:** CE-45, session 2026-10-13c
