@@ -3,6 +3,8 @@ type: Runbook
 title: "Manual mode: every engine operation done by hand, and why each step exists"
 source: FRAMEWORK P16, §7.5
 created: 2026-10-08
+mode: replaced
+liveness: LIVING
 ---
 
 # Manual mode
@@ -321,6 +323,25 @@ Check every record, then the working state. `--working` does only the second hal
   every backticked `path::Name.attr` names a file that exists case-exact (a bare file name may be
   anywhere in the repo) whose text has each dotted part as a word. *Why: a dead reference sends
   the reader to nothing, and on Windows a wrong case still opens.*
+- **G-D4** (only when `[guards]` lists `liveness` or `history` paths): read the first
+  `liveness_lines` lines (10 by default) of each `.md` there. It declares its liveness by a
+  frontmatter `liveness:` key, a line that starts (after `**`, `*` or `_`) with LIVING,
+  ACTIVE-PLAN or FROZEN, or an `ARCHIVED <date>` line (FROZEN); the topmost counts, and the word
+  mid-line declares nothing. A doc with none must match a glob of `liveness_given`, which gives it
+  one; a doc that declares one must agree with its entry; a glob that matches no file is red.
+  Under a `history` directory a doc is FROZEN or ACTIVE-PLAN, never LIVING. An ACTIVE-PLAN doc
+  names a board item in those lines, and at least one item it names is open. A `liveness` list
+  holding no doc is red. *Why: a reader cannot tell whether a doc's status lines are still true
+  unless it says how alive it is, and a plan left ACTIVE-PLAN after its item landed reads as work
+  in progress.*
+- **G-D5** (only when `[guards] numbers` lists paths): in each `.md` there whose liveness, read as
+  for G-D4, is not FROZEN or ACTIVE-PLAN, outside fenced code and frontmatter, skipping every line
+  with a `YYYY-MM-DD` date or session key and blanking every backticked or quoted span: no number
+  (digits, or a spelled number from three up) stands directly before a noun of `count_nouns` (an
+  `open`, `closed` or `new` may stand between), unless `at most`, `at least`, `more than`, `fewer
+  than`, `less than` or `up to` comes right before it (a bound is a rule's value). A list whose docs
+  are all FROZEN or ACTIVE-PLAN is red. *Why: a count typed in prose is never re-derived, so it
+  goes stale unseen (P5); delete it and point at what counts it.*
 - **G-T3**: in each file `[guards] existence` lists, skipping fenced code, blockquotes and lines
   with `*HISTORY —*`: every backticked name of a file (a path with a `/`, or a name ending in a
   text extension such as `.py` or `.md`) exists case-exact, and every `file::symbol` resolves as

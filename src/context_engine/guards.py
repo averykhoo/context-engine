@@ -7,15 +7,16 @@ check (P7). ``lint`` runs them all; ``Engine.lint`` drops the ids ``[guards] off
 What a doc guard reads is configured, never guessed: G-D1's caps sit on ``[[routes]]``, and G-D3,
 G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty checks nothing.
 G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while neither is set.
-G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records.
+G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records. G-D4
+reads ``[guards] liveness`` and ``history`` (with ``liveness_given`` for docs whose top the repo
+does not own), and G-D5 reads ``[guards] numbers``; each is off while its lists are empty.
 
 The intent chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] charter``, ``stories``,
 ``tests`` and ``claim`` with ``[working] criteria``: a guard is off while a source it needs is unset,
 and red when a set path is missing or a source yields nothing (no goal row, no criterion row, no
 claim), so a reworded table or a pattern that does not fit cannot pass by finding nothing.
 
-Not here (FRAMEWORK §8, with their homes): G-D4 liveness and G-D5 typed numbers, G-T5 mutation
-per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
+Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
 G-V3 (the run ledger).
 """
 
@@ -30,7 +31,7 @@ from typing import TYPE_CHECKING, Iterator
 
 from . import decisions as D
 from . import ledger as L
-from .config import CONFIG_NAME
+from .config import CONFIG_NAME, LIVENESS
 from .store import Failure, key_order
 
 if TYPE_CHECKING:
@@ -57,7 +58,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", "__pycache__", "node_modules", ".ve
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -414,6 +415,218 @@ def decision_code(e: Engine, files: Files) -> list[Failure]:
             problem = code_link_problem(files, link)
             if problem:
                 out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but {problem[0]}",f"if the code moved, `decision relink {doc.get('id')} {link} <file::symbol>`; if what it did is gone, `decision supersede` the decision; do not hand-edit `code:`"))
+    return out
+
+
+# -- G-D4 liveness -----------------------------------------------------------------------
+
+WORD_RE = "|".join(LIVENESS)
+# a declaration is a line LED by the word (after emphasis): `LIVING. ...`, `**FROZEN 2026-10-12d.**`;
+# the word in passing ("not a LIVING doc") declares nothing, so it cannot pass a doc unread
+DECLARED_RE = re.compile(rf"^\s*(?:\*\*|__|\*|_)?({WORD_RE})(?![A-Za-z0-9-])")  # `_FROZEN_` closes with a `_`
+FM_LIVENESS_RE = re.compile(r"^liveness:\s*(.*?)\s*$")  # a frontmatter key, as the method runbooks carry
+ARCHIVED_RE = re.compile(r"^\s*ARCHIVED \d{4}-\d{2}-\d{2}")  # an archive's first line (FRAMEWORK §7.3) is FROZEN
+
+
+@dataclass
+class Liveness:
+    """What a doc declares near its top: the word (None if nothing), its line, and a problem."""
+
+    word: str | None = None
+    line: int = 0
+    problem: str = ""
+
+
+def declared(text: str, window: int) -> Liveness:
+    """The first liveness declaration in the first ``window`` lines: a frontmatter `liveness:`
+    key, a line led by LIVING, ACTIVE-PLAN or FROZEN, or an `ARCHIVED <date>` line (FROZEN). The
+    topmost wins, because a correction is added at the top (P2)."""
+    lines = text.lstrip("\ufeff").split("\n")
+    end = None
+    if lines and lines[0] == "---":
+        end = next((j for j in range(1, len(lines)) if lines[j] == "---"), None)
+    for i, line in enumerate(lines[:window]):
+        if end is not None and 0 < i < end:
+            m = FM_LIVENESS_RE.match(line)
+            if m:
+                if m.group(1) in LIVENESS:
+                    return Liveness(m.group(1), i + 1)
+                return Liveness(None, i + 1, f"line {i + 1}: `liveness: {m.group(1)}` is none of {', '.join(LIVENESS)}")
+            continue
+        if ARCHIVED_RE.match(line):
+            return Liveness("FROZEN", i + 1)
+        m = DECLARED_RE.match(line)
+        if m:
+            return Liveness(m.group(1), i + 1)
+    return Liveness()
+
+
+def given(e: Engine) -> tuple[dict[str, tuple[str, str]], list[Failure]]:
+    """Each doc `[guards] liveness_given` names, as repo-relative path -> (liveness, glob); and a
+    red for a glob that matches no file (a declaration of nothing has gone stale)."""
+    out: dict[str, tuple[str, str]] = {}
+    reds: list[Failure] = []
+    for glob, word in e.store.config.guards.liveness_given.items():
+        hits = sorted(p for p in e.root.glob(glob) if p.is_file())
+        if not hits:
+            reds.append(Failure("G-D4", CONFIG_NAME, f"[guards] liveness_given names {glob}, which matches no file", "fix the glob, or drop the entry: the doc it declared is gone"))
+        for p in hits:
+            out.setdefault(p.relative_to(e.root).as_posix(), (word, glob))
+    return out, reds
+
+
+def liveness_of(e: Engine, rel: str, text: str, table: dict[str, tuple[str, str]]) -> str | None:
+    """A doc's liveness: its own declaration, else the one `liveness_given` gives it (``table``,
+    from `given`). G-D5's banner escape reads it."""
+    own = declared(text, e.store.config.guards.liveness_lines).word
+    if own:
+        return own
+    hit = table.get(rel)
+    return hit[0] if hit else None
+
+
+def _board_ids(e: Engine) -> dict[str, bool]:
+    """Every board item's id -> whether it is open (not `status: deprecated`)."""
+    out: dict[str, bool] = {}
+    st = e.store
+    for k in e.w.board:
+        kind = st.config.kind(k)
+        for p in st._files(kind):
+            rid = st._id_of(kind, p)
+            if rid:
+                out[rid] = not _deprecated(_text(p))
+    return out
+
+
+def _under(rel: str, dirs: tuple[str, ...]) -> bool:
+    return any(rel == d.rstrip("/") or rel.startswith(d.rstrip("/") + "/") for d in dirs)
+
+
+def liveness(e: Engine) -> list[Failure]:
+    """G-D4: every doc under `[guards] liveness` and `history` declares how alive it is (P2) in
+    its first `liveness_lines` lines (the window): a frontmatter `liveness:` key, a line led by
+    LIVING, ACTIVE-PLAN or FROZEN, or an archive's `ARCHIVED <date>` (FROZEN). A doc whose top
+    the repo does not own (frozen provenance, a framework-owned or engine-written file, an
+    owner-stamped one) is given its liveness by `liveness_given` instead, and a doc that declares
+    one must agree with it. A doc under a `history` directory is FROZEN, or ACTIVE-PLAN while its
+    item is open: an ACTIVE-PLAN doc anywhere names its board item in the window, and is red once
+    every board item it names there is closed (freeze it when it lands, §6.7). Red too: a listed
+    path that is missing, a `liveness_given` glob that matches no file, and a `liveness` list
+    that yields no doc at all (it would check nothing).
+
+    Not checked: whether the declaration is true (a LIVING doc gone stale is DR9), the change
+    mode beside it (P2's other half), files other than `.md` under a listed directory, a word in
+    the window that is not line-led ("not a LIVING doc" declares nothing), and the ACTIVE-PLAN
+    item rule while `[working] board` is unset."""
+    g = e.store.config.guards
+    if not (g.liveness or g.history):
+        return []
+    table, out = given(e)
+    board = _board_ids(e) if e.w.board else None
+    seen: set[str] = set()
+    read = 0
+    for name, paths in (("liveness", g.liveness), ("history", g.history)):
+        for rel, path in docs(e.root, paths):
+            if path is None:
+                out.append(Failure("G-D4", CONFIG_NAME, f"[guards] {name} names {rel}, which does not exist", f"fix the path, or drop it from [guards] {name}"))
+                continue
+            read += name == "liveness"
+            if rel in seen:
+                continue
+            seen.add(rel)
+            text = _text(path)
+            own = declared(text, g.liveness_lines)
+            give = table.get(rel)
+            if own.problem:
+                out.append(Failure("G-D4", rel, own.problem, f"write one of {', '.join(LIVENESS)}"))
+                continue
+            if own.word and give and own.word != give[0]:
+                out.append(Failure("G-D4", rel, f"declares {own.word} (line {own.line}), but [guards] liveness_given ({give[1]}) gives it {give[0]}", "keep one declaration: drop the entry from liveness_given, or make the doc agree"))
+                continue
+            word = own.word or (give[0] if give else None)
+            if word is None:
+                out.append(Failure("G-D4", rel, f"declares no liveness in its first {g.liveness_lines} lines", f"open it with a line led by {', '.join(LIVENESS)}, or a frontmatter `liveness:` key (FRAMEWORK P2); a doc whose top the repo does not own (frozen provenance, a framework-owned file) goes in [guards] liveness_given"))
+                continue
+            if word == "LIVING" and _under(rel, g.history):
+                out.append(Failure("G-D4", rel, "is LIVING, but it sits in a history directory ([guards] history), which holds provenance", "freeze it (a FROZEN line at the top), or mark it ACTIVE-PLAN while its item is open; a doc kept current belongs outside the history directory"))
+            if word == "ACTIVE-PLAN" and board is not None:
+                top = "\n".join(text.lstrip("\ufeff").split("\n")[: g.liveness_lines])
+                named = [i for i in dict.fromkeys(ID_RE.findall(top)) if i in board]
+                if not named:
+                    out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN but names no board item in its first {g.liveness_lines} lines, so nobody can tell when it lands", "name the item it serves near the top (FRAMEWORK §7.2), or freeze it"))
+                elif not any(board[i] for i in named):
+                    out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN, but every item it names ({', '.join(named)}) is closed", "freeze it: a FROZEN line with the date at the top, above the ACTIVE-PLAN one (FRAMEWORK §6.7)"))
+    if g.liveness and read == 0:
+        out.append(Failure("G-D4", CONFIG_NAME, f"[guards] liveness ({', '.join(g.liveness)}) holds no doc, so G-D4 checks nothing there", "list the docs to check, or empty the list"))
+    return out
+
+
+# -- G-D5 typed numbers ------------------------------------------------------------------
+
+SPELLED = "three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty"
+# a number: a numeral, or a spelled one from three up ("one test" and "two checks" are narrative far
+# more often than a census); never mid-token (`R6`, `1.5`, `§6`, `G-D5`, `#3`, `a/3`)
+COUNT_NUMBER = rf"(?<![\w.,\-§#/])(?:\d+(?:,\d{{3}})*|{SPELLED})"
+COUNT_ADJ = r"(?:(?:open|closed|new)\s+)?"  # `12 open tasks`
+DATED_RE = re.compile(r"(?<![\d-])\d{4}-\d{2}-\d{2}[a-z]*(?![\w-])")  # a date or session key on the line (P5)
+QUOTED_RE = re.compile("`[^`\n]*`|\"[^\"\n]*\"|“[^”\n]*”")  # a backticked or quoted span (P5)
+# a bound is a rule's value, not a count of the tree: `at most 7 lines`, `more than 2 entries`
+BOUND_RE = re.compile(r"(?:at most|at least|more than|fewer than|less than|up to)\s*$", re.IGNORECASE)
+
+
+def count_re(nouns: tuple[str, ...]) -> re.Pattern[str]:
+    return re.compile(rf"{COUNT_NUMBER}\s+{COUNT_ADJ}(?:{'|'.join(map(re.escape, nouns))})(?![\w-])", re.IGNORECASE)
+
+
+def typed_counts(text: str, nouns: tuple[str, ...]) -> list[tuple[int, str]]:
+    """(line number, the count) for each count of the tree typed in prose: a number directly
+    before a counted noun (an `open`, `closed` or `new` between them allowed), outside P5's
+    other forms: fenced code (and frontmatter), a backticked or quoted span, a line carrying a
+    `YYYY-MM-DD` key; and not a bound (`at most N`), which is a rule's value."""
+    rx = count_re(nouns)
+    out: list[tuple[int, str]] = []
+    for n, line in prose(text):
+        if DATED_RE.search(line):
+            continue
+        bare = QUOTED_RE.sub(lambda m: " " * len(m.group(0)), line)
+        for m in rx.finditer(bare):
+            if not BOUND_RE.search(bare[: m.start()]):
+                out.append((n, re.sub(r"\s+", " ", m.group(0))))
+    return out
+
+
+def numbers(e: Engine) -> list[Failure]:
+    """G-D5: in each doc `[guards] numbers` lists, no count of the tree is typed in prose (P5):
+    a number (a numeral, or a spelled one from three up) directly before a noun of `[guards]
+    count_nouns` (`23 components`, `12 open tasks`). P5's four forms pass: fenced code, a
+    backticked or quoted span, a line with a `YYYY-MM-DD` key (a dated measurement), and a doc
+    whose liveness is FROZEN or ACTIVE-PLAN (its body is provenance; G-D4's reader, so
+    `liveness_given` counts). A bound (`at most 7 lines`, `more than 2 entries`) is a rule's
+    value, not a count, and passes. Red too: a listed path that is missing, and a list whose
+    docs are all FROZEN or ACTIVE-PLAN or none (it would check nothing).
+
+    Not checked: counts of nouns not in `count_nouns`, `one` and `two` spelled out, a singular
+    after `1`, a count split across a line break, rule values restated in prose (a bound, or
+    `NEXT holds 5`: no value check is built), whether a dated number is still true (P5:
+    re-measure), and generated blocks inside a hand-written doc (no generator writes one yet)."""
+    g = e.store.config.guards
+    if not g.numbers:
+        return []
+    out: list[Failure] = []
+    table = given(e)[0]
+    scanned = 0
+    for rel, path in docs(e.root, g.numbers):
+        if path is None:
+            out.append(Failure("G-D5", CONFIG_NAME, f"[guards] numbers names {rel}, which does not exist", "fix the path, or drop it from [guards] numbers"))
+            continue
+        text = _text(path)
+        if liveness_of(e, rel, text, table) in ("FROZEN", "ACTIVE-PLAN"):
+            continue
+        scanned += 1
+        for n, count in typed_counts(text, g.count_nouns):
+            out.append(Failure("G-D5", rel, f"line {n}: `{count}` is a count of the tree typed in prose", "delete the number and point at its home (the command, table or file that counts it; P5); a measurement keeps its YYYY-MM-DD on the line, and a quoted figure goes in backticks"))
+    if scanned == 0 and not out:
+        out.append(Failure("G-D5", CONFIG_NAME, f"[guards] numbers ({', '.join(g.numbers)}) holds no doc that is not FROZEN or ACTIVE-PLAN, so G-D5 checks nothing", "list the LIVING docs, or empty the list to switch G-D5 off"))
     return out
 
 

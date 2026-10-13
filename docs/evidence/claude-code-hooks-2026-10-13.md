@@ -1,5 +1,7 @@
 # Claude Code behaviours the bootloader (CE-38) and roster (CE-39) rest on
 
+FROZEN 2026-10-13c: provenance, as written; the banner was added when G-D4 was built (CE-33).
+
 Checked 2026-10-13 (session 2026-10-13a) against the official docs at https://code.claude.com/docs/,
 by five doc-reading agents, one per question; each finding below carries its page and a short
 verbatim quote. READ means stated in the docs; NOT FOUND means the docs are silent and a probe is owed.

@@ -244,3 +244,18 @@ coverage_maps = "docs/evidence/framework-coverage-*.md"  # G-D12: the frozen, da
 charter = "docs/charter.md"   # G-I1 (CE-25): its goal table's `G-n` rows are the goals a story's `goals` may name
 stories = "story"             # G-I1, G-I2, G-T1, G-T6: the kind holding the stories
 tests = ["tests"]             # G-T2: where tests claim criteria, as `@pytest.mark.criterion("AC-n")` (the default `claim` pattern)
+liveness = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework", "docs/ledger/session-log.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D4 (CE-33): every tracked doc that is not a record
+history = ["docs/evidence", "spike"]  # G-D4: provenance directories, FROZEN (or ACTIVE-PLAN while the item is open)
+liveness_lines = 10  # G-D4: the window; provenance: MEASURED 2026-10-13c, every declaration in this repo sits in lines 3 to 8 (docs/evidence/ce33-false-reds-2026-10-13.md), and the window the prior art measured is 10; wrong if the title block of a doc legitimately pushes its declaration further down
+numbers = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D5 (CE-33, §11.2 "the repo measures things"): the LIVING docs
+
+# G-D4: the liveness of docs whose top this repo does not own, so they cannot carry the line
+[guards.liveness_given]
+"CLAUDE.md" = "LIVING"                                      # the contract: its top is the kit block in a fresh repo
+"docs/framework/contract.md" = "LIVING"                     # the framework's, byte-equal to the kit's (G-D0)
+"docs/framework/FRAMEWORK-v0.*.md" = "FROZEN"               # frozen provenance: never edited
+"docs/charter.md" = "LIVING"                                # owner-stamped: replaced only with the owner
+"docs/ledger/session-log.md" = "LIVING"                     # written by the engine; append-only entries
+"src/context_engine/kit/contract.md" = "LIVING"             # the framework contract itself (G-D0 compares against it)
+"src/context_engine/kit/bootloader.md" = "LIVING"           # the CLAUDE.md block, compared by G-D0
+"src/context_engine/kit/docs/ledger/session-log.md" = "LIVING"  # the engine's empty ledger, pinned by AC-30

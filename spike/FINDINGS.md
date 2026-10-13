@@ -1,5 +1,7 @@
 # Step-0 spike findings (2026-10-08)
 
+FROZEN 2026-10-13c: provenance, as written; the banner was added when G-D4 was built (CE-33).
+
 Claude Code 2.1.280, headless (`claude -p`, `--model haiku`), Windows 11, Git Bash; MCP Python
 SDK 2.3.0 (`mcp.server.mcpserver.MCPServer`: v2 renamed `FastMCP`). Driver: `run_probes.sh`;
 server: `probe_server.py`; project config: `project/`; raw outputs: `runs/2026-10-08/`.

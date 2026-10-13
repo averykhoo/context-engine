@@ -1,6 +1,6 @@
 # A context-engineering framework for agent-built repos
 
-**Framework 0.5. Status: DRAFT, LIVING.** This is the specification of what the
+**LIVING. Framework 0.5. Status: DRAFT.** This is the specification of what the
 `context-engine` repo builds, and the source of truth for how the framework works. It describes
 the framework as it is meant to work now and carries no history. Where the engine has not caught
 up with the design, the text says *Not built yet* (or *Built so far* for a part) and names the
@@ -52,7 +52,7 @@ item.
 |---|---|---|
 | 0 | What this framework is for | Who does what (owner intent, agents the rest), the four jobs, and the stance: plain files, records through a tool, mechanical refusal over warnings |
 | 1 | Principles | P1 to P18: one home per statement, change modes, stable ids, provenance, caps, guards that have been seen to fail, owner attention, concurrency, design for a context-free agent, fallbacks, design for safety and maintainability |
-| 2 | The components at a glance | The 23 components by layer, how each changes and who writes it; terms; which separations are load-bearing |
+| 2 | The components at a glance | The components by layer, how each changes and who writes it; terms; which separations are load-bearing |
 | 3 | The intent layer and the correctness chain | Charter, stories, criteria (including research repos), the chain from goal to test and its guards, the deviation register |
 | 4 | Drift: kinds and guards | Each way records drift from reality, and the guard (or the absence of one) for it |
 | 5 | Working state | The orientation note, the board, owner questions as board rows, batons and pause records, rules for several writers, the owner digest |
@@ -314,7 +314,7 @@ Regulations 2015 (S 428/2015).
 **P18. Design for maintainability: F.A.M.E.** Adopted from the Singapore Building and
 Construction Authority's Design for Maintainability (DfM), which integrates maintenance
 experience into design to make maintenance easy, safe and economical over the whole life of the
-work. Its four principles, as BCA states them, then what each means here:
+work. Its principles, as BCA states them, then what each means here:
 - **F, Forecast maintenance:** *"Designers should understand the impact of their designs and
   the expected downstream maintenance works, thereby making necessary upstream design
   provisions."* Here: for each new component, say what will need doing to it later, who does it
@@ -1453,8 +1453,9 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 ### 7.2 Evidence and plan docs
 
-- One per item or investigation, dated, with its liveness declared near the top. While
-  ACTIVE-PLAN, corrections are appended at the top with dates. It freezes when the item lands.
+- One per item or investigation, dated, with its liveness declared near the top (G-D4). While
+  ACTIVE-PLAN it names its board item there, and corrections are appended at the top with dates.
+  It freezes when the item lands: a FROZEN line with the date goes above the old declaration.
 - The task row is the index and the doc is the body: `show <id>` alone must be enough to
   resume.
 - An author's-voice TODO in a frozen doc is a declared hole, not an instruction.
@@ -1496,8 +1497,8 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 Runbooks hold **method**, which survives when the status around it is archived. Each is one file
 under `docs/runbooks/`, short, and routed (§2). Each method runbook declares how it changes and
-how alive it is in its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 will check
-the liveness, CE-33).
+how alive it is in its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 checks the
+liveness).
 - `docs/runbooks/rituals.md`: every ritual's steps in order, each with its engine command, its
   by-hand step and its why; the only place a ritual's order is written (§6). A test in the engine
   repo checks that every §6 subsection has its steps or says why it has none, and that every
@@ -1729,10 +1730,29 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   `[guards] links` lists, and checks relative links with their `#anchor`s and backticked
   `file::symbol` spans; a bare file name resolves to any file of that name, and a record no
   longer current (`status: deprecated`) is history and is skipped.
-- **G-D4:** every doc declares its liveness near the top; history directories are checked for
-  frozen banners within a window. *Not built yet (CE-33).*
-- **G-D5:** derivable counts appear only in generated blocks. A typed number needs one of the
-  four allowed forms (P5). *Not built yet (CE-33).*
+- **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
+  (`liveness_lines`, 10 by default): a frontmatter `liveness:` key, a line led by LIVING,
+  ACTIVE-PLAN or FROZEN, or an archive's `ARCHIVED <date>` (FROZEN, §7.3). The topmost
+  declaration counts, and the word in passing declares nothing. A doc whose top the repo does not
+  own (frozen provenance, the framework's contract, the engine-written ledger, an owner-stamped
+  charter) is given its liveness in config instead, and a doc that declares one must agree.
+  History directories hold provenance: each doc there is FROZEN, or ACTIVE-PLAN while its item is
+  open. An ACTIVE-PLAN doc names its board item in the window, and is red once every item it
+  names is closed (§6.7: it freezes when it lands). Config: `[guards] liveness` and `history`
+  (paths; both empty is off), `liveness_given` (a repo-relative glob to a liveness; one that
+  matches no file is red) and `liveness_lines`. A listed path that is missing, and a `liveness`
+  list holding no doc, are red.
+- **G-D5:** derivable counts appear only in generated blocks, so a count of the tree typed in
+  prose is red: a number (a numeral, or a spelled one from three up) directly before a counted
+  noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the like; an
+  `open`, `closed` or `new` may stand between). P5's four forms pass: fenced code, a backticked
+  or quoted span, a line with a `YYYY-MM-DD` key, and a doc whose liveness (G-D4's reading) is
+  FROZEN or ACTIVE-PLAN. A bound (`at most 7 lines`) is a rule's value, not a count, and passes.
+  Config: `[guards] numbers`, the LIVING docs to read (empty is off; the kit leaves it empty
+  until the repo measures things, §11.2), and `count_nouns`. A listed path that is missing, and a
+  list whose docs are all FROZEN or ACTIVE-PLAN, are red. *Not built: generated blocks inside a
+  hand-written doc (no generator writes one yet), and a value check of a rule value restated in
+  prose (`NEXT holds 5`).*
 - **G-D6:** generated indexes match a regeneration **and** are content-complete from a
   configured cutoff id. An index built from record frontmatter needs only the regeneration
   check; the cutoff check remains for indexes that still parse prose. Built for the decision

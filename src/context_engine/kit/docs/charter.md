@@ -1,6 +1,6 @@
 # Charter
 
-About a page, from the owner (FRAMEWORK §3.1): the goals, the anti-goals, and the mandates. It
+LIVING. About a page, from the owner (FRAMEWORK §3.1): the goals, the anti-goals, and the mandates. It
 is replaced only with the owner's confirmation. A story's `goals:` field names the goal ids
 below, so give every goal one (`G-1`, `G-2`, ...) and never renumber them.
 

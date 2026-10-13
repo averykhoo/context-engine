@@ -1,6 +1,6 @@
 # Criteria
 
-The definition of correct (FRAMEWORK §3.3). One row per criterion; ids are `AC-n`, never reused
+LIVING. The definition of correct (FRAMEWORK §3.3). One row per criterion; ids are `AC-n`, never reused
 or renumbered. `status` is `planned`, `tested` or `retired`: a criterion moves to `tested` only
 when a test claims it and that test has been seen to fail with the behaviour broken.
 

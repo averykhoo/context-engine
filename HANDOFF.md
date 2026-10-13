@@ -1,6 +1,6 @@
 # HANDOFF
 
-Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
+LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
 ## Banner (2026-10-13b)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import tomllib
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from .errors import Refusal
 
@@ -18,7 +18,7 @@ FIELD_TYPES = ("str", "date", "key", "list", "int")  # `key` is a session key, e
 CONFIG_NAME = "context.toml"
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
-    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
+    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D4", "G-D5", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
     "G-I1", "G-I2", "G-T1", "G-T2", "G-T3", "G-T6",
     "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W12", "G-W13",
 )
@@ -81,6 +81,18 @@ class Route:
     max_width: int = 0  # characters per line; table rows are exempt
 
 
+LIVENESS = ("LIVING", "ACTIVE-PLAN", "FROZEN")  # FRAMEWORK P2: how alive a doc is
+# G-D5's counted nouns (FRAMEWORK P5): a number directly before one of these is a census of the tree.
+# Plurals only: after a spelled number a singular is a modifier ("three entry points"). Measured
+# 2026-10-13c (CE-33, docs/evidence/ce33-false-reds-2026-10-13.md): this list over this repo's
+# docs flags 6 lines, 3 of them bounds (`at most 2 entries`, escaped) and 2 of the rest real counts.
+COUNT_NOUNS = (
+    "tests", "checks", "guards", "criteria", "stories", "decisions", "tasks", "items", "rows", "questions",
+    "records", "components", "rituals", "goals", "runbooks", "kinds", "principles", "steps", "files",
+    "entries", "ids", "scenarios",
+)
+
+
 # G-T2's default claim: a pytest marker `criterion("AC-n")`, or a comment `criterion: AC-n` in any language.
 CLAIM = r"""criterion(?:\(\s*["']|:\s*)([A-Z]+-[1-9][0-9]*)"""
 
@@ -103,6 +115,12 @@ class Guards:
     stories: str = ""  # G-I1, G-I2, G-T1, G-T6: the record kind holding the stories; unset turns all four off
     tests: tuple[str, ...] = ()  # G-T2: files and directories whose claims trace tests and drivers to criteria; empty is off
     claim: str = CLAIM  # G-T2: a regex whose one group is the criterion id a test or driver claims
+    liveness: tuple[str, ...] = ()  # G-D4: files and directories whose docs declare their liveness near the top; empty is off
+    history: tuple[str, ...] = ()  # G-D4: directories of provenance, whose docs must be FROZEN, or ACTIVE-PLAN while their item is open
+    liveness_given: dict[str, str] = field(default_factory=dict)  # G-D4: repo-relative glob -> liveness, for docs whose top the repo does not own
+    liveness_lines: int = 10  # G-D4: how many lines from the top the declaration may sit (the window)
+    numbers: tuple[str, ...] = ()  # G-D5: files and directories where a count of the tree may not be typed in prose; empty is off
+    count_nouns: tuple[str, ...] = COUNT_NOUNS  # G-D5: the nouns a number counts when it stands directly before one
 
 
 @dataclass(frozen=True)
@@ -249,6 +267,17 @@ def from_dict(raw: dict) -> Config:
         raise Refusal(f"[guards] `claim` is not a regular expression ({err})", "fix the pattern; its one group is the claimed criterion id") from None
     if groups != 1:
         raise Refusal(f"[guards] `claim` has {groups} groups", "give it exactly one group, the claimed criterion id (make others `(?:...)`)")
+    for glob, word in g.get("liveness_given", {}).items():
+        if word not in LIVENESS:
+            raise Refusal(f"[guards] `liveness_given` gives {glob!r} the liveness {word!r}", f"give one of {', '.join(LIVENESS)}")
+        if not glob or PureWindowsPath(glob).anchor or ".." in PureWindowsPath(glob).parts:  # `/` and `\` alike, as G-D12's glob
+            raise Refusal(f"[guards] `liveness_given` names {glob!r}, which is not a glob relative to the repo root", "name the docs from the repo root, with no `..` and no leading `/` or drive")
+    if "liveness_lines" in g and g["liveness_lines"] < 1:
+        raise Refusal(f"[guards] `liveness_lines` is {g['liveness_lines']}", "give the window at least 1 line (the engine default is 10)")
+    nouns = g.get("count_nouns", COUNT_NOUNS)
+    bad = [n for n in nouns if not isinstance(n, str) or not re.fullmatch(r"[A-Za-z][A-Za-z-]*", n)]
+    if not nouns or bad:
+        raise Refusal(f"[guards] `count_nouns` {'is empty' if not nouns else f'holds {bad[0]!r}, which is not a word'}", "list the plural nouns a typed count may name (`tests`, `checks`, ...); to switch G-D5 off, empty `numbers` instead")
     guards = Guards(**{k: (tuple(v) if isinstance(v, list) else v) for k, v in g.items()})
     return Config(
         kinds=kinds,

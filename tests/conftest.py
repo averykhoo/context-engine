@@ -50,12 +50,17 @@ def _toml(d, prefix=""):
         if isinstance(v, dict) and not (prefix and k == "enums"):
             tables.append((k, v))
         else:
-            out.append(f"{k} = {_val(v)}")
+            out.append(f"{_key(k)} = {_val(v)}")
     text = "\n".join(out) + "\n"
     for k, v in tables:
         name = f"{prefix}.{k}" if prefix else k
         text += f"[{name}]\n" + _toml(v, name)
     return text
+
+
+def _key(k: str) -> str:
+    """A bare key where TOML allows one, else a quoted one (`"docs/v0.*.md"`)."""
+    return k if all(c.isalnum() or c in "_-" for c in k) else f'"{k}"'
 
 
 def _val(v):
@@ -66,7 +71,7 @@ def _val(v):
     if isinstance(v, list):
         return "[" + ", ".join(_val(x) for x in v) + "]"
     if isinstance(v, dict):
-        return "{ " + ", ".join(f"{k} = {_val(x)}" for k, x in v.items()) + " }"
+        return "{ " + ", ".join(f"{_key(k)} = {_val(x)}" for k, x in v.items()) + " }"
     return str(v)
 
 

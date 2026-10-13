@@ -1,5 +1,7 @@
 # adhoc baseline: session start and clean close cost, 2026-10-11 (CE-4)
 
+FROZEN 2026-10-13c: provenance, as written; the banner was added when G-D4 was built (CE-33).
+
 The baseline CE-7 (adhoc trial cutover) is scored against. FRAMEWORK §8.0.3 pre-registers the
 rubric's shape: *context spent on session start and clean close against the same rituals done
 by hand, plus collisions or lost blocks across two concurrent sessions.* This doc fixes the

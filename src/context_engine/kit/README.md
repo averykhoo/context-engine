@@ -1,6 +1,6 @@
 # The adoption kit
 
-How a repo gets the framework (FRAMEWORK.md §6.9, §10, §11). The kit is text: everything here
+LIVING. How a repo gets the framework (FRAMEWORK.md §6.9, §10, §11). The kit is text: everything here
 can be copied by hand, and `context-engine init` copies it for you. Nothing in it is a server or
 a process the owner starts: Claude Code starts the engine's MCP server itself, per session.
 

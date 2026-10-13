@@ -3,6 +3,8 @@ type: Runbook
 title: "Rituals: every ritual's steps in order, the engine command and the by-hand step side by side"
 source: FRAMEWORK §6, P16
 created: 2026-10-12
+mode: replaced
+liveness: LIVING
 ---
 
 # Rituals
