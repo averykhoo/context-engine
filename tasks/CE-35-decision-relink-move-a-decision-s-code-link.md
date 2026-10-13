@@ -4,13 +4,15 @@ id: CE-35
 title: "Decision relink: move a decision's code link when the code moves"
 brief: 'logged like link, re-checks existence; code: is never hand-edited'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-12d
 created: 2026-10-12
 moved: 2026-10-13a
 updated: 2026-10-13a
 review: [write-op, shipped]
+status: deprecated
+closed: 2026-10-13a
 ---
 
 Filed by CE-14-fix (session 2026-10-12d). G-T3 (src/context_engine/guards.py::decision_code) fails a current decision whose `code:` link no longer resolves. `decision link` only adds; no operation removes or replaces a link, and `code` is written by an operation, so it is not hand-edited: today the only remedy is restoring the code. Add one (e.g. `decision link --replace <old>`), its runbook section, and point the G-T3 remedy and INV-15 at it.
@@ -32,3 +34,4 @@ E: mirrors `decision link` (same positional id and target, same one-line return,
 ## Log
 
 - 2026-10-13a (claude-code/claude-opus-5-5): built: `decision relink <id> <old> <new>` (working.py::Engine.relink, ops.py::decision_relink; op-log op `relink`): moves one `code:` link in place, the new one checked as `decision link` checks it; refuses id links, superseded decisions, an old link it does not have. G-T3 remedy and INV-15 point at it; manual-mode § decision relink; FRAMEWORK §6.5, §8.0.2, §8.2; AC-54. Shape: a separate verb, not `decision link --replace` (link stays add-only). Awaiting review.
+- 2026-10-13a (claude-code/claude-opus-5-5): closed: decision relink moves a code: link in place; a code link must name a repo file and symbol (link, relink and G-T3 share guards.py::code_link_problem)

@@ -170,3 +170,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** whether the owner sanctioned a status move is in the owner's words, which no operation can read; the op log names session and actor and the index diff shows the move in the commit
 - **control:** individual: manual-mode.md § decision set: move an owner decision's status only on the owner's words, recorded first (`record amend`)
 - **from:** CE-32, session 2026-10-13a
+
+## INV-24: an agent relinks a decision to code that resolves but does not carry the decision out (a different symbol, or a file the behaviour never moved to), so why() answers wrongly
+
+- **affects:** the owner, whose decisions name the code that carries them out; the next session, which reads why() and `decision find --links-to` answers from `code:` links; a plain-git human relinking by hand from manual-mode.md; every deployed repo, which gets the operation and the kit runbook copy
+- **why not eliminated:** whether code carries out a decision is a reading judgement no operation can make; the op log `relink` line names session and actor, and the commit diff shows old and new side by side
+- **control:** individual: manual-mode.md § decision relink: relink only to where the same behaviour now lives, in the commit that moves it
+- **from:** CE-35, session 2026-10-13a
