@@ -137,10 +137,14 @@ place:
 - a runbook `init` skipped because the repo already had a file of that name (`skipped` in its
   output) is now the framework's runbook of that name: the contract points agents at it and its
   route's caps apply. Merge the kit's copy into it by hand, or move the repo's own file aside
-  and run `init` again.
+  and run `init` again;
+- each doc the repo already had under `[guards] liveness` or `history` (G-D4: `HANDOFF.md`,
+  `docs/runbooks`, `docs/evidence`) gets its liveness line near its top (LIVING, ACTIVE-PLAN or
+  FROZEN), or a `liveness_given` entry when the repo does not own its top; list the repo's other
+  docs under `liveness` too.
 
 `context-engine lint` then shows what still disagrees (dead routes, records that break the
-schema). Back-filled stories are reconstructions, never the owner's words (§11.4).
+schema, docs that declare no liveness). Back-filled stories are reconstructions, never the owner's words (§11.4).
 
 ## 4. Upgrade (FRAMEWORK §8.0)
 

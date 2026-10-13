@@ -85,7 +85,7 @@ LIVENESS = ("LIVING", "ACTIVE-PLAN", "FROZEN")  # FRAMEWORK P2: how alive a doc 
 # G-D5's counted nouns (FRAMEWORK P5): a number directly before one of these is a census of the tree.
 # Plurals only: after a spelled number a singular is a modifier ("three entry points"). Measured
 # 2026-10-13c (CE-33, docs/evidence/ce33-false-reds-2026-10-13.md): this list over this repo's
-# docs flags 6 lines, 3 of them bounds (`at most 2 entries`, escaped) and 2 of the rest real counts.
+# docs flags 6 lines: 2 bounds (`at most 2 entries`, escaped), 1 in a doc now FROZEN, 2 real counts.
 COUNT_NOUNS = (
     "tests", "checks", "guards", "criteria", "stories", "decisions", "tasks", "items", "rows", "questions",
     "records", "components", "rituals", "goals", "runbooks", "kinds", "principles", "steps", "files",

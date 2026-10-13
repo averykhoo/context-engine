@@ -25,7 +25,7 @@ S = [
  (G, 'DECLARED_RE = re.compile(rf"^\\s*(?:', 'DECLARED_RE = re.compile(rf"^.*?(?:', T + " -k each_declaration", "docs/f.md: declares no liveness"),
  (G, "    for i, line in enumerate(lines[:window]):", "    for i, line in enumerate(lines):", T + " -k each_declaration", "docs/g.md: declares no liveness"),
  (G, '                return Liveness(None, i + 1, f"line {i + 1}: ', '                return Liveness()  # f"line {i + 1}: ', T + " -k each_declaration", "LIVNG"),
- (G, "            m = FM_LIVENESS_RE.match(line)\n", "            m = None\n", T + " -k each_declaration", "docs/b.md"),
+ (G, "            m = FM_LIVENESS_RE.match(line) if 0 < i < end else None\n", "            m = None\n", T + " -k each_declaration", "docs/b.md"),
  (G, "        if ARCHIVED_RE.match(line):", "        if False:", T + " -k each_declaration", "docs/d.md"),
  (G, '    lines = text.lstrip("\\ufeff").split("\\n")\n    end = None', '    lines = text.split("\\n")\n    end = None', T + " -k each_declaration", "docs/j.md"),
  (G, "    for i, line in enumerate(lines[:window]):", "    for i, line in reversed(list(enumerate(lines[:window]))):", T + " -k history_doc", "plan-2026-10-13.md"),
@@ -40,14 +40,14 @@ S = [
  (G, '            if word == "LIVING" and _under(rel, g.history):', "            if False:", T + " -k history_doc", "sits in a history directory"),
  (G, "                if not named:\n", "                if not named and False:\n", T + " -k history_doc", "names no board item"),
  (G, "                elif not any(board[i] for i in named):", "                elif False:", T + " -k history_doc", "is closed"),
- (G, '    return any(rel == d.rstrip("/") or rel.startswith(d.rstrip("/") + "/") for d in dirs)', "    return False", T + " -k history_doc", "sits in a history directory"),
+ (G, '    return any(rel == d or rel.startswith(d + "/") for d in norm)', "    return False", T + " -k history_doc", "sits in a history directory"),
  # -- G-D4: switches and empty extraction
  (G, "    if g.liveness and read == 0:", "    if False:", T + " -k is_off_while_both", "checks nothing there"),
  (G, '                out.append(Failure("G-D4", CONFIG_NAME, f"[guards] {name} names {rel}, which does not exist"', '                continue\n                out.append(Failure("G-D4", CONFIG_NAME, f"[guards] {name} names {rel}, which does not exist"', T + " -k is_off_while_both", "nowhere.md, which does not exist"),
  (G, "    return caps(e) + ids(e) + links(e) + liveness(e) + numbers(e)", "    return caps(e) + ids(e) + links(e) + numbers(e)", T + " -k is_off_while_both", "declares no liveness"),
  # -- G-D4 on this repo: the declarations are read, and the frozen provenance is given
- ("README.md", "\nLIVING. Status: pre-alpha.", "\nStatus: pre-alpha.", R, "G-D4 README.md: declares no liveness"),
- ("context.toml", '"docs/framework/FRAMEWORK-v0.*.md" = "FROZEN"', '"docs/framework/FRAMEWORK-v9.*.md" = "FROZEN"', R, "FRAMEWORK-v0.1.md: declares no liveness"),
+ ("README.md", "\n\nLIVING. The record engine", "\n\nThe record engine", R, "G-D4 README.md: declares no liveness"),
+ ("context.toml", '"docs/framework/FRAMEWORK-v*.md" = "FROZEN"', '"docs/framework/FRAMEWORK-v9.*.md" = "FROZEN"', R, "FRAMEWORK-v0.1.md: declares no liveness"),
  # -- G-D5: the count and P5's forms
  (G, "        if DATED_RE.search(line):\n            continue\n        bare = QUOTED_RE", "        if False:\n            continue\n        bare = QUOTED_RE", T + " -k count_of_the_tree", "1157 tests"),
  (G, "        bare = QUOTED_RE.sub(lambda m: \" \" * len(m.group(0)), line)\n        for m in rx", "        bare = line\n        for m in rx", T + " -k count_of_the_tree", "line 7"),
@@ -56,7 +56,7 @@ S = [
  (G, 'COUNT_NUMBER = rf"(?<![\\w.,\\-§#/])', 'COUNT_NUMBER = rf"(?<![\\w])', T + " -k count_of_the_tree", "6 rituals"),
  (G, 'COUNT_NUMBER = rf"(?<![\\w.,\\-§#/])(?:\\d+(?:,\\d{{3}})*|', 'COUNT_NUMBER = rf"(?<![\\w.,\\-§#/])(?:\\d+|', T + " -k count_of_the_tree", "1,157 tests"),
  (G, 'COUNT_ADJ = r"(?:(?:open|closed|new)\\s+)?"', 'COUNT_ADJ = r""', T + " -k count_of_the_tree", "12 open tasks"),
- (G, "    for n, line in prose(text):\n        if DATED_RE", "    for n, line in enumerate(text.split(\"\\n\"), 1):\n        if DATED_RE", T + " -k count_of_the_tree", "40 tests"),
+ (G, '    for n, line in prose(text.lstrip("\\ufeff")):', "    for n, line in enumerate(text.split(\"\\n\"), 1):", T + " -k count_of_the_tree", "40 tests"),
  (G, "(?:{'|'.join(map(re.escape, nouns))})", "(?:tests|components|steps|tasks|rows)", T + " -k count_of_the_tree", "23 components"),
  (C, "    if not nouns or bad:", "    if False:", T + " -k count_of_the_tree", "DID NOT RAISE"),
  # -- G-D5: the banner escape, liveness_given, empty extraction
@@ -65,6 +65,33 @@ S = [
  (G, "    if scanned == 0 and not out:", "    if False:", T + " -k frozen_or_active_plan", "checks nothing"),
  # -- G-D5 on this repo: a count typed into a LIVING doc
  ("README.md", "Nothing here is usable yet.", "Nothing here is usable yet; 552 tests pass.", R, "G-D5 README.md: line 9: `552 tests` is a count"),
+ # -- review fixes (2026-10-13c): G-D4's reader
+ (G, 'DECLARED_RE = re.compile(rf"^\\s*(?:>\\s*)*(?:', 'DECLARED_RE = re.compile(rf"^\\s*(?:', T + " -k each_declaration", "docs/k.md"),
+ (G, """FM_LIVENESS_RE = re.compile(r\"\"\"^liveness:\\s*["']?(.*?)["']?\\s*(?:#.*)?$\"\"\")""", 'FM_LIVENESS_RE = re.compile(r"^liveness:\\s*(.*?)\\s*$")', T + " -k each_declaration", "docs/l.md"),
+ (G, "            continue  # a wrapped line: the word at a soft line break", "            pass  # a wrapped line: the word at a soft line break", T + " -k each_declaration", "docs/m.md"),
+ (G, "        if fence or FENCE_RE.match(line):\n            continue", "        if FENCE_RE.match(line):\n            continue", T + " -k each_declaration", "docs/n.md"),
+ (G, "(?:\\*\\*|__|\\*|_)?({WORD_RE})(?![A-Za-z0-9-])", "(?:\\*\\*|__|\\*|_)?({WORD_RE})", T + " -k each_declaration", "docs/o.md"),
+ (G, 'ARCHIVED_RE = re.compile(r"^\\s*ARCHIVED \\d{4}-\\d{2}-\\d{2}")', 'ARCHIVED_RE = re.compile(r"^\\s*ARCHIVED")', T + " -k each_declaration", "docs/p.md"),
+ (G, "            continue\n        if FENCE_RE.match(line):", "            pass\n        if FENCE_RE.match(line):", T + " -k each_declaration", "docs/q.md"),
+ # -- review fixes: the archived copy's remedy, history paths, the window's ids, the floor
+ (G, 'if give[0] == "FROZEN" else ""', 'if False else ""', T + " -k liveness_given", "startswith"),
+ (G, '    norm = [PurePosixPath(d.replace("\\\\", "/")).as_posix() for d in dirs]', "    norm = list(dirs)", T + " -k history_directory_inside", "./docs/evidence"),
+ (G, "    return any(rel == d or rel.startswith(d + \"/\") for d in norm)", "    return any(rel.startswith(d + \"/\") for d in norm)", T + " -k history_directory_inside", "docs/evidence/live.md"),
+ (G, "    return any(rel == d or rel.startswith(d + \"/\") for d in norm)", "    return any(rel == d or rel.startswith(d) for d in norm)", T + " -k history_directory_inside", "evidence-old"),
+ (G, '            if word == "LIVING" and _under(rel, g.history):', '            if word == "LIVING" and name == "history" and _under(rel, g.history):', T + " -k history_directory_inside", "sits in a history directory"),
+ (G, '            read += name == "liveness"', "            read += 1", T + " -k history_directory_inside", "holds no doc"),
+ (G, '                top = "\\n".join(text.lstrip("\\ufeff").split("\\n")[: g.liveness_lines])', "                top = text", T + " -k history_doc", "is closed"),
+ # -- review fixes: G-D5's escapes and near misses
+ (G, 'DATED_RE = re.compile(r"(?<!\\d)\\d{4}-\\d{2}-\\d{2}(?!\\d)")', 'DATED_RE = re.compile(r"(?<![\\d-])\\d{4}-\\d{2}-\\d{2}(?!\\d)")', T + " -k count_of_the_tree", "line 14"),
+ (G, 'DATED_RE = re.compile(r"(?<!\\d)\\d{4}-\\d{2}-\\d{2}(?!\\d)")', 'DATED_RE = re.compile(r"\\d{4}-\\d{2}-\\d{2}")', T + " -k count_of_the_tree", "9 tasks"),
+ (G, 'DATED_RE = re.compile(r"(?<!\\d)\\d{4}-\\d{2}-\\d{2}(?!\\d)")', 'DATED_RE = re.compile(r"\\d{4}")', T + " -k count_of_the_tree", "1234 tests"),
+ (G, 'BOUND_RE = re.compile(r"(?:at most|at least|more than|fewer than|less than|up to)\\s*$"', 'BOUND_RE = re.compile(r"(?:at most|at least|more than|fewer than|less than|up to)\\s*"', T + " -k count_of_the_tree", "23 checks"),
+ (G, '    for n, line in prose(text.lstrip("\\ufeff")):', '    for n, line in prose(text.lstrip("\\ufeff"), history=True):', T + " -k count_of_the_tree", "31 rows"),
+ (G, '    for n, line in prose(text.lstrip("\\ufeff")):', "    for n, line in prose(text):", T + " -k count_of_the_tree", "3 tests"),
+ (G, 'SPELLED = "three|four|five|six|seven|eight|nine|', 'SPELLED = "three|four|five|six|seven|eight|', T + " -k count_of_the_tree", "nine checks"),
+ (G, "(?![\\w-])\", re.IGNORECASE)", "(?![\\w-])\")", T + " -k count_of_the_tree", "23 Tests"),
+ (G, 'COUNT_ADJ = r"(?:(?:open|closed|new)\\s+)?"', 'COUNT_ADJ = r"(?:(?:open|new)\\s+)?"', T + " -k count_of_the_tree", "3 closed items"),
+ ("src/context_engine/kit/context.toml.template", '"ids", "scenarios"]', '"ids"]', T + " -k count_of_the_tree", "scenarios"),
 ]
 only = {int(a) for a in sys.argv[1:]}
 ok = True

@@ -166,7 +166,8 @@ a date.**
 - A measured value from a run may be typed **with its date on the line**, ideally in a
   single-baseline slot (one dated baseline per suite).
 - A number in prose takes one of four forms: a fenced block; a backticked or quoted span; a
-  `YYYY-MM-DD` key on the line; or a file whose banner declares its body is provenance.
+  `YYYY-MM-DD` key on the line; or a file whose banner declares its body is provenance. A bound
+  (`at most 2 entries`) is a rule's value, not a count, and needs none of them.
 - Re-measure; never difference against a recorded number.
 
 **P6. Cap the dimension that actually grows, target the mechanism of growth, and give every
@@ -1407,7 +1408,8 @@ script and MCP prove insufficient.
   holds the old text.
 - **A huge change that the future may need to reference** (a rewrite that changes the shape, or
   a design that was tried and dropped) first copies the current file to
-  `docs/framework/FRAMEWORK-v<version>.md`. Archived copies are frozen once written.
+  `docs/framework/FRAMEWORK-v<version>.md` and opens the copy with `ARCHIVED <date>` (§7.3), so its
+  old LIVING line no longer counts (G-D4). Archived copies are frozen once written.
 - If the old text will never be needed, do not archive it.
 - What belongs here is the framework: what it is for, its rules, components, rituals, tools and
   guards. Origin stories, prior art, owner Q&A and change history go to decisions, stories,
@@ -1731,25 +1733,31 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   `file::symbol` spans; a bare file name resolves to any file of that name, and a record no
   longer current (`status: deprecated`) is history and is skipped.
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
-  (`liveness_lines`, 10 by default): a frontmatter `liveness:` key, a line led by LIVING,
-  ACTIVE-PLAN or FROZEN, or an archive's `ARCHIVED <date>` (FROZEN, §7.3). The topmost
-  declaration counts, and the word in passing declares nothing. A doc whose top the repo does not
-  own (frozen provenance, the framework's contract, the engine-written ledger, an owner-stamped
-  charter) is given its liveness in config instead, and a doc that declares one must agree.
-  History directories hold provenance: each doc there is FROZEN, or ACTIVE-PLAN while its item is
-  open. An ACTIVE-PLAN doc names its board item in the window, and is red once every item it
-  names is closed (§6.7: it freezes when it lands). Config: `[guards] liveness` and `history`
-  (paths; both empty is off), `liveness_given` (a repo-relative glob to a liveness; one that
-  matches no file is red) and `liveness_lines`. A listed path that is missing, and a `liveness`
-  list holding no doc, are red.
+  (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is no liveness
+  word is red), or a line that opens a block (the first, or one after a blank line, a heading or
+  the frontmatter) led, after a blockquote's `>` and emphasis, by LIVING, ACTIVE-PLAN or FROZEN,
+  or by an archive's `ARCHIVED <date>` (FROZEN, §7.3). The topmost declaration counts; the word
+  in passing (mid-line, on a wrapped line, in fenced code) declares nothing. A doc whose top the
+  repo does not own (frozen provenance, the framework's contract, the engine-written ledger, an
+  owner-stamped charter) is given its liveness in config instead, and a doc that declares one
+  must agree. History directories hold provenance: each doc there is FROZEN, or ACTIVE-PLAN
+  while its item is open. With a board configured, an ACTIVE-PLAN doc names its board item in
+  the window, and is red once every item it names there is closed (§6.7: it freezes when it
+  lands). Config: `[guards] liveness` and `history` (paths; both empty is off),
+  `liveness_given` (a repo-relative glob to a liveness; one that matches no file is red) and
+  `liveness_lines`. A listed path that is missing, and a `liveness` list holding no doc, are red.
 - **G-D5:** derivable counts appear only in generated blocks, so a count of the tree typed in
-  prose is red: a number (a numeral, or a spelled one from three up) directly before a counted
-  noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the like; an
-  `open`, `closed` or `new` may stand between). P5's four forms pass: fenced code, a backticked
-  or quoted span, a line with a `YYYY-MM-DD` key, and a doc whose liveness (G-D4's reading) is
-  FROZEN or ACTIVE-PLAN. A bound (`at most 7 lines`) is a rule's value, not a count, and passes.
-  Config: `[guards] numbers`, the LIVING docs to read (empty is off; the kit leaves it empty
-  until the repo measures things, §11.2), and `count_nouns`. A listed path that is missing, and a
+  prose is red: a number (a numeral, or a spelled one from three to twenty) directly before a
+  counted noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the
+  like, plurals only, case-insensitive; an `open`, `closed` or `new` may stand between). A
+  number glued on its left to a letter, digit, `.`, `,`, `-`, `§`, `#` or `/` is part of a
+  token (`R6`, `1.5`, `§6`, `G-D5`) and is no count. P5's four forms pass: fenced code and
+  frontmatter, a backticked or double-quoted span, a line with a `YYYY-MM-DD` anywhere on it,
+  and a doc whose liveness (G-D4's reading) is FROZEN or ACTIVE-PLAN. A bound (`at most 2
+  entries`) is a rule's value, not a count, and passes; another rule value or a label (`Step 3
+  checks`) goes in backticks. Config: `[guards] numbers`, the LIVING docs to read (empty is off;
+  the kit leaves it empty until the repo measures things, §11.2; list each under `liveness`
+  too, so its liveness is checked), and `count_nouns`. A listed path that is missing, and a
   list whose docs are all FROZEN or ACTIVE-PLAN, are red. *Not built: generated blocks inside a
   hand-written doc (no generator writes one yet), and a value check of a rule value restated in
   prose (`NEXT holds 5`).*

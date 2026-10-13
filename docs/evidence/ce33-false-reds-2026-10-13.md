@@ -31,7 +31,7 @@ ending in it, or `ARCHIVED <date>`. Docs declaring one, of 37, measured 2026-10-
 | 15 | 0 | 13 | 13 |
 
 - Every declaration sits in lines 3 to 7 (a title, a blank, a status line; or a runbook
-  frontmatter, whose `liveness:` is line 7; after the edits below, `README.md`'s is line 8). The window is 10: the prior art's measured value,
+  frontmatter, whose `liveness:` is line 7; after the edits below every one is on line 3 or 7). The window is 10: the prior art's measured value,
   with room above the runbooks' line 7, and a wider one finds nothing more here.
 - A finds none: the repo's declarations are plain (`LIVING. The definition ...`, `FROZEN
   2026-10-12d.`), so A would force 13 rewrites, frozen evidence docs among them. B matched only
@@ -89,7 +89,8 @@ skipped). Number matches, measured 2026-10-13c:
   modifier) and the bound escape: `at most`, `at least`, `more than`, `fewer than`, `less than`,
   `up to` before the number mark a rule's value. `over` and `under` are not escapes: "over 1000
   tests" is a census.
-- N4's 6: 3 bounds (escaped), 2 real counts (`FRAMEWORK.md`'s "The 23 components by layer";
+- N4's 6: 2 bounds (`at most 2 entries`, escaped, once in each `manual-mode.md`), 1 in an
+  evidence doc now FROZEN (`over 10 entries`), 2 real counts (`FRAMEWORK.md`'s "The 23 components by layer";
   `criteria.md`'s "FRAMEWORK §6.6's seven steps"), 1 false red ("Its four principles, as BCA
   states them": a count of an external list, enumerated right after it). All three were edited:
   the counts dropped, the principles line reworded.

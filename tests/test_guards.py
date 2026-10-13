@@ -3,11 +3,13 @@ what it protects, green otherwise, and `[guards] off` is the only way to silence
 
 import json
 import shutil
+import tomllib
 
 import pytest
 
 from context_engine import guards as G
-from context_engine.config import from_dict
+from context_engine import bootstrap as B
+from context_engine.config import COUNT_NOUNS, from_dict
 from context_engine.errors import Refusal
 from context_engine.working import Engine
 
@@ -424,18 +426,22 @@ def test_g_d4_each_declaration_form_passes_and_a_doc_without_one_is_red(tmp_path
     t = e.new("task", "the plan", **W)
     (tmp_path / "docs/e.md").write_bytes(f"\ufeff# E\r\n\r\n_ACTIVE-PLAN_ for {t.id}\r\n".encode("utf-8"))  # a BOM and CRLF
     (tmp_path / "docs/j.md").write_bytes("\ufeff---\r\ntype: Runbook\r\nliveness: LIVING\r\n---\r\n".encode("utf-8"))  # an editor's BOM before frontmatter
+    write(tmp_path, "docs/k.md", "# K\n\n> **FROZEN 2026-08-01.** Provenance, not a living document.\n")  # a blockquote banner
+    write(tmp_path, "docs/l.md", '---\nliveness: "FROZEN"  # YAML quotes and a comment\n---\n')
     assert reds(e, "G-D4") == []
     # the word in passing declares nothing, and a declaration below the window is not near the top
     write(tmp_path, "docs/f.md", "# F\n\nThis is not a LIVING doc, and FROZEN means nothing here.\n")
     write(tmp_path, "docs/g.md", "# G\n" + "\n" * 10 + "LIVING.\n")
     write(tmp_path, "docs/h.md", "---\nliveness: LIVNG\n---\n")
     write(tmp_path, "docs/i.md", "# I\n\n- LIVING: a list item about the word\n")
-    assert reds(e, "G-D4") == [
-        "docs/f.md: declares no liveness in its first 10 lines",
-        "docs/g.md: declares no liveness in its first 10 lines",
+    write(tmp_path, "docs/m.md", "# M\n\nThis archive is not a\nLIVING document, and nothing here is\n> FROZEN in place.\n")  # wrapped lines
+    write(tmp_path, "docs/n.md", "# N\n\n```\n\nLIVING\n```\n")  # fenced code
+    write(tmp_path, "docs/o.md", "# O\n\nLIVINGROOM notes\n")  # not the whole word
+    write(tmp_path, "docs/p.md", "ARCHIVED\n\n# no date\n")
+    write(tmp_path, "docs/q.md", "---\ntitle: q\n\nLIVING: true\n---\n")  # a frontmatter line is no body line
+    assert reds(e, "G-D4") == [f"docs/{x}.md: declares no liveness in its first 10 lines" for x in "fg"] + [
         "docs/h.md: line 2: `liveness: LIVNG` is none of LIVING, ACTIVE-PLAN, FROZEN",
-        "docs/i.md: declares no liveness in its first 10 lines",
-    ]
+    ] + [f"docs/{x}.md: declares no liveness in its first 10 lines" for x in "imnopq"]
     [red] = [f for f in e.lint() if f.guard == "G-D4" and f.path == "docs/f.md"]
     assert red.remedy.startswith("open it with a line led by LIVING, ACTIVE-PLAN, FROZEN, or a frontmatter `liveness:` key")
     assert "docs/g.md" not in " ".join(reds(live(tmp_path, liveness_lines=12), "G-D4"))  # the window is configured
@@ -454,6 +460,10 @@ def test_g_d4_liveness_given_declares_docs_whose_top_the_repo_does_not_own(tmp_p
     e = live(tmp_path, liveness_given={"docs/FRAMEWORK-v0.*.md": "FROZEN"})
     write(tmp_path, "docs/FRAMEWORK-v0.4.md", "# Older spec\n\nLIVING. Kept current.\n")
     assert reds(e, "G-D4") == ["docs/FRAMEWORK-v0.4.md: declares LIVING (line 3), but [guards] liveness_given (docs/FRAMEWORK-v0.*.md) gives it FROZEN"]
+    [red] = [f for f in e.lint() if f.guard == "G-D4"]
+    assert red.remedy.startswith("open it with `ARCHIVED <date>` or a FROZEN line if it is an archived copy")
+    write(tmp_path, "docs/FRAMEWORK-v0.4.md", "ARCHIVED 2026-10-13\n\n# Older spec\n\nLIVING. Kept current.\n")  # an archived copy (§6.12)
+    assert reds(e, "G-D4") == []
     for given_, says in (
         ({"a.md": "LIVELY"}, "gives 'a.md' the liveness 'LIVELY'"),
         ({"/abs/*.md": "FROZEN"}, r"names '/abs/\*.md', which is not a glob relative"),
@@ -485,6 +495,26 @@ def test_g_d4_a_history_doc_is_frozen_or_active_plan_while_the_item_it_names_is_
     assert reds(e, "G-D4") == [f"evidence/plan-2026-10-13.md: is ACTIVE-PLAN, but every item it names ({t.id}) is closed"]
     write(tmp_path, "evidence/plan-2026-10-13.md", f"# Plan\n\nFROZEN 2026-10-13a: landed.\n\nACTIVE-PLAN for {t.id}.\n")  # the topmost wins
     assert reds(e, "G-D4") == []
+    # only the window names the item: an open item named further down does not keep a plan open
+    u = e.new("task", "a follow-up", **W)
+    write(tmp_path, "evidence/plan-2026-10-13.md", f"# Plan\n\nACTIVE-PLAN for {t.id}.\n" + "\n" * 10 + f"Follow-up: {u.id}.\n")
+    assert reds(e, "G-D4") == [f"evidence/plan-2026-10-13.md: is ACTIVE-PLAN, but every item it names ({t.id}) is closed"]
+
+
+@pytest.mark.criterion("AC-74")
+def test_g_d4_a_history_directory_inside_a_liveness_one_and_its_path_forms(tmp_path):
+    living = "# Kept current\n\nLIVING. Updated as we go.\n"
+    write(tmp_path, "docs/evidence/live.md", living)
+    write(tmp_path, "docs/evidence-old/live.md", living)  # a sibling with the same prefix is not inside
+    write(tmp_path, "docs/a.md", "# A\n\nLIVING.\n")
+    hist = "docs/evidence/live.md: is LIVING, but it sits in a history directory ([guards] history), which holds provenance"
+    for h in ("docs/evidence", "./docs/evidence", "docs/evidence/", "docs/evidence/live.md"):
+        assert reds(make(tmp_path, liveness=["docs"], history=[h]), "G-D4") == [hist], h
+    assert G._under("docs/evidence/live.md", ("docs\\evidence",))  # a `\` path, as Windows writes one
+    # history docs do not make a `liveness` list that holds no doc pass
+    (tmp_path / "empty").mkdir()
+    write(tmp_path, "docs/evidence/live.md", "# Run\n\nFROZEN 2026-10-12a.\n")
+    assert reds(make(tmp_path, liveness=["empty"], history=["docs/evidence"]), "G-D4") == ["context.toml: [guards] liveness (empty) holds no doc, so G-D4 checks nothing there"]
 
 
 @pytest.mark.criterion("AC-74")
@@ -515,6 +545,10 @@ A quoted figure: `23 components`, "5 tests", \u201c9 checks\u201d.
 Measured 2026-10-13c: 1157 tests pass.
 A bound: at most 7 lines, at most 2 entries, more than 3 tasks, up to 4 files.
 Narrative: two checks, one test; ids and sections are no counts: R6 tests, §6 rituals, G-D5 checks, 1.5 files, #3 rows.
+Near misses: at most 2 rules, and the 23 checks here; 1234 tests on port 8080; nine checks, 23 Tests, 3 closed items.
+Serial 123456-78-901 has 9 tasks.
+> A quote holds 31 rows.
+See ce33-false-reds-2026-10-13.md: 23 components.
 
 ```
 40 tests in a transcript
@@ -532,6 +566,9 @@ def test_g_d5_a_count_of_the_tree_typed_in_prose_is_red_and_p5_forms_pass(tmp_pa
         "docs/a.md: line 6: `12 open tasks` is a count of the tree typed in prose",
         "docs/a.md: line 6: `1,157 tests` is a count of the tree typed in prose",
         "docs/a.md: line 6: `40 new rows` is a count of the tree typed in prose",
+    ] + [f"docs/a.md: line 11: `{c}` is a count of the tree typed in prose" for c in ("23 checks", "1234 tests", "nine checks", "23 Tests", "3 closed items")] + [
+        "docs/a.md: line 12: `9 tasks` is a count of the tree typed in prose",
+        "docs/a.md: line 13: `31 rows` is a count of the tree typed in prose",
     ]
     [red, *_] = [f for f in e.lint() if f.guard == "G-D5"]
     assert red.remedy.startswith("delete the number and point at its home")
@@ -542,6 +579,12 @@ def test_g_d5_a_count_of_the_tree_typed_in_prose_is_red_and_p5_forms_pass(tmp_pa
     for nouns, says in (([], "`count_nouns` is empty"), (["tests", "a b"], "holds 'a b', which is not a word")):
         with pytest.raises(Refusal, match=says):
             from_dict(config(numbers=["docs"], count_nouns=nouns))
+    # an editor's BOM does not turn the frontmatter into prose
+    (tmp_path / "docs/a.md").write_bytes("\ufeff---\nsource: the 3 tests run here\n---\nLIVING.\n".encode("utf-8"))
+    assert reds(make(tmp_path, numbers=["docs"]), "G-D5") == []
+    # the kit ships the engine's default nouns
+    kit = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
+    assert tuple(kit["guards"]["count_nouns"]) == COUNT_NOUNS
 
 
 @pytest.mark.criterion("AC-75")
