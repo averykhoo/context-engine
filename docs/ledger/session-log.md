@@ -7,10 +7,39 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-13b · kind: open
+## 2026-10-13b · kind: close
 
-- **opened:** 2026-10-13T12:13:10+08:00 by claude-code/claude-opus-5-5
-- **asked:** ASK-3, ASK-4
+- **rows:** CE-38 closed (bootloader; INV-28..32), CE-25 closed (intent-chain guards; INV-33..35);
+  CE-7 to NOW; ASK-3, ASK-4 answered (DEC-33, DEC-32); ASK-5 filed and raised; CE-42..49 filed;
+  CE-6, CE-7, CE-46 commented; DEC-34, DEC-35 recorded, DEC-6 amended
+- **receipts:**
+  - guards: pytest -q: 480 passed in 77.66s (rc=0), lint inside it clean, on main 7ed8c68 plus CE-46
+    comment
+  - read: orient + task show CE-7, CE-38, ASK-3 + FRAMEWORK §5.5, §6.3, §5.3
+  - asked: ASK-3, ASK-4, ASK-5
+- **summary** (the owner digest):
+  - Owner: DEC-32 (init merges the SessionStart hook into an existing settings file only after
+    asking), DEC-33 (ASK-3: criteria rows, one id form, CE-25 split), DEC-34 (every question carries
+    a cheap, confident recommendation), DEC-35 (dogfood the whole framework), DEC-6 amended (quick
+    adhoc trial; audio-workspace next, CE-43).
+  - CE-38 built (bootloader contract, SessionStart hook, G-D0) and adopted in this repo; CE-25 built
+    by an ultracode workflow in a worktree: 12 review findings confirmed, 8 fixed, CE-48/CE-49 carry
+    the rest.
+  - Agent-drafted, owner to read: planned criteria AC-60..64 for US-10, US-12, US-13; goal ids are
+    G-n, stamped stories keep G1 (read as G-1).
+  - Session scope (owner question): stays per request (DEC-31); the per-task close commit is the
+    completion record; G-W11 should derive a dead session's digest (CE-6 log).
+  - Found: mid-session commits are red on G-W7 alone (op log committed only at close, CE-45); a
+    fast-forward on this machine checks files out CRLF and reddens a kit test (CE-46; Git Bash grep
+    cannot see CR).
+  - Open for the owner: ASK-5 (rename imported ids with aliases, recommended); restart Claude Code
+    after the push (stale MCP server; first live test of the hook).
+  - AAR: worktree builds avoid shared-tree collisions but need PYTHONPATH=<wt>/src and
+    core.autocrlf=false; the workflow's skeptic pass cut 15 findings to 12 real ones.
+- **Still owed:**
+  - CE-46 is at LATER with NEXT full: the owner to say whether it swaps with CE-26 or CE-33
+  - INV-31 live probes in the first adhoc session (CE-7); the hook's first live run is the owner's
+    restart after this push
 
 ---
 

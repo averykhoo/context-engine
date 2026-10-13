@@ -376,3 +376,4 @@
 {"at": "2026-10-13T14:15:09+08:00", "session": "2026-10-13b", "actor": "claude-code/claude-opus-5-5", "op": "section", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-13T14:15:43+08:00", "session": "2026-10-13b", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-13b", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
 {"at": "2026-10-13T14:21:54+08:00", "session": "2026-10-13b", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-46", "path": "tasks/CE-46-a-fresh-windows-clone-turns-kit-runbooks-crlf.md", "fields": ["updated", "body"], "mechanical": false}
+{"at": "2026-10-13T14:22:27+08:00", "session": "2026-10-13b", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-13b", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
