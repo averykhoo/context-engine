@@ -67,7 +67,7 @@ These hold for every operation below. The per-operation sections only list what 
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
 | **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 reads it. |
-| **Commit the write** | Commit the op log with every path its uncommitted lines name, by path and at once. The uncommitted lines are those `git diff HEAD -- docs/ledger/ops.jsonl` adds; if git has never seen the op log, every line. Leave out a named path git ignores, or one that is gone and git never knew. `git add -- <paths git has never seen>`, then `git commit --only -m "engine: <op> <id>, <op> <id>" -m "Session: <key>" -- docs/ledger/ops.jsonl <paths>` (with many paths, `--pathspec-from-file`). Lines another session left uncommitted go in too, with their files: add `-m "Also carries <n> op log lines left uncommitted by session <key>, with the files they name."` before the trailer. Never `--no-verify`; if the commit fails, `git rm -q --cached` what you added. Do not commit during a merge, rebase, cherry-pick, revert or bisect, on a detached HEAD, with `GIT_DIR` or `GIT_INDEX_FILE` set, before `context.toml` is tracked, or while the op log lacks lines HEAD has: commit when that is fixed. The engine does all this itself and says `not committed: <why>` on the operation's line when it cannot. With `[engine] commit = false` it says nothing, and the session commits at the latest at close or pause. | Lint reads the op log and the records together (G-W7), so a record committed without its line fails lint on a clean checkout. By path, so what another session staged or left untracked stays as it was (FRAMEWORK §5.5 rule 4). |
+| **Commit the write** | At a milestone, commit the op log with every path its uncommitted lines name, by path and at once; every other write rides along to the next commit. The milestones (`[engine] commit = "milestones"`, the default): task close; record new, amend and retire; decision supersede; ask answer; baton add; pause open; session close and session pause; banner set. The uncommitted lines are those `git diff HEAD -- docs/ledger/ops.jsonl` adds; if git has never seen the op log, every line. Leave out a named path git ignores, or one that is gone and git never knew. `git add -- <paths git has never seen>`, then `git commit --only -m "engine: <op> <id>, <op> <id>" -m "Session: <key>" -- docs/ledger/ops.jsonl <paths>` (with many paths, `--pathspec-from-file`; this operation's own `<op> <id>` first; a task close and a pause take the titles their sections give). Lines another session left uncommitted go in too, with their files: add `-m "Also carries <n> op log lines left uncommitted by session <key>, with the files they name."` before the trailer. Your own commits take the same lines and files with them (§ context-engine commit). Never `--no-verify`; if the commit fails, `git rm -q --cached` what you added. Do not commit during a merge, rebase, cherry-pick, revert or bisect, on a detached HEAD, with `GIT_DIR` or `GIT_INDEX_FILE` set, before `context.toml` is tracked, or while the op log lacks lines HEAD has: commit when that is fixed. The engine does all this itself and says `not committed: <why>` on a milestone's line when it cannot. With `"every-write"` every write operation commits; with `"off"` the engine commits only a pause and says nothing, and the session commits at the latest at close or pause (an older `context.toml` saying `true` means `"milestones"`, and `false` means `"off"`). | Lint reads the op log and the records together (G-W7), so a record committed without its line fails lint on a clean checkout. By path, so what another session staged or left untracked stays as it was. At milestones, because what they commit is dear to lose or must be at HEAD now, while a write that rides along costs little to lose: the next commit carries it, whoever makes it (FRAMEWORK §5.5 rule 4). |
 | **Engine-owned keys** | Never hand-edit `type`, `id` or `body_sha` on an existing record. | Ids are never reused or renumbered (P3). `body_sha` pins an owner's words (G-D10). |
 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
@@ -163,8 +163,9 @@ different case or one extra BOM gives a hash that never matches the engine's.*
 
    - **opened:** 2026-10-08T19:02:11+08:00 by claude-code/<model-id>
    ```
-4. Commit the ledger and the op log by path at once (§ What every write does, **Commit the
-   write**). The engine makes this commit itself.
+4. Leave it uncommitted: a session start is no milestone, so it rides along, and the next
+   commit (yours or another session's) carries it (§ What every write does, **Commit the
+   write**).
 
 `HANDOFF.md` may be missing, but if it exists it must have a `## Banner (<key>)` heading:
 without one, session start, orient and both banner commands refuse.
@@ -563,6 +564,15 @@ promote (§ task promote) before you run the gate. Do not pick it yourself. The 
 anyway and says the same at the end of its close line. It says nothing when NOW is still at or
 over its cap (G-W5's own remedy applies then) or when `[guards] off` names G-W5.
 
+**Last, commit: a close is a milestone** (§ What every write does, **Commit the write**): the
+item, the register if it changed, the op log and what rode along, at once. The message: the
+title `<id>: close; <message>` (its first line, cut at a word with `...` to fit 72 characters);
+then `Ops: <op> <id>, ...` naming the op lines it carries, when there is more than its own; then
+the whole message, if the title cut it or it runs over a line; then the body given with `--body`
+or `--body-file` (the `Sabotage:` lines [sabotage.md](sabotage.md) step 5 asks for, and any
+receipts); then one trailer paragraph, `Closes: <id>` and `Session: <key>`. A close refused
+after its write commits that write without `Closes:`.
+
 **Why:** closed items stay in place as records, so links never break. `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
 A question closed by `task close` would carry no decision in the owner's words, and the agent
@@ -572,6 +582,9 @@ register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 c
 An empty NOW is said at close, not refused: refusing would block a close the owner wants, and
 the next NOW item is the owner's call; said only at the next gate, it turns the gate red before
 anything can be committed.
+The close is a commit of its own because finishing a task is the step a reader of the history
+looks for: `Closes:` names the task in the commit that finished it (FRAMEWORK §6.10), and
+[sabotage.md](sabotage.md) puts the `Sabotage:` lines in a commit message, which is the close's.
 
 ### context-engine task reopen
 
@@ -723,7 +736,8 @@ blocking orientation (G-W3).
 
 1. Read the branch (`git rev-parse --abbrev-ref HEAD`) and every uncommitted path, untracked files
    included (`git status --porcelain=v1 --untracked-files=all`; for a rename take the new path),
-   from git itself.
+   from git itself. Leave out the op log and every path its uncommitted lines name: step 3
+   commits them.
 2. New `PAU-n`: `title` (first line of what was in flight, cut to 100 characters), `session`, `state: open`, `created`,
    `branch`, `uncommitted: [...]`, `resume_step`, `evidence` (or `none`), `deferred: [...]`. Body:
    `**In flight:** ...` + blank line + `**Resume step:** ...`.
@@ -732,8 +746,8 @@ blocking orientation (G-W3).
    adding any path the op log's other uncommitted lines name (§ What every write does,
    **Commit the write**). (`--only` on a file git has never seen fails without the `add`. The
    second `-m` is the `Session:` trailer every agent commit ends with, FRAMEWORK §6.10.) The
-   engine commits a pause even with `[engine] commit = false`, and when it cannot commit one it
-   refuses, keeping the record: commit it by hand then.
+   engine commits a pause whatever `[engine] commit` says, `"off"` included, and when it cannot
+   commit one it refuses, keeping the record: commit it by hand then.
 
 **Why:** the next session needs the exact state of the tree, which comes from git, not from
 memory. Committing at once keeps another session's close from sweeping it away (FRAMEWORK §5.5
@@ -1060,6 +1074,38 @@ to the whole file. One line each by id, as § context-engine decision find, endi
 
 **Why:** "why is this code like this?" is answered by the decisions that link it, in one call,
 instead of grepping a log.
+
+## The session's own commits
+
+### context-engine commit
+
+`context-engine commit [<paths> ...] -m "<title>" [-m "<paragraph>" ...]` (or `-F <file>`; over
+MCP `commit(paths, message)`). **Run the gate first:** it runs none. By hand:
+
+1. Re-read `git status` and `git log -3`: another session may have committed since.
+2. Take the op log's uncommitted lines and the paths they name, as § What every write does,
+   **Commit the write**, says.
+3. `git add -- <each named file git has never seen>`, yours and theirs. Do not name a path git
+   ignores (the engine refuses one; `git add -f` it first if it belongs in git), the whole repo
+   (`.`), or pathspec magic (`:/`).
+4. The message is yours, then the engine's lines before your closing trailer paragraphs: `Ops:
+   <op> <id>, ...` naming the op lines the commit carries, and the `Also carries ...` paragraph
+   when another session's lines go in. Then `Session: <key>`, added to your last paragraph when
+   that is a trailer paragraph (every line `Token: value`), else as a paragraph of its own; a
+   message that has a `Session:` line already keeps it, and one naming another session is
+   refused.
+5. `git commit --only -F <message file> -- <your paths> docs/ledger/ops.jsonl <the paths the
+   lines name>`. If it fails, `git rm -q --cached` what step 3 added.
+
+It writes no op line: it changes no record. It commits whatever `[engine] commit` says, and
+refuses (exit 2) whenever it commits nothing, naming why.
+
+**Why:** a milestone policy leaves board writes riding along in the tree, so a plain
+`git commit -o` of a record would commit it without its op line, and G-W7 reds that commit on a
+clean checkout. Committing through the engine takes the lines and the files they name together,
+under the lock, so a session's own commit never splits them (FRAMEWORK §5.5 rule 4). It runs no
+gate, as `git commit` runs none: the gate is the session's step before it, so a gate is never
+skipped silently by a tool that was thought to run it.
 
 ## Bootstrap
 

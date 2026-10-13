@@ -51,8 +51,9 @@ class Op:
 
     def call(self, target: "Engine | Path", c: "Caller", /, **kw) -> tuple[int, str]:
         """Run the operation on ``target`` (from ``self.target``), as the CLI and the MCP server
-        both do. A write runs in one store batch, so everything it wrote is committed once, by
-        path, with its op log lines (FRAMEWORK §5.5 rule 4), and its line says what the commit did."""
+        both do. A write runs in one store batch, so whatever commit the policy makes after it
+        (FRAMEWORK §5.5 rule 4: at a milestone, after every write, or only a pause's) is made
+        once, by path, with its op log lines, and its line says what the commit did."""
         if not (self.write and self.engine):
             return self.fn(target, c, **kw)
         store = target.store
@@ -185,9 +186,9 @@ def task_touch(e: Engine, c: Caller, id: str, mechanical: bool = False) -> tuple
 
 
 @op(write=True)
-def task_close(e: Engine, c: Caller, id: str, msg: str = "") -> tuple[int, str]:
-    """Close an item; `msg` says what finished it and is required. Closing the NOW item while others stay open says G-W5 is red until the owner picks one to promote."""
-    return 0, e.close(id, msg, **c.kw)
+def task_close(e: Engine, c: Caller, id: str, msg: str = "", body: str = "") -> tuple[int, str]:
+    """Close an item; `msg` says what finished it and is required. A milestone: the engine commits it with `Closes: <id>`, and `body` goes in that commit's message (the `Sabotage:` and receipt lines). Closing the NOW item while others stay open says G-W5 is red until the owner picks one to promote."""
+    return 0, e.close(id, msg, body=body, **c.kw)
 
 
 @op(write=True)
@@ -365,6 +366,15 @@ def hk_regen_index(e: Engine, c: Caller) -> tuple[int, str]:
 def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> tuple[int, str]:
     """Import a single-file decision log (`### D-n -- title *(actor, date)*`): every id and text kept, stamped; all or nothing."""
     return 0, e.import_log(path, dry_run=dry_run, **c.kw)
+
+
+# -- the session's own commits (FRAMEWORK §5.5 rule 4) --------------------------------------
+
+
+@op(write=True)
+def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None) -> tuple[int, str]:
+    """Commit `paths` by path (`git commit -o`) with every op log line HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` trailer. It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
+    return 0, e.commit(paths or [], message, **c.kw)
 
 
 # -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------

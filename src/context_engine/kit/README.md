@@ -75,13 +75,14 @@ Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
    real one, and read every `provenance:` note in `context.toml`.
-3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its own
-   writes (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. Then
+3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its
+   writes at milestones (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. Then
    `context-engine session start` opens the first session.
 4. The first clean close (FRAMEWORK §6.3): `session close`, then `banner show` (it says
    `no banner yet`, hash `none`) and `banner set --seen none --file <banner.md>`, which writes the
-   `## Banner (<key>)` heading. The engine has committed each of these writes; commit by path
-   anything else the close changed.
+   `## Banner (<key>)` heading. Both are milestones, so the engine has committed them with
+   every write before them; commit anything else the close changed with `context-engine commit
+   <paths> -m "<message>"`, which takes any write still riding along with it.
 
 ## 2b. Bootstrap by hand
 
@@ -158,7 +159,11 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
    runbook in `docs/runbooks/` with the new kit's copy, unless the repo edited its own (then merge
    by hand), and run `init` for any runbook the new kit adds. Copy each new runbook's `[[routes]]`
    entry from the new `context.toml.template` too: lint cannot tell that one is missing. `init`
-   never overwrites a runbook, so an upgrade is the only time they move.
+   never overwrites a runbook, so an upgrade is the only time they move. `[engine] commit` is a
+   policy now (`"milestones"`, `"every-write"` or `"off"`, FRAMEWORK §5.5 rule 4): an older
+   `true` reads as `"milestones"` and `false` as `"off"`, so it needs no edit, and while any
+   machine still runs an older engine keep the old spelling, which that engine refuses
+   otherwise.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).
@@ -167,7 +172,8 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
 ## 5. The gate
 
 `<this repo's own test command> && context-engine lint`, from the repo root, before every
-commit that touches code, tests or records (the engine's own commits of its writes excepted),
+commit that touches code, tests or records (the engine's milestone commits excepted; your own
+`context-engine commit` runs none, so run the gate before it),
 and before every push. Guards the engine does not
 run yet are checked by hand (FRAMEWORK §11.1).
 

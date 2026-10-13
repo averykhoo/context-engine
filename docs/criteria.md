@@ -147,6 +147,14 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 |---|---|---|---|
 | AC-71 | The kit ships the method runbooks FRAMEWORK §7.5 names (`gate.md`, `sabotage.md`, `fan-out.md`, `release.md`), byte-equal to this repo's, and `init` copies them; §7.5 names every runbook the kit ships and the kit ships every runbook §7.5 names; each method runbook declares `mode` and `liveness` (LIVING, ACTIVE-PLAN or FROZEN) in its frontmatter, and has its own `[[routes]]` entry with G-D1 caps both here and in the kit's config template, so an adopted repo that loses one fails lint G-R1 and one that outgrows its cap fails G-D1; and `fan-out.md`'s build rounds are FRAMEWORK §6.6's steps, in its order and with its numbers | US-9, US-15 | tested |
 
+## Commits at milestones (CE-55)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-74 | `[engine] commit` is `milestones` (the default), `every-write` or `off` (an older `true` reads as `milestones`, `false` as `off`, anything else refuses); under `milestones` exactly task close, record new, amend and retire, decision supersede, ask answer, baton add, pause open, session close and pause, and banner set commit, each carrying every op log line HEAD lacks with the files they name, and every other write commits nothing | DEC-36 | tested |
+| AC-75 | A task close's commit is titled `<id>: close; <message>` (cut to 72 characters, the whole message then in the body), carries the close's optional body and `Closes: <id>` with `Session: <key>` in its trailer paragraph, and a close refused after its write commits that write without `Closes:` | DEC-36 | tested |
+| AC-76 | `context-engine commit [paths] -m ...` (and the MCP tool) commits the paths by path with every op log line HEAD lacks and the files they name, whatever the policy, adds a `Session:` trailer where git reads it, keeps what other sessions staged or left untracked as it was, and refuses (committing nothing, taking back any add) a missing message, another session's trailer, the whole repo, pathspec magic, an ignored path, nothing to commit, a path git does not know, and a root in no git work tree | DEC-36 | tested |
+
 ## Drafted for live stories with none (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

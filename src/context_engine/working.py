@@ -16,7 +16,10 @@ expiry (CE-6).
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import json
+import os
+import posixpath
 import re
 import subprocess
 from pathlib import Path
@@ -29,6 +32,7 @@ from . import ledger as L
 from . import okf
 from . import review as R
 from . import bootstrap as K  # the kit: its block markers, bootloader and contract (G-D0)
+from . import commit as C
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
@@ -82,6 +86,32 @@ def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
 def _answered_by(answered: Any) -> str:
     """The decision id in a question's `answered:` mapping, or a placeholder."""
     return str(answered.get("decision") or "<DEC>") if isinstance(answered, dict) else "<DEC>"
+
+
+def _milestone(fn):
+    """The operation is a milestone (FRAMEWORK §5.5 rule 4, DEC-36): under the `milestones`
+    policy its end commits its writes, with every op log line HEAD lacks and the files they
+    name. Milestones are what must reach HEAD at once: a task's close, owner words (a story or
+    decision recorded, amended, retired or superseded; a question answered), a hand-off to the
+    next session (a baton, a pause), the session's own close or pause, and the banner, which a
+    clean close writes after the session's close. Every other write rides along with the next
+    commit."""
+
+    @functools.wraps(fn)
+    def run(self, *args, **kw):
+        with self.store.milestone():
+            return fn(self, *args, **kw)
+
+    return run
+
+
+def _short(text: str, limit: int) -> str:
+    """The first line of ``text``, cut at a word to fit ``limit`` characters."""
+    line = text.strip().splitlines()[0].strip() if text.strip() else ""
+    if len(line) <= limit:
+        return line
+    cut = line[: limit - 3].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return (cut or line[: limit - 3]) + "..."
 
 
 def _one(items) -> str:
@@ -199,6 +229,7 @@ class Engine:
             self.store.write_text(path, led.render())
             self.store.log(op, key, path, key, actor, ["kind"])
 
+    @_milestone
     def session_close(self, key: str, *, actor: str, rows: str, summary: list[str], receipts: dict[str, str], owed: list[str] | None = None) -> str:
         """Write the session's ledger entry over its stub, refusing a malformed receipt (AC-11, G-W6, G-W8)."""
         self._check(key, actor)
@@ -231,6 +262,7 @@ class Engine:
         self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or []), "session.close", check)
         return f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
 
+    @_milestone
     def session_pause(self, key: str, *, actor: str, rows: str, deferred: str) -> str:
         """A three-line ``kind: pause`` entry over the stub (FRAMEWORK §6.4, AC-11)."""
         self._check(key, actor)
@@ -359,8 +391,11 @@ class Engine:
         self._board_set(rid, {} if mechanical else {"moved": session}, session=session, actor=actor, mechanical=mechanical, op="touch")
         return f"{rid}: {'updated' if mechanical else 'moved'} {session}"
 
-    def close(self, rid: str, msg: str, *, session: str, actor: str) -> str:
-        """``state: closed`` and the derived OKF ``status: deprecated``, in place (AC-12)."""
+    @_milestone
+    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "") -> str:
+        """``state: closed`` and the derived OKF ``status: deprecated``, in place (AC-12). A
+        milestone: its commit is titled ``<id>: close; <msg>`` and carries ``Closes: <id>``
+        (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11)."""
         self._check(session, actor)
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
@@ -383,6 +418,13 @@ class Engine:
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
         self._board_set(rid, changes, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"closed: {msg.strip()}"), op="close")
+        # set after the write, so a close refused partway never commits a `Closes:` (the batch of
+        # `_milestone` commits when the operation ends)
+        title = f"{rid}: close; " + _short(msg, C.TITLE_MAX - len(rid) - 9)
+        whole = msg.strip()
+        self.store.commit_title = title
+        self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", body.strip()) if x)
+        self.store.commit_trailers = [f"Closes: {rid}"]
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
 
@@ -658,6 +700,7 @@ class Engine:
         self._board_set(rid, {"last_asked": session}, session=session, actor=actor, body=self._log_line(session, actor, "owner said later; still open"), op="ask.later")
         return f"{rid}: deferred by the owner, last_asked {session}, still open"
 
+    @_milestone
     def ask_answer(self, rid: str, words: str, *, title: str, session: str, actor: str) -> str:
         """Record the owner's words verbatim as a decision (`actor: owner`), close the question,
         and report what it unblocked."""
@@ -690,6 +733,7 @@ class Engine:
 
     # -- batons and pauses (FRAMEWORK §5.4) ---------------------------------------------
 
+    @_milestone
     def baton_add(self, step: str, why: str, *, session: str, actor: str) -> str:
         self._check(session, actor)
         if not step.strip():
@@ -716,6 +760,46 @@ class Engine:
         self._end(rid, "baton", "done", {"done": session, "evidence": evidence.strip()}, session=session, actor=actor, op="baton.done")
         return f"{rid}: done ({evidence.strip()[:80]})"
 
+    def commit(self, paths: list[str], message: str, *, session: str, actor: str) -> str:
+        """The session's own commit (FRAMEWORK §5.5 rule 4): ``paths`` by path, with every op log
+        line HEAD lacks and the files they name, so a record is never committed without its op
+        line, nor a line without its record. Whatever the policy. It runs no gate: the session
+        runs the gate first, as before any commit."""
+        self._check(session, actor)
+        if not message.strip():
+            raise Refusal("a commit with no message", 'pass `-m "<id>: what changed"` (the task id leads the title, DEC-22); the engine adds the `Session:` trailer')
+        other = [k for k in C.session_trailers(message) if k != session]
+        if other:
+            raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
+        rels = [self._commit_path(x) for x in paths]
+        out = self.store.commit_paths(message, rels, session)
+        if not out.sha:
+            raise Refusal(f"not committed: {out.note or 'git made no commit'}",
+                          "fix what it names and run it again; by hand: manual-mode.md § context-engine commit")
+        extra = []
+        if out.carried:
+            extra.append(f"carrying lines left uncommitted by {', '.join(out.carried)}")
+        if out.left_out:
+            extra.append(f"left out as gitignored: {', '.join(out.left_out)}")
+        n = len(out.paths)
+        return f"committed {out.sha}: {n} path{'s' if n != 1 else ''}" + (f" ({'; '.join(extra)})" if extra else "")
+
+    def _commit_path(self, given: str) -> str:
+        """A path for ``commit``, relative to the root with forward slashes. The whole root and
+        pathspec magic are refused: a commit names its paths (never the whole tree)."""
+        raw = str(given).strip()
+        if not raw or raw.startswith(":"):
+            raise Refusal(f"path {given!r} is empty or pathspec magic", "name each file or directory to commit")
+        q = Path(raw)
+        try:
+            rel = os.path.relpath(q if q.is_absolute() else self.root / q, self.root)
+        except ValueError:  # another drive, on Windows
+            raise Refusal(f"{given} is outside this repo", "commit it with git in its own repo") from None
+        rel = posixpath.normpath(rel.replace("\\", "/"))
+        if rel in (".", ""):
+            raise Refusal(f"{given!r} is the whole repo", "name the paths to commit: by path, never the whole tree (FRAMEWORK §5.5)")
+        return rel
+
     def _git(self, *args: str) -> str:
         try:
             p = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, encoding="utf-8")
@@ -733,9 +817,13 @@ class Engine:
             raise Refusal("a pause needs what was in flight and the exact resume step", "pass both")
         branch = self._git("rev-parse", "--abbrev-ref", "HEAD").strip()
         dirty = []
+        # the pause's own commit carries the op log's uncommitted lines and the files they name,
+        # so they are not left uncommitted (INV-45); the list holds what stays so
+        carried = C.pending(self.root, self.store.config.oplog)
         for line in self._git("status", "--porcelain=v1", "--untracked-files=all").splitlines():
-            path = line[3:]
-            dirty.append(path.split(" -> ")[-1].strip('"'))
+            path = line[3:].split(" -> ")[-1].strip('"')
+            if path not in carried:
+                dirty.append(path)
         fields = {
             "title": in_flight.strip().splitlines()[0][:100],
             "session": session,
@@ -781,6 +869,7 @@ class Engine:
 
     # -- append-only records (G-D10) ----------------------------------------------------
 
+    @_milestone
     def record_new(self, kind: str, title: str, body: str, raw: dict[str, str], *, session: str, actor: str) -> Record:
         """A new decision or story, stamped at birth. A required key the caller left out is filled
         when it can only mean now: a date-typed key with today, a key-typed one with this session."""
@@ -835,6 +924,7 @@ class Engine:
             self.store.stamp(rid, session=session, actor=actor)
         return f"stamped {len(ids)}: {_one(ids)}"
 
+    @_milestone
     def amend(self, rid: str, text: str, *, session: str, actor: str) -> str:
         """Append a dated entry under ``## Amendments``; the text above it never changes."""
         self.store.amend(rid, text, session=session, actor=actor)
@@ -846,6 +936,7 @@ class Engine:
         _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
         return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
 
+    @_milestone
     def retire(self, rid: str, why: str, *, by: str, superseded_by: str = "", session: str, actor: str) -> str:
         """Retire a story (FRAMEWORK §3.2): `story_status: retired` with the derived OKF
         `status: deprecated`, `superseded_by` on it and `supersedes` on its successor when one
@@ -917,6 +1008,7 @@ class Engine:
         if self.store.config.kind_for_id(rid).name != self._decision_kind():
             raise Refusal(f"{rid} is not a decision", f"name a {self.store.config.kind(self._decision_kind()).prefix}-n record")
 
+    @_milestone
     def supersede(self, old: str, new: str, *, session: str, actor: str) -> str:
         """``new`` replaces ``old``: both directions are written under one lock, and ``old``
         becomes SUPERSEDED with the derived OKF ``status: deprecated``."""
@@ -1176,6 +1268,7 @@ class Engine:
 
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 
+    @_milestone
     def banner_set(self, text: str, seen_hash: str, *, session: str, actor: str) -> str:
         """Replace the banner only if it is unchanged since ``seen_hash`` was read (AC-16)."""
         self._check(session, actor)

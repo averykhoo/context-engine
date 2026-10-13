@@ -563,7 +563,9 @@ def _git(root, *args):
 
 @pytest.mark.criterion("AC-14")
 def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_itself(eng):
-    """Itself and its op log line (CE-45): the session start before it committed its own stub."""
+    """Itself, its op log line and the writes riding along (DEC-36: the session start before it
+    is no milestone, so its stub rides with the pause), and nothing else. Its list of
+    uncommitted paths leaves out what its own commit carries (INV-45)."""
     root = eng.root
     _git(root, "init", "-q", "-b", "feature-x")
     _git(root, "config", "user.email", "t@example.com")
@@ -579,7 +581,7 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     assert rec.doc.get("branch") == "feature-x"
     assert set(rec.doc.get("uncommitted")) == {"wip.py", "HANDOFF.md"}
     committed = _git(root, "show", "--name-only", "--format=", "HEAD").split()
-    assert sorted(committed) == sorted([rec.path.relative_to(root).as_posix(), "ops.jsonl"])
+    assert sorted(committed) == sorted([rec.path.relative_to(root).as_posix(), "ops.jsonl", "ledger.md"])
     status = _git(root, "status", "--porcelain")
     assert "wip.py" in status and "M  HANDOFF.md" in status
     assert rec.id in out and re.search(r"; committed [0-9a-f]{7,}$", out), out

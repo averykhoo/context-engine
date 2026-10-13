@@ -1,7 +1,13 @@
-"""The engine commits its own writes by path (FRAMEWORK §5.5 rule 4, CE-45): every op log line
-HEAD lacks, with the files those lines name, so a clean checkout of any commit passes lint on
-its own, and nothing another session staged or left untracked rides along."""
+"""The engine commits its writes by path (FRAMEWORK §5.5 rule 4, CE-45): every op log line HEAD
+lacks, with the files those lines name, so a clean checkout of any commit passes lint on its
+own, and nothing another session staged or left untracked rides along. When it commits is the
+`[engine] commit` policy (DEC-36, CE-55): at milestones by default, after every write, or only a
+pause. The session's own commits sweep the same way (`context-engine commit`).
 
+The sweep's own tests run under `every-write`, where each write commits, so each pins one case;
+the policy's tests below them run under the default."""
+
+import copy
 import dataclasses
 import json
 import re
@@ -22,6 +28,8 @@ from context_engine.working import Engine
 from test_working import ACTOR, CONFIG, FRAMEWORK, LEDGER, NOTE, TODAY
 from conftest import _toml
 
+EVERY = {**CONFIG, "engine": {**CONFIG["engine"], "commit": "every-write"}}  # the sweep's tests: each write commits
+
 
 def git(root, *args, check=True):
     p = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, encoding="utf-8")
@@ -30,7 +38,7 @@ def git(root, *args, check=True):
     return p.stdout
 
 
-def _write_target(root: Path, config: dict = CONFIG) -> None:
+def _write_target(root: Path, config: dict = EVERY) -> None:
     root.mkdir(parents=True, exist_ok=True)
     (root / "context.toml").write_text(_toml(config), encoding="utf-8")
     (root / "ledger.md").write_text(LEDGER, encoding="utf-8")
@@ -70,7 +78,7 @@ def eng(root, **config) -> Engine:
     return Engine(root, config=dataclasses.replace(cfg, **config) if config else cfg, today=lambda: TODAY)
 
 
-def run(root, name, c, **kw):
+def run(root, name, c, /, **kw):
     """An operation as the CLI and the MCP server run it (``Op.call``)."""
     o = ops.OPS[name]
     return o.call(o.target(root), c, **kw)
@@ -169,7 +177,7 @@ def test_another_sessions_leftover_lines_ride_along_with_the_files_they_name(rep
     """A session whose commit never happened (an older engine, a by-hand op, a crash) leaves
     op lines and records in the tree; the next engine commit carries them, and says whose."""
     c = start(repo)
-    other = eng(repo, commit=False)  # the leftover: written, never committed
+    other = eng(repo, commit="off")  # the leftover: written, never committed
     key = other.session_start(actor=ACTOR)
     other.new("task", "Left behind", session=key, actor=ACTOR)
     assert "tasks/" in git(repo, "status", "--porcelain")
@@ -243,15 +251,19 @@ def test_a_target_that_is_not_a_git_repo_is_written_and_says_nothing(tmp_path):
     assert next((root / "tasks").glob("CE-1-*.md")).exists()
 
 
-def test_commit_false_leaves_every_commit_but_a_pauses_to_the_session(repo):
-    (repo / "context.toml").write_text(_toml({**CONFIG, "engine": {**CONFIG["engine"], "commit": False}}), encoding="utf-8")
-    git(repo, "commit", "-q", "-am", "commit = false")
+@pytest.mark.parametrize("off", ["off", False])  # False: CE-45's spelling, still read
+def test_commit_off_leaves_every_commit_but_a_pauses_to_the_session(repo, off):
+    (repo / "context.toml").write_text(_toml({**CONFIG, "engine": {**CONFIG["engine"], "commit": off}}), encoding="utf-8")
+    git(repo, "commit", "-q", "-am", "commit = off")
     before = count(repo)
     c = start(repo)
     _, line = run(repo, "task_new", c, title="Not committed")
     assert count(repo) == before and "; committed" not in line and "not committed" not in line
+    _, line = run(repo, "task_close", c, id="CE-1", msg="done")  # a milestone, but the policy is off
+    assert count(repo) == before and "; committed" not in line, line
     _, line = run(repo, "pause_open", c, in_flight="half done", resume="finish it")
     assert count(repo) == before + 1 and "; committed" in line  # AC-14: a pause commits regardless
+    assert git(repo, "status", "--porcelain").strip() == ""  # and carries what the others left
 
 
 @pytest.mark.parametrize("marker,what", [(m, w) for m, w in C.IN_PROGRESS])
@@ -462,3 +474,324 @@ def test_the_title_stays_short_and_names_the_rest():
     lines = [{"session": "2026-10-08a", "op": "touch", "id": f"CE-{n}"} for n in range(30)]
     title = C.message(lines, "2026-10-08a", None).splitlines()[0]
     assert len(title) <= C.TITLE_MAX and title.startswith("engine: touch CE-0, touch CE-1") and title.endswith("more)")
+
+
+# -- the policy: commit at milestones (DEC-36, CE-55) ---------------------------------------------
+
+STORY = {"type": "Story", "prefix": "US", "dir": "stories", "mode": "append-only", "required": ["title", "actor", "date", "story_status"],
+         "enums": {"story_status": ["live", "unspecified", "unconfirmed", "retired"]}, "types": {"date": "date"}}
+MILESTONE_CONFIG = copy.deepcopy(CONFIG)  # no `commit` key: the default policy
+MILESTONE_CONFIG["kinds"]["story"] = STORY
+MILESTONE_CONFIG["kinds"]["decision"]["enums"]["decision_status"].append("SUPERSEDED")
+MILESTONE_CONFIG["guards"] = {**CONFIG["guards"], "stories": "story"}
+MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions/index.md"}
+# DEC-36's milestones: a task's close, the owner-words writes, a hand-off (baton, pause) and the
+# session's own close or pause; and the banner, which a clean close writes after the session's
+# close (CE-55's call: DEC-36 names it in neither list). Every other write rides along.
+MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "decision_supersede",
+              "baton_add", "pause_open", "session_close", "session_pause", "banner_set"}
+OWNER = {"actor": "owner", "story_status": "live"}
+
+
+@pytest.fixture
+def mrepo(tmp_path):
+    root = tmp_path / "repo"
+    _write_target(root, MILESTONE_CONFIG)
+    _init(root)
+    return root
+
+
+def trailers(root, rev="HEAD") -> list[str]:
+    msg = git(root, "log", "-1", "--format=%B", rev)
+    return subprocess.run(["git", "interpret-trailers", "--parse"], cwd=root, input=msg, capture_output=True, text=True, check=True).stdout.splitlines()
+
+
+@pytest.mark.criterion("AC-74")
+def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
+    """Every write operation, walked once under the default policy: exactly DEC-36's milestones
+    commit, each carrying what rode along, and a new write operation must be placed here."""
+    committed, walked = set(), []
+    c = ops.Caller(actor=ACTOR)
+
+    def w(op, /, **kw):
+        before = count(mrepo)
+        _, line = run(mrepo, op, c, **kw)
+        walked.append(op)
+        if count(mrepo) != before:
+            committed.add(op)
+            assert line.endswith(f"; committed {head(mrepo)}"), (op, line)
+            left = [ln for ln in git(mrepo, "status", "--porcelain").splitlines() if ln[3:] not in ("a.py", "b.py", "log.md")]
+            assert left == [], (op, "a milestone carries every write before it")
+        else:
+            assert "committed" not in line, (op, line)  # riding along says nothing
+        return line
+
+    w("session_start")
+    w("task_new", title="One", pri="NOW")
+    w("task_new", title="Two")
+    w("task_set", id="CE-2", fields={"brief": "b"})
+    w("task_promote", id="CE-2", pri="NEXT")
+    w("task_dep", id="CE-2", add=["CE-1"])
+    w("task_comment", id="CE-2", text="a note")
+    w("task_touch", id="CE-2")
+    w("task_section", id="CE-2", name="Traps", text="- one")
+    w("task_close", id="CE-2", msg="done")
+    w("task_reopen", id="CE-2", msg="not yet")
+    w("ask_new", title="Which way?")
+    w("ask_raised", ids=["ASK-1"])
+    w("ask_later", id="ASK-1")
+    w("ask_answer", id="ASK-1", words="this way", title="This way")
+    w("record_new", kind="decision", title="Kept", body="Owner words.", fields={"actor": "owner", "decision_status": "BUILT"})
+    w("record_amend", id="DEC-2", text="widened")
+    w("record_correct", id="DEC-2", after="Owner", text="sic")
+    w("decision_link", id="DEC-2", target="CE-1")
+    for f in ("a.py", "b.py"):
+        (mrepo / f).write_text("def f():\n    pass\n", encoding="utf-8")
+    w("decision_link", id="DEC-2", target="a.py::f")
+    w("decision_relink", id="DEC-2", old="a.py::f", new="b.py::f")
+    w("decision_set", id="DEC-2", fields={"tags": "a, b"})
+    w("decision_supersede", old="DEC-1", new="DEC-2")
+    w("hk_regen_index")
+    w("record_new", kind="story", title="A story", body="the owner's words", fields=OWNER)
+    w("record_new", kind="story", title="Again", body="the owner's words", fields=OWNER)
+    w("record_retire", id="US-1", why="recorded again", by="agent", superseded_by="US-2")
+    w("baton_add", step="a step", why="no time")
+    w("baton_done", id="BTN-1", evidence="did it")
+    w("pause_open", in_flight="half done", resume="finish it")
+    w("pause_resume", id="PAU-1")
+    w("hk_expire_batons")
+    sha = run(mrepo, "banner_show", c)[1].split()[3]
+    w("banner_set", text="- Where things stand.", seen=sha)
+    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
+    w("session_start")
+    w("session_pause", rows="none", deferred="everything")
+    (mrepo / "log.md").write_text("### DEC-91 -- Old *(owner, 2026-01-01)*\n\nwords\n", encoding="utf-8")
+    w("decision_import", path="log.md")
+    hand = "---\ntype: Decision\nid: DEC-90\ntitle: By hand\nactor: owner\ndecided: 2026-10-08\nsession: 2026-10-08a\ndecision_status: BUILT\n---\n\nwords\n"
+    (mrepo / "decisions" / "DEC-90-by-hand.md").write_text(hand, encoding="utf-8")
+    w("record_stamp", ids=["DEC-90"])
+    assert committed == MILESTONES
+    writes = {o.name for o in ops.OPS.values() if o.write}
+    assert writes - set(walked) == {"init", "commit"}  # init commits nothing; commit is the session's own (below)
+
+
+@pytest.mark.criterion("AC-75")
+def test_a_task_close_commits_with_closes_its_body_and_what_rode_along(mrepo):
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Build the parser")
+    run(mrepo, "task_comment", c, id="CE-1", text="half way")
+    sabotage = "Sabotage: dropped the check -> test_parser red\nSabotage: cut the cap -> test_cap red"
+    _, line = run(mrepo, "task_close", c, id="CE-1", msg="done in abc1234", body=sabotage)
+    assert line.endswith(f"; committed {head(mrepo)}"), line
+    msg = git(mrepo, "log", "-1", "--format=%B")
+    assert msg.splitlines()[0] == "CE-1: close; done in abc1234", msg
+    assert f"Ops: close CE-1, session.start {c.session}, new CE-1, comment CE-1" in msg, msg
+    assert sabotage in msg
+    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}"], msg
+    assert git(mrepo, "status", "--porcelain").strip() == ""
+
+
+@pytest.mark.criterion("AC-75")
+def test_a_long_close_message_is_cut_in_the_title_and_kept_whole_in_the_body(mrepo):
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Long")
+    words = "done in abc1234, with the parser, the lexer, the printer and the docs all reviewed twice over"
+    run(mrepo, "task_close", c, id="CE-1", msg=words)
+    msg = git(mrepo, "log", "-1", "--format=%B")
+    title = msg.splitlines()[0]
+    assert len(title) <= C.TITLE_MAX and title.startswith("CE-1: close; done in abc1234, with") and title.endswith("..."), title
+    assert words in msg
+
+
+@pytest.mark.criterion("AC-75")
+def test_a_close_refused_after_its_write_commits_the_write_without_closes(mrepo, monkeypatch):
+    """`Closes:` is set after the close's write: a close that refuses partway still commits what
+    it wrote (the op log at HEAD must not lag), but never claims the item closed."""
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Half")
+    real = Engine._board_set
+
+    def writes_then_refuses(self, *a, **kw):
+        real(self, *a, **kw)
+        raise Refusal("after the write", "retry")
+
+    monkeypatch.setattr(Engine, "_board_set", writes_then_refuses)
+    before = count(mrepo)
+    with pytest.raises(Refusal, match=r"what it wrote before the refusal was committed"):
+        run(mrepo, "task_close", c, id="CE-1", msg="done")
+    assert count(mrepo) == before + 1
+    assert not [t for t in trailers(mrepo) if t.startswith("Closes:")], trailers(mrepo)
+    assert git(mrepo, "log", "-1", "--format=%s").startswith("engine: close CE-1")
+
+
+def test_a_refused_close_that_wrote_nothing_commits_nothing(mrepo):
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="One")
+    run(mrepo, "task_close", c, id="CE-1", msg="done")
+    before = count(mrepo)
+    with pytest.raises(Refusal, match="already closed"):
+        run(mrepo, "task_close", c, id="CE-1", msg="again")
+    _, line = run(mrepo, "task_new", c, title="After")  # the spent milestone does not make this one commit
+    assert count(mrepo) == before and "committed" not in line, line
+
+
+@pytest.mark.criterion("AC-74")
+@pytest.mark.parametrize("value,policy", [(True, "milestones"), (False, "off"), ("every-write", "every-write"), ("milestones", "milestones"), ("off", "off")])
+def test_the_policy_reads_its_three_values_and_ce_45s_bools(tmp_path, value, policy):
+    _write_target(tmp_path, {**CONFIG, "engine": {**CONFIG["engine"], "commit": value}})
+    assert load(tmp_path).commit == policy
+    _write_target(tmp_path, CONFIG)
+    assert load(tmp_path).commit == "milestones"  # the default
+
+
+@pytest.mark.criterion("AC-74")
+def test_an_unknown_policy_refuses_naming_the_three(tmp_path):
+    _write_target(tmp_path, {**CONFIG, "engine": {**CONFIG["engine"], "commit": "sometimes"}})
+    with pytest.raises(Refusal, match=r'`commit` is .sometimes.*"milestones", "every-write", "off"'):
+        load(tmp_path)
+
+
+def test_an_upgraded_repo_saying_commit_true_commits_at_milestones(mrepo):
+    """CE-45's kit wrote `commit = true` into every repo it set up: that repo now commits at
+    milestones, as a new one does."""
+    cfg = copy.deepcopy(MILESTONE_CONFIG)
+    cfg["engine"]["commit"] = True
+    (mrepo / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    git(mrepo, "commit", "-q", "-am", "commit = true")
+    before = count(mrepo)
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Rides")
+    assert count(mrepo) == before
+    run(mrepo, "task_close", c, id="CE-1", msg="done")
+    assert count(mrepo) == before + 1
+
+
+# -- the session's own commit (`context-engine commit`) ------------------------------------------
+
+
+@pytest.mark.criterion("AC-76")
+def test_the_session_commit_carries_its_paths_with_the_op_log_and_the_records_it_names(mrepo, tmp_path):
+    """The defect a milestone policy would bring back: the session commits its code mid-task
+    while board writes ride along uncommitted; a commit of a record without its line fails
+    lint on a clean checkout. `commit` sweeps them in, so every commit lints on its own."""
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Build the parser")
+    run(mrepo, "task_comment", c, id="CE-1", text="half way")
+    (mrepo / "parser.py").write_text("x = 1\n", encoding="utf-8")  # new: added by the commit
+    (mrepo / "CLAUDE.md").write_text("# contract\n\nframework: " + FRAMEWORK + "\n\nmore\n", encoding="utf-8")
+    (mrepo / "HANDOFF.md").write_text("# HANDOFF\n\n## Banner (2026-10-07b)\n\n- staged by someone else\n", encoding="utf-8")
+    git(mrepo, "add", "HANDOFF.md")  # another session's staged edit: stays staged
+    (mrepo / "wip.py").write_text("y = 2\n", encoding="utf-8")  # untracked and not named: stays untracked
+    _, line = run(mrepo, "commit", c, paths=["parser.py", "CLAUDE.md"], message="CE-1: the parser\n\nSabotage: x -> test_y red")
+    task_file = next((mrepo / "tasks").glob("CE-1-*.md")).relative_to(mrepo).as_posix()
+    assert line == f"committed {head(mrepo)}: 5 paths", line
+    assert files_at(mrepo) == sorted(["CLAUDE.md", "parser.py", "ops.jsonl", "ledger.md", task_file])
+    msg = git(mrepo, "log", "-1", "--format=%B")
+    assert msg.startswith(f"CE-1: the parser\n\nOps: session.start {c.session}, new CE-1, comment CE-1\n\nSabotage: x -> test_y red\nSession: {c.session}\n"), msg
+    assert trailers(mrepo) == ["Sabotage: x -> test_y red", f"Session: {c.session}"], msg  # a trailer-shaped last paragraph takes the trailer
+    status = git(mrepo, "status", "--porcelain")
+    assert status.splitlines() == ["M  HANDOFF.md", "?? wip.py"], status
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(mrepo), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
+
+
+@pytest.mark.criterion("AC-76")
+def test_the_session_commit_keeps_its_trailer_block_and_adds_session_to_it(mrepo):
+    c = start(mrepo)
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a\n\nCo-Authored-By: Someone <s@example.com>\n")
+    assert trailers(mrepo) == ["Co-Authored-By: Someone <s@example.com>", f"Session: {c.session}"]
+    msg = git(mrepo, "log", "-1", "--format=%B")
+    assert msg.index("Ops: session.start") < msg.index("Co-Authored-By")  # what the engine adds goes before the trailers
+    (mrepo / "a.py").write_text("a = 2\n", encoding="utf-8")
+    run(mrepo, "commit", c, paths=["a.py"], message=f"CE-1: again\n\nSession: {c.session}\n\nCo-Authored-By: Someone <s@example.com>")
+    assert git(mrepo, "log", "-1", "--format=%B").count("Session:") == 1  # the session's own trailer stands
+
+
+def test_the_session_commit_with_no_paths_commits_the_op_log_and_what_it_names(mrepo):
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Board only")
+    _, line = run(mrepo, "commit", c, message="Board: file CE-1")
+    assert line.startswith("committed ") and git(mrepo, "status", "--porcelain").strip() == "", line
+
+
+def test_the_session_commit_takes_directories_and_absolute_paths(mrepo):
+    c = start(mrepo)
+    (mrepo / "src").mkdir()
+    (mrepo / "src" / "m.py").write_text("m = 1\n", encoding="utf-8")
+    git(mrepo, "add", "src/m.py")
+    (mrepo / "README.md").write_text("readme\n", encoding="utf-8")
+    run(mrepo, "commit", c, paths=["src", str(mrepo / "README.md")], message="CE-1: both")
+    assert {"src/m.py", "README.md"} <= set(files_at(mrepo))
+
+
+@pytest.mark.criterion("AC-76")
+@pytest.mark.parametrize("paths,message,why", [
+    (["a.py"], "", "a commit with no message"),
+    (["a.py"], "CE-1: x\n\nSession: 2026-01-01a", "names 2026-01-01a, not this session"),
+    (["."], "CE-1: x", "is the whole repo"),
+    ([":/"], "CE-1: x", "pathspec magic"),
+    (["a.py", "ignored.log"], "CE-1: x", "ignored.log is gitignored"),
+    ([], "CE-1: x", "nothing to commit"),
+    (["a.py", "missing.py"], "CE-1: x", "did not match"),  # a.py is added, then the add is taken back
+], ids=["no-message", "other-session", "whole-repo", "magic", "ignored", "nothing", "missing"])
+def test_the_session_commit_refuses_what_it_cannot_commit_and_commits_nothing(mrepo, paths, message, why):
+    (mrepo / ".gitignore").write_text("*.log\n", encoding="utf-8")
+    git(mrepo, "add", ".gitignore")
+    git(mrepo, "commit", "-q", "-m", "ignore logs")
+    (mrepo / "ignored.log").write_text("x\n", encoding="utf-8")
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    c = ops.Caller("2026-10-13a", ACTOR)
+    before = count(mrepo)
+    with pytest.raises(Refusal, match=re.escape(why)):
+        run(mrepo, "commit", c, paths=paths, message=message)
+    assert count(mrepo) == before
+    assert "?? a.py" in git(mrepo, "status", "--porcelain")  # an add is taken back
+
+
+@pytest.mark.criterion("AC-76")
+def test_the_session_commit_outside_git_refuses(tmp_path):
+    root = tmp_path / "plain"
+    _write_target(root, MILESTONE_CONFIG)
+    (root / "a.py").write_text("a = 1\n", encoding="utf-8")
+    with pytest.raises(Refusal, match="in no git work tree"):
+        run(root, "commit", ops.Caller("2026-10-13a", ACTOR), paths=["a.py"], message="CE-1: a")
+
+
+@pytest.mark.criterion("AC-76")
+def test_the_session_commit_through_the_cli_and_the_mcp_tool(mrepo, capsys):
+    from context_engine.cli import main
+
+    c = start(mrepo)
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    (mrepo / "msg.txt").write_bytes("﻿CE-1: from a file\r\n\r\nits body\r\n".encode())  # PowerShell 5.1: a BOM, CRLF
+    argv = ["--root", str(mrepo), "--session", c.session, "--actor", ACTOR]
+    assert main([*argv, "commit", "a.py", "-F", str(mrepo / "msg.txt")]) == 0
+    assert capsys.readouterr().out.strip().startswith(f"committed {head(mrepo)}")
+    assert git(mrepo, "log", "-1", "--format=%B").startswith("CE-1: from a file\n\nits body\n")
+    (mrepo / "a.py").write_text("a = 2\n", encoding="utf-8")
+    assert main([*argv, "commit", "a.py", "-m", "CE-1: two", "-m", "para"]) == 0
+    assert git(mrepo, "log", "-1", "--format=%B").startswith("CE-1: two\n\npara\n")
+    assert main([*argv, "commit", "a.py", "-m", "CE-1: nothing changed"]) == 2
+    assert "not committed" in capsys.readouterr().err
+    (mrepo / "a.py").write_text("a = 3\n", encoding="utf-8")
+    state = ops.Caller(c.session, ACTOR)
+    line = mcp.make_tool(ops.OPS["commit"], mrepo, state)(paths=["a.py"], message="CE-1: over MCP")
+    assert line == f"committed {head(mrepo)}: 1 path", line
+    run(mrepo, "task_new", c, title="Closed from the CLI")
+    (mrepo / "lines.md").write_bytes("\ufeffSabotage: a -> test_b red\r\n".encode())
+    assert main([*argv, "task", "close", "CE-1", "-m", "done", "--body-file", str(mrepo / "lines.md")]) == 0
+    assert "\n\nSabotage: a -> test_b red\n\nCloses: CE-1\n" in git(mrepo, "log", "-1", "--format=%B")
+
+
+def test_a_new_repo_commits_its_kit_through_the_session_commit(tmp_path):
+    """Bootstrap: a session that started before the kit was committed commits the kit with
+    `commit`, its op lines riding along; the kit's own `context.toml` is in that commit."""
+    root = tmp_path / "fresh"
+    _write_target(root, MILESTONE_CONFIG)
+    _init(root, commit=False)
+    c = start(root)
+    _, line = run(root, "commit", c, paths=["context.toml", "CLAUDE.md", "HANDOFF.md"], message="Adopt the framework")
+    assert line.startswith("committed "), line
+    assert files_at(root) == ["CLAUDE.md", "HANDOFF.md", "context.toml", "ledger.md", "ops.jsonl"]

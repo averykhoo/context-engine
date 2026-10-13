@@ -1,4 +1,10 @@
-"""The engine commits its own writes by path (FRAMEWORK §5.5 rule 4).
+"""The engine commits its writes by path, at milestones (FRAMEWORK §5.5 rule 4, DEC-36).
+
+``[engine] commit`` says when (``store.Store._commit``): at a milestone (task close, the owner-words
+writes, a baton or pause, session close or pause), after every write, or never but a pause. A
+write that is not a milestone rides along with the next commit, which carries it whole. The
+session's own commits go through ``commit`` too (``context-engine commit <paths> -m ...``), so
+they never split a record from its op line.
 
 A commit carries **every op log line the working tree has and HEAD lacks, every file those lines
 name, and the op log itself**. So the op log at HEAD never runs ahead of, or behind, the records
@@ -15,8 +21,8 @@ staged; nothing is unstaged, reset or stashed; hooks run.
 
 It never undoes the write it follows. When it cannot commit, the operation's line says why, and
 the session commits those paths by hand (manual-mode § What every write does):
-- it says nothing when the root is in no git work tree (no ``.git`` in it or above it), or
-  ``[engine] commit`` is false;
+- it says nothing when the root is in no git work tree (no ``.git`` in it or above it), or the
+  policy makes no commit now (the session's own commit says so instead: it was asked for);
 - otherwise the line reads "not committed: ...". That covers: git missing beside a ``.git``; git
   refusing the repo; a merge, rebase, cherry-pick, revert or bisect in progress; a detached HEAD;
   ``GIT_DIR``-style variables set (inside a git hook); ``context.toml`` not tracked by the
@@ -45,6 +51,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 TITLE_MAX = 72
+OPS_MAX = 400  # characters of the `Ops:` line naming the op log lines a commit carries, when its title does not
+TRAILER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*: \S")  # `Token: value`, as git reads a trailer
 # Seconds. Provenance: JUDGEMENT, a hook may run a check. Wrong if a normal hook takes longer. It is
 # longer than the engine lock's own 30 s default, so a hook slower than that makes another
 # session's write refuse (before it writes anything) while this one waits.
@@ -149,44 +157,117 @@ def new_lines(working: str, head: str) -> list[str]:
     return out
 
 
-def message(lines: list[dict], session: str, title: str | None) -> str:
-    """The commit message. The title is ``engine: <op> <id>, ...``, naming the session's own ops;
-    a mechanical index line is named only when it is alone. Then a paragraph naming any other
-    session whose lines ride along, then the trailer."""
+def _parts(lines: list[dict], session: str, lead: tuple[str, ...] = ()) -> list[str]:
+    """``<op> <id>`` for the session's own lines (a mechanical index line only when it is alone),
+    the ones this operation wrote (``lead``) first."""
     own = [o for o in lines if o.get("session") == session] or lines
     named = [o for o in own if o.get("op") != "index"] or own
-    if not title:
-        parts = list(dict.fromkeys(f"{o.get('op')} {o.get('id')}" for o in named))
-        title = "engine: "
-        for n, p in enumerate(parts):
-            more = f" (+{len(parts) - n} more)"
-            sep = ", " if n else ""
-            if len(title) + len(sep) + len(p) + (len(more) if n < len(parts) - 1 else 0) > TITLE_MAX:
-                title += more
-                break
-            title += sep + p
+    keys = list(dict.fromkeys(f"{o.get('op')} {o.get('id')}" for o in named))
+    return list(dict.fromkeys([*(k for k in lead if k in keys), *keys]))
+
+
+def _fit(head: str, parts: list[str], limit: int) -> str:
+    """``head`` and as many parts as fit in ``limit``, then ``(+n more)``."""
+    out = head
+    for n, p in enumerate(parts):
+        more = f" (+{len(parts) - n} more)"
+        sep = ", " if n else ""
+        if len(out) + len(sep) + len(p) + (len(more) if n < len(parts) - 1 else 0) > limit:
+            return out + more
+        out += sep + p
+    return out
+
+
+def _carried_by(lines: list[dict], session: str) -> str:
     others = _others(lines, session)
-    body = ""
-    if others:
-        n = sum(o.get("session") != session for o in lines)
-        body = (f"Also carries {n} op log line{'s' if n != 1 else ''} left uncommitted by "
-                f"session{'s' if len(others) != 1 else ''} {', '.join(others)}, with the files they name.\n\n")
-    return f"{title}\n\n{body}Session: {session}\n"
+    if not others:
+        return ""
+    n = sum(o.get("session") != session for o in lines)
+    return (f"Also carries {n} op log line{'s' if n != 1 else ''} left uncommitted by "
+            f"session{'s' if len(others) != 1 else ''} {', '.join(others)}, with the files they name.")
+
+
+def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[str, ...] = (), body: str = "", trailers: tuple[str, ...] = ()) -> str:
+    """An engine commit's message. The title is ``engine: <op> <id>, ...``, naming the session's
+    own ops, this operation's first; an operation that names its own title (a pause, a task
+    close) gets an ``Ops:`` line naming them instead, when there is more than one. Then the
+    operation's ``body``, a paragraph naming any other session whose lines ride along, then
+    ``trailers`` and the ``Session:`` trailer, in one block."""
+    parts = _parts(lines, session, lead)
+    paras = []
+    if not title:
+        title = _fit("engine: ", parts, TITLE_MAX)
+    elif len(parts) > 1:
+        paras.append(_fit("Ops: ", parts, OPS_MAX))
+    if body.strip():
+        paras.append(body.strip())
+    if _carried_by(lines, session):
+        paras.append(_carried_by(lines, session))
+    paras.append("\n".join([*trailers, f"Session: {session}"]))
+    return "\n\n".join([title, *paras]) + "\n"
+
+
+def _paragraphs(text: str) -> list[str]:
+    paras, cur = [], []
+    for ln in text.replace("\r\n", "\n").split("\n"):
+        if ln.strip():
+            cur.append(ln.rstrip())
+        elif cur:
+            paras.append("\n".join(cur))
+            cur = []
+    if cur:
+        paras.append("\n".join(cur))
+    return paras
+
+
+def session_trailers(text: str) -> list[str]:
+    """The key of every ``Session:`` line in a commit message a session wrote."""
+    return [ln.split(":", 1)[1].strip() for ln in text.replace("\r\n", "\n").split("\n") if ln.startswith("Session:")]
+
+
+def session_message(text: str, lines: list[dict], session: str) -> str:
+    """A session's own commit message as it wrote it, plus what the engine carries: an ``Ops:``
+    line naming the op log lines it sweeps in, and the paragraph naming other sessions, both
+    before the closing trailer paragraphs; and a ``Session:`` trailer in the last paragraph,
+    where ``git interpret-trailers`` reads it, unless the message has one already."""
+    paras = _paragraphs(text)
+    tail = len(paras)
+    while tail > 1 and all(TRAILER_RE.match(ln) for ln in paras[tail - 1].split("\n")):
+        tail -= 1
+    ours = []
+    if lines:
+        ours.append(_fit("Ops: ", _parts(lines, session), OPS_MAX))
+    if _carried_by(lines, session):
+        ours.append(_carried_by(lines, session))
+    paras[tail:tail] = ours
+    if not session_trailers(text):
+        if tail + len(ours) < len(paras):
+            paras[-1] += f"\nSession: {session}"
+        else:
+            paras.append(f"Session: {session}")
+    return "\n\n".join(paras) + "\n"
 
 
 def _others(lines: list[dict], session: str) -> tuple[str, ...]:
     return tuple(sorted({str(o.get("session")) for o in lines if o.get("session") != session}))
 
 
-def commit(root: Path, oplog: str, session: str, *, title: str | None = None) -> Outcome:
-    """Commit the op log's uncommitted lines with the files they name. Call it holding the lock."""
+def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
+           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = ()) -> Outcome:
+    """Commit the op log's uncommitted lines with the files they name. Call it holding the lock.
+
+    An engine commit's message is built from ``title``, ``lead``, ``body`` and ``trailers``
+    (``message``). The session's own commit passes its message as ``text`` and its own
+    ``paths``, relative to ``root`` (``session_message``); then every case that commits nothing
+    says why, since a commit was asked for."""
+    asked = text is not None
     remedy = (f"commit by hand: `git commit -o {oplog} <the paths its uncommitted lines name>` with a "
               f"`Session: {session}` trailer (manual-mode § What every write does)")
     set_env = [v for v in GIT_ENV if os.environ.get(v)]
     if set_env:
         return Outcome(note=f"{', '.join(set_env)} is set (inside a git hook?), so a commit would go to that repo or index; outside it, {remedy}")
     if not _in_git_tree(root):
-        return Outcome()
+        return Outcome(note=f"{root} is in no git work tree") if asked else Outcome()
     git = _Git(root)
     try:
         p = git.run("rev-parse", "--absolute-git-dir", "--show-prefix")
@@ -196,7 +277,8 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None) ->
         return Outcome(note=f"git did not answer in {GIT_TIMEOUT}s; {remedy}")
     if p.returncode != 0:
         if "not a git repository" in p.stderr:
-            return Outcome()  # a `.git` above that is not a repo of this tree: nothing to commit to
+            # a `.git` above that is not a repo of this tree: nothing to commit to
+            return Outcome(note=f"{root} is in no git work tree") if asked else Outcome()
         return Outcome(note=f"git refuses this repo ({_first_error(p)}); {remedy}")
     gitdir, prefix = (p.stdout.splitlines() + ["", ""])[:2]
     gitdir = Path(gitdir.strip())
@@ -208,7 +290,8 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None) ->
     started = time.time()
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
-            return _commit(git, root, oplog, session, title, remedy, prefix.strip(), Path(tmp))
+            how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
+            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths))
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
             left = f"; it left {lock} behind: remove it once no git command is running" if lock.exists() and lock.stat().st_mtime >= started - 1 else ""
@@ -219,6 +302,37 @@ def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
     f = tmp / name
     f.write_bytes(b"\0".join(p.encode("utf-8") for p in paths))
     return str(f)
+
+
+def pending(root: Path, oplog: str) -> set[str]:
+    """The paths, from the top of the work tree as `git status` gives them, that the next
+    commit's sweep carries: the op log and every path its lines HEAD lacks name. Empty when
+    there is no git, or nothing is uncommitted. A pause reads it to leave those paths out of its
+    own list of uncommitted paths, since its commit carries them (INV-45)."""
+    log = root / oplog
+    if not log.exists() or not _in_git_tree(root):
+        return set()
+    git = _Git(root)
+    try:
+        top = git.run("rev-parse", "--show-prefix")
+        head = git.run("show", f"HEAD:./{oplog}")
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if top.returncode != 0:
+        return set()
+    prefix = top.stdout.strip()
+    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head.stdout if head.returncode == 0 else "")
+    if not fresh:
+        return set()
+    out = {prefix + oplog}
+    for ln in fresh:
+        try:
+            o = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(o, dict) and o.get("path"):
+            out.add(prefix + str(o["path"]))
+    return out
 
 
 def _detached(git: _Git, gitdir: Path) -> bool:
@@ -233,20 +347,21 @@ def _detached(git: _Git, gitdir: Path) -> bool:
     return git.run("symbolic-ref", "-q", "HEAD").returncode != 0
 
 
-def _commit(git: _Git, root: Path, oplog: str, session: str, title: str | None, remedy: str, prefix: str, tmp: Path) -> Outcome:
+def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: Path, remedy: str, how: dict,
+            text: str | None, given: tuple[str, ...]) -> Outcome:
     log = root / oplog
-    if not log.exists():
-        return Outcome()
-    head = git.run("show", f"HEAD:./{oplog}")
-    head_text = head.stdout if head.returncode == 0 else ""
-    working = log.read_bytes().decode("utf-8", errors="replace")
-    lost = new_lines(head_text, working)
-    if lost:
-        return Outcome(note=(f"{oplog} lacks {len(lost)} line{'s' if len(lost) != 1 else ''} HEAD has, so a commit would "
-                             f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
-    fresh = new_lines(working, head_text)
-    if not fresh:
-        return Outcome()
+    fresh: list[str] = []
+    if log.exists():
+        head = git.run("show", f"HEAD:./{oplog}")
+        head_text = head.stdout if head.returncode == 0 else ""
+        working = log.read_bytes().decode("utf-8", errors="replace")
+        lost = new_lines(head_text, working)
+        if lost:
+            return Outcome(note=(f"{oplog} lacks {len(lost)} line{'s' if len(lost) != 1 else ''} HEAD has, so a commit would "
+                                 f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
+        fresh = new_lines(working, head_text)
+    if not fresh and not given:
+        return Outcome(note=f"nothing to commit: {oplog} has no line HEAD lacks, and no path was given") if text is not None else Outcome()
     ops: list[dict] = []
     for ln in fresh:
         try:
@@ -255,9 +370,9 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, title: str | None, 
             continue  # G-W7 reports it; the line still rides with the op log
         if isinstance(o, dict):
             ops.append(o)
-    wanted = list(dict.fromkeys([oplog, *(str(o["path"]) for o in ops if o.get("path"))]))
+    wanted = list(dict.fromkeys([oplog, *(str(o["path"]) for o in ops if o.get("path"))])) if fresh else []
     codes: dict[str, str] = {}
-    asked = [CONFIG, *wanted]
+    asked = [CONFIG, *wanted, *(g for g in given if g not in wanted)]
     for i in range(0, len(asked), STATUS_CHUNK):
         st = git.run("status", "--porcelain=v1", "-z", "--ignored", "--untracked-files=all", "--", *asked[i:i + STATUS_CHUNK])
         if st.returncode != 0:
@@ -265,11 +380,11 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, title: str | None, 
         for entry in st.stdout.split("\0"):
             if len(entry) > 3 and entry[2] == " ":
                 codes[entry[3:]] = entry[:2]  # porcelain paths are from the top of the work tree
-    if codes.get(prefix + CONFIG) in ("??", "!!") or not (root / CONFIG).exists():
+    if fresh and CONFIG not in given and (codes.get(prefix + CONFIG) in ("??", "!!") or not (root / CONFIG).exists()):
         where = f" (this target is {prefix.rstrip('/')} inside a larger repo)" if prefix else ""
         return Outcome(note=(f"{CONFIG} is not committed in this repo{where}, so a clean checkout would lack it; "
                              f"commit the kit's files by path first (rituals § Bootstrap), then {remedy}"))
-    if codes.get(prefix + oplog) == "!!":
+    if fresh and codes.get(prefix + oplog) == "!!":
         return Outcome(note=(f"{oplog} is gitignored, so no commit can carry it and G-W7 fails on every clone; "
                              f"un-ignore it, or set `[engine] commit = false` and commit by hand"))
     paths, untracked, left_out = [], [], []
@@ -283,12 +398,21 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, title: str | None, 
         paths.append(rel)
         if code == "??":
             untracked.append(rel)
+    for rel in given:  # the session's own paths go to git as given; a new file is added first
+        if rel in wanted:
+            continue
+        code = codes.get(prefix + rel)
+        if code == "!!":
+            return Outcome(note=f"{rel} is gitignored; drop it, or `git add -f -- {rel}` first if it belongs in git")
+        paths.append(rel)
+        if code == "??" and (root / rel).is_file():
+            untracked.append(rel)
     if untracked:
         a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
         if a.returncode != 0:
             return Outcome(note=f"`git add` failed ({_first_error(a)}); {remedy}")
     msg = tmp / "message"
-    msg.write_bytes(message(ops, session, title).encode("utf-8"))
+    msg.write_bytes((session_message(text, ops, session) if text is not None else message(ops, session, **how)).encode("utf-8"))
     try:
         c = git.write("commit", "--only", "-F", str(msg), f"--pathspec-from-file={_pathspec(tmp, 'commit', paths)}", "--pathspec-file-nul")
     except subprocess.TimeoutExpired:

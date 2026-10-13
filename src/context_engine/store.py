@@ -3,11 +3,13 @@
 Every write is one operation: it takes the repo lock, re-reads the record inside it (so two
 writers never lose each other's change, AC-9), checks the result against the kind's schema
 before any byte is written (AC-5), writes atomically, and appends one line to the operation log
-carrying the session key and the actor (AC-6). Before the lock is let go, the write is committed
-by path with its op log line (``commit.commit``, FRAMEWORK §5.5 rule 4); inside ``batch()`` the
-commit waits for the batch's end, so one operation that writes several times commits once, and
-the lock is held across all of it. With ``[engine] commit = false`` nothing is committed but a
-pause, which is committed regardless.
+carrying the session key and the actor (AC-6). Before the lock is let go, the write may be
+committed by path with its op log lines (``commit.commit``, FRAMEWORK §5.5 rule 4). ``[engine]
+commit`` says when: at a milestone (an operation marks itself one with ``milestone()``), after
+every write, or never but a pause, which is committed regardless (``commit_always``). A write
+not committed rides along with the next commit, which carries every op log line HEAD lacks.
+Inside ``batch()`` the commit waits for the batch's end, so one operation that writes several
+times commits once, and the lock is held across all of it.
 
 Deliberately not checked here: whether an actor is allowed to make a change (that is policy,
 in the operations built on this core), and whether an append-only body changed *before* it was
@@ -124,7 +126,11 @@ class Store:
         self._missed: commit_mod.Outcome | None = None  # a pause commit that did not happen
         self._wrote: str | None = None  # the session of a write not yet committed
         self.commit_title: str | None = None  # the next commit's title, when an operation names it
-        self.commit_always = False  # the next commit is made even with `[engine] commit = false` (a pause)
+        self.commit_always = False  # the next commit is made whatever the policy, `off` included (a pause)
+        self.commit_milestone = False  # the next commit is a milestone's (`milestone()`)
+        self.commit_body = ""  # the next commit's message body, when an operation gives one (a task close's)
+        self.commit_trailers: list[str] = []  # the next commit's trailers before `Session:` (a task close's `Closes:`)
+        self._lead: list[str] = []  # `<op> <id>` of the lines logged since the last commit point: this operation's
         self.last_commit = commit_mod.Outcome()  # what the newest commit attempt did
 
     # -- reading -----------------------------------------------------------------------
@@ -435,22 +441,49 @@ class Store:
             r.reports_commit = True  # `Op.call` adds nothing: the refusal is about the commit
             raise r
 
+    @contextmanager
+    def milestone(self) -> Iterator[None]:
+        """An operation that is a milestone (FRAMEWORK §5.5 rule 4): its writes run in one batch,
+        and under the `milestones` policy the batch's end commits them, with every op log line
+        HEAD lacks. Marked at the start, so a milestone refused after a write still commits what
+        it wrote, as every write did under CE-45; what the commit message adds only on success
+        (a close's `Closes:`) the operation sets after its last write."""
+        with self.batch():
+            self.commit_milestone = True
+            yield
+
     def _commit(self) -> None:
-        """Holding the lock: commit what the writes since the last commit put in the op log."""
+        """Holding the lock: commit what the writes since the last commit put in the op log, if
+        the policy says now. Every one-shot setting is spent here, committed or not."""
         session, self._wrote = self._wrote, None
         title, self.commit_title = self.commit_title, None
         always, self.commit_always = self.commit_always, False
+        milestone, self.commit_milestone = self.commit_milestone, False
+        body, self.commit_body = self.commit_body, ""
+        trailers, self.commit_trailers = self.commit_trailers, []
+        lead, self._lead = self._lead, []
         if not session:
             return
-        if not (self.config.commit or always):
+        policy = self.config.commit
+        if not (always or policy == "every-write" or (milestone and policy == "milestones")):
             self.last_commit = commit_mod.Outcome()
             return
         try:
-            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title)
+            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
             self._missed = self.last_commit
+
+    def commit_paths(self, text: str, paths: list[str], session: str) -> commit_mod.Outcome:
+        """The session's own commit (`context-engine commit`): ``paths`` by path, with every op
+        log line HEAD lacks and the files they name, under the lock, whatever the policy. It
+        runs no gate: the session runs it first."""
+        with self._lock():
+            try:
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths))
+            except Exception as exc:
+                return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 
     def _validate(self, kind: Kind, doc: okf.Document, path: Path) -> None:
         probs = self.problems(kind, doc, path)
@@ -488,6 +521,7 @@ class Store:
         with open(log, "a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         self._wrote = session
+        self._lead.append(f"{op} {rec_id}")
 
     def new(self, kind_name: str, fields: dict[str, Any], body: str = "", *, session: str, actor: str, mechanical: bool = False) -> Record:
         """Create a record with the next free id in its series."""

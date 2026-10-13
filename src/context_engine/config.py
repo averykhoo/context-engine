@@ -6,6 +6,7 @@ The engine ships no record kinds of its own: a repo that has not declared a kind
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from dataclasses import dataclass, field
@@ -131,7 +132,7 @@ class Config:
     bundles: tuple[str, ...] = ()
     lock_timeout: float = 30.0
     contract: str = "CLAUDE.md"  # the file holding `framework: <major.minor>` (lint G-D0, DEC-23)
-    commit: bool = True  # the engine commits its own writes by path (FRAMEWORK §5.5 rule 4, CE-45)
+    commit: str = "milestones"  # when the engine commits its writes by path (FRAMEWORK §5.5 rule 4, DEC-36): one of COMMIT_POLICIES
     working: Working = field(default_factory=Working)
     routes: tuple[Route, ...] = ()
     guards: Guards = field(default_factory=Guards)
@@ -178,7 +179,13 @@ def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> N
 
 TOP_KEYS = ("engine", "kinds", "working", "routes", "guards")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract", "commit")
-ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": bool}
+ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": (str, bool)}
+# FRAMEWORK §5.5 rule 4 (DEC-36): commit at milestones (task close, owner words, batons and pauses,
+# session close or pause), after every write, or never but a pause. A bool is CE-45's spelling,
+# which init wrote into every repo as `commit = true`: true is the engine committing, now at
+# milestones, and false is off.
+COMMIT_POLICIES = ("milestones", "every-write", "off")
+COMMIT_BOOLS = {True: "milestones", False: "off"}
 KIND_KEYS = tuple(f for f in Kind.__dataclass_fields__ if f != "name")
 KIND_TYPES = {"type": str, "prefix": str, "dir": str, "mode": str, "required": list, "enums": dict, "extra_dirs": list, "types": dict}
 _PY = {str: str, int: int, tuple: list, dict: dict}
@@ -279,6 +286,10 @@ def from_dict(raw: dict) -> Config:
     if not nouns or bad:
         raise Refusal(f"[guards] `count_nouns` {'is empty' if not nouns else f'holds {bad[0]!r}, which is not a word'}", "list the plural nouns a typed count may name (`tests`, `checks`, ...); to switch G-D5 off, empty `numbers` instead")
     guards = Guards(**{k: (tuple(v) if isinstance(v, list) else v) for k, v in g.items()})
+    commit = engine.get("commit", Config.commit)
+    commit = COMMIT_BOOLS.get(commit, commit) if isinstance(commit, bool) else commit
+    if commit not in COMMIT_POLICIES:
+        raise Refusal(f"[engine] `commit` is {commit!r}", f"set it to one of {', '.join(map(json.dumps, COMMIT_POLICIES))} (FRAMEWORK §5.5 rule 4)")
     return Config(
         kinds=kinds,
         oplog=engine.get("oplog", Config.oplog),
@@ -286,7 +297,7 @@ def from_dict(raw: dict) -> Config:
         bundles=tuple(engine.get("bundles", ())),
         lock_timeout=float(engine.get("lock_timeout", Config.lock_timeout)),
         contract=engine.get("contract", Config.contract),
-        commit=engine.get("commit", Config.commit),
+        commit=commit,
         working=working,
         routes=tuple(routes),
         guards=guards,

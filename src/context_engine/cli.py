@@ -92,6 +92,10 @@ def build() -> argparse.ArgumentParser:
         x = t.add_parser(name)
         x.add_argument("id")
         x.add_argument("-m", "--msg", default="")
+        if name == "close":
+            cb = x.add_mutually_exclusive_group()
+            cb.add_argument("--body", default="", help="the close commit's message body: the Sabotage: and receipt lines")
+            cb.add_argument("--body-file", type=Path, help="read --body from a file")
     se = t.add_parser("section")
     se.add_argument("id")
     se.add_argument("name")
@@ -193,6 +197,12 @@ def build() -> argparse.ArgumentParser:
     di.add_argument("path", help="the single-file log, e.g. a copy of docs/decisions.md")
     di.add_argument("--dry-run", action="store_true")
 
+    co = groups.add_parser("commit", help="commit paths by path with the op log lines HEAD lacks and their files; runs no gate (run it first)")
+    co.add_argument("paths", nargs="*", help="files or directories, relative to the root; none: only the op log's uncommitted lines and their files")
+    msg = co.add_mutually_exclusive_group(required=True)
+    msg.add_argument("-m", "--message", action="append", help="a paragraph of the message, as `git commit -m`; repeat for each")
+    msg.add_argument("-F", "--message-file", type=Path, help="read the message from a file")
+
     wy = groups.add_parser("why", help="the decisions that link a task, criterion or file::symbol")
     wy.add_argument("target")
 
@@ -239,6 +249,7 @@ CLI_OPS = {
     ("decision", "show"): "decision_show",
     ("decision", "index"): "hk_regen_index",
     ("decision", "import"): "decision_import",
+    ("commit", None): "commit",
     ("why", None): "why",
     ("register", "show"): "register_show",
     ("banner", "show"): "banner_show",
@@ -258,6 +269,10 @@ def _params(args: argparse.Namespace) -> dict:
             a[name] = _ids(a[name])
     if isinstance(a.get("ids"), list):
         a["ids"] = _ids(" ".join(a["ids"]))
+    if args.group == "commit":
+        a["message"] = a["message_file"].read_text(encoding="utf-8-sig") if a.get("message_file") else "\n\n".join(a["message"])
+    if a.get("body_file") is not None:
+        a["body"] = a["body_file"].read_text(encoding="utf-8-sig")
     if a.get("file") is not None:
         into = ("why" if a.get("op") == "retire" else "body") if args.group == "record" else "text"
         a[into] = a["file"].read_text(encoding="utf-8-sig")  # a BOM (PowerShell 5.1 writes one) is no part of the words
