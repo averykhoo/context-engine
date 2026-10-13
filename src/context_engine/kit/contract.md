@@ -1,16 +1,18 @@
-<!-- context-engine kit 0.5 begin -->
-## Framework
+# The framework contract
 
 framework: 0.5
 
 This repo runs the context-engineering framework (FRAMEWORK.md, in the engine repo at the
 pinned ref) through the record engine, `context-engine`. `§` references below are FRAMEWORK
-sections. What is true now and what is next live in `HANDOFF.md` and on the board
-(`context-engine task list`); this block holds only what is durable. Where each component lives
-is `[[routes]]` in `context.toml` (`context-engine routes`); the record kinds and their schemas
-are `[kinds.*]` there too.
+sections. This file is the framework's, imported by `CLAUDE.md`: an upgrade replaces it whole,
+and `context-engine lint` (G-D0) fails when it differs from the installed engine's
+`kit/contract.md`. This repo's own rules, its gate command among them, live in `CLAUDE.md`,
+outside the kit markers; **where they narrow or override a rule here, `CLAUDE.md` wins**, so the
+owner changes a rule there, never in this file. What is true now and what is next live in `HANDOFF.md` and on the board
+(`context-engine task list`). Where each component lives is `[[routes]]` in `context.toml`
+(`context-engine routes`); the record kinds and their schemas are `[kinds.*]` there too.
 
-### Environment
+## Environment
 
 - **The engine runs from its own environment and is never installed into this repo's.**
   `<engine-python>` below is that environment's interpreter. `context-engine` means
@@ -26,20 +28,28 @@ are `[kinds.*]` there too.
   committed: the path is machine-specific), then ask the owner to restart Claude Code. Until the
   restart, use the CLI (same functions, nothing lost).
 
-### Gate
+## Gate
 
-`<this repo's own test command> && context-engine lint`, from the repo root. Run it before every
-commit that touches code, tests or any record, and before every push. Lint covers the record
-schemas, append-only bodies, bundles, the working state and the routes; it fails on a hand edit
-to a stamped record, a broken record or a dead route.
+This repo's own test command, as `CLAUDE.md` § Gate names it, then `context-engine lint`, from
+the repo root. Run it before every commit that touches code, tests or any record, and before
+every push. Lint covers the record schemas, append-only bodies, bundles, the working state, the
+routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
+record or a dead route.
 
-### Rituals
+## Rituals
 
-**Session start:** `context-engine session start` (it prints the key; use it as `CE_SESSION`),
-then `context-engine orient`. Do the batons and pauses it lists first, show the owner the other
-open sessions it lists (or "none"), one line each, so they can say what to stop; raise every
-question it lists in chat, one line each, then `context-engine ask raised <ids>`; and read the
-top item with `context-engine task show <id>`.
+**Session start:** a `SessionStart` hook (`context-engine init` writes it to
+`.claude/settings.local.json`) prints `context-engine orient` into your context at startup,
+resume, `/clear` and compaction. It runs without a session key: if you already hold one (after a
+resume, `/clear` or compaction), keep it, do not run `session start` again, and do not show your
+own key to the owner as another session. Otherwise run `context-engine session start` (it prints
+the key; use it as `CE_SESSION`), then work from that orient output, or run `context-engine
+orient` if it is not in your context: **a failing hook is silent**, so when it is missing, say so
+to the owner. If
+orient opens with a `Contract` section, fix that first. Do the batons and pauses it lists first,
+show the owner the other open sessions it lists (or "none"), one line each, so they can say what
+to stop; raise every question it lists in chat, one line each, then `context-engine ask raised
+<ids>`; and read the top item with `context-engine task show <id>`.
 
 Every other ritual (intake, clean close, pause, resume, push and CI, foreign reconcile,
 housekeeping), in order, each step with its engine command and its by-hand step, is
@@ -48,7 +58,7 @@ When the engine errors or refuses something it should allow, do that step by han
 runbooks, then report the engine bug. A refusal with a sensible remedy is not an error: follow the
 remedy.
 
-### Rules
+## Rules
 
 **Ultracode** (the `Workflow` tool, multi-agent orchestration) needs no per-request opt-in when
 it keeps the session's own context and tokens down: bulky reading, auditing or verification
@@ -76,4 +86,3 @@ pushed into agents, only verdicts kept.
   `status`, `pri`, `deps`, `moved`, `updated`; a story's or decision's text above
   `## Amendments`.
 - Never reuse or renumber an id.
-<!-- context-engine kit 0.5 end -->

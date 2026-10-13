@@ -31,7 +31,7 @@ S = [
     ("drift-6.6", KIT + "contract.md", "it keeps the session's own context and tokens down", "it keeps the session's context and tokens down", T + " -k verbatim"),
     ("drift-6.6", KIT + "contract.md", "- that task agent pushes the work down again", "- that agent pushes the work down again", T + " -k verbatim"),
     ("drift-6.6", KIT + "contract.md", "  Never fan out with fable: it wastes tokens.", "  Avoid fanning out with fable.", T + " -k verbatim"),
-    ("pin", KIT + "contract.md", "framework: 0.5\n", "framework: draft\n", T + " -k marked_and_pins"),
+    ("pin", KIT + "contract.md", "framework: 0.5\n", "framework: draft\n", T + " -k pins_the_framework"),  # CE-38: that test split in two
     ("leak-kit", KIT + "contract.md", "- Never reuse or renumber an id.", "- Never reuse or renumber an id (DEC-7).", T + " -k carry_none"),
     ("leak-kit", KIT + "README.md", "repo, at the pinned ref; copy it", "repo (spike/FINDINGS.md), at the pinned ref; copy it", T + " -k carry_none"),
     ("leak-fw", FW, "fallback is a runbook section (P16). Not built yet (CE-18).", "fallback is a runbook section (P16). Board task: CE-18.", T + " -k carry_none"),
@@ -61,7 +61,7 @@ S = [
     ("cfg-bool", CF, "and not (isinstance(v, bool)", "and not (False", T + " -k mistyped"),
     ("cfg-list-items", CF, "            ok = all(isinstance(x, str) for x in v)", "            ok = True", "tests/test_kit.py -k mistyped"),
     ("g-w1-none", WK, "                if b is None:  # a session closed", "                if False:  # a session closed", T + " -k g_w1"),
-    ("contract-orient", KIT + "contract.md", "then `context-engine orient`.", "then read the board.", T + " -k marked_and_pins"),
+    ("contract-orient", KIT + "contract.md", "orient` if it is not in your context", "orient` when you like", T + " -k starts_a_session_alone"),  # CE-38
     ("banner-show", "src/context_engine/ops.py", 'return 0, f"banner none hash {L.NO_BANNER}', 'return 0, f"no banner ({L.NO_BANNER})', T + " -k first_banner"),
     # init refuses a file created mid-run (design review residual narrowed, 2026-10-12b)
     ("create-x", BS, '        mode = "x"  # create only', '        mode = "w"  # create only', T + " -k created_after_its_plan"),

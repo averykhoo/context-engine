@@ -135,10 +135,15 @@ coverage_maps = ""           # G-D12: a repo-relative glob of frozen, dated cove
 [[routes]]
 component = "Contract"
 path = "CLAUDE.md"
-mode = "replaced; the framework block between the kit markers is replaced only on upgrade"
-max_lines = 200    # G-D1: caps on the routed file (or each .md under a routed directory); 0 is no cap; provenance: JUDGEMENT, engine default (the kit block is about 80 lines); wrong if a rule that belongs here is kept elsewhere to stay under it
+mode = "replaced; the kit block (the framework: line and the import of the framework contract) is replaced only on upgrade"
+max_lines = 200    # G-D1: caps on the routed file (or each .md under a routed directory); 0 is no cap; provenance: JUDGEMENT, engine default (the kit block is about 10 lines, the repo's own rules the rest); wrong if a rule that belongs here is kept elsewhere to stay under it
 max_bytes = 16000  # provenance: JUDGEMENT, engine default; wrong as above
 max_width = 120    # characters per line, table rows exempt; provenance: JUDGEMENT, engine default; wrong if wrapping splits commands mid-line
+
+[[routes]]
+component = "Framework contract"
+path = "docs/framework/contract.md"
+mode = "the framework's: imported by CLAUDE.md, replaced whole on upgrade, never edited here (G-D0 compares it with the engine's kit)"
 
 [[routes]]
 component = "Charter"

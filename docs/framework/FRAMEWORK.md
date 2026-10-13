@@ -850,7 +850,10 @@ letter suffix); none is renumbered.
 
 **Full orientation:**
 1. The contract loads automatically: global, repo (`AGENTS.md` for workflow, `CLAUDE.md` for
-   product, mandates and gate), and subtree.
+   product, mandates and gate, which imports the framework's own contract, §6.9), and subtree.
+   In an adopted repo a `SessionStart` hook prints `orient` (item 3's read) into the context at
+   startup, resume, `/clear` and compaction. A failing hook is silent, so the contract keeps
+   the by-hand `orient` as the fallback (CE-38).
 2. **Open batons and pause records: execute or resume them first.**
 3. The board query, which prints the banner. **Raise NEXT-tier and overdue owner questions
    in chat now,** one line each (§5.3), together with any tier-2 flags from the background
@@ -1186,10 +1189,22 @@ the hold and where it is recorded.
 
 The engine ships an **adoption kit**: text only, as package data beside the engine's code
 (`kit/`), readable in the engine repo too. It holds the config template (`context.toml.template`,
-which is the config schema), the contract block for `CLAUDE.md`, skeletons for the orientation
-note, charter, criteria and ledger, the two runbooks (`rituals.md` and `manual-mode.md`, so the
+which is the config schema), the bootloader for `CLAUDE.md` and the contract it imports, the
+`SessionStart` hook, skeletons for the orientation note, charter, criteria and ledger, the two runbooks (`rituals.md` and `manual-mode.md`, so the
 repo can run every ritual by hand from its own tree, P16), and a README with the install,
 bootstrap and upgrade steps. The steps in order: `rituals.md` § Bootstrap.
+
+**The bootloader (CE-38):** an adopted framework must not depend on the owner leaving
+`CLAUDE.md` alone, so `CLAUDE.md` carries only a short block between the kit markers: the
+`framework:` line and an `@`-import of `docs/framework/contract.md`. The framework owns that
+file: an upgrade replaces it whole, G-D0 fails when it differs from the installed engine's copy,
+and the repo's own rules (its gate command among them) live in `CLAUDE.md` outside the markers.
+A `SessionStart` hook runs `orient`, so the session-start read does not rest on the agent
+obeying a rule; its command names the machine's engine interpreter, so it lives in the
+machine-local `.claude/settings.local.json`. **Standing permissions stay in owner-loaded files**
+(`CLAUDE.md` and what it imports; harness permissions in the settings files), never in MCP
+instructions or `orient` output: an agent rightly discounts a grant that arrives as tool output.
+Procedure may come from any of the three; a grant may not.
 
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
 2. The agent installs the engine into its own environment, pinned to a release tag or commit
@@ -1197,7 +1212,8 @@ bootstrap and upgrade steps. The steps in order: `rituals.md` § Bootstrap.
    server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
    operation, and a repo that wants the server registers it here.
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
-   runbooks, and the contract block appended to `CLAUDE.md`. It only creates files and never overwrites one; by
+   runbooks, the bootloader appended to `CLAUDE.md`, the contract it imports, and the hook. It
+   only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the repo
    already uses.
@@ -1421,10 +1437,14 @@ hold **method**, which survives when the status around it is archived:
   no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. `context-engine lint` checks
   every `framework:` line of the contract (`contract` in `[engine]`, `CLAUDE.md` by default),
   and the version in its kit block's begin marker. A missing contract, a missing line, or a value
-  that is not `major.minor` fails it too, and each red names the remedy (CE-21).
+  that is not `major.minor` fails it too, and each red names the remedy (CE-21). A kit block of
+  the engine's version must be the kit's bootloader text, and the file it imports must exist and
+  equal the installed engine's `kit/contract.md`, line endings aside (CE-38); `orient` opens
+  with these reds, so a session whose contract did not load is told at once.
 - **Upgrade ritual:** bump the engine's pinned ref (reinstall it in its own environment) and
   the contract's `framework:` line, run the lint, fix the reds, and write a ledger line naming
-  the new ref. A new kit contract block replaces the old one between its markers.
+  the new ref. The kit's contract replaces `docs/framework/contract.md` whole, and a new kit
+  bootloader replaces the old block between its markers.
 - **Existing repos keep their own check numbers.** The package maps its ids onto them and
   never renumbers them (P3).
 - **Tools that refuse name the remedy.** Every red says what to do.
@@ -1733,13 +1753,14 @@ marked `*` that the repo does not have yet; the rest are added when needed (§11
 
 ```
 AGENTS.md                  # workflow conventions (how agents work), read first
-CLAUDE.md                * # product contract: mandates, gate, footguns; push-hold line on top; framework: <version>
+CLAUDE.md                * # product contract: the kit's bootloader (framework: <version>, imports docs/framework/contract.md), mandates, gate, footguns; push-hold line on top
 HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
 context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)
   charter.md             *
+  framework/contract.md  * # the framework's rules, imported by CLAUDE.md; replaced whole on upgrade, never edited here (G-D0)
   law.md                   # optional: NFRs / data-model law with invariant → test map
   stories/S-n-<slug>.md  * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
   criteria.md            * or criteria/ or features/*.feature
@@ -1754,6 +1775,7 @@ docs/
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; ignores itself, never tracked
+.claude/settings.local.json * # machine-local, gitignored (.claude/.gitignore): the SessionStart hook that runs orient
 .claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
 .scratch/                * # gitignored crash bag (ignores itself)
 ```
@@ -1786,7 +1808,7 @@ minimum set until the §8.0.3 trial reports.
 
 **The gate** of an adopting repo is its own test command followed by `context-engine lint`, run
 from the repo root before every commit that touches code, tests or records, and before every
-push. The kit's contract block (§6.9) states it.
+push. The kit's contract (§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
 `context-engine lint` runs G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-W1, G-W2, G-W4 and G-W6 (plus
@@ -1824,7 +1846,7 @@ checked by hand. *Not built yet: G-I2, G-T1 and G-T2 (CE-25).*
   existing files. Existing ids and check numbers are never renumbered; the package maps onto
   them.
 - **`init` on an existing repo** writes only what is missing: it skips every file that exists,
-  appends the contract block to an existing `CLAUDE.md` only when no kit block (of any version)
+  appends the bootloader to an existing `CLAUDE.md` only when no kit block (of any version)
   is there, and keeps an existing `context.toml` once it loads. Then edit `context.toml` in
   place: each kind's `dir` and `prefix` and each route's `path` point at what the repo already
   has (an existing `D-n` series stays `D-n`), and the skeletons `init` wrote for components the

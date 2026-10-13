@@ -229,6 +229,8 @@ skipped gates and commits pile up.
 Read and report, in this order, in under 6000 bytes in total (`orient_max_bytes`). If a part does
 not fit, cut it at a line and say where the rest is:
 
+0. only when G-D0 fails (§ lint), and `[guards] off` does not name it: a `Contract: fix this
+   first` section, one line per failure with its remedy;
 1. the banner (`HANDOFF.md` § Banner);
 2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, each pause
    with its resume step and branch;
@@ -241,7 +243,10 @@ not fit, cut it at a line and say where the rest is:
    `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
 **Why:** one bounded read at session start replaces opening a dozen files. The
-order is the order of urgency: carried work and live sessions come before new work.
+order is the order of urgency: a contract that did not load, then carried work and live sessions,
+then new work. A `SessionStart` hook runs it in an adopted repo (kit README § Hook), with no
+session key; a failing hook is silent, so a session that finds no orient output in its context
+does this by hand.
 
 ### context-engine routes
 
@@ -292,7 +297,14 @@ Check every record, then the working state. `--working` does only the second hal
   and that major.minor, and the version in any `<!-- context-engine kit X.Y begin -->` marker,
   equal the first two numbers of the installed engine's version (`<engine-python> -m pip show
   context-engine`, or `context_engine.__version__`). *Why: the pin says which engine the repo's
-  rules were written for; a stale one means the rules and the tool disagree.*
+  rules were written for; a stale one means the rules and the tool disagree.* When the contract
+  holds a kit block of that version: the text between its markers is exactly the engine's
+  `kit/bootloader.md` block (not the inline block of a kit from before the bootloader, not a hand
+  edit, and with its end marker), and every `@<path>` line in it names a file, resolved against
+  the contract's own directory, that exists and equals the engine's `kit/contract.md` once line
+  endings are ignored (`git diff --no-index --ignore-cr-at-eol`). *Why: Claude Code loads the
+  framework's rules through that import, and the framework owns the file; a missing or edited
+  copy means a session runs on rules nobody shipped.*
 - **G-D1**: for each `[[routes]]` entry with `max_lines`, `max_bytes` or `max_width`, the routed
   file (or each `.md` under a routed directory) has at most that many lines and bytes, and no
   line wider than that many characters except table rows (lines starting `|`). *Why: a place
@@ -962,9 +974,14 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    `docs/runbooks/manual-mode.md` and `docs/runbooks/rituals.md` from the kit to the same paths,
    skipping any that exist.
 4. `CLAUDE.md`: if it holds no `<!-- context-engine kit <version> begin -->` marker, append the
-   kit's `contract.md` after a blank line (create the file with a `# <repo>: contract` title if
-   it is absent), keeping the file's line endings. If it holds an older version's block, leave it
-   for the upgrade to replace (kit README § Upgrade); never add a second block.
+   kit's `bootloader.md` after a blank line (create the file with a `# <repo>: contract` title if
+   it is absent), keeping the file's line endings. If it holds an older version's block, or a
+   block with no `@` import line (the inline block from before the bootloader), leave it for the
+   upgrade to replace (kit README § Upgrade); never add a second block. Copy the kit's
+   `contract.md` to `docs/framework/contract.md` if absent. If `.claude/settings.local.json` is
+   absent, write it with the `SessionStart` hook from the kit README § Hook (this machine's
+   absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too;
+   if it exists, add the hook to it by hand, keeping every other key.
 5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/evidence` and `tasks`
    that does not exist, create it with an empty `.gitkeep`. Create
    `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.

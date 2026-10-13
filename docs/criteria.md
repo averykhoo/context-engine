@@ -71,16 +71,24 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | id | criterion | from | status |
 |---|---|---|---|
 | AC-30 | `context-engine init` (CLI and MCP, no `context.toml` needed) writes the adoption kit into an empty repo, and that repo then passes `context-engine lint` and runs `session start`, `session close` and its first `banner set` with no hand edit | US-9 | tested |
-| AC-31 | `init` only creates: a file that exists is byte-identical afterwards, `CLAUDE.md` gets the marked contract block appended only when its markers are absent (keeping its line endings), a second run creates nothing, and a different `context.toml` or a bad or colliding `--prefix` is refused | US-9 | tested |
+| AC-31 | `init` only creates: a file that exists is byte-identical afterwards, `CLAUDE.md` gets the marked bootloader appended only when its markers are absent (keeping its line endings), a second run creates nothing, and a different `context.toml` or a bad or colliding `--prefix` is refused | US-9 | tested |
 | AC-32 | The kit's `context.toml.template` is the config schema: it sets every key the engine reads and parses as a config, every tuned value in it carries a provenance note, and loading a config refuses an unknown key in `[engine]`, `[working]` or `[kinds.*]`, naming the allowed keys | US-15 | tested |
-| AC-33 | The kit's contract block carries FRAMEWORK §6.6 'Ultracode', 'Several tasks' and the fable rule verbatim and a `framework:` pin, and neither the kit nor FRAMEWORK carries this repo's ids (other than `(CE-n)` build marks) or paths | US-9, US-15 | tested |
+| AC-33 | The kit's contract carries FRAMEWORK §6.6 'Ultracode', 'Several tasks' and the fable rule verbatim and a `framework:` pin, and the kit's bootloader is marked, pins the engine's major.minor and imports the contract, and neither the kit nor FRAMEWORK carries this repo's ids (other than `(CE-n)` build marks) or paths | US-9, US-15 | tested |
 | AC-34 | `banner show` on a note with no banner gives hash `none`; `banner set --seen none` writes the first banner just before the note's first `## ` section (creating the note if absent), and refuses any other hash while there is no banner | US-15 | tested |
 
 ## Versioning (CE-21)
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-35 | Lint fails G-D0, naming the remedy, when the contract (`[engine] contract`, default `CLAUDE.md`) is missing, has no `framework:` line, has one that is not `major.minor` or `major.minor.*`, has one whose major.minor differs from the installed engine's, or holds a kit block whose begin marker names another version; `0.5` and `0.5.*` both pass against any engine `0.5.N` (DEC-23) | US-9 | tested |
+| AC-35 | Lint fails G-D0, naming the remedy, when the contract (`[engine] contract`, default `CLAUDE.md`) is missing, has no `framework:` line, has one that is not `major.minor` or `major.minor.*`, has one whose major.minor differs from the installed engine's, or holds a kit block whose begin marker names another version (the bootloader half is AC-58); `0.5` and `0.5.*` both pass against any engine `0.5.N` (DEC-23) | US-9 | tested |
+
+## Bootloader (CE-38)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-57 | `init` writes the kit's bootloader into `CLAUDE.md` (as AC-31), the kit's contract to docs/framework/contract.md (in the target repo), and, only when `.claude/settings.local.json` is absent, that file holding one `SessionStart` hook with no matcher whose command, run through a shell from another directory with no `CE_` variables, prints `orient`, plus `.claude/.gitignore` ignoring it; an existing settings file is left byte-identical and named with its by-hand remedy, and a current-version inline kit block is left as it is and named as the upgrade | US-17 | tested |
+| AC-58 | Lint fails G-D0, naming the remedy, when the contract's kit block of the engine's version is not the kit's bootloader text (an inline block, a hand edit, or no end marker), when a file it `@`-imports (resolved against the contract's own directory) is missing, or when that file is not the installed engine's `src/context_engine/kit/contract.md`, line endings aside | US-17 | tested |
+| AC-59 | `orient` opens with a `Contract: fix this first` section listing every G-D0 failure with its remedy, and has no such section when G-D0 is green or `[guards] off` names it | US-17 | tested |
 
 ## Rituals runbook (CE-24)
 

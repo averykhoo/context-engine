@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from context_engine import __version__
 from context_engine import bootstrap as B
 from context_engine import config as C
 from context_engine import guards as G
@@ -93,7 +94,7 @@ def test_init_refuses_a_claude_md_edited_after_its_plan_and_leaves_the_edit(tmp_
 def test_the_contract_block_starts_on_its_own_line_after_a_blank_one(tmp_path, old, sep):
     (tmp_path / "CLAUDE.md").write_bytes(old.encode())
     B.init(tmp_path)
-    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + sep + (B.KIT / B.CONTRACT).read_text(encoding="utf-8")
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + sep + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
 
 
 @pytest.mark.criterion("AC-31")
@@ -103,6 +104,93 @@ def test_an_older_kit_block_is_never_doubled(tmp_path):
     out = B.init(tmp_path)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old
     assert "CLAUDE.md (holds the kit 0.4 block: replace it" in out, out
+
+
+def _hook_command(root: Path) -> str:
+    import json
+
+    doc = json.loads((root / B.SETTINGS).read_text(encoding="utf-8"))
+    [entry] = doc["hooks"]["SessionStart"]
+    assert "matcher" not in entry, "no matcher: startup, resume, clear and compact all run it"
+    [hook] = entry["hooks"]
+    assert hook["type"] == "command"
+    return hook["command"]
+
+
+@pytest.mark.criterion("AC-57")
+def test_init_writes_the_bootloader_the_contract_and_the_hook(tmp_path):
+    import sys
+
+    out = B.init(tmp_path)
+    claude = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+    assert claude == f"# {tmp_path.name}: contract\n\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
+    assert (tmp_path / B.CONTRACT_DEST).read_bytes() == (B.KIT / B.CONTRACT).read_bytes()
+    cmd = _hook_command(tmp_path)
+    assert cmd == f'"{Path(sys.executable).as_posix()}" -m context_engine --root "{tmp_path.resolve().as_posix()}" orient'
+    assert (tmp_path / B.SETTINGS_IGNORE).read_text(encoding="utf-8") == "settings.local.json\n"
+    for rel in (B.CONTRACT_DEST, B.SETTINGS, B.SETTINGS_IGNORE):
+        assert rel in out.split("; skipped")[0], (rel, out)
+
+
+@pytest.mark.criterion("AC-57")
+def test_the_hook_command_runs_orient_through_a_shell(tmp_path):
+    """The command as Claude Code runs it: a shell line, from another directory, with no CE_ env."""
+    import os
+    import subprocess
+
+    B.init(tmp_path)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CE_")}
+    r = subprocess.run(_hook_command(tmp_path), shell=True, capture_output=True, text=True, encoding="utf-8", cwd=tmp_path.parent, env=env, timeout=120)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.startswith("# orient (no session)") and "## Banner" in r.stdout and "Contract" not in r.stdout, r.stdout
+
+
+@pytest.mark.criterion("AC-57")
+def test_a_rerun_finds_its_own_hook_and_a_gitignore_that_misses_the_settings_file_is_named(tmp_path):
+    B.init(tmp_path)
+    again = B.init(tmp_path)
+    assert again.startswith("init: created 0") and f"{B.SETTINGS}," in again and "add the SessionStart hook" not in again, again
+    other = tmp_path / "other"
+    (other / ".claude").mkdir(parents=True)
+    (other / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
+    out = B.init(other)
+    assert (other / B.SETTINGS).exists() and (other / B.SETTINGS_IGNORE).read_bytes() == b"agents.local/\n"
+    assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in out, out
+    (other / B.SETTINGS_IGNORE).write_bytes(b"/agents.local/\r\nsettings.local.json\r\n")
+    (other / B.SETTINGS).unlink()
+    assert "does not ignore" not in B.init(other)
+    for broken in (b"{not json", b'{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "echo orient"}]}]}}', b"[]"):
+        (other / B.SETTINGS).write_bytes(broken)
+        assert "add the SessionStart hook to it by hand" in B.init(other), broken
+
+
+@pytest.mark.criterion("AC-57")
+def test_init_never_touches_an_existing_local_settings_file(tmp_path):
+    (tmp_path / ".claude").mkdir()
+    grants = b'{"permissions": {"allow": ["Bash(git status)"]}}\n'
+    (tmp_path / B.SETTINGS).write_bytes(grants)
+    out = B.init(tmp_path)
+    assert (tmp_path / B.SETTINGS).read_bytes() == grants
+    assert f"{B.SETTINGS} (add the SessionStart hook to it by hand: kit README § Hook)" in out, out
+    assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "no ignore file for a settings file init did not write"
+    assert "## Hook" in (B.KIT / "README.md").read_text(encoding="utf-8"), "the remedy names a section that exists"
+
+
+@pytest.mark.criterion("AC-57")
+def test_an_inline_kit_block_is_left_for_the_upgrade_and_the_contract_still_lands(tmp_path):
+    inline = f"# Ours\n\n{B.BEGIN}\nframework: 0.5\n\n### Gate\n\n`make test && context-engine lint`\n{B.END}\n"
+    (tmp_path / "CLAUDE.md").write_text(inline, encoding="utf-8")
+    out = B.init(tmp_path)
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == inline
+    assert f"CLAUDE.md (holds the inline kit 0.5 block: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
+    assert (tmp_path / B.CONTRACT_DEST).exists()
+    assert "## 4. Upgrade" in (B.KIT / "README.md").read_text(encoding="utf-8")
+    boot = tmp_path / "boot"
+    boot.mkdir()
+    kept = "# Ours\r\n\r\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8").replace("\n", "\r\n")
+    (boot / "CLAUDE.md").write_bytes(kept.encode())
+    out = B.init(boot)
+    assert (boot / "CLAUDE.md").read_bytes() == kept.encode() and "skipped 1 (CLAUDE.md)" in out, out  # a bootloader already there (CRLF too) is kept
 
 
 @pytest.mark.criterion("AC-31")
@@ -196,12 +284,31 @@ def test_the_kit_contract_carries_framework_6_6_verbatim(start):
 
 
 @pytest.mark.criterion("AC-33")
-def test_the_contract_block_is_marked_and_pins_the_framework():
+def test_the_bootloader_is_marked_pins_the_framework_and_imports_the_contract():
+    boot = (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
+    assert boot.startswith(B.BEGIN) and B.END in boot
+    want = ".".join(__version__.split(".")[:2])
+    body = B.bootloader_body()
+    assert re.findall(r"^framework: (.*)$", body, re.MULTILINE) == [want], "the pin is the engine's major.minor"
+    assert B.IMPORT_RE.findall(body) == [B.CONTRACT_DEST], body
+    assert B.BEGIN == f"<!-- context-engine kit {want} begin -->" and B.END == f"<!-- context-engine kit {want} end -->"
+    assert "<this repo's own test command>" in boot.split(B.END)[1], "the gate command is the repo's: outside the markers"
+
+
+@pytest.mark.criterion("AC-33")
+def test_the_contract_pins_the_framework_and_starts_a_session_alone():
     text = (B.KIT / B.CONTRACT).read_text(encoding="utf-8")
-    assert text.startswith(B.BEGIN) and text.rstrip("\n").endswith(B.END)
-    assert re.search(r"^framework: \d+\.\d+$", text, re.MULTILINE)
-    # the block alone starts a session: no other file is needed to know the first two steps
-    assert re.search(r"\*\*Session start:\*\* `context-engine session start`.*\n?.*then `context-engine orient`", text), text
+    want = ".".join(__version__.split(".")[:2])
+    assert re.findall(r"^framework: (.*)$", text, re.MULTILINE) == [want]
+    assert "<this repo" not in text and B.BEGIN not in text, "the framework's file carries nothing a repo fills in"
+    assert not B.IMPORT_RE.search(text), "the contract imports nothing: one hop, nowhere near Claude Code's limit of four"
+    # it alone starts a session: no other file is needed to know the first two steps and the fallback
+    flat = " ".join(text.split())
+    assert "a `SessionStart` hook (`context-engine init` writes it to `.claude/settings.local.json`) prints `context-engine orient`" in flat
+    assert "run `context-engine session start`" in flat and "or run `context-engine orient` if it is not in your context" in flat
+    assert "if you already hold one (after a resume, `/clear` or compaction), keep it, do not run `session start` again" in flat, "the keyless hook re-fires on compaction"
+    assert "where they narrow or override a rule here, `CLAUDE.md` wins" in flat, "the owner changes a grant in an owner-loaded file they may edit"
+    assert "a failing hook is silent" in flat, "the fallback says why it exists"
 
 
 # -- no leaks from this repo ----------------------------------------------------------------
@@ -297,7 +404,7 @@ ACTOR, KEY = "claude-code/test", "2026-10-12a"
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 15")
+    assert _cli(tmp_path, "init").startswith("init: created 18")
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)

@@ -10,6 +10,7 @@ import subprocess
 import pytest
 
 from context_engine import __version__
+from context_engine import bootstrap as K
 from context_engine import ledger as L
 from context_engine import okf
 from context_engine.cli import main
@@ -849,8 +850,107 @@ def test_every_pin_and_the_kit_block_marker_must_match(eng):
     stale = "framework: 0.5\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
     got = pinned(eng, stale)
     assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 contract block, but the installed engine is framework 0.5"]
-    assert "kit/contract.md" in got[1][2]
-    assert pinned(eng, stale.replace("0.4", "0.5")) == []
+    assert "kit/bootloader.md" in got[1][2]
+    current = "framework: 0.5\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8")
+    copy_contract(eng)
+    assert pinned(eng, current) == []
+    assert [m for _, m, _ in pinned(eng, current.replace("0.5", "0.4"))] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)"] * 2 + ["holds the kit 0.4 contract block, but the installed engine is framework 0.5"]
+
+
+# -- G-D0's bootloader half (CE-38): the kit block and the contract it imports ----------------
+
+
+def copy_contract(eng, text=None):
+    p = eng.root / K.CONTRACT_DEST
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes((K.KIT / K.CONTRACT).read_bytes() if text is None else text.encode())
+    return p
+
+
+def booted(crlf=False):
+    text = "# Ours\n\nour own rule\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8")
+    return text.replace("\n", "\r\n") if crlf else text
+
+
+@pytest.mark.criterion("AC-58")
+@pytest.mark.parametrize("crlf", [False, True])
+def test_a_bootloader_importing_the_engines_contract_passes(eng, crlf):
+    copy_contract(eng, (K.KIT / K.CONTRACT).read_text(encoding="utf-8").replace("\n", "\r\n") if crlf else None)
+    assert pinned(eng, booted(crlf)) == []  # a checkout with CRLF line endings is the same text
+
+
+@pytest.mark.criterion("AC-58")
+def test_a_missing_import_target_fails_g_d0(eng):
+    [(path, message, remedy)] = pinned(eng, booted())
+    assert path == "CLAUDE.md" and message == f"imports @{K.CONTRACT_DEST}, which does not exist, so the framework's rules are not loaded"
+    assert "context-engine init" in remedy and K.CONTRACT_DEST in remedy
+
+
+@pytest.mark.criterion("AC-58")
+@pytest.mark.parametrize("edit", [lambda t: t.replace("Never reuse or renumber an id.", "Never reuse an id."), lambda t: t + "\nour own rule\n", lambda t: t.replace("framework: 0.5", "framework: 0.6")])
+def test_an_imported_contract_that_is_not_the_engines_fails_g_d0(eng, edit):
+    copy_contract(eng, edit((K.KIT / K.CONTRACT).read_text(encoding="utf-8")))
+    [(path, message, remedy)] = pinned(eng, booted())
+    assert path == K.CONTRACT_DEST and message.startswith("is not the installed engine's kit/contract.md")
+    assert "copy the engine's kit/contract.md over it" in remedy and "CLAUDE.md, outside the kit markers" in remedy
+
+
+@pytest.mark.criterion("AC-58")
+def test_an_import_resolves_against_the_file_that_holds_it(eng):
+    copy_contract(eng)
+    (eng.root / "sub").mkdir()
+    (eng.root / "context.toml").write_text(_toml({**CONFIG, "engine": {**CONFIG["engine"], "contract": "sub/CLAUDE.md"}}), encoding="utf-8")
+    mapped = Engine(eng.root, today=lambda: TODAY)
+    [(_, message, remedy)] = pinned(mapped, booted(), name="sub/CLAUDE.md")
+    assert message.startswith(f"imports @{K.CONTRACT_DEST}, which does not exist"), "sub/docs/framework/contract.md, not the root's"
+    assert remedy == f"copy the engine's kit/contract.md to sub/{K.CONTRACT_DEST}", "init writes only the root's copy, so it is not the remedy here"
+
+
+@pytest.mark.criterion("AC-58")
+@pytest.mark.parametrize("where", ["CLAUDE.md", K.CONTRACT_DEST])
+def test_a_contract_that_is_not_utf8_is_a_red_and_orient_still_runs(eng, where):
+    (eng.root / "CLAUDE.md").write_text(booted(), encoding="utf-8")
+    p = copy_contract(eng)
+    target = eng.root / where
+    target.write_bytes(target.read_bytes() + b"\nr\xe9sum\xe9\n")
+    [f] = [f for f in eng.lint() if f.guard == "G-D0"]
+    assert f.path == where and ("is not UTF-8" in f.message if where == "CLAUDE.md" else f.message.startswith("is not the installed engine's kit/contract.md"))
+    out = eng.orient()  # the hook's read: never a traceback
+    assert out.split("\n## ", 2)[1].startswith("Contract: fix this first") and p.exists()
+
+
+@pytest.mark.criterion("AC-58")
+def test_the_inline_block_from_before_the_bootloader_fails_g_d0_naming_the_upgrade(eng):
+    copy_contract(eng)
+    inline = f"# Ours\n\n{K.BEGIN}\nframework: 0.5\n\n### Gate\n\n`make test`\n{K.END}\n"
+    [(path, message, remedy)] = pinned(eng, inline)
+    assert path == "CLAUDE.md" and message == "holds the inline kit 0.5 block, which copies the framework's rules instead of importing them"
+    assert "`## Gate`" in remedy and "kit/bootloader.md" in remedy and "kit README § Upgrade" in remedy
+
+
+@pytest.mark.criterion("AC-58")
+@pytest.mark.parametrize("edit, says", [
+    (lambda t: t.replace("is never\nedited here", "may be\nedited here"), "the text between the kit 0.5 markers is not the engine's kit/bootloader.md block"),
+    (lambda t: t.replace(f"{K.END}\n", ""), "has the kit 0.5 begin marker but no end marker after it"),
+])
+def test_a_hand_edited_bootloader_fails_g_d0(eng, edit, says):
+    copy_contract(eng)
+    text = edit(booted())
+    assert text != booted()
+    assert [m for _, m, _ in pinned(eng, text)] == [says]
+
+
+@pytest.mark.criterion("AC-59")
+def test_orient_leads_with_a_red_contract_and_says_nothing_when_it_is_green(eng):
+    (eng.root / "CLAUDE.md").write_text(booted(), encoding="utf-8")
+    out = eng.orient()
+    first = out.split("\n## ", 2)[1]
+    assert first.startswith("Contract: fix this first\n") and f"imports @{K.CONTRACT_DEST}, which does not exist" in first and "Remedy: run `context-engine init`" in first
+    copy_contract(eng)
+    assert "Contract" not in eng.orient()
+    (eng.root / K.CONTRACT_DEST).unlink()
+    (eng.root / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": ["G-D9", "G-D0"]}}), encoding="utf-8")
+    assert "Contract" not in Engine(eng.root, today=lambda: TODAY).orient(), "[guards] off G-D0 silences it here too"
 
 
 @pytest.mark.criterion("AC-35")

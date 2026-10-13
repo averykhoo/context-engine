@@ -7,7 +7,8 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 | Kit file | Goes to | What it is |
 |---|---|---|
 | `context.toml.template` | `context.toml` | the config, and its schema: every key the engine reads |
-| `contract.md` | appended to `CLAUDE.md` | the framework block: `framework:` line, environment, gate, rituals, rules |
+| `bootloader.md` | appended to `CLAUDE.md` | the kit block: the `framework:` line and an `@`-import of the contract; then a `## Gate` stub for the repo's own test command |
+| `contract.md` | `docs/framework/contract.md` | the framework's rules (environment, gate, rituals, rules), imported by `CLAUDE.md`; the framework's file, replaced whole on upgrade |
 | `HANDOFF.md` | `HANDOFF.md` | the orientation note, with no banner yet |
 | `docs/charter.md` | `docs/charter.md` | the charter, goals with `G-n` ids |
 | `docs/criteria.md` | `docs/criteria.md` | the criteria table and how a test claims one |
@@ -15,7 +16,7 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 | `docs/runbooks/rituals.md` | `docs/runbooks/rituals.md` | every ritual's steps in order, the engine command and the by-hand step side by side |
 | `docs/runbooks/manual-mode.md` | `docs/runbooks/manual-mode.md` | every engine operation by hand, each step with its why |
 
-`init` also creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
+`init` also writes the `SessionStart` hook (§ Hook) and creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
 `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
 (each with a `.gitignore` holding `*`, so they ignore themselves).
 
@@ -31,8 +32,8 @@ into the target repo's environment, and the target repo never imports it.
 
 **The pin** is two things: the ref in that install line (a release tag once there are releases;
 a full commit SHA until then), and the `framework: <major.minor>` line in `CLAUDE.md`, which
-must match the engine's major.minor (`context-engine lint` checks it, and the kit block's marker
-version, as G-D0). Write the ref into the first ledger entry's summary, so the
+must match the engine's major.minor (`context-engine lint` checks it, the kit block's marker
+version, the block's text and the imported contract, as G-D0). Write the ref into the first ledger entry's summary, so the
 repo records which engine it was bootstrapped with.
 
 The MCP server is optional (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
@@ -57,9 +58,10 @@ From the repo root:
 ```
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
-it skipped. It never overwrites a file. It appends the contract block to an existing `CLAUDE.md`
+it skipped. It never overwrites a file. It appends the bootloader to an existing `CLAUDE.md`
 only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a block from an
-older kit is left for the upgrade to replace (§4), never doubled. An existing `context.toml` is
+older kit, or the inline block of a kit from before the bootloader, is left for the upgrade to
+replace (§4), never doubled. An existing `context.toml` is
 kept if it loads (init refuses one that does not, or one whose prefixes disagree with
 `--prefix`), and init then writes only the files and directories that config points at, so it
 can be re-run after the config is edited. `--prefix` changes a kind's id series
@@ -67,8 +69,8 @@ can be re-run after the config is edited. `--prefix` changes a kind's id series
 
 Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
-2. Replace `<this repo's own test command>` in the `CLAUDE.md` block with the real one, and read
-   every `provenance:` note in `context.toml`.
+2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
+   real one, and read every `provenance:` note in `context.toml`.
 3. `context-engine lint` is green; `context-engine session start` opens the first session.
 4. The first clean close (FRAMEWORK §6.3): `session close`, then `banner show` (it says
    `no banner yet`, hash `none`) and `banner set --seen none --file <banner.md>`, which writes the
@@ -76,12 +78,39 @@ Then:
 
 ## 2b. Bootstrap by hand
 
-Copy each kit file to where the table above says, with `contract.md` appended to `CLAUDE.md`
-(create it if absent). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
+Copy each kit file to where the table above says, with `bootloader.md` appended to `CLAUDE.md`
+(create it if absent) and `contract.md` copied to `docs/framework/contract.md`; add the hook
+(§ Hook). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
 and `.scratch/.gitignore` each holding the single line `*`. To change an id prefix, edit `prefix`
 in that kind's `[kinds.<name>]` table; no two kinds may share one. Then follow steps 1 to 4
 above, in the order `docs/runbooks/rituals.md` gives, doing each operation by hand from
 `docs/runbooks/manual-mode.md` (both copied with the kit).
+
+## Hook
+
+A `SessionStart` hook runs `context-engine orient` and Claude Code puts its output in the
+session's context at startup, resume, `/clear` and compaction, so the session-start read does not
+rest on the agent remembering a rule. `init` writes it to `.claude/settings.local.json`, and
+`.claude/.gitignore` (holding `settings.local.json`) beside it, only when that file is absent.
+The command names this machine's engine interpreter and repo root, so the file is
+machine-local, like the MCP registration: each clone runs `init` (or adds it by hand) once.
+When the file already exists (it may hold the owner's permission grants), `init` leaves it alone;
+add the hook by hand, keeping every other key:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command", "command": "\"<engine-python>\" -m context_engine --root \"<repo root>\" orient"}]}
+    ]
+  }
+}
+```
+
+Both paths are absolute, with forward slashes. The command runs under bash and cmd.exe; under
+PowerShell a quoted program needs `& ` in front. A failing `SessionStart` hook is silent (Claude
+Code shows its error to the user only, and the session goes on), so the contract keeps the
+by-hand fallback: no orient output in the context means run `orient` and tell the owner.
 
 ## 3. An existing repo: map, don't move (FRAMEWORK §11.4)
 
@@ -98,12 +127,18 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
 ## 4. Upgrade (FRAMEWORK §8.0)
 
 1. Reinstall the engine in its own environment at the new ref.
-2. Bump `framework:` in `CLAUDE.md` if the engine's major.minor moved, and replace the block
-   between the kit markers with the new kit's `contract.md`. Replace `docs/runbooks/rituals.md` and
-   `docs/runbooks/manual-mode.md` with the new kit's copies, unless the repo edited its own (then
-   merge by hand): `init` never overwrites them, so an upgrade is the only time they move.
+2. Copy the new kit's `contract.md` over `docs/framework/contract.md` (the framework's file: it is
+   replaced whole, never merged). If the engine's major.minor moved, replace the text between the
+   kit markers in `CLAUDE.md`, markers included, with the new kit's `bootloader.md` block. **From
+   an inline block** (a kit from before the bootloader, whose block holds the rules themselves):
+   move its gate command to a `## Gate` section below the end marker first, then replace the
+   block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace
+   `docs/runbooks/rituals.md` and `docs/runbooks/manual-mode.md` with the new kit's copies, unless
+   the repo edited its own (then merge by hand): `init` never overwrites them, so an upgrade is
+   the only time they move.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
-   key shows up here; G-D0 names a `framework:` line or kit block the new engine does not match).
+   key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
+   not match).
 4. Write a ledger line naming the new ref (in the session's close summary).
 
 ## 5. The gate

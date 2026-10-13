@@ -28,6 +28,7 @@ from . import guards as G
 from . import ledger as L
 from . import okf
 from . import review as R
+from . import bootstrap as K  # the kit: its block markers, bootloader and contract (G-D0)
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
@@ -1143,6 +1144,11 @@ class Engine:
         pointer = self._engine_register_line()
         if pointer:
             sections.append(("Engine register", pointer, "`context-engine register show --engine`"))
+        # G-D0 first (CE-38): run by the SessionStart hook, orient is where a missing or stale
+        # contract import is said out loud: what Claude Code does with a missing import is not
+        # documented (docs/evidence/claude-code-hooks-2026-10-13.md), so nothing else may say it
+        if "G-D0" not in self.store.config.guards.off and (bad := self.lint_contract()):
+            sections.insert(0, ("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`"))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
 
@@ -1179,7 +1185,15 @@ class Engine:
         """G-D0 (DEC-23): every `framework:` line in the contract, and the version in its kit
         block's begin marker, equal the installed engine's major.minor. `0.5.*` is a synonym of
         `0.5`. A missing contract, a contract with no `framework:` line, or a value that is not
-        `major.minor` is a red too: the pin is what says which engine the repo's rules assume."""
+        `major.minor` is a red too: the pin is what says which engine the repo's rules assume.
+
+        The bootloader (CE-38): a kit block of the engine's version holds exactly the kit's
+        bootloader text (an inline block from before it, or a hand edit, is red), and every file it
+        `@`-imports exists and equals the installed engine's ``kit/contract.md``, line endings
+        aside, since the framework owns that file and Claude Code loads nothing from a missing one.
+        Not checked: a contract with no kit block (a hand-written contract, like the engine repo's
+        own), whether Claude Code actually loaded the import, and the machine-local SessionStart
+        hook, which lint cannot see."""
         rel = self.store.config.contract
         m = VERSION_RE.match(version)
         assert m, f"engine version {version!r} has no major.minor"
@@ -1187,7 +1201,10 @@ class Engine:
         path = self.root / rel if rel else None
         if path is None or not path.is_file():
             return [Failure("G-D0", rel or "context.toml", f"the contract {rel or '([engine] contract is empty)'} does not exist", f"create it with a `framework: {want}` line, or point `contract` in [engine] of context.toml at the repo's contract")]
-        text = path.read_bytes().decode("utf-8-sig")
+        try:  # orient runs this too, from the SessionStart hook: a crash there would be silent
+            text = path.read_bytes().decode("utf-8-sig")
+        except UnicodeDecodeError as e:
+            return [Failure("G-D0", rel, f"is not UTF-8 ({e.reason} at byte {e.start}), so its pin cannot be read", "save it as UTF-8")]
         out: list[Failure] = []
         pins = FRAMEWORK_LINE_RE.findall(text)
         if not pins:
@@ -1200,7 +1217,40 @@ class Engine:
                 out.append(Failure("G-D0", rel, f"`framework: {value}` does not match the installed engine {version} (framework {want})", f"if the repo has moved to framework {want}, follow the upgrade ritual (FRAMEWORK §8.0; kit README § Upgrade) and set `framework: {want}`; otherwise run an engine {have}.x"))
         for marker in ANY_BEGIN.findall(text):
             if marker != want:
-                out.append(Failure("G-D0", rel, f"holds the kit {marker} contract block, but the installed engine is framework {want}", f"replace the block between its markers with the engine's kit/contract.md (kit README § Upgrade), or run an engine {marker}.x"))
+                out.append(Failure("G-D0", rel, f"holds the kit {marker} contract block, but the installed engine is framework {want}", f"replace the block between its markers with the engine's kit/bootloader.md block (kit README § Upgrade), or run an engine {marker}.x"))
+        block = K.kit_block(text)
+        if block and block[0] == want:  # a block of another version is red above
+            out += self._bootloader(rel, path, want, block[1])
+        return out
+
+    def _bootloader(self, rel: str, path: Path, want: str, body: str | None) -> list[Failure]:
+        """G-D0's bootloader half: the kit block's text, and every file it imports."""
+        if body is None:
+            return [Failure("G-D0", rel, f"has the kit {want} begin marker but no end marker after it", "restore the block from the engine's kit/bootloader.md, both markers included")]
+        out: list[Failure] = []
+        imports = K.IMPORT_RE.findall(body)
+        if body != K.bootloader_body():
+            if not imports:
+                out.append(Failure("G-D0", rel, f"holds the inline kit {want} block, which copies the framework's rules instead of importing them", f"move its gate command to `## Gate` below the end marker, replace the text between the markers with the engine's kit/bootloader.md block, then run `context-engine init`, which writes {K.CONTRACT_DEST} (kit README § Upgrade)"))
+            else:
+                out.append(Failure("G-D0", rel, f"the text between the kit {want} markers is not the engine's kit/bootloader.md block", "copy the block from the engine's kit/bootloader.md; this repo's own rules go outside the markers"))
+        want_text = (K.KIT / K.CONTRACT).read_text(encoding="utf-8").replace("\r\n", "\n")
+        for target in imports:
+            p = path.parent / target  # Claude Code resolves an import against the file that holds it
+            try:
+                shown = p.resolve().relative_to(self.root.resolve()).as_posix()
+            except ValueError:
+                shown = target
+            if not p.is_file():
+                fix = f"copy the engine's kit/contract.md to {shown}"  # init writes only the root's copy
+                out.append(Failure("G-D0", rel, f"imports @{target}, which does not exist, so the framework's rules are not loaded", f"run `context-engine init`, which writes it, or {fix}" if shown == K.CONTRACT_DEST else fix))
+                continue
+            try:
+                have = p.read_bytes().decode("utf-8-sig").replace("\r\n", "\n")
+            except UnicodeDecodeError:
+                have = None  # not UTF-8, so not the kit's text: the red below
+            if have != want_text:
+                out.append(Failure("G-D0", shown, "is not the installed engine's kit/contract.md, and the framework owns this file", f"copy the engine's kit/contract.md over it (an upgrade replaces it whole); this repo's own rules go in {rel}, outside the kit markers"))
         return out
 
     def lint_working(self) -> list[Failure]:
