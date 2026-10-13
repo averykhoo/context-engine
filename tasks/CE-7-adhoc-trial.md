@@ -20,8 +20,9 @@ the CE-4 baseline. The owner decides whether the branch merges.
 
 ## Read first
 
+- `src/context_engine/kit/README.md` (init, § Hook, § 4 Upgrade) and `docs/runbooks/rituals.md` § Bootstrap
+- ASK-5, DEC-32, DEC-6 and its amendment; INV-28 to INV-32 in `src/context_engine/REGISTER.md`
 - `docs/framework/FRAMEWORK.md` §8.0.3, §11.4
-- `docs/decisions/DEC-5-framework-before-migration.md`, `DEC-6-adhoc-first.md`
 
 ## Log
 
@@ -31,3 +32,11 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - 2026-10-13b (claude-code/claude-opus-5-5): DEC-6 amended (owner, 2026-10-13b): adhoc confirmed for a QUICK trial; audio-workspace is the better testing ground and is next (CE-43). Keep the trial short: cutover, a few real sessions, score, owner decides the merge.
 - 2026-10-13b (claude-code/claude-opus-5-5): Promoted to NOW as CE-38 closed, following the owner's order of 2026-10-13b (CE-38 then CE-7). CE-38's init now writes the bootloader, docs/framework/contract.md and the SessionStart hook; adhoc probably has a .claude/settings.local.json already, so init will refuse until the owner says yes (--merge-settings) or no (--skip-settings), per DEC-32. The live probes owed by CE-38 (missing @-import, hook output on resume, /clear and compaction, the shell that runs hooks on Windows, a failing hook) fit this trial's first session.
 - 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: CE-7 stays NOW. A session is live in adhoc, working on untracked audio files: do the cutover in a worktree branch, touch nothing in adhoc's main checkout, and re-check adhoc's HANDOFF/decisions for commits made after the import before the owner decides the merge.
+
+## Traps
+
+- The body predates CE-38: there is no .mcp.json step and no rewriting of rituals into adhoc's CLAUDE.md. Run init from the engine's env (kit README); it appends the bootloader block and copies docs/framework/contract.md.
+- adhoc very likely has .claude/settings.local.json already, so init refuses until the owner says yes (--merge-settings) or no (--skip-settings) (DEC-32).
+- A session is live in adhoc's main checkout (untracked audio, 2026-10-13b): work only in a worktree branch, and re-check adhoc's HANDOFF and decisions for commits made after the import before the merge.
+- The import waits on ASK-5 (rename ids or keep them); leave [guards] charter, stories and tests unset until adhoc's charter holds the owner's goals (rituals § Bootstrap).
+- The first session there runs INV-31's live probes: does orient output appear on startup, resume, /clear and compaction; what a missing import or a broken interpreter path looks like.
