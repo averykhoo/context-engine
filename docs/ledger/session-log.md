@@ -7,9 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-13d · kind: open
+## 2026-10-13d · kind: close
 
-- **opened:** 2026-10-13T22:58:02+08:00 by claude-code/claude-opus-5-5
+- **rows:** US-18 recorded (owner words); CE-67 filed and closed; AC-79, AC-80 drafted and tested;
+  banner set
+- **receipts:**
+  - guards: pytest -q: 631 passed in 145.80s (rc=0), lint inside it clean, on main c4e5704;
+    tools/linux_gate.py on c4e5704: 631 passed (git 2.55.0, Python 3.12.3)
+  - read: orient + rituals § Push and CI, § Intake + gate.md + FRAMEWORK §6.8 + CI run 38417074413
+    log + actions/runner-images install-git.sh
+- **summary** (the owner digest):
+  - Pushed 39e09ca on a green Windows gate; CI went red: 3 CE-55 tests in test_commit.py failed only
+    on Linux.
+  - Owner: US-18 (fix them, replicate CI locally, guard the class). tools/linux_gate.py runs CI's
+    job on any commit in a runner-shaped container (WSL docker) and reproduced CI's exact three.
+  - Causes: time.sleep patched on the module (Linux subprocess polls with it); the runner's
+    /etc/gitconfig safe.directory = *; Windows text-mode stdin sends CRLF to git.
+  - Fixed in CE-67 with guards: tests read no machine git config; no test patches a stdlib module;
+    test_ci keeps linux_gate in step with the workflow. Footguns: docs/evidence/ci-
+    divergence-2026-10-13.md.
+  - Rule: CLAUDE.md § Gate now runs the Linux gate before every push; gate.md (kit) and FRAMEWORK
+    §6.8 carry the method.
+  - For the owner: 'rituals' reads as off-putting; a rename (procedures or checklists) would be a
+    decision and a task, not yet recorded.
+- **Still owed:**
+  - a decision on renaming 'rituals', if the owner wants one
 
 ---
 
