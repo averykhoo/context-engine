@@ -3,12 +3,12 @@ type: Task
 id: CE-25
 title: 'Intent chain tooling: charter goals, criteria with statuses and refs, intake steps, and G-I1, G-I2, G-T1, G-T2, G-T6'
 brief: Charter and criteria stay hand-written today; build their checks after CE-14's lint frame, each sabotaged red
-pri: LATER
+pri: NOW
 state: open
 deps: [CE-14]
 source: session 2026-10-12b
 created: 2026-10-12
-moved: 2026-10-12b
+moved: 2026-10-13a
 updated: 2026-10-13a
 review: [guard, write-op, shipped]
 ---
