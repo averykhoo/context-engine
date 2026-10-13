@@ -87,6 +87,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-36](DEC-36-the-engine-commits-at-milestones-not-at-every.md): The engine commits at milestones, not at every write; CE-55 builds it *(owner, 2026-10-13)*
 - [DEC-37](DEC-37-imported-ids-are-renamed-at-adoption-keeping.md): Imported ids are renamed at adoption, keeping the number, and each old id stays a resolvable alias (ASK-5 option c) *(owner, 2026-10-13)*
 - [DEC-38](DEC-38-standard-id-prefixes-one-readable-prefix-per.md): Standard id prefixes: one readable prefix per record kind in every repo, 2 to 5 capitals; tasks take a per-repo prefix *(owner, 2026-10-13)*
+- [DEC-39](DEC-39-rituals-are-renamed-procedures-the-framework-s.md): Rituals are renamed procedures; the framework's strange turns of phrase are corrected in one sweep *(owner, 2026-10-13)*
 
 ## REJECTED
 
