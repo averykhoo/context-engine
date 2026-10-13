@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-13b)
+## Banner (2026-10-13c)
 
 - **This repo builds the whole framework** in `docs/framework/FRAMEWORK.md`, to deploy across
   all the owner's repos (charter confirmed and widened, DEC-10). The record engine (§8.0) is
@@ -13,42 +13,48 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   log, and no repo ids (a kit test reds a `DEC-n` in it). Change it in place; the why goes in a
   decision or story. The pre-trim text is frozen in `FRAMEWORK-v0.5.md`.
 - **The command is `context-engine`** (DEC-15; `ce` before). Older records keep `ce`.
-- **Bootloader (CE-38, adopted here 2026-10-13b):** `CLAUDE.md` carries the kit block, which
-  `@`-imports `docs/framework/contract.md` (a byte copy of `kit/contract.md`; G-D0 reds a
-  difference or a missing file); a `SessionStart` hook in `.claude/settings.local.json` prints
-  orient. A failing hook is silent: if orient is not in context at start, say so. `init` merges
-  into an existing settings file only with `--merge-settings` (DEC-32). Never run `init` here.
-- **State:** CE-1..3, CE-5, CE-8, CE-10, CE-14..16, CE-20..25, CE-30..32, CE-35..38 done. **Since
-  2026-10-13b: CE-38 (bootloader) and CE-25 (intent-chain guards G-I1, G-I2, G-T1, G-T2, G-T6 in
-  lint; goal ids `G-n`; stamped stories keep `G1`, read as `G-1`).** AC-60..64 are agent-drafted
-  planned criteria for US-10, US-12, US-13: the owner has not read them yet.
-- **Priorities:** NOW CE-7 (quick adhoc trial; its import waits on **ASK-5**: rename a repo's ids at
-  adoption or keep them, recommendation in the item). Then CE-43 (audio-workspace, the owner's
-  better testing ground, DEC-6 amendment). NEXT: ASK-5, CE-45 (commit the op log with every
-  commit: a mid-session commit is red on G-W7 alone), CE-49 (retire a story), CE-26, CE-33.
-  CE-42 is CE-25's write-op half (DEC-33).
+- **Bootloader (CE-38):** `CLAUDE.md` carries the kit block, which `@`-imports
+  `docs/framework/contract.md` (a byte copy of `kit/contract.md`; G-D0 reds a difference); a
+  `SessionStart` hook prints orient. A failing hook is silent: if orient is not in context at
+  start, say so. Never run `init` here.
+- **The engine commits at milestones (CE-45, CE-55, DEC-36):** task close, owner words (story
+  new, amend, retire; decision; ask answer), baton, pause, session close and banner commit at
+  once; every other write rides along. Commit your own work through `context-engine commit
+  <paths> -m ...` (it sweeps the riding op lines); close a task after its work is committed, with
+  `task close <id> -m ... --body-file <Sabotage: lines>`, which carries `Closes:`.
+- **State:** CE-1..3, CE-5, CE-8, CE-10, CE-14..16, CE-20..26, CE-30..33, CE-35..38, CE-45, CE-49
+  and CE-55 done. **Since 2026-10-13c:** method runbooks (CE-26), engine commits (CE-45, CE-55),
+  `record retire` (CE-49), G-D4 liveness and G-D5 typed counts (CE-33). AC-60..64 and AC-71..78
+  are agent-drafted criteria the owner has not read.
+- **Priorities:** NOW CE-7, the adhoc trial: adhoc's live session has ended, ASK-5 is answered
+  (DEC-37: rename imported ids, keep the number, the old id an alias), and the owner runs it in a
+  new session. Then CE-43 (audio-workspace). NEXT: CE-64 (agent commits put `Session:` outside
+  git's trailer block). CE-56 carries DEC-38's standard prefixes (DEC, STORY, AC, ASK, RISK,
+  GOAL, BATON, PAUSE; EXP and HAZ reserved; a per-repo task prefix).
 - **Every owner question carries a recommendation** held with reasonable confidence, where one
   is cheap to reach (DEC-34, FRAMEWORK §5.3); CE-44 makes it mechanical.
-- **One id form for minted ids: `[A-Z]+-[1-9][0-9]*`** (DEC-33, FRAMEWORK P3). Imported ids: ASK-5.
+- **One id form for minted ids: `[A-Z]+-[1-9][0-9]*`** (DEC-33, FRAMEWORK P3).
 - **Session start shows the owner every other open session** (US-16), one line each, or "none".
   Marking a dead stub `abandoned` stays by hand (DEC-29). A session closes by default when its
   requested work is done (DEC-31); more work after a close starts a new session.
-- **Rituals: the order lives in `docs/runbooks/rituals.md`** (CE-24, US-15); `manual-mode.md` has
-  the by-hand detail. Both ship in the kit, byte-equal. When the engine errors, do the step by
-  hand and fix the engine (US-11). `lint` is in the gate.
-- **Guards:** `src/context_engine/guards.py` runs G-D0..D3/D7/D8/D9/D12, G-I1/I2, G-T1/T2/T3/T6
-  and G-W7 in lint; `[guards]` in `context.toml` switches them off or scopes their paths.
+- **Rituals: the order lives in `docs/runbooks/rituals.md`** (CE-24); `manual-mode.md` has the
+  by-hand detail; method lives in `gate.md`, `sabotage.md`, `fan-out.md` and `release.md`
+  (CE-26). All ship in the kit, byte-equal. When the engine errors, do the step by hand and fix
+  the engine (US-11). `lint` is in the gate.
+- **Guards:** `src/context_engine/guards.py` runs G-D0..D5/D7/D8/D9/D12, G-I1/I2, G-T1/T2/T3/T6
+  and G-W7 in lint; `[guards]` in `context.toml` switches them off or scopes their paths. G-D5 is
+  on here: write a count of the tree in one of P5's forms (dated, quoted, bounded, backticked).
 - **Deploy path (CE-15):** the kit is package data at `src/context_engine/kit/`; `init` writes it
   into a target repo, never overwrites, never touches the target env (DEC-1). No release tag yet.
 - **Design review and register (CE-23, US-14):** work above the review threshold needs `review:`
   and a `## Design review` before promote or close; `task close` files the residuals as `INV-n`
-  (INV-1..35 so far).
-- **The MCP server is built (CE-3).** A server started before 2026-10-13a refuses every call (route
-  key `max_bytes`): the owner restarts Claude Code after the 2026-10-13b push; until then, the CLI.
-- **Several tasks in one request → the top level coordinates** (DEC-16). Ultracode workflows
-  (build in a worktree, three review lenses, a skeptic each, fix) found real defects every time;
-  gate a worktree with `PYTHONPATH=<worktree>/src` (the editable install points at the main tree)
-  and check it out with `git -c core.autocrlf=false` (CE-46).
+  (INV-1..69 so far; DEC-38 renames them RISK-n under CE-56).
+- **The MCP server (CE-3):** one started before 2026-10-13c refuses every call here (the new
+  `[guards]` keys): the owner restarts Claude Code; until then, the CLI.
+- **Several tasks in one request → the top level coordinates** (DEC-16): a task agent per item,
+  each building in its own worktree (review lenses, a skeptic, fix), merged and verified at the
+  top. Gate a worktree with `PYTHONPATH=<worktree>/src` and check it out with `git -c
+  core.autocrlf=false` (CE-46); its MCP stdio test is a known false red there (CE-62).
 - **Anti-goal:** a server the owner starts or manages. Claude Code may start one as a ritual.
 - **Owner rules in force:** `fable` only when the owner asks, or for the arbiter role (DEC-18);
   every programmatic process has a ritual fallback (DEC-20, P16).

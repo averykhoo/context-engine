@@ -439,3 +439,4 @@
 {"at": "2026-10-13T22:22:59+08:00", "session": "2026-10-13c", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-55", "path": "tasks/CE-55-the-engine-s-task-close-commit-carries-closes.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-13T22:23:21+08:00", "session": "2026-10-13c", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-13T22:27:23+08:00", "session": "2026-10-13c", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-13c", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-13T22:27:31+08:00", "session": "2026-10-13c", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-13c", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
