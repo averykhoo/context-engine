@@ -20,12 +20,24 @@ S = [
     # init (AC-57)
     ("boot-not-appended", BS, "    block = (KIT / BOOTLOADER).read_text(encoding=\"utf-8\")\n", "    block = (KIT / CONTRACT).read_text(encoding=\"utf-8\")\n", TK + " -k writes_the_bootloader"),
     ("contract-unwritten", BS, "        writes[CONTRACT_DEST] = (KIT / CONTRACT).read_text(encoding=\"utf-8\")\n", "        pass\n", TK + " -k writes_the_bootloader"),
-    ("settings-clobber", BS, "    if (root / SETTINGS).exists():", "    if False:", TK + " -k existing_local_settings"),
+    ("settings-clobber", BS, "    if (root / SETTINGS).exists():", "    if False:", TK + " -k refuses_showing_the_change"),
     ("no-ignore", BS, "            writes[SETTINGS_IGNORE] = \"settings.local.json\\n\"\n", "            pass\n", TK + " -k writes_the_bootloader"),
-    ("ignore-always", BS, "    if (root / SETTINGS).exists():  # it may hold", "    writes[SETTINGS_IGNORE] = \"settings.local.json\\n\"\n    if (root / SETTINGS).exists():  # it may hold", TK + " -k existing_local_settings"),
+    ("ignore-always", BS, "    if (root / SETTINGS).exists():  # it holds", "    writes[SETTINGS_IGNORE] = \"settings.local.json\\n\"\n    if (root / SETTINGS).exists():  # it holds", TK + " -k refuses_showing_the_change"),
     ("ignore-unchecked", BS, "        elif \"settings.local.json\" not in ignore.read_bytes()", "        elif False and \"settings.local.json\" not in ignore.read_bytes()", TK + " -k rerun_finds_its_own_hook"),
-    ("rerun-asks-again", BS, "        skipped.append(SETTINGS if has_hook(root / SETTINGS) else", "        skipped.append(SETTINGS if False else", TK + " -k rerun_finds_its_own_hook"),
-    ("hook-any-command", BS, "    return any(\"-m context_engine\" in c and", "    return any(True or \"-m context_engine\" in c and", TK + " -k rerun_finds_its_own_hook"),
+    ("rerun-asks-again", BS, "            if new is None:\n", "            if False:\n", TK + " -k rerun_finds_its_own_hook"),
+    # the consented merge into an existing settings file (DEC-32)
+    ("merge-no-consent", BS, "            elif settings != \"merge\":\n", "            elif False:\n", TK + " -k refuses_showing_the_change"),
+    ("skip-ignored", BS, "        if settings == \"skip\":\n", "        if False:\n", TK + " -k refuses_showing_the_change"),
+    ("merge-drops-keys", BS, "    doc.setdefault(\"hooks\", hooks)\n", "    doc = {\"hooks\": hooks}\n", TK + " -k merge_settings_adds_only"),
+    ("merge-crlf", BS, "(text.replace(\"\\n\", \"\\r\\n\") if \"\\r\\n\" in old else text)", "text", TK + " -k merge_settings_adds_only"),
+    ("merge-ascii", BS, "ensure_ascii=False", "ensure_ascii=True", TK + " -k merge_settings_adds_only"),
+    ("merge-twice", BS, "    if _holds_hook(doc):\n        return None", "    if False:\n        return None", TK + " -k merge_settings_adds_only"),
+    ("dup-keys-ok", BS, "        if dup:\n", "        if False:\n", TK + " -k refuses_what_it_cannot"),
+    ("shape-unchecked", BS, "    if not isinstance(starts, list):\n", "    if False:\n", TK + " -k refuses_what_it_cannot"),
+    ("not-utf8-ok", BS, "    except UnicodeDecodeError as e:\n        raise Refusal(f\"{path.name} is not UTF-8", "    except KeyError as e:\n        raise Refusal(f\"{path.name} is not UTF-8", TK + " -k refuses_what_it_cannot"),
+    ("recheck-off", BS, "            if now != seen[rel]:\n", "            if False:\n", TK + " -k settings_file_changed_after"),
+    ("tmp-left", BS, "            tmp.unlink(missing_ok=True)\n", "            pass\n", TK + " -k settings_file_changed_after"),
+    ("hook-any-command", BS, "    return any(\"-m context_engine\" in c and", "    return any(True or \"-m context_engine\" in c and", TK + " -k merge_settings_adds_only"),
     ("hook-relative", BS, "--root \"{Path(root).resolve().as_posix()}\" orient'", "--root . orient'", TK + " -k runs_orient_through_a_shell"),
     ("hook-matcher", BS, "[{\"hooks\": [{\"type\": \"command\"", "[{\"matcher\": \"startup\", \"hooks\": [{\"type\": \"command\"", TK + " -k writes_the_bootloader"),
     ("inline-kept", BS, "            if found and found[1] is not None and IMPORT_RE.search(found[1]):\n", "            if True:\n", TK + " -k inline_kit_block"),
@@ -50,7 +62,7 @@ S = [
     ("key-kept", KIT + "contract.md", "keep it, do not run `session start` again", "run `session start` again", TK + " -k starts_a_session_alone"),
     ("claude-wins", KIT + "contract.md", "`CLAUDE.md` wins", "this file wins", TK + " -k starts_a_session_alone"),
     ("fallback-gone", KIT + "contract.md", "**a failing hook is silent**", "**the hook always runs**", TK + " -k starts_a_session_alone"),
-    ("readme-hook", KIT + "README.md", "## Hook\n", "## The hook\n", TK + " -k existing_local_settings"),
+    ("readme-hook", KIT + "README.md", "## Hook\n", "## The hook\n", TK + " -k refuses_showing_the_change"),
 ]
 ok = True
 for name, f, old, new, sel in S:

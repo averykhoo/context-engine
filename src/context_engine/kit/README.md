@@ -94,8 +94,13 @@ rest on the agent remembering a rule. `init` writes it to `.claude/settings.loca
 `.claude/.gitignore` (holding `settings.local.json`) beside it, only when that file is absent.
 The command names this machine's engine interpreter and repo root, so the file is
 machine-local, like the MCP registration: each clone runs `init` (or adds it by hand) once.
-When the file already exists (it may hold the owner's permission grants), `init` leaves it alone;
-add the hook by hand, keeping every other key:
+When the file already exists it holds the owner's permission grants (Claude Code writes them
+there), so `init` changes it only with the owner's yes: without a flag it refuses, naming the one
+entry it would append to `hooks.SessionStart`; show the owner, then run `init --merge-settings`
+(yes) or `init --skip-settings` (no). The merge parses the file strictly (it refuses, untouched,
+a file that is not JSON or repeats a key), keeps every other key and its order, re-reads the file
+right before an atomic replace, and is a no-op when the hook is there. By hand, add this entry,
+keeping every other key:
 
 ```json
 {

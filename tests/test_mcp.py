@@ -22,7 +22,7 @@ ACTOR = "claude-code/test"
 # One call per operation: (the CLI's argv after the global flags, the MCP tool's arguments).
 # Both must reach the operation's function with the same parameters.
 CALLS = {
-    "init": (["--prefix", "task=PRJ", "--prefix", "decision=DEC", "--dry-run"], {"prefix": {"task": "PRJ", "decision": "DEC"}, "dry_run": True}),
+    "init": (["--prefix", "task=PRJ", "--prefix", "decision=DEC", "--dry-run", "--merge-settings"], {"prefix": {"task": "PRJ", "decision": "DEC"}, "dry_run": True, "merge_settings": True}),
     "session_start": ([], {}),
     "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--owed", "o"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "owed": ["o"]}),
     "session_pause": (["--rows", "r", "--deferred", "d"], {"rows": "r", "deferred": "d"}),

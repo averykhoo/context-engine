@@ -61,8 +61,8 @@ def _plan_then(monkeypatch, act):
     """Run ``act`` after init's plan and before its writes: another writer in that window."""
     real = B.plan
 
-    def plan(root, prefixes=None):
-        out = real(root, prefixes)
+    def plan(root, prefixes=None, settings=""):
+        out = real(root, prefixes, settings)
         act(Path(root))
         return out
 
@@ -149,7 +149,7 @@ def test_the_hook_command_runs_orient_through_a_shell(tmp_path):
 def test_a_rerun_finds_its_own_hook_and_a_gitignore_that_misses_the_settings_file_is_named(tmp_path):
     B.init(tmp_path)
     again = B.init(tmp_path)
-    assert again.startswith("init: created 0") and f"{B.SETTINGS}," in again and "add the SessionStart hook" not in again, again
+    assert again.startswith("init: created 0") and f"{B.SETTINGS} (holds the orient hook)," in again, again
     other = tmp_path / "other"
     (other / ".claude").mkdir(parents=True)
     (other / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
@@ -159,21 +159,98 @@ def test_a_rerun_finds_its_own_hook_and_a_gitignore_that_misses_the_settings_fil
     (other / B.SETTINGS_IGNORE).write_bytes(b"/agents.local/\r\nsettings.local.json\r\n")
     (other / B.SETTINGS).unlink()
     assert "does not ignore" not in B.init(other)
-    for broken in (b"{not json", b'{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "echo orient"}]}]}}', b"[]"):
-        (other / B.SETTINGS).write_bytes(broken)
-        assert "add the SessionStart hook to it by hand" in B.init(other), broken
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(other, merge_settings=True), "a merge finds the hook already there"
+
+
+# -- an existing settings file: the hook goes in only with the owner's yes (DEC-32) -----------
+
+GRANTS = '{\n  "permissions": {\n    "allow": [\n      "Bash(git status)"\n    ],\n    "deny": []\n  },\n  "hooks": {\n    "PreToolUse": [\n      {\n        "matcher": "Bash",\n        "hooks": [\n          {\n            "type": "command",\n            "command": "echo pre"\n          }\n        ]\n      }\n    ]\n  },\n  "model": "opus \\u00e9"\n}\n'
+
+
+def _settings(root: Path, text: str = GRANTS) -> Path:
+    (root / ".claude").mkdir(exist_ok=True)
+    p = root / B.SETTINGS
+    p.write_bytes(text.encode())
+    return p
 
 
 @pytest.mark.criterion("AC-57")
-def test_init_never_touches_an_existing_local_settings_file(tmp_path):
-    (tmp_path / ".claude").mkdir()
-    grants = b'{"permissions": {"allow": ["Bash(git status)"]}}\n'
-    (tmp_path / B.SETTINGS).write_bytes(grants)
-    out = B.init(tmp_path)
-    assert (tmp_path / B.SETTINGS).read_bytes() == grants
-    assert f"{B.SETTINGS} (add the SessionStart hook to it by hand: kit README § Hook)" in out, out
+def test_an_existing_settings_file_without_the_hook_refuses_showing_the_change_and_writes_nothing(tmp_path):
+    import json
+
+    p = _settings(tmp_path)
+    for dry in (False, True):
+        with pytest.raises(Refusal) as e:
+            B.init(tmp_path, dry_run=dry)
+        assert e.value.message.startswith(f"{B.SETTINGS} exists, so the hook goes into it: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart and change nothing else")
+        assert "ask" in e.value.remedy and "--merge-settings" in e.value.remedy and "--skip-settings" in e.value.remedy
+    assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"], "a refusal writes nothing at all"
+    out = B.init(tmp_path, skip_settings=True)
+    assert p.read_bytes() == GRANTS.encode() and f"{B.SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)" in out, out
     assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "no ignore file for a settings file init did not write"
     assert "## Hook" in (B.KIT / "README.md").read_text(encoding="utf-8"), "the remedy names a section that exists"
+    with pytest.raises(Refusal, match="contradict"):
+        B.init(tmp_path, merge_settings=True, skip_settings=True)
+
+
+@pytest.mark.criterion("AC-57")
+@pytest.mark.parametrize("crlf", [False, True])
+def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_is_idempotent(tmp_path, crlf):
+    import json
+
+    old = GRANTS.replace("\n", "\r\n") if crlf else GRANTS
+    p = _settings(tmp_path, old)
+    out = B.init(tmp_path, merge_settings=True)
+    assert f"{B.SETTINGS} (the orient hook merged in)" in out.split("; skipped")[0], out
+    new = p.read_bytes().decode()
+    assert ("\n" not in new.replace("\r\n", "")) if crlf else ("\r" not in new), "the file's line endings are kept"
+    before, after = json.loads(old), json.loads(new)
+    assert list(after) == list(before) and list(after["hooks"]) == ["PreToolUse", "SessionStart"]
+    assert after["hooks"]["SessionStart"] == [B.hook_entry(tmp_path)]
+    after["hooks"].pop("SessionStart")
+    assert after == before, "nothing else changed"
+    assert "opus é" in new, "non-ASCII stays as it was written"
+    assert not list((tmp_path / ".claude").glob("*.tmp")), "the atomic write leaves no temp file"
+    again = B.init(tmp_path, merge_settings=True)
+    assert p.read_bytes().decode() == new and f"{B.SETTINGS} (holds the orient hook)" in again, again
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path), "with the hook there, no flag is needed"
+    other = json.dumps({"hooks": {"SessionStart": [{"matcher": "clear", "hooks": [{"type": "command", "command": "echo hi"}]}]}})
+    x = tmp_path / "x"
+    x.mkdir()
+    _settings(x, other)
+    B.init(x, merge_settings=True)
+    starts = json.loads((x / B.SETTINGS).read_text(encoding="utf-8"))["hooks"]["SessionStart"]
+    assert starts == [json.loads(other)["hooks"]["SessionStart"][0], B.hook_entry(x)], "an existing SessionStart entry is kept, first"
+
+
+@pytest.mark.criterion("AC-57")
+@pytest.mark.parametrize("text, says", [
+    ("{not json", "is not JSON init can merge into"),
+    ('{"permissions": {"allow": ["A"]}, "permissions": {"allow": []}}', "the key 'permissions' appears twice"),
+    ("[]", "has no object at the top"),
+    ('{"hooks": []}', "has no object at the top, at `hooks`"),
+    ('{"hooks": {"SessionStart": {}}}', "a list at `hooks.SessionStart`"),
+])
+def test_merge_settings_refuses_what_it_cannot_merge_into_and_leaves_it_untouched(tmp_path, text, says):
+    p = _settings(tmp_path, text)
+    with pytest.raises(Refusal, match=re.escape(says)) as e:
+        B.init(tmp_path, merge_settings=True)
+    assert "left untouched" in e.value.message and "--skip-settings" in e.value.remedy
+    assert p.read_bytes() == text.encode()
+    p.write_bytes(b'{"a": "\xe9"}')
+    with pytest.raises(Refusal, match="is not UTF-8"):
+        B.init(tmp_path, merge_settings=True)
+
+
+@pytest.mark.criterion("AC-57")
+def test_merge_settings_refuses_a_settings_file_changed_after_its_plan_and_keeps_that_change(tmp_path, monkeypatch):
+    p = _settings(tmp_path)
+    granted = GRANTS.replace('"Bash(git status)"', '"Bash(git status)", "Bash(ls)"')
+    _plan_then(monkeypatch, lambda root: (root / B.SETTINGS).write_bytes(granted.encode()))
+    with pytest.raises(Refusal, match=re.escape(f"{B.SETTINGS} changed while init ran, so nothing was written to it")):
+        B.init(tmp_path, merge_settings=True)
+    assert p.read_bytes() == granted.encode(), "the grant Claude Code wrote meanwhile is kept"
+    assert not list((tmp_path / ".claude").glob("*.tmp"))
 
 
 @pytest.mark.criterion("AC-57")

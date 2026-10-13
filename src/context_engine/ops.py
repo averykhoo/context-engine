@@ -71,9 +71,9 @@ def _rel(e: Engine, path) -> str:
 
 
 @op(write=True, engine=False)
-def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: bool = False) -> tuple[int, str]:
-    """Write the adoption kit's missing files into the repo (config, contract block, skeletons); never overwrites. `prefix` maps kind -> id prefix."""
-    return 0, bootstrap.init(root, prefix or {}, dry_run=dry_run)
+def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: bool = False, merge_settings: bool = False, skip_settings: bool = False) -> tuple[int, str]:
+    """Write the adoption kit's missing files into the repo (config, bootloader, contract, hook, skeletons); never overwrites. `prefix` maps kind -> id prefix. An existing .claude/settings.local.json without the hook refuses until the owner chooses: merge_settings (yes) or skip_settings (no)."""
+    return 0, bootstrap.init(root, prefix or {}, dry_run=dry_run, merge_settings=merge_settings, skip_settings=skip_settings)
 
 
 # -- sessions (FRAMEWORK §6.1, §6.3, §6.4) ---------------------------------------------

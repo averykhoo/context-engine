@@ -980,8 +980,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    upgrade to replace (kit README § Upgrade); never add a second block. Copy the kit's
    `contract.md` to `docs/framework/contract.md` if absent. If `.claude/settings.local.json` is
    absent, write it with the `SessionStart` hook from the kit README § Hook (this machine's
-   absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too;
-   if it exists, add the hook to it by hand, keeping every other key.
+   absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too.
+   If it exists and has no such hook, it holds the owner's grants: show the owner the entry and
+   ask; with a yes, add it to `hooks.SessionStart`, keeping every other key and its order (the
+   engine's `--merge-settings`); with a no, leave it (`--skip-settings`).
 5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/evidence` and `tasks`
    that does not exist, create it with an empty `.gitkeep`. Create
    `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.

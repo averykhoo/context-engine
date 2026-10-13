@@ -64,7 +64,7 @@ S = [
     ("contract-orient", KIT + "contract.md", "orient` if it is not in your context", "orient` when you like", T + " -k starts_a_session_alone"),  # CE-38
     ("banner-show", "src/context_engine/ops.py", 'return 0, f"banner none hash {L.NO_BANNER}', 'return 0, f"no banner ({L.NO_BANNER})', T + " -k first_banner"),
     # init refuses a file created mid-run (design review residual narrowed, 2026-10-12b)
-    ("create-x", BS, '        mode = "x"  # create only', '        mode = "w"  # create only', T + " -k created_after_its_plan"),
+    ("create-x", BS, '    mode = "x"  # create only', '    mode = "w"  # create only', T + " -k created_after_its_plan"),
     ("claude-recheck", BS, "        if now != seen[rel]:\n", "        if False:\n", T + " -k edited_after_its_plan"),
     ("claude-seen", BS, "            seen[CONTRACT_TARGET] = old\n", "", T + " -k edited_after_its_plan"),
 ]

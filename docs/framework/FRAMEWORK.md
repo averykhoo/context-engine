@@ -1201,7 +1201,9 @@ file: an upgrade replaces it whole, G-D0 fails when it differs from the installe
 and the repo's own rules (its gate command among them) live in `CLAUDE.md` outside the markers.
 A `SessionStart` hook runs `orient`, so the session-start read does not rest on the agent
 obeying a rule; its command names the machine's engine interpreter, so it lives in the
-machine-local `.claude/settings.local.json`. **Standing permissions stay in owner-loaded files**
+machine-local `.claude/settings.local.json`. That file holds the owner's permission grants, so
+an existing one gains the hook only with the owner's yes (`init --merge-settings`), and nothing
+else in it changes. **Standing permissions stay in owner-loaded files**
 (`CLAUDE.md` and what it imports; harness permissions in the settings files), never in MCP
 instructions or `orient` output: an agent rightly discounts a grant that arrives as tool output.
 Procedure may come from any of the three; a grant may not.
