@@ -798,7 +798,9 @@ class Engine:
         problems = [] if "G-I2" in off else G.story_problems(fields)
         known, bad = G.known_goals(self)
         if known is not None and "G-I1" not in off:
-            problems += [b.message for b in bad] + G.goal_problems(fields.get("goals"), known, legacy=False)
+            if not known:  # the charter is missing or yields no goal: no story's goals can be checked
+                raise Refusal(f"no story can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
+            problems += G.goal_problems(fields.get("goals"), known, legacy=False)  # the charter's own reds are lint's (G-I1)
         if problems:
             raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed, retired, and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 

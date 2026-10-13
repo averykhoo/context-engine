@@ -916,7 +916,7 @@ def goals(e: Engine) -> list[Failure]:
         if doc.get("story_status") == "retired":
             continue
         for p in goal_problems(doc.get("goals"), known):
-            out.append(Failure("G-I1", rel, f"{rid} {p}", "a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again and retire this one"))
+            out.append(Failure("G-I1", rel, f"{rid} {p}", "a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again (`record new story`) and file a task to retire this one: no op or runbook step retires a story yet"))
         served |= {goal_id(v) for v in D.as_list(doc.get("goals"))}
     for gid in sorted(known - served, key=lambda x: int(x[2:])):
         out.append(Failure("G-I1", g.charter, f"goal {gid} is served by no story", f"record the owner's story for it (`record new story ... --set goals=[{gid}]`), or ask the owner whether the goal still stands (FRAMEWORK §3.1)"))
@@ -932,7 +932,7 @@ def story_fields(e: Engine) -> list[Failure]:
     Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), and `via`."""
     if not e.store.config.guards.stories:
         return []
-    remedy = "a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status, and retire this one"
+    remedy = "a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status (`record new story`) and file a task to retire this one: no op or runbook step retires a story yet"
     return [Failure("G-I2", rel, f"{rid}: {p}", remedy) for rid, rel, doc in _stories(e) for p in story_problems(doc)]
 
 

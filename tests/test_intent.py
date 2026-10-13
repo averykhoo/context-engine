@@ -165,6 +165,21 @@ def test_record_new_story_refuses_bad_provenance_and_goals_before_writing(chain)
 
 
 @pytest.mark.criterion("AC-66")
+def test_record_new_story_leaves_the_charters_own_reds_to_lint_unless_no_goal_can_be_read(chain):
+    """A legacy or doubled charter goal id is lint's red against the charter, not a refusal of a
+    sound story; a charter that yields no goal refuses, naming the charter and its remedy."""
+    ok = {"actor": "owner", "date": "2026-10-13", "story_status": "live", "goals": "[G-1]"}
+    edit(chain, "docs/charter.md", "| G-2 | two |", "| G2 | two |\n| G-1 | again |")
+    assert make(chain).record_new("story", "Sound", "words", ok, **W).id == "US-3"
+    write(chain, "docs/charter.md", "# Charter\n\n| # | Goal |\n|---|---|\n| Goal 1 | reworded |\n")
+    with pytest.raises(Refusal, match=r"no story can be checked against the charter: docs/charter\.md: no goal rows.*Remedy: give each goal a row led by its id"):
+        make(chain).record_new("story", "Blocked", "words", ok, **W)
+    with pytest.raises(Refusal, match=r"context\.toml: \[guards\] charter names docs/gone\.md, which does not exist\. Remedy: fix the path"):
+        make(chain, charter="docs/gone.md").record_new("story", "Blocked", "words", ok, **W)
+    assert sorted(p.name for p in (chain / "docs/stories").iterdir()) == ["US-1-words.md", "US-2-words.md", "US-3-sound.md"]
+
+
+@pytest.mark.criterion("AC-66")
 def test_record_new_story_without_a_date_is_dated_today_before_the_checks_run(chain):
     """The intake command passes no date (CLAUDE.md § Rituals): a required date-typed key is
     filled with today (AC-25) before G-I2's write-time twin reads it, so it is not refused."""
