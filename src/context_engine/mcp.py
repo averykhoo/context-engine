@@ -35,7 +35,11 @@ from .errors import Refusal
 NAME = "context-engine"  # DEC-15
 INSTRUCTIONS = (
     "Records and working state for this repo. Start every session with session_start(actor=...), "
-    "then orient. Writes return one line; reads are capped and say where the rest is."
+    "then orient. Writes return one line; reads are capped and say where the rest is. "
+    # DEC-30: asking for a permission is procedure, so it may come from here; a grant may not
+    "When a task would go better as a multi-agent workflow and your instructions do not already "
+    "approve one, ask the owner to opt in by typing \"ultracode\" (the keyword counts only when "
+    "the owner types it)."
 )
 
 

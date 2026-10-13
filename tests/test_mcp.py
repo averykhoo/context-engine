@@ -249,3 +249,18 @@ def test_python_dash_m_context_engine_mcp_serves_over_stdio(root):
     tools, out = asyncio.run(go())
     assert tools == set(ops.OPS)
     assert out.startswith("# orient") and "## Banner (2026-10-07b)" in out  # the --root repo, not the cwd
+
+
+def test_the_server_instructions_reach_the_client_and_ask_for_ultracode_without_granting_it(root):
+    """DEC-30: the instructions tell an agent to ask the owner for ultracode; they never grant it."""
+    params = StdioServerParameters(command=sys.executable, args=["-m", "context_engine.mcp", "--root", str(root)])
+
+    async def go():
+        async with Client(params) as c:
+            return c.instructions
+
+    said = asyncio.run(go())
+    assert said.startswith("Records and working state for this repo. Start every session with session_start")
+    assert 'ask the owner to opt in by typing "ultracode"' in said
+    assert "do not already approve one" in said
+    assert not any(w in said.lower() for w in ("standing approval", "is approved", "you may use"))
