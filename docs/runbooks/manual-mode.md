@@ -482,7 +482,8 @@ register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 c
 A message is required, and the item must be closed. **Never reopen an owner question that
 carries `answered:`**, and never delete its `answered:`: its answer is a decision (the one
 `answered: {decision: D-n}` names). To change the answer, `record amend D-n` or
-`decision supersede D-n <new>`; for a follow-up, `ask new` citing ASK-n and D-n. A question
+`decision supersede D-n <new>`, where D-n is the decision that stands now (follow its
+`superseded_by`); for a follow-up, `ask new` citing ASK-n and D-n. A question
 closed without `answered:` (by a `task close` from before close refused questions) may be
 reopened: that is its repair. Set `state: open`, set `closed:` to null, delete `status`, and set `moved` and `updated`.
 Append `- <key> (<actor>): reopened: <message>`.
@@ -568,7 +569,9 @@ or demoted to LATER.
 
 ### context-engine ask answer
 
-1. The question must be open, and you need the owner's words verbatim.
+1. The question must be open and carry no `answered:`, and you need the owner's words verbatim.
+   Open with `answered:` means someone reopened it by hand (G-W4): restore `state: closed` and
+   `status: deprecated` from git and change the answer through its decision, as in `task reopen`.
 2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
    `decision_status: PROVISIONAL`, `answers: ASK-n`. Body:
    `Owner, answering ASK-n: *"<words>"*`. Stamp its `body_sha` at once.

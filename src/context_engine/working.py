@@ -57,9 +57,11 @@ LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")
 HOUSEKEEPER = "process:housekeep"
 
 
-def answered_remedy(rid: str, dec: str) -> str:
-    """What to do instead of reopening an answered question (CE-31): the answer is a decision."""
-    return (f"the owner's answer is {dec}: change it with `record amend {dec} \"<words>\"` or replace it "
+def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
+    """What to do instead of reopening or re-answering an answered question (CE-31): the answer
+    is a decision. ``dec`` is the decision that stands now; ``was`` the owner's answer it replaced."""
+    now = f"the owner's answer was {was}, superseded by {dec}" if was and was != dec else f"the owner's answer is {dec}"
+    return (f"{now}: change it with `record amend {dec} \"<words>\"` or replace it "
             f"with `decision supersede {dec} <new DEC>`; for a follow-up, `ask new \"<question>\"` citing {rid} and {dec}")
 
 
@@ -465,6 +467,22 @@ class Engine:
             out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own INV id"))
         return out
 
+    def _answered_remedy(self, rid: str, answered: Any) -> str:
+        """`answered_remedy` for the decision that stands now: follow `superseded_by` from the
+        owner's answer, so a remedy never says to supersede a decision already superseded."""
+        was = dec = _answered_by(answered)
+        seen = {dec}
+        while True:
+            try:
+                later = D.as_list(self.store.get(dec).doc.get("superseded_by"))
+            except (Refusal, OSError, UnicodeDecodeError):  # missing or unreadable: name what `answered:` says
+                break
+            if not later or str(later[-1]) in seen:
+                break
+            dec = str(later[-1])
+            seen.add(dec)
+        return answered_remedy(rid, dec, was)
+
     def reopen(self, rid: str, msg: str, *, session: str, actor: str) -> str:
         self._check(session, actor)
         if not msg or not msg.strip():
@@ -478,7 +496,7 @@ class Engine:
                 # CE-31: refuse, never clear `answered:` (that would orphan the decision whose
                 # `answers:` names this question). A question closed without an answer (a
                 # pre-CE-20 `task close`, audit A20) carries no `answered:` and may reopen.
-                raise Refusal(f"{rid} was answered by the owner, and an answered question never reopens (FRAMEWORK §5.3)", answered_remedy(rid, _answered_by(answered)))
+                raise Refusal(f"{rid} was answered by the owner, and an answered question never reopens (FRAMEWORK §5.3)", self._answered_remedy(rid, answered))
 
         self._board_set(rid, {"state": "open", "closed": None, "moved": session}, session=session, actor=actor, unset=("status",), check=check, body=self._log_line(session, actor, f"reopened: {msg.strip()}"), op="reopen")
         return f"{rid}: reopened"
@@ -597,6 +615,11 @@ class Engine:
         q = self.store.get(rid)
         if q.doc.get("state") != "open":
             raise Refusal(f"{rid} is already closed", "record a new decision instead")
+        if q.doc.get("answered"):
+            # CE-31: open and answered is a by-hand reopen (G-W4); a second answer would make two
+            # decisions answer one question and hide the G-W4 failure.
+            raise Refusal(f"{rid} was already answered by the owner ({_answered_by(q.doc.get('answered'))}), so it takes no second answer (FRAMEWORK §5.3)",
+                          f"restore `state: closed` and `status: deprecated` from git; {self._answered_remedy(rid, q.doc.get('answered'))}")
         fields = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
         body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
@@ -1115,7 +1138,7 @@ class Engine:
                 if state == "open" and r.doc.get("answered") and r.kind.name == self.w.question:
                     # CE-31: nothing is open and answered at once (a by-hand reopen of an answered question)
                     dec = _answered_by(r.doc.get("answered"))
-                    out.append(Failure("G-W4", rel, f"{r.id} is open but carries `answered:` ({dec})", f"restore `state: closed` and `status: deprecated` from git: {answered_remedy(r.id, dec)}"))
+                    out.append(Failure("G-W4", rel, f"{r.id} is open but carries `answered:` ({dec})", f"restore `state: closed` and `status: deprecated` from git: {self._answered_remedy(r.id, r.doc.get('answered'))}"))
                 if state == "open":
                     open_.append(r)
             for pri, cap in self.w.caps.items():

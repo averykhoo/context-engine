@@ -1,7 +1,10 @@
 """Working state: session keys and the ledger, the board, owner questions, batons and pauses,
 the banner, orient() and the working-state guards (CE-2, AC-10 to AC-17)."""
 
+import copy
 import datetime as dt
+import re
+import shlex
 import subprocess
 
 import pytest
@@ -337,6 +340,10 @@ def test_task_close_refuses_a_question_and_names_ask_answer(eng):
 def test_task_reopen_refuses_an_answered_question_and_names_the_decision_ops(eng):
     """CE-31: an answered question never reopens; its answer is a decision, so the remedy is
     to amend or supersede that decision, or ask a new question. `answered:` is never cleared."""
+    cfg = copy.deepcopy(CONFIG)  # this test supersedes a decision, as the remedy says
+    cfg["kinds"]["decision"]["enums"]["decision_status"] = ["PROVISIONAL", "BUILT", "SUPERSEDED"]
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    eng = Engine(eng.root, today=lambda: TODAY)
     key = started(eng)
     q = eng.ask_new("Red or blue?", **kw(key))
     eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
@@ -347,6 +354,37 @@ def test_task_reopen_refuses_an_answered_question_and_names_the_decision_ops(eng
     for op in (f"record amend {dec}", f"decision supersede {dec}", "ask new"):
         assert op in exc.value.remedy
     assert q.path.read_bytes() == before  # nothing written, `answered:` kept
+    # the remedy runs as written: each command it names is a real CLI command
+    other = eng.ask_answer(eng.ask_new("Which shade?", **kw(key)).id, "navy", title="Navy", **kw(key)).split()[3].rstrip(",")
+    fill = {'"<words>"': '"navy, not blue"', '"<question>"': '"Which shade of blue?"', "<new DEC>": other}
+    commands = re.findall(r"`((?:record amend|ask new|decision supersede) [^`]*)`", exc.value.remedy)
+    assert len(commands) == 3
+    for command in commands:
+        for k, v in fill.items():
+            command = command.replace(k, v)
+        assert main(["--root", str(eng.root), "--session", key, "--actor", ACTOR, *shlex.split(command)]) == 0, command
+    # after the supersede, the refusal names the decision that stands now, not the replaced one
+    with pytest.raises(Refusal) as exc:
+        eng.reopen(q.id, "again", **kw(key))
+    assert f"was {dec}, superseded by {other}" in exc.value.remedy
+    assert f"decision supersede {other}" in exc.value.remedy and f"decision supersede {dec}" not in exc.value.remedy
+
+
+def test_ask_answer_refuses_an_open_question_that_already_carries_answered(eng):
+    """CE-31: a by-hand reopen leaves a question open and answered (G-W4); a second `ask answer`
+    would make two decisions answer it and hide that G-W4 failure."""
+    key = started(eng)
+    q = eng.ask_new("Red or blue?", **kw(key))
+    eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
+    dec = eng.store.get(q.id).doc.get("answered")["decision"]
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    before = q.path.read_bytes()
+    decisions = sorted(p.name for p in (eng.root / "decisions").glob("*.md"))
+    with pytest.raises(Refusal, match=rf"{q.id} was already answered by the owner \({dec}\)") as exc:
+        eng.ask_answer(q.id, "red", title="Red", **kw(key))
+    assert "restore `state: closed`" in exc.value.remedy and f"record amend {dec}" in exc.value.remedy
+    assert q.path.read_bytes() == before  # `answered:` still names the first decision
+    assert sorted(p.name for p in (eng.root / "decisions").glob("*.md")) == decisions  # no second decision
 
 
 def test_task_set_cannot_clear_answered_to_get_round_the_reopen_refusal(eng):

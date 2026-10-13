@@ -736,6 +736,8 @@ into the flat directory once the schema carries `state` (§11.4).
 - **An answered question never reopens:** `task reopen` refuses a question carrying `answered:`
   and never clears it; the answer changes through its decision (amend or supersede), and a
   follow-up is a new question citing both (CE-31). A question closed without an answer may reopen.
+  `ask answer` likewise refuses a question that already carries `answered:`, so no question is
+  answered by two decisions; the remedies name the decision that stands now, following `superseded_by`.
 - **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
   receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, owner_words)` records
   the words verbatim as a decision with `actor: owner`, closes the question, and reports which
