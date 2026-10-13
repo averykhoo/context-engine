@@ -164,6 +164,19 @@ def test_record_new_story_refuses_bad_provenance_and_goals_before_writing(chain)
     assert off.record_new("story", "Off", "words", {**ok, "goals": "[G-3]", "actor": "claude-code/x"}, **W).id == "US-4"
 
 
+@pytest.mark.criterion("AC-66")
+def test_record_new_story_without_a_date_is_dated_today_before_the_checks_run(chain):
+    """The intake command passes no date (CLAUDE.md § Rituals): a required date-typed key is
+    filled with today (AC-25) before G-I2's write-time twin reads it, so it is not refused."""
+    cfg = config()
+    cfg["kinds"]["story"].update(required=["title", "date"], types={"goals": "list", "date": "date"})
+    (chain / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    e = Engine(chain)
+    rec = e.record_new("story", "Undated", "words", {"actor": "owner", "story_status": "live", "goals": "[G-1]"}, **W)
+    assert rec.id == "US-3" and str(rec.doc.get("date")) == str(e.today())
+    assert reds(e, "G-I2") == []
+
+
 # -- G-T1 ----------------------------------------------------------------------------------
 
 

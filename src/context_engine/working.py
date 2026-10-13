@@ -782,13 +782,13 @@ class Engine:
             raise Refusal("an empty body", "pass the owner's words verbatim (for a story) or the decision and its reason")
         fields: dict[str, Any] = {"title": title}
         fields.update({key: coerce(k, key, v) for key, v in raw.items()})
-        if kind == self.store.config.guards.stories:
-            self._story_checks(fields)
         for key in k.required:
             if key not in fields and k.types.get(key) == "date":
                 fields[key] = self.today()
             elif key not in fields and k.types.get(key) == "key":
                 fields[key] = session
+        if kind == self.store.config.guards.stories:
+            self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
 
     def _story_checks(self, fields: dict[str, Any]) -> None:
@@ -800,7 +800,7 @@ class Engine:
         if known is not None and "G-I1" not in off:
             problems += [b.message for b in bad] + G.goal_problems(fields.get("goals"), known, legacy=False)
         if problems:
-            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), `story_status` from live, unspecified, unconfirmed, retired, and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
+            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed, retired, and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""
