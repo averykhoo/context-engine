@@ -201,3 +201,5 @@ signals = ["CLAUDE.md", "HANDOFF.md", "docs/framework/FRAMEWORK.md", "docs/runbo
 warn_max = 3       # G-D7; provenance: JUDGEMENT, engine default (the global contract keeps about this many per section); wrong if a real trap goes unmarked to stay under it
 bold_caps_max = 5  # G-D7; provenance: JUDGEMENT, engine default; FRAMEWORK holds 3 on 2026-10-12d (its liveness words); wrong as above
 retired_glyphs = []
+coverage_spec = "docs/framework/FRAMEWORK.md"           # G-D12 (CE-30): every component, ritual and G-id it names is owned by the newest map or a board item
+coverage_maps = "docs/evidence/framework-coverage-*.md"  # G-D12: the frozen, dated coverage maps (CE-16); the newest by file-name date is read

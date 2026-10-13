@@ -260,3 +260,101 @@ def test_g_w7_session_keyed_owned_keys_match_the_op_log(tmp_path):
     log.write_text(log.read_text(encoding="utf-8") + "{not json\n", encoding="utf-8")
     assert reds(e, "G-W7") == ["ops.jsonl: 1 lines do not parse as JSON (the first: line 3)"]
     assert [f.guard for f in e.lint(working=True) if f.guard == "G-W7"] == ["G-W7"]  # `lint --working` runs it
+
+
+# -- G-D12 framework coverage ----------------------------------------------------------------
+
+LETTERS = "ABCDEFGHIJKLMNOPQRSTU"  # 21 components, over the floor of 20
+COV = {"coverage_spec": "spec/FRAMEWORK.md", "coverage_maps": "maps/coverage-*.md"}
+
+
+def spec(components=LETTERS, rituals=11, gids=31, drop_section=False, ritual_head="### {n} Ritual {n}", gid="G-D{i}") -> str:
+    rows = "\n".join(f"| {i} | Layer | **Component {c}** | what? |" for i, c in enumerate(components, 1))
+    heads = "\n\n".join(ritual_head.format(n=n) for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)])
+    guards = "\n".join(f"- **{gid.format(i=i)}:** a guard" for i in range(1, gids + 1))
+    return (
+        f"# Spec\n\n## {'Two' if drop_section else '2.'} Components\n\n| # | Layer | Component | Question |\n|---|---|---|---|\n{rows}\n\n"
+        f"## 5. Working\n\n{heads}\n\n## 7. Records\n\n| 1 | Layer | **Not a component** | a numbered bold row outside §2 |\n\n"
+        f"## 8. Guards\n\n{guards}\n\n```\n- **G-Z9:** fenced, not a guard\n```\n"
+    )
+
+
+def cov_map(date="2026-10-12", drop=(), components=LETTERS, rituals=11, gids=31) -> str:
+    rows = [f"| {i} | Component {c} | §2 | EXISTING CE-1 |" for i, c in enumerate(components, 1)]
+    rows[0] = rows[0].replace("Component A", "Component A (the first)")  # a component's cell may add a parenthesis
+    rows += [f"| Ritual | §{n} | PROSE-ONLY |" for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)]]
+    rows += [f"| G-D{i} | §8 | EXISTING CE-14 |" for i in range(1, gids + 1)]
+    rows = [r for r in rows if not any(f"| {d} |" in r or f"| Component {d} |" in r for d in drop)]
+    return f"# Coverage map, {date}\n\nFROZEN {date}.\n\n| Key | § | Class |\n|---|---|---|\n" + "\n".join(rows) + "\n"
+
+
+def covered(tmp_path, **guards) -> Engine:
+    e = make(tmp_path, **{**COV, **guards})
+    write(tmp_path, "spec/FRAMEWORK.md", spec())
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map())
+    return e
+
+
+def unowned(label: str, map_rel: str = "maps/coverage-2026-10-12.md") -> str:
+    return f"spec/FRAMEWORK.md: {label} is owned by no row of {map_rel} and named by no board item"
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_every_component_ritual_and_g_id_is_owned_by_the_map_or_a_board_item_closed_ones_included(tmp_path):
+    e = covered(tmp_path)
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(drop=("G-D7", "§6.1", "B")))  # three map rows deleted
+    assert reds(e, "G-D12") == [unowned("component 'Component B' (§2)"), unowned("ritual §6.1 'Ritual 6.1'"), unowned("guard G-D7")]
+    # a near miss is not a mention: `§6.10` does not name §6.1, `G-D70` does not name G-D7
+    t = e.new("task", "near misses", body="Covers §6.10 and G-D70 and Component BB.", **W)
+    assert len(reds(e, "G-D12")) == 3
+    # a board item naming them owns them, and still does once it is closed
+    e.comment(t.id, "Builds G-D7 and §6.1 for Component B.", **W)
+    e.close(t.id, "done in abc123", **W)
+    assert e.store.read(t.path).get("state") == "closed"
+    assert reds(e, "G-D12") == []
+    # a G-id the spec gains that nothing owns
+    write(tmp_path, "spec/FRAMEWORK.md", spec().replace("## 8. Guards\n", "## 8. Guards\n\n- **G-Q1:** new and unowned\n"))
+    [red] = [f for f in e.lint() if f.guard == "G-D12"]
+    assert f"{red.path}: {red.message}" == unowned("guard G-Q1")
+    assert red.remedy.startswith("file a board item that names G-Q1 (`task new`), or write a new dated coverage map")
+    assert reds(make(tmp_path, off=["G-D12"], **COV), "G-D12") == []
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_reads_the_newest_dated_map_and_refuses_an_undated_one(tmp_path):
+    e = covered(tmp_path)
+    write(tmp_path, "maps/coverage-2026-10-13.md", cov_map("2026-10-13", drop=("G-D7",)))  # newer, a row short
+    assert reds(e, "G-D12") == [unowned("guard G-D7", "maps/coverage-2026-10-13.md")]
+    write(tmp_path, "maps/coverage-2026-10-13b.md", cov_map("2026-10-13b"))  # a later session the same day
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-13b.md", cov_map("2026-10-13b", drop=("G-D9",)))
+    assert reds(e, "G-D12") == [unowned("guard G-D9", "maps/coverage-2026-10-13b.md")]
+    write(tmp_path, "maps/coverage-final.md", cov_map())
+    assert reds(e, "G-D12") == ["maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told"]
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_is_red_when_a_class_extracts_under_its_floor_so_a_reworded_spec_cannot_pass_by_finding_nothing(tmp_path):
+    e = covered(tmp_path)
+    floor = "the spec's format no longer matches the pattern, so they would go unchecked"
+    for text, red in [
+        (spec(drop_section=True), f"0 components extracted, under the floor of 20: {floor}"),  # §2's heading reworded
+        (spec(components=LETTERS[:19]), f"19 components extracted, under the floor of 20: {floor}"),
+        (spec(ritual_head="### Ritual {n}"), f"0 rituals extracted, under the floor of 10: {floor}"),  # numbers dropped from headings
+        (spec(gid="GD{i}"), f"0 G-ids extracted, under the floor of 30: {floor}"),  # the id format changed
+    ]:
+        write(tmp_path, "spec/FRAMEWORK.md", text)
+        assert reds(e, "G-D12") == [f"spec/FRAMEWORK.md: {red}"]
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_is_off_while_both_paths_are_unset_and_red_on_one_unset_or_a_missing_path(tmp_path):
+    e = make(tmp_path)  # neither set: off, though there is no spec and no map
+    assert reds(e, "G-D12") == []
+    assert reds(make(tmp_path, coverage_spec="spec/FRAMEWORK.md"), "G-D12") == ["context.toml: [guards] sets coverage_spec but not coverage_maps"]
+    assert reds(make(tmp_path, coverage_maps="maps/*.md"), "G-D12") == ["context.toml: [guards] sets coverage_maps but not coverage_spec"]
+    assert reds(make(tmp_path, **COV), "G-D12") == [
+        "context.toml: [guards] coverage_spec names spec/FRAMEWORK.md, which does not exist",
+        "context.toml: [guards] coverage_maps matches no file (maps/coverage-*.md)",
+    ]

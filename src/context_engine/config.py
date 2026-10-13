@@ -18,7 +18,7 @@ FIELD_TYPES = ("str", "date", "key", "list", "int")  # `key` is a session key, e
 CONFIG_NAME = "context.toml"
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
-    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-R1", "G-T3",
+    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1", "G-T3",
     "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W12", "G-W13",
 )
 
@@ -92,6 +92,8 @@ class Guards:
     warn_max: int = 3  # G-D7: ⚠ per file
     bold_caps_max: int = 5  # G-D7: bold all-caps spans (`**NEVER**`) per file
     retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
+    coverage_spec: str = ""  # G-D12: the framework spec whose components, rituals and G-ids must be owned; unset (with coverage_maps) is off
+    coverage_maps: str = ""  # G-D12: a glob of dated coverage maps; the newest by the date in its file name is read
 
 
 @dataclass(frozen=True)

@@ -6,6 +6,7 @@ check (P7). ``lint`` runs them all; ``Engine.lint`` drops the ids ``[guards] off
 
 What a doc guard reads is configured, never guessed: G-D1's caps sit on ``[[routes]]``, and G-D3,
 G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty checks nothing.
+G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while neither is set.
 G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records.
 
 Not here (FRAMEWORK §8, with their homes): G-D4 liveness and G-D5 typed numbers, G-T5 mutation
@@ -51,7 +52,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", "__pycache__", "node_modules", ".ve
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e)
+    return caps(e) + ids(e) + links(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -558,4 +559,129 @@ def tool_owned(e: Engine) -> list[Failure]:
                     out.append(Failure("G-W7", rel, f"`{k}: {v}`, but the newest operation that wrote it ({op.get('op')}, {op.get('at', '?')}) was in session {op.get('session')}", f"restore `{k}` from git: {k} is changed only by an operation (manual-mode.md § What every write does)"))
             elif first is None or not re.fullmatch(KEY_RE, v) or key_order(v) >= key_order(first):
                 out.append(Failure("G-W7", rel, f"`{k}: {v}`, but no logged operation wrote it", f"restore `{k}` from git, or redo the change with the operation that owns it"))
+    return out
+
+
+# -- G-D12 framework coverage ------------------------------------------------------------
+
+# What G-D12 extracts from the spec, each class with its floor: fewer than the floor means the
+# spec's format changed under the pattern, so the class is red rather than silently unchecked.
+# Floors: provenance: JUDGEMENT, CE-30; FRAMEWORK.md held 23 components, 14 rituals and 41 G-ids
+# on 2026-10-13a (counted by these patterns); wrong if the spec is trimmed below them on purpose.
+COMPONENT_SECTION_RE = re.compile(r"^##\s+2\.\s")  # §2 "The components at a glance": its table
+COMPONENT_RE = re.compile(r"^\|\s*\d+\s*\|[^|]*\|\s*\*\*(?P<name>[^*|]+?)\*\*")  # `| 1 | Intent | **Charter** |`
+RITUAL_RE = re.compile(r"^###\s+(?P<num>5\.6|6\.\d+)\s+(?P<name>.+?)\s*$")  # `### 6.1 Session start`
+GID_RE = re.compile(r"(?<![\w-])G-[A-Z]\d+(?!\w)")  # `G-D3`
+COVERAGE_FLOORS = {"component": 20, "ritual": 10, "G-id": 30}
+MAP_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})([a-z]*)")
+
+
+@dataclass(frozen=True)
+class Owned:
+    """One thing the spec names that something must own: its class, its key, and how to name it."""
+
+    cls: str
+    key: str  # a component's name, `§6.4`, or `G-D3`
+    label: str
+
+    def in_cell(self, cell: str) -> bool:
+        """A map row names it: the cell is the key (a component's cell may add a parenthesis)."""
+        return cell == self.key or (self.cls == "component" and cell.startswith(self.key + " ("))
+
+    def in_text(self, text: str) -> bool:
+        """A board item names it: the key as a word (`§6.1` is not `§6.13`; `G-D1` is not `G-D10`)."""
+        return re.search(rf"(?<![\w-]){re.escape(self.key)}(?!\w|\.\d)", text) is not None
+
+
+def spec_items(text: str) -> dict[str, list[Owned]]:
+    """Every component (§2's table), ritual (§5.6 and §6.n headings) and G-id the spec names, by
+    class, outside fenced code; each key once, in order of first appearance."""
+    out: dict[str, list[Owned]] = {c: [] for c in COVERAGE_FLOORS}
+    seen: set[tuple[str, str]] = set()
+
+    def add(item: Owned) -> None:
+        if (item.cls, item.key) not in seen:
+            seen.add((item.cls, item.key))
+            out[item.cls].append(item)
+
+    section = False
+    for _, line in prose(text):
+        h = HEADING_RE.match(line)
+        if h and len(h.group(1)) <= 2:
+            section = bool(COMPONENT_SECTION_RE.match(line))
+        m = COMPONENT_RE.match(line)
+        if section and m:
+            name = m["name"].strip()
+            add(Owned("component", name, f"component {name!r} (§2)"))
+        m = RITUAL_RE.match(line)
+        if m:
+            add(Owned("ritual", f"§{m['num']}", f"ritual §{m['num']} {m['name']!r}"))
+        for gid in GID_RE.findall(line):
+            add(Owned("G-id", gid, f"guard {gid}"))
+    return out
+
+
+def coverage_maps(root: Path, pattern: str) -> tuple[list[Path], list[Path]]:
+    """(the maps the glob matches, newest first by the date and letter in the file name; the
+    matches with no date in their name)."""
+    dated, undated = [], []
+    for p in root.glob(pattern):
+        if p.is_file():
+            (dated if MAP_DATE_RE.search(p.name) else undated).append(p)
+    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name), reverse=True)
+    return dated, sorted(undated)
+
+
+def map_cells(text: str) -> set[str]:
+    """The first three cells of every table row of a coverage map, stripped."""
+    cells: set[str] = set()
+    for _, line in prose(text):
+        if line.lstrip().startswith("|"):
+            cells.update(c.strip() for c in line.strip().strip("|").split("|")[:3])
+    return cells
+
+
+def coverage(e: Engine) -> list[Failure]:
+    """G-D12: every component (§2's table), ritual (§5.6, §6.n headings) and G-id the spec
+    (`[guards] coverage_spec`) names is owned: a table row of the newest coverage map
+    (`[guards] coverage_maps`, a glob; newest by the date in the file name) names it in one of
+    its first three cells, or a board item, open or closed, names it. Red when a class extracts
+    fewer than its floor (`COVERAGE_FLOORS`), so a reworded format cannot pass by finding nothing;
+    when only one of the two keys is set; when the spec is missing or no map matches; and when a
+    matching map has no date in its name.
+
+    Not checked: whether a board item's mention is ownership or a passing reference (a
+    judgement; the map's one-class-per-row rule carries it), whether a map row's class is right,
+    the rest of the spec (§3, §7 and §9 are context), and maps other than the newest."""
+    g = e.store.config.guards
+    if not (g.coverage_spec or g.coverage_maps):
+        return []
+    off = "or unset both coverage_spec and coverage_maps to switch G-D12 off"
+    if not (g.coverage_spec and g.coverage_maps):
+        have, need = ("coverage_spec", "coverage_maps") if g.coverage_spec else ("coverage_maps", "coverage_spec")
+        return [Failure("G-D12", CONFIG_NAME, f"[guards] sets {have} but not {need}", f"set {need} too, {off}")]
+    out: list[Failure] = []
+    spec = e.root / g.coverage_spec
+    if not spec.is_file():
+        out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_spec names {g.coverage_spec}, which does not exist", f"fix the path, {off}"))
+    maps, undated = coverage_maps(e.root, g.coverage_maps)
+    for p in undated:
+        out.append(Failure("G-D12", p.relative_to(e.root).as_posix(), "matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told", "rename it with its date, or narrow the coverage_maps glob"))
+    if not maps and not undated:
+        out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_maps matches no file ({g.coverage_maps})", f"fix the glob, {off}"))
+    if out:
+        return out
+    items = spec_items(_text(spec))
+    for cls, floor in COVERAGE_FLOORS.items():
+        if len(items[cls]) < floor:
+            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "update COMPONENT_RE, RITUAL_RE or GID_RE in guards.py to the spec's format, or lower COVERAGE_FLOORS with a provenance note if the spec shrank on purpose"))
+    if out:
+        return out
+    map_rel = maps[0].relative_to(e.root).as_posix()
+    cells = map_cells(_text(maps[0]))
+    board = [_text(p) for p in sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})]  # tasks and questions may share a directory
+    for cls in COVERAGE_FLOORS:
+        for item in items[cls]:
+            if not any(item.in_cell(c) for c in cells) and not any(item.in_text(t) for t in board):
+                out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
     return out

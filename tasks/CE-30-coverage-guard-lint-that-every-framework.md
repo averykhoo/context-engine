@@ -9,7 +9,7 @@ deps: [CE-14]
 source: session 2026-10-12b
 created: 2026-10-12
 moved: 2026-10-12e
-updated: 2026-10-12e
+updated: 2026-10-13a
 review: [guard]
 ---
 
@@ -29,3 +29,7 @@ F: goes stale when FRAMEWORK §2, §5.6, §6 or §8 change their heading or id f
 A: one function in `src/context_engine/guards.py`, done by hand from manual-mode.md § context-engine lint (grep the ids, diff against the map and `tasks/`); `[guards] off` silences it with no code change
 M: reuses the guards frame, `Failure` and `[guards]` path scoping from CE-14; extraction patterns live in one place with the sabotage table pointing at them
 E: one guard, one test file section, sabotage rows in the existing table; the remedy names the exact missing id and the two ways to own it
+
+## Log
+
+- 2026-10-13a (claude-code/claude-opus-5-5): Built as G-D12 (guards.py::coverage; [guards] coverage_spec and coverage_maps; AC-56). Not closed yet: review next.

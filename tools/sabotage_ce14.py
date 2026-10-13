@@ -1,7 +1,9 @@
 """CE-14 sabotage table (DEC-11): break what each AC-43 to AC-51 test guards; every run must go red.
+CE-30 added the AC-56 rows (G-D12, framework coverage).
 
-Run from the repo root: `<interpreter> tools/sabotage_ce14.py`. It restores every file it touches,
-byte for byte. The patterns are exact source text from 2026-10-12d; when the code moves, a
+Run from the repo root: `<interpreter> tools/sabotage_ce14.py [AC-n ...]` (no ids: every row). It
+restores every file it touches, byte for byte. The patterns are exact source text from 2026-10-12d
+(the AC-56 rows from 2026-10-13a); when the code moves, a
 pattern stops matching and the script stops with an AssertionError naming it, rather than
 passing quietly. G-T5 (mutation per criterion) replaces this hand table.
 
@@ -26,7 +28,7 @@ S = [
  ("AC-45", G, "            if rid in created:", "            if False:", T + " -k g_d2"),
  ("AC-46", G, "if not here.is_dir() or part not in os.listdir(here):", "if not (here / part).exists():", T + " -k g_d3"),
  ("AC-46", G, "frag not in anchors_of(hit)", "frag in ()", T + " -k g_d3"),
- ("AC-46", G, "missing = symbol_missing(hit, symbol)", "missing = None", T + " -k g_d3"),
+ ("AC-46", G, "        missing = symbol_missing(hit, symbol)\n", "        missing = None\n", T + " -k g_d3"),  # code_ref_problem; code_link_problem has the same call since CE-35
  ("AC-46", G, "        if _deprecated(text):\n            continue", "        if False:\n            continue", T + " -k g_d3"),
  ("AC-46", G, "        if fence:\n            continue", "        if False:\n            continue", T + " -k g_d3"),
  ("AC-47", G, "for n, line in prose(_text(path), history=True):", "for n, line in prose(_text(path)):", T + " -k g_t3"),
@@ -49,9 +51,30 @@ S = [
  # data, not code: this repo's own docs under the new guards (AC-23 runs lint on them)
  ("AC-23", "docs/criteria.md", "# Criteria", "# Criteria `src/context_engine/nowhere.py`", "tests/test_repo_records.py"),
  ("AC-23", "HANDOFF.md", "## Banner (", "## 2026-10-01a notes\n\n## Banner (", "tests/test_repo_records.py"),
+ # CE-30, G-D12 framework coverage (patterns from 2026-10-13a)
+ ("AC-56", G, "            if not any(item.in_cell(c) for c in cells) and not any(item.in_text(t) for t in board):", "            if False:", T + " -k g_d12_every"),
+ ("AC-56", G, "        return cell == self.key or (", "        return True or (", T + " -k g_d12_every"),
+ ("AC-56", G, "(?<![\\w-]){re.escape(self.key)}(?!\\w|\\.\\d)", "(?<![\\w-]){re.escape(self.key)}", T + " -k g_d12_every"),
+ ("AC-56", G, "for p in e.store._files(e.store.config.kind(k))})]", "for p in e.store._files(e.store.config.kind(k))}) if \"state: closed\" not in _text(p)]", T + " -k g_d12_every"),
+ ("AC-56", G, "        if section and m:", "        if m:", T + " -k g_d12_every"),
+ ("AC-56", G, "    for _, line in prose(text):\n        h = HEADING_RE", "    for line in text.split(\"\\n\"):\n        h = HEADING_RE", T + " -k g_d12_every"),
+ ("AC-56", G, "+ tool_owned(e) + coverage(e)", "+ tool_owned(e)", T + " -k g_d12_every"),
+ ("AC-56", G, "    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name), reverse=True)", "    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name))", T + " -k g_d12_reads"),
+ ("AC-56", G, "    for p in undated:\n", "    for p in []:\n", T + " -k g_d12_reads"),
+ ("AC-56", G, "COVERAGE_FLOORS = {\"component\": 20,", "COVERAGE_FLOORS = {\"component\": 0,", T + " -k g_d12_is_red"),
+ ("AC-56", G, " \"ritual\": 10,", " \"ritual\": 0,", T + " -k g_d12_is_red"),
+ ("AC-56", G, " \"G-id\": 30}", " \"G-id\": 0}", T + " -k g_d12_is_red"),
+ ("AC-56", G, "    if not (g.coverage_spec or g.coverage_maps):\n        return []", "    if False:\n        return []", T + " -k g_d12_is_off"),
+ ("AC-56", G, "    if not (g.coverage_spec and g.coverage_maps):", "    if False:", T + " -k g_d12_is_off"),
+ ("AC-56", G, "    if not spec.is_file():", "    if False:", T + " -k g_d12_is_off"),
+ ("AC-56", G, "    if not maps and not undated:", "    if False:", T + " -k g_d12_is_off"),
+ ("AC-56", "docs/evidence/framework-coverage-2026-10-12.md", "| G-V2 | §8.5 | DEFERRED |", "| (row deleted) | §8.5 | DEFERRED |", "tests/test_repo_records.py"),
+ ("AC-56", "docs/framework/FRAMEWORK.md", "- **G-D12:** coverage:", "- **G-Q9:** unowned.\n- **G-D12:** coverage:", "tests/test_repo_records.py"),
+ ("AC-56", "context.toml", "coverage_spec = \"docs/framework/FRAMEWORK.md\"", "coverage_spec = \"docs/framework/FRAMEWORK-renamed.md\"", "tests/test_repo_records.py"),
 ]
+only = set(sys.argv[1:])
 ok = True
-for ac, f, old, new, sel in S:
+for ac, f, old, new, sel in (r for r in S if not only or r[0] in only):
     p = pathlib.Path(f)
     orig = p.read_bytes()
     text = orig.decode("utf-8").replace("\r\n", "\n")  # a CRLF checkout (autocrlf) matches too
