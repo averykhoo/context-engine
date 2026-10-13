@@ -34,7 +34,9 @@ This repo's own test command, as `CLAUDE.md` § Gate names it, then `context-eng
 the repo root. Run it before every commit that touches code, tests or any record, and before
 every push. Lint covers the record schemas, append-only bodies, bundles, the working state, the
 routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
-record or a dead route.
+record or a dead route. How to run it so its result is true, and the test baselines:
+`docs/runbooks/gate.md`. No new test, guard or refusal is believed until it has been seen to
+fail: `docs/runbooks/sabotage.md`.
 
 ## Rituals
 
@@ -81,7 +83,8 @@ pushed into agents, only verdicts kept.
   share the working tree.
 - Push (§6.8): gate before every push; push only with permission; a background CI watcher for
   every push, keyed on the commit hash; the push is not done until the watcher reports; the
-  watcher only watches.
+  watcher only watches. A release also follows `docs/runbooks/release.md`.
+- How to delegate, persist, watch and build in rounds (§6.6): `docs/runbooks/fan-out.md`.
 - Never hand-edit what an operation owns: `body_sha`, `type`, `id`, a board item's `state`,
   `status`, `pri`, `deps`, `moved`, `updated`; a story's or decision's text above
   `## Amendments`.

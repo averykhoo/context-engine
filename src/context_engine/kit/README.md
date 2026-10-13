@@ -15,6 +15,10 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 | `docs/ledger/session-log.md` | `docs/ledger/session-log.md` | the empty session ledger |
 | `docs/runbooks/rituals.md` | `docs/runbooks/rituals.md` | every ritual's steps in order, the engine command and the by-hand step side by side |
 | `docs/runbooks/manual-mode.md` | `docs/runbooks/manual-mode.md` | every engine operation by hand, each step with its why |
+| `docs/runbooks/gate.md` | `docs/runbooks/gate.md` | running the gate so its result is true, and the test baselines |
+| `docs/runbooks/sabotage.md` | `docs/runbooks/sabotage.md` | seeing every new test, guard or refusal fail before believing it |
+| `docs/runbooks/fan-out.md` | `docs/runbooks/fan-out.md` | delegating to agents, workflows, and the build rounds |
+| `docs/runbooks/release.md` | `docs/runbooks/release.md` | tag, publish, confirm, and the fresh-user install trial |
 
 `init` also writes the `SessionStart` hook (§ Hook) and creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
 `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
@@ -139,10 +143,10 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
    kit markers in `CLAUDE.md`, markers included, with the new kit's `bootloader.md` block. **From
    an inline block** (a kit from before the bootloader, whose block holds the rules themselves):
    move its gate command to a `## Gate` section below the end marker first, then replace the
-   block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace
-   `docs/runbooks/rituals.md` and `docs/runbooks/manual-mode.md` with the new kit's copies, unless
-   the repo edited its own (then merge by hand): `init` never overwrites them, so an upgrade is
-   the only time they move.
+   block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace every
+   runbook in `docs/runbooks/` with the new kit's copy, unless the repo edited its own (then merge
+   by hand), and run `init` for any runbook the new kit adds (copying its `[[routes]]` entry from the new
+   `context.toml.template`): `init` never overwrites one, so an upgrade is the only time they move.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).
@@ -156,13 +160,19 @@ run yet are checked by hand (FRAMEWORK §11.1).
 
 ## Runbooks
 
-The kit ships the two by-hand runbooks, and `init` copies them into the repo's `docs/runbooks/`,
-so a repo can run the framework from its own tree with no engine (FRAMEWORK P16):
+The kit ships the runbooks, and `init` copies them into the repo's `docs/runbooks/`, so a repo can
+run the framework from its own tree with no engine (FRAMEWORK P16). Two are the by-hand fallback:
 - `rituals.md`: the order of every ritual (session start, intake, clean close, pause, resume,
   push and CI, bootstrap, foreign reconcile, housekeeping), each step with its engine command, its
   by-hand step and its why. It is the only place the order is written.
 - `manual-mode.md`: every engine operation by hand, with its why; the reference for what the
   engine should have done when it errs.
+
+Four hold method (FRAMEWORK §7.5): `gate.md` (running the gate, and the test baselines),
+`sabotage.md`, `fan-out.md` (delegation and the build rounds) and `release.md`. Each is routed on
+its own in `context.toml`, with caps. None carries a repo value: the repo's test command, suites,
+baselines outside the gate, models and release steps go in `CLAUDE.md`, which the runbooks point
+at.
 
 They are the repo's own copies from then on (see § 4 for upgrades).
 

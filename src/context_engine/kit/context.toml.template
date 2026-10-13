@@ -214,7 +214,46 @@ note = "created by the first engine write"
 component = "Runbooks"
 path = "docs/runbooks"
 mode = "replaced"
-note = "manual-mode: every engine operation by hand (FRAMEWORK §7.5)"
+note = "rituals: every ritual's steps in order; manual-mode: every engine operation by hand (FRAMEWORK §7.5); the method runbooks are routed one by one below"
+
+# The method runbooks (FRAMEWORK §7.5): one route each, so G-R1 is red when one is lost and G-D1
+# keeps each short. They carry no repo values: the repo's own (its test command, suites, models,
+# release steps) go in CLAUDE.md.
+[[routes]]
+component = "Gate runbook"
+path = "docs/runbooks/gate.md"
+mode = "replaced, LIVING"
+note = "running the gate so its result is true, and the test baselines"
+max_lines = 90     # G-D1; provenance: JUDGEMENT, engine default (the kit's copy is about 55 lines); wrong if a method step is left out to stay under it
+max_bytes = 8000   # provenance: JUDGEMENT, engine default; wrong as above
+max_width = 100    # provenance: JUDGEMENT, engine default (the runbooks' prose wrap); wrong if wrapping splits a command mid-line
+
+[[routes]]
+component = "Sabotage runbook"
+path = "docs/runbooks/sabotage.md"
+mode = "replaced, LIVING"
+note = "seeing every new check fail before believing it"
+max_lines = 90     # G-D1; provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_bytes = 8000   # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_width = 100    # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+
+[[routes]]
+component = "Fan-out runbook"
+path = "docs/runbooks/fan-out.md"
+mode = "replaced, LIVING"
+note = "delegation, workflows and the build rounds (FRAMEWORK §6.6)"
+max_lines = 90     # G-D1; provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_bytes = 8000   # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_width = 100    # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+
+[[routes]]
+component = "Release runbook"
+path = "docs/runbooks/release.md"
+mode = "replaced, LIVING"
+note = "tag, publish, confirm, and the fresh-user install trial; a repo that publishes nothing may drop this route and the file"
+max_lines = 90     # G-D1; provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_bytes = 8000   # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_width = 100    # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
 
 [[routes]]
 component = "Evidence"

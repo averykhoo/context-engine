@@ -481,7 +481,7 @@ def test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths():
 
 # -- the runbooks ship in the kit (CE-24) ----------------------------------------------------
 
-RUNBOOKS = ("manual-mode.md", "rituals.md")
+RUNBOOKS = ("manual-mode.md", "rituals.md", "gate.md", "sabotage.md", "fan-out.md", "release.md")
 
 
 @pytest.mark.criterion("AC-37")
@@ -548,7 +548,7 @@ ACTOR, KEY = "claude-code/test", "2026-10-12a"
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 18")
+    assert _cli(tmp_path, "init").startswith("init: created 22")
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)

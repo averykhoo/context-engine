@@ -158,8 +158,46 @@ mode = "append-only, written by the engine"
 [[routes]]
 component = "Runbooks"
 path = "docs/runbooks"
-mode = "replaced only through the kit copy: both files equal src/context_engine/kit/docs/runbooks/ byte for byte (AC-37); AC-21 and AC-36 keep them in step with the CLI and FRAMEWORK §6"
-note = "rituals.md: every ritual in order (US-15); manual-mode.md: every engine operation by hand, with its Why (US-11)"
+mode = "replaced only through the kit copy: every file equals src/context_engine/kit/docs/runbooks/ byte for byte (AC-37); AC-21 and AC-36 keep rituals.md and manual-mode.md in step with the CLI and FRAMEWORK §6"
+note = "rituals.md: every ritual in order (US-15); manual-mode.md: every engine operation by hand, with its Why (US-11); the method runbooks are routed one by one below (CE-26)"
+
+# The method runbooks (FRAMEWORK §7.5, CE-26): one route each, so G-R1 is red when one goes and
+# G-D1 keeps each short. Framework-generic kit copies (AC-71); this repo's values are in CLAUDE.md.
+[[routes]]
+component = "Gate runbook"
+path = "docs/runbooks/gate.md"
+mode = "replaced only through the kit copy (AC-37), LIVING"
+note = "running the gate so its result is true, and the test baselines"
+max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, the longest method runbook 70 lines, plus room for a few rows; wrong if a method step is left out to stay under it
+max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, the largest 4724 bytes, plus the same room; wrong as above
+max_width = 100    # G-D1; provenance: JUDGEMENT 2026-10-13c, the prose wrap of the other runbooks; wrong if wrapping splits a command mid-line
+
+[[routes]]
+component = "Sabotage runbook"
+path = "docs/runbooks/sabotage.md"
+mode = "replaced only through the kit copy (AC-37), LIVING"
+note = "seeing every new check fail before believing it (DEC-11)"
+max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_width = 100    # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+
+[[routes]]
+component = "Fan-out runbook"
+path = "docs/runbooks/fan-out.md"
+mode = "replaced only through the kit copy (AC-37), LIVING"
+note = "delegation, workflows and FRAMEWORK §6.6's build rounds (DEC-16, DEC-17, DEC-18 are the rules)"
+max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_width = 100    # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+
+[[routes]]
+component = "Release runbook"
+path = "docs/runbooks/release.md"
+mode = "replaced only through the kit copy (AC-37), LIVING"
+note = "tag, publish, confirm, and the fresh-user install trial"
+max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_width = 100    # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
 
 [[routes]]
 component = "Adoption kit"

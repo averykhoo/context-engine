@@ -137,6 +137,12 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-69 | G-T6 fails a criterion whose `from` cell names no id, or an id that is no story or decision record | US-2, DEC-33 | tested |
 | AC-70 | G-T1, G-T2 and G-T6 each fail a missing criteria file, a table of criteria with no `status` or source column, a file with no row led by an id, and a row of a table of criteria not led by a plain id (an id at rest is read as written, `AC-05`, and a GFM-escaped `\|` stays in its cell); G-T2 fails a `[guards] tests` path that does not exist, `tests` set without a criteria file, and a claim pattern that matches nothing; each is off while a source it needs is unset | US-2 | tested |
 
+## Method runbooks (CE-26)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-71 | The kit ships the method runbooks FRAMEWORK §7.5 names (`gate.md`, `sabotage.md`, `fan-out.md`, `release.md`), byte-equal to this repo's, and `init` copies them; §7.5 names every runbook the kit ships and the kit ships every runbook §7.5 names; each method runbook declares `mode` and `liveness` (LIVING, ACTIVE-PLAN or FROZEN) in its frontmatter, and has its own `[[routes]]` entry with G-D1 caps both here and in the kit's config template, so an adopted repo that loses one fails lint G-R1 and one that outgrows its cap fails G-D1; and `fan-out.md`'s build rounds are FRAMEWORK §6.6's seven steps, in its order and with its numbers | US-9, US-15 | tested |
+
 ## Drafted for live stories with none (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

@@ -56,6 +56,11 @@ FILES = {
     # the by-hand fallback (P16): every operation, and every ritual in order; the repo's own copy
     "docs/runbooks/manual-mode.md": "docs/runbooks/manual-mode.md",
     "docs/runbooks/rituals.md": "docs/runbooks/rituals.md",
+    # the method runbooks (FRAMEWORK §7.5): framework-generic; the repo's values stay in its CLAUDE.md
+    "docs/runbooks/gate.md": "docs/runbooks/gate.md",
+    "docs/runbooks/sabotage.md": "docs/runbooks/sabotage.md",
+    "docs/runbooks/fan-out.md": "docs/runbooks/fan-out.md",
+    "docs/runbooks/release.md": "docs/runbooks/release.md",
 }
 KEEP = ("docs/decisions", "docs/stories", "docs/working", "docs/evidence", "tasks")  # empty dirs get a .gitkeep
 SELF_IGNORING = (".context", ".scratch")  # each holds a .gitignore of `*`

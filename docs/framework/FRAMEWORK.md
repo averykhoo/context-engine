@@ -1161,7 +1161,8 @@ A single-task request is unaffected.
 6. adversarial review through several lenses;
 7. flip the statuses.
 
-No `git stash`. Workflows are tracked files.
+No `git stash`. Workflows are tracked files. How to run each step, and how to delegate,
+persist and watch: `docs/runbooks/fan-out.md` (§7.5).
 
 **Model choice** is per-repo config (§8.0), with one rule that applies everywhere:
 - **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
@@ -1203,8 +1204,8 @@ the hold and where it is recorded.
 The engine ships an **adoption kit**: text only, as package data beside the engine's code
 (`kit/`), readable in the engine repo too. It holds the config template (`context.toml.template`,
 which is the config schema), the bootloader for `CLAUDE.md` and the contract it imports, the
-`SessionStart` hook, skeletons for the orientation note, charter, criteria and ledger, the two runbooks (`rituals.md` and `manual-mode.md`, so the
-repo can run every ritual by hand from its own tree, P16), and a README with the install,
+`SessionStart` hook, skeletons for the orientation note, charter, criteria and ledger, the runbooks (`rituals.md` and `manual-mode.md`, so the
+repo can run every ritual by hand from its own tree, P16; and the method runbooks of §7.5), and a README with the install,
 bootstrap and upgrade steps. The steps in order: `rituals.md` § Bootstrap.
 
 **The bootloader (CE-38):** an adopted framework must not depend on the owner leaving
@@ -1410,17 +1411,35 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 ### 7.5 Runbooks
 
-Gate, sabotage procedure, fan-out, release, test baselines, and the manual-mode fallback. They
-hold **method**, which survives when the status around it is archived:
+Runbooks hold **method**, which survives when the status around it is archived. Each is one file
+under `docs/runbooks/`, short, and routed (§2); it declares how it changes and how alive it is in
+its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 will check it, CE-33).
 - `docs/runbooks/rituals.md`: every ritual's steps in order, each with its engine command, its
   by-hand step and its why; the only place a ritual's order is written (§6). A test in the engine
   repo checks that every §6 subsection has its steps or says why it has none, and that every
   step names an operation that exists;
 - `docs/runbooks/manual-mode.md`: every engine operation done by hand, each step with its why
   (P16); a test in the engine repo keeps it in step with the CLI;
-- both ship in the adoption kit (§6.9), and `init` copies them into the repo, where they are the
-  repo's own from then on;
-- a testing runbook keeps one dated baseline per suite, and an *unexplained* drop is a blocker.
+- `docs/runbooks/gate.md`: running the gate so its result is true (the exit code, a worktree's
+  code, a red gate), and the **test baselines**: one dated baseline per suite, and an
+  *unexplained* drop is a blocker. The gate's own suite takes its baseline from the newest
+  ledger entry's `guards:` receipt; a suite outside the gate keeps a dated line where the
+  repo's contract names it;
+- `docs/runbooks/sabotage.md`: seeing every new test, guard or refusal fail before believing it
+  (P7), and the traps that make a sabotage pass falsely; the fallback for G-T5;
+- `docs/runbooks/fan-out.md`: delegation, persistence, watchers, worktrees and workflows, and the
+  build rounds of §6.6 step by step, with the same numbers;
+- `docs/runbooks/release.md`: tag, publish, confirm the version is live, and the fresh-user
+  install trial of every published release.
+
+**Generic method, repo values** (CE-26): all six are the framework's. They ship in the adoption
+kit (§6.9) and `init` copies them, so they carry no repo values and no repo ids, and a test in
+the engine repo fails on a leaked id or path. A repo's own values stay in its contract
+(`CLAUDE.md`), which the runbooks point at: its test command and interpreter, its CI workflow,
+its suites and their baselines outside the gate, its models, where its sabotage probes are kept,
+and its release steps, index and declared floor. In the engine repo each runbook is byte-equal
+to its kit copy, so a fix lands in both; in an adopted repo they are the repo's own from `init`
+on, and move only on upgrade.
 
 ---
 
@@ -1799,7 +1818,7 @@ docs/
   decisions/D-n-<slug>.md * # one record per decision; generated index.md
   deviations/              # append-only records (+ optional generated open-gaps view)
   invariants.md            # durable traps; the residual-risk register (`[working] register`, §7.4)
-  runbooks/              * # method: rituals.md (every ritual in order) and manual-mode.md (every engine operation by hand), from the kit
+  runbooks/              * # method: rituals.md (every ritual in order), manual-mode.md (every engine operation by hand), gate, sabotage, fan-out and release (§7.5), from the kit
   evidence/<id>-<topic>-<date>.md *
   ledger/session-log.md  * # session ledger (one file under the engine lock)
   ledger/ops.jsonl         # engine op log, one JSON line per write
@@ -1830,7 +1849,9 @@ tasks/                   * # flat; open and closed side by side, `state:` in fro
 - ledger in its own file;
 - the scratch rule;
 - the fallback runbooks (P16): every ritual in order (`rituals.md`) and every engine operation
-  by hand (`manual-mode.md`), copied from the kit.
+  by hand (`manual-mode.md`), copied from the kit;
+- the method runbooks (§7.5): `gate.md`, `sabotage.md`, `fan-out.md` and `release.md`, copied
+  from the kit.
 
 **Rituals:** intake, start/resume, clean close, pause, bootstrap.
 
@@ -1855,7 +1876,7 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 | a second concurrent session works the board | board size 2 (one file per item) |
 | the note layers, or sessions read it for item detail | board size 3 (tree plus CLI), adopted by trial |
 | a baton survives two sessions | G-W3 |
-| the repo measures things | evidence docs; runbook baselines; G-D5 |
+| the repo measures things | evidence docs; dated baselines (`gate.md`, §7.5); G-D5 |
 | traps accumulate | invariants doc; G-T3 over it |
 | the code deliberately departs from the spec | deviation register; G-T7 |
 | "did the gate pass on this tree?" keeps coming up | G-V1 |
