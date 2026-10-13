@@ -184,3 +184,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a by-hand step has no engine to warn it
 - **control:** collective: manual-mode.md § task close tells the by-hand closer to count NOW after closing a NOW item and ask the owner which to promote; G-W5 reds it at rest
 - **from:** CE-36, session 2026-10-13a
+
+## INV-26: a passing mention of an id in a board item body ("G-D4 is not done here") counts as ownership
+
+- **affects:** every later session, since lint runs in the gate (AC-23); the owner, whose attention a false red costs; every repo the kit deploys to, if the guard ships with `[guards]` defaults
+- **why not eliminated:** telling ownership from mention needs judgement, and a structured owner field on every item would duplicate the map
+- **control:** individual: the map's one-class-per-row rule, redone when FRAMEWORK changes materially
+- **from:** CE-30, session 2026-10-13a
+
+## INV-27: the map is FROZEN, so making the guard green after a FRAMEWORK change means a new dated map or a new board item, never an edit
+
+- **affects:** every later session, since lint runs in the gate (AC-23); the owner, whose attention a false red costs; every repo the kit deploys to, if the guard ships with `[guards]` defaults
+- **why not eliminated:** frozen provenance is never edited (CLAUDE.md)
+- **control:** collective: the remedy text names both routes; filing a board item is one `task new`
+- **from:** CE-30, session 2026-10-13a
