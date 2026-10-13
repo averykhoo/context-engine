@@ -1576,7 +1576,9 @@ charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] cl
 the criterion id), and the criteria file. A guard is off while a source it needs is unset. A set
 path that does not exist is red, and so is a source that yields nothing (no goal row, no
 criterion row, no claim), so a reworded table or a claim pattern that does not fit the repo's
-test syntax cannot pass by finding nothing.
+test syntax cannot pass by finding nothing. So is a row of a goal or criteria table that is not
+led by an id (`G 3`, `**C-4**`), so one reworded row cannot pass unread either. An id at rest
+is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-escaped `\|`.
 
 ### 8.2 Trace and existence guards
 - **G-T1:** every `live` story has a criterion that is not retired, or is `unspecified` and an

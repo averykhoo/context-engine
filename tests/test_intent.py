@@ -262,6 +262,38 @@ def test_a_criteria_file_that_is_missing_unreadable_or_empty_is_red_for_each_gua
 
 
 @pytest.mark.criterion("AC-70")
+def test_a_row_of_a_criteria_table_not_led_by_a_plain_id_is_red_and_a_legacy_id_is_read_verbatim(chain):
+    """Partial extraction: a row the id pattern drops must not pass every guard unread, while the
+    other rows parse. An id stamped before the one form (`AC-05`, `DEC-0007`) is read as written (P3)."""
+    write(chain, "docs/decisions/DEC-0007-x.md", "---\ntype: Decision\nid: DEC-0007\ntitle: t\n---\n\nwhy\n")
+    edit(chain, "docs/criteria.md", "| AC-3 | c | DEC-1 | manual |", "| AC-3 | c | DEC-1 | manual |\n| **AC-4** | d | US-1 | tested |\n| AC-05 | e | US-99 | planned |\n| AC 6 | f | nobody | tested |\n| AC-7 | g | DEC-0007 | planned |")
+    stray = [
+        "docs/criteria.md: line 8: a row of a table of criteria is led by `**AC-4**`, which is not an id, so the row is not read",
+        "docs/criteria.md: line 10: a row of a table of criteria is led by `AC 6`, which is not an id, so the row is not read",
+    ]
+    assert all_reds(make(chain)) == {"G-T1": stray, "G-T2": stray, "G-T6": [*stray, "docs/criteria.md: line 9: AC-05 comes from US-99, which is no story or decision"]}
+    from context_engine import guards as G, working
+    for cell in ("AC-4", "AC-05", "**AC-4**", "AC 6", "`AC-4`", "ac-4", "AC-"):
+        assert bool(G.ROW_ID_RE.fullmatch(cell)) == bool(working.CRITERION_ROW_RE.match(f"| {cell} |")), cell
+
+
+@pytest.mark.criterion("AC-65")
+def test_a_row_of_the_goal_table_not_led_by_a_goal_id_is_red(chain):
+    edit(chain, "docs/charter.md", "| G-2 | two |", "| G-2 | two |\n| G 3 | three |\n| G-04 | four |\n| Goal-5 | five |")
+    assert reds(make(chain), "G-I1") == [
+        "docs/charter.md: line 9: a row of the goal table is led by `G 3`, which is not a goal id, so it is no goal",
+        "docs/charter.md: line 10: a row of the goal table is led by `G-04`, which is not a goal id, so it is no goal",
+        "docs/charter.md: line 11: a row of the goal table is led by `Goal-5`, which is not a goal id, so it is no goal",
+    ]
+
+
+@pytest.mark.criterion("AC-70")
+def test_an_escaped_pipe_stays_inside_its_cell(chain):
+    edit(chain, "docs/criteria.md", "| AC-2 | b | US-2, DEC-1 | planned |", "| AC-2 | `a \\| b` pipes are escaped | US-2, DEC-1 | planned |")
+    assert all_reds(make(chain)) == {}
+
+
+@pytest.mark.criterion("AC-70")
 def test_g_t2_is_red_on_a_missing_tests_path_or_no_claim_and_off_while_tests_is_unset(chain):
     assert reds(make(chain, tests=["tests", "drivers"]), "G-T2") == ["context.toml: [guards] tests names drivers, which does not exist"]
     write(chain, "tests/test_a.py", "def test_a():\n    pass\n")

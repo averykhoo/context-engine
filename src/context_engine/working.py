@@ -35,7 +35,7 @@ from .errors import Refusal
 from .store import ACTOR_RE, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
-CRITERION_ROW_RE = G.CRITERION_ROW_RE  # one criterion-row parser, shared with G-T1, G-T2 and G-T6 (CE-25)
+CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the rows guards.py::ROW_ID_RE reads
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment

@@ -721,8 +721,12 @@ def coverage(e: Engine) -> list[Failure]:
 # -- the intent chain: G-I1, G-I2, G-T1, G-T2, G-T6 (CE-25) -------------------------------
 
 ID_FORM = r"[A-Z]+-[1-9][0-9]*"  # every id the framework mints: a capital prefix, a dash, a number (FRAMEWORK P3)
-ID_RE = re.compile(rf"(?<![\w-]){ID_FORM}(?![\w-])")
-CRITERION_ROW_RE = re.compile(rf"^\|\s*({ID_FORM})\s*\|", re.MULTILINE)  # a criteria table row, by its first cell
+# An id at rest is read verbatim, so one stamped before a repo took up the form (`ADR-0007`)
+# still resolves (P3); the store's ids are `prefix-digits` too (config.py::Kind.id_re).
+READ_FORM = r"[A-Z]+-[0-9]+"
+ID_RE = re.compile(rf"(?<![\w-]){READ_FORM}(?![\w-])")
+ROW_ID_RE = re.compile(READ_FORM)  # a criterion row's whole first cell: the rows working.py::CRITERION_ROW_RE reads
+PIPE_RE = re.compile(r"(?<!\\)\|")  # a cell boundary; a GFM-escaped `\|` stays inside its cell
 GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the one id form
 STORY_STATUSES = ("live", "unspecified", "unconfirmed", "retired")  # FRAMEWORK §3.2
 CRITERION_STATUSES = ("planned", "tested", "manual", "deviates", "retired")  # FRAMEWORK §3.3
@@ -754,7 +758,8 @@ def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]
         last = n
         if not row.startswith("|"):
             continue
-        cells = [c.strip() for c in row.strip("|").split("|")]
+        inner = row[1:-1] if len(row) > 1 and row.endswith("|") and not row.endswith("\\|") else row[1:]
+        cells = [c.strip() for c in PIPE_RE.split(inner)]
         if header is None:
             header = [c.lower() for c in cells]
         elif not all(set(c) <= set("-: ") for c in cells):
@@ -763,10 +768,18 @@ def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]
         yield header, body
 
 
-def charter_goals(text: str) -> list[tuple[int, str, str]]:
+def charter_goals(text: str) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
     """(line number, goal id, the cell as written) for each table row the charter leads with a
-    goal id, in the one form or the legacy one (`goal_id`)."""
-    return [(n, gid, cells[0]) for _, body in tables(text) for n, cells in body if (gid := goal_id(cells[0]))]
+    goal id, in the one form or the legacy one (`goal_id`); and (line number, first cell) of each
+    other row of a table that has goal rows: no goal, and it must not pass unread."""
+    found: list[tuple[int, str, str]] = []
+    strays: list[tuple[int, str]] = []
+    for _, body in tables(text):
+        mine = [(n, cells[0], goal_id(cells[0])) for n, cells in body]
+        if any(gid for _, _, gid in mine):
+            found += [(n, gid, raw) for n, raw, gid in mine if gid]
+            strays += [(n, raw) for n, raw, gid in mine if not gid]
+    return found, strays
 
 
 @dataclass(frozen=True)
@@ -779,21 +792,25 @@ class Criterion:
     status: str
 
 
-def criteria_rows(text: str) -> tuple[list[Criterion], list[str]]:
-    """The criterion rows (a table row whose first cell is an id, `CRITERION_ROW_RE`), and the
-    problems that stop a row being read: a table of criteria with no `status` column or no
-    source column (`from`, `story` or `source`)."""
+def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
+    """The criterion rows (a table row whose whole first cell is an id, `ROW_ID_RE`), and the
+    problems, as (message, remedy), that stop a row being read: a table of criteria with no
+    `status` column or no source column (`from`, `story` or `source`), and a row of a table of
+    criteria not led by a plain id (`**AC-4**`, `AC 6`), which would otherwise pass unread."""
     rows: list[Criterion] = []
-    problems: list[str] = []
+    problems: list[tuple[str, str]] = []
     for header, body in tables(text):
-        mine = [(n, cells) for n, cells in body if CRITERION_ROW_RE.match(f"| {cells[0]} |")]
+        mine = [(n, cells) for n, cells in body if ROW_ID_RE.fullmatch(cells[0])]
         if not mine:
             continue
+        for n, cells in body:
+            if not ROW_ID_RE.fullmatch(cells[0]):
+                problems.append((f"line {n}: a row of a table of criteria is led by `{cells[0]}`, which is not an id, so the row is not read", "lead the row with its id alone and plain (`| AC-4 | ...`), or move the line out of the table (FRAMEWORK §3.3)"))
         src = next((header.index(c) for c in SOURCE_COLUMNS if c in header), None)
         status = header.index("status") if "status" in header else None
         if src is None or status is None:
             missing = "source column (`from`, `story` or `source`)" if src is None else "`status` column"
-            problems.append(f"line {mine[0][0]}: a table of criteria has no {missing}, so its {len(mine)} rows cannot be read")
+            problems.append((f"line {mine[0][0]}: a table of criteria has no {missing}, so its {len(mine)} rows cannot be read", "give the table its `status` and `from` columns (FRAMEWORK §3.3)"))
             continue
         for n, cells in mine:
             src_cell = cells[src] if src < len(cells) else ""
@@ -865,7 +882,9 @@ def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
     if not path.is_file():
         return set(), [Failure("G-I1", CONFIG_NAME, f"[guards] charter names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}")]
     out: list[Failure] = []
-    found = charter_goals(_text(path))
+    found, strays = charter_goals(_text(path))
+    for n, raw in strays:
+        out.append(Failure("G-I1", rel, f"line {n}: a row of the goal table is led by `{raw}`, which is not a goal id, so it is no goal", "lead each goal's row with its id in the one form, G-n (FRAMEWORK P3), or move the row out of the goal table"))
     if not found:
         out.append(Failure("G-I1", rel, "no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked", f"give each goal a row led by its id, G-n (FRAMEWORK §3.1), or {INTENT_OFF}"))
     seen: set[str] = set()
@@ -925,7 +944,7 @@ def _criteria(e: Engine, guard: str) -> tuple[list[Criterion], list[Failure]]:
     if not path.is_file():
         return [], [Failure(guard, CONFIG_NAME, f"[working] criteria names {rel}, which does not exist", "fix the path, or create the criteria file (FRAMEWORK §3.3)")]
     rows, problems = criteria_rows(_text(path))
-    out = [Failure(guard, rel, p, "give the table its `status` and `from` columns (FRAMEWORK §3.3)") for p in problems]
+    out = [Failure(guard, rel, p, remedy) for p, remedy in problems]
     if not rows and not problems:
         out.append(Failure(guard, rel, "no criterion rows: no table row starts with an id (`| AC-1 | ... |`), so nothing is traced", "write the criteria as table rows led by their ids, with `from` and `status` columns (FRAMEWORK §3.3)"))
     return rows, out
