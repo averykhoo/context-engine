@@ -254,3 +254,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** finding a contradiction or classing a criterion KEEP, rewrite or retire is judgement no lint can make (P8)
 - **control:** individual: rituals.md § Intake steps 5 and 6 and the census evidence doc; the next coverage map marks them deliberately prose-only, so G7 counts them
 - **from:** CE-25, session 2026-10-13b
+
+## INV-36: an upgraded repo can lack the method runbooks with lint clean, since init never edits an existing context.toml and the new routes are added by hand while the contract names those files
+
+- **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
+- **why not eliminated:** init does not rewrite an owner's config (DEC-1, DEC-32)
+- **control:** individual: kit README § 4 upgrade step; a lint check that every runbook the kit ships is routed is the follow-up
+- **from:** CE-26, session 2026-10-13c
+
+## INV-37: a repo's own file under a method runbook's name takes the framework runbook's place (init skips it, it gains the route's caps and the contract's pointer)
+
+- **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
+- **why not eliminated:** init never overwrites
+- **control:** individual: kit README § 3 and init's skipped output
+- **from:** CE-26, session 2026-10-13c
+
+## INV-38: adopted runbook copies drift from the kit after init and nothing compares them
+
+- **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
+- **why not eliminated:** they are the repo's own once copied
+- **control:** individual: kit README § 4 upgrade step (continues CE-24's residual)
+- **from:** CE-26, session 2026-10-13c
+
+## INV-39: a runbook's method can be wrong while every check passes, since the tests check shape (set, routes, liveness, step names, leaks), not the method
+
+- **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
+- **why not eliminated:** judging a method is review, not lint (P8)
+- **control:** individual: design review and the three-lens review at build
+- **from:** CE-26, session 2026-10-13c
+
+## INV-40: the leak check is a deny-list, so a new repo-specific id prefix or path form passes until someone adds it
+
+- **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
+- **why not eliminated:** an allow-list of framework id forms is not built
+- **control:** individual: tests/test_kit.py::LEAK, extended when a leak is found
+- **from:** CE-26, session 2026-10-13c

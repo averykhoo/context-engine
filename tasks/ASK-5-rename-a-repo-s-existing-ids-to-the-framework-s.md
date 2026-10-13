@@ -9,8 +9,8 @@ deps: []
 source: session 2026-10-13b
 created: 2026-10-13
 moved: 2026-10-13b
-updated: 2026-10-13b
-last_asked: 2026-10-13b
+updated: 2026-10-13c
+last_asked: 2026-10-13c
 ---
 
 **Question:** When a repo adopts the framework, are its existing ids renamed to the framework's form, or kept as they are?

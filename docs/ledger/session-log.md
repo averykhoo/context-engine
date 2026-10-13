@@ -7,6 +7,13 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-13c · kind: open
+
+- **opened:** 2026-10-13T14:31:46+08:00 by claude-code/claude-opus-5-5
+- **asked:** ASK-5
+
+---
+
 ## 2026-10-13b · kind: close
 
 - **rows:** CE-38 closed (bootloader; INV-28..32), CE-25 closed (intent-chain guards; INV-33..35);

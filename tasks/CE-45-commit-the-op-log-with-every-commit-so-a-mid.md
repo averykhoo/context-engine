@@ -9,7 +9,11 @@ deps: []
 source: session 2026-10-13b
 created: 2026-10-13
 moved: 2026-10-13b
-updated: 2026-10-13b
+updated: 2026-10-13c
 ---
 
 Found 2026-10-13b: per-task commits (2026-10-13a's too) leave docs/ledger/ops.jsonl and the session stub uncommitted until session close, so a clean checkout of any mid-session commit fails lint (G-W7 reads a task's moved against ops.jsonl), and a conversation that dies leaves its op lines dirty in the shared tree for another session's close to sweep up. Options: each engine write commits its own op line by path (FRAMEWORK §5.5 rule 4, today only pause open does); or rituals require the op log in every commit; or G-W7 tolerates an op log behind HEAD. Recommendation: the engine commits its own working-state writes, as §5.5 already intends, with the ritual as the by-hand fallback. 2026-10-13b worked around it by committing ops.jsonl with its commits.
+
+## Log
+
+- 2026-10-13c (claude-code/claude-opus-5-5): 2026-10-13c: owner asked for the NEXT items this session (adhoc has a live agent, so CE-7 waits). Building on branch ce-45 in worktree context-engine-wt/ce-45, taking the item's recommendation (the engine commits its own working-state writes; the ritual is the by-hand fallback).
