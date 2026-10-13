@@ -127,9 +127,10 @@ retired_glyphs = []          # glyphs no file may use any more (G-D7)
 coverage_spec = ""           # G-D12: the framework spec (e.g. docs/framework/FRAMEWORK.md) whose components, rituals and G-ids must be owned; empty with coverage_maps is off. The engine's patterns and floors (20 components, 10 rituals, 30 G-ids) fit FRAMEWORK.md's format: a spec they do not fit stays red, so leave both empty
 coverage_maps = ""           # G-D12: a repo-relative glob of frozen, dated coverage maps (e.g. docs/evidence/framework-coverage-*.md); the newest by file-name date and session letters is read
 # The intent chain (FRAMEWORK §3.4): unset here, because a fresh repo has no goals, stories or tests
-# yet, and a set source that yields nothing is red. Set them at bootstrap, once the charter has
-# the owner's goals: a guard is off while a source it needs is unset (but `charter` without
-# `stories`, or `tests` without [working] criteria, is red: half set).
+# yet, and a set source that yields nothing is red. Set them at bootstrap step 4 (rituals.md),
+# once the goals, the first stories and their criteria are recorded. A guard is off while a
+# source it needs is unset, but `charter` without `stories`, or `tests` without [working]
+# criteria, is red (half set).
 charter = ""                 # G-I1: the charter (docs/charter.md); its table rows led by a goal id (`| G-1 | ... |`) are the goals a story's `goals` may name
 stories = ""                 # G-I1, G-I2, G-T1, G-T6: the kind holding the stories ("story"); G-T1 and G-T6 also read [working] criteria
 tests = []                   # G-T2: files and directories where tests and drivers claim criteria (e.g. ["tests"])

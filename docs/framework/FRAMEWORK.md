@@ -1230,9 +1230,12 @@ Procedure may come from any of the three; a grant may not.
    runbooks, the bootloader appended to `CLAUDE.md`, the contract it imports, and the hook. It
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
-   config, with a provenance note on every cap, sets the intent chain's sources in `[guards]`
-   (§8.1), and checks the id prefixes against ids the repo already uses.
+   config, with a provenance note on every cap, and checks the id prefixes against ids the
+   repo already uses.
 4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
+   Then it sets the intent chain's sources in `[guards]` (§8.1): set before the first stories
+   and criteria are recorded, the guards are red on a source that is still empty, and the first
+   session could not open on a green lint.
 5. First clean close: the guards are green, the ledger entry is `kind: close`, and the first
    `banner set` (with `--seen none`) writes the banner heading.
 
@@ -1843,7 +1846,7 @@ push. The kit's contract (§6.9) states it; the test command itself is in `CLAUD
 `context-engine lint` runs every one (plus the record schemas, G-D11, G-R1 and the other built
 guards of §8). G-I2, G-T1 and G-T2 read the sources `[guards]` names (§8.1), which the kit leaves
 unset because a fresh repo has no goals, stories or tests yet; bootstrap sets them once the
-charter holds the owner's goals (§6.9), and until then they are checked by hand.
+first stories and criteria are recorded (§6.9 step 4), and until then they are checked by hand.
 
 ### 11.2 Add when needed
 

@@ -306,6 +306,28 @@ def test_a_row_of_the_goal_table_not_led_by_a_goal_id_is_red(chain):
     ]
 
 
+def test_bootstrap_sets_the_intent_sources_only_after_the_first_stories_and_criteria():
+    """Set before stories and criteria exist, the guards are red on an empty source, so the
+    bootstrap row that sets them must come after the rows that record them, not before the
+    lint-green row that opens the first session."""
+    from pathlib import Path
+
+    import context_engine
+
+    text = (Path(context_engine.__file__).parent / "kit/docs/runbooks/rituals.md").read_text(encoding="utf-8")
+    rows = [ln for ln in text.split("## Bootstrap", 1)[1].split("\n## ", 1)[0].splitlines() if ln.startswith("| ")]
+
+    def at(needle: str) -> int:
+        hits = [i for i, row in enumerate(rows) if needle in row]
+        assert len(hits) == 1, (needle, hits)
+        return hits[0]
+
+    sets = at("`[guards]` `charter`, `stories` and `tests`")
+    assert sets > at("Lint is green, then open the first session")
+    assert sets > at("Record the owner's charter words and first stories")
+    assert sets > at("Draft the criteria")
+
+
 @pytest.mark.criterion("AC-70")
 def test_an_escaped_pipe_stays_inside_its_cell(chain):
     edit(chain, "docs/criteria.md", "| AC-2 | b | US-2, DEC-1 | planned |", "| AC-2 | `a \\| b` pipes are escaped | US-2, DEC-1 | planned |")
