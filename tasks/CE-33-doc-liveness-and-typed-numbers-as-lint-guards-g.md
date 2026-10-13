@@ -3,13 +3,13 @@ type: Task
 id: CE-33
 title: Doc liveness and typed numbers as lint guards (G-D4, G-D5)
 brief: Measure false reds on this repo before choosing the exemptions; frozen provenance is never edited
-pri: LATER
+pri: NEXT
 state: open
 deps: [CE-14]
 source: session 2026-10-12d
 created: 2026-10-12
-moved: 2026-10-12d
-updated: 2026-10-12d
+moved: 2026-10-13a
+updated: 2026-10-13a
 ---
 
 Split from CE-14 (2026-10-12d), which built the rest of the §8.3 doc guards in `src/context_engine/guards.py` with `[guards]` path lists in context.toml. Both are §11.2-triggered here: the repo keeps evidence docs ("the repo measures things").
