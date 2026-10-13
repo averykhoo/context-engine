@@ -139,7 +139,7 @@ def task_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None
 
 @op(write=True)
 def task_promote(e: Engine, c: Caller, id: str, pri: str) -> tuple[int, str]:
-    """Move an item to another tier; NOW holds exactly one, NEXT at most five."""
+    """Move an item to another tier; NOW holds exactly one, NEXT at most five. Moving the NOW item down while others stay open says G-W5 is red until the owner picks one to promote."""
     return 0, e.promote(id, pri, **c.kw)
 
 
@@ -216,7 +216,7 @@ def ask_later(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 @op(write=True)
 def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str) -> tuple[int, str]:
-    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question."""
+    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. Answering a question at NOW while others stay open says G-W5 is red until the owner picks one to promote."""
     return 0, e.ask_answer(id, words, title=title, **c.kw)
 
 

@@ -318,7 +318,7 @@ class Engine:
                 self._review_ready(rid, rec.doc.body, rec.doc.get("review"))
 
         self._board_set(rid, {"pri": pri, "moved": session}, session=session, actor=actor, check=check, op="promote")
-        return f"{rid}: {old[0]} -> {pri}"
+        return f"{rid}: {old[0]} -> {pri}{self._now_left(old)}"
 
     def dep(self, rid: str, *, session: str, actor: str, add: list[str] = (), remove: list[str] = ()) -> str:
         self._check(session, actor)
@@ -377,12 +377,17 @@ class Engine:
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
 
     def _now_left(self, was: list[str]) -> str:
-        """CE-36: closing a NOW item can leave NOW short while items stay open, which G-W5 reds at
-        the next gate. Say so on the close's line, with the remedy; never refuse, never promote:
-        the next NOW item is the owner's call."""
-        if was != ["NOW"]:
+        """CE-36: taking an item off NOW (`close`, `ask answer`, a demoting `promote`) can leave NOW
+        below its cap while items stay open, which G-W5 reds at the next gate. Say so on the op's
+        line, with the remedy; never refuse, never promote: the next NOW item is the owner's call.
+        Quiet when G-W5 is off, and when NOW is still at or over its cap (refilling is then not
+        the remedy; G-W5 says what is)."""
+        if was != ["NOW"] or "G-W5" in self.store.config.guards.off:
             return ""
         open_ = self._open_board()
+        cap = self.w.caps.get("NOW")
+        if cap is None or sum(r.doc.get("pri") == "NOW" for r in open_) >= cap:
+            return ""
         short = self._now_short(open_)
         if not short:
             return ""
@@ -662,11 +667,16 @@ class Engine:
         body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
         answered = {"on": self.today(), "session": session, "decision": dec.id}
-        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "answered": answered}, session=session, actor=actor, body=self._log_line(session, actor, f"answered by the owner: {dec.id}"), op="ask.answer")
+        was: list[str] = []
+
+        def check(rec: Record) -> None:
+            was.append(str(rec.doc.get("pri")))
+
+        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "answered": answered}, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"answered by the owner: {dec.id}"), op="ask.answer")
         closed = {r.id for r in self.board_heads() if r.doc.get("state") == "closed"}
         freed = [r.id for r in self._open_board() if rid in (r.doc.get("deps") or []) and all(str(d) in closed for d in r.doc.get("deps"))]
         freed += [str(b) for b in (q.doc.get("blocks") or []) if str(b) not in freed]
-        return f"{rid}: answered as {dec.id}, closed; unblocked {_one(freed)}"
+        return f"{rid}: answered as {dec.id}, closed; unblocked {_one(freed)}{self._now_left(was)}"
 
     # -- batons and pauses (FRAMEWORK §5.4) ---------------------------------------------
 

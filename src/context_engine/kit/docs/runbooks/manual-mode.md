@@ -392,7 +392,8 @@ the residual lines out first.
 ### context-engine task promote
 
 Item open; `pri` a valid tier; the target tier has room, not counting the item itself. Set `pri`,
-`moved: <key>`, `updated: <key>`.
+`moved: <key>`, `updated: <key>`. **Moving the NOW item down** can leave NOW short: check NOW as
+in § task close and tell the owner.
 
 **Promoting to NOW an item that carries `review:`** (it is above the threshold, FRAMEWORK §5.2):
 first check its `## Design review` section by hand, and do not promote while any check fails.
@@ -477,7 +478,8 @@ one first.
 than its cap (`[working.caps]`, 1 by default) while any item stays open, G-W5 is red from now
 on: tell the owner, naming the NEXT items (or saying NEXT is empty), and ask which one to
 promote (§ task promote) before you run the gate. Do not pick it yourself. The engine closes
-anyway and says the same at the end of its close line.
+anyway and says the same at the end of its close line. It says nothing when NOW is still at or
+over its cap (G-W5's own remedy applies then) or when `[guards] off` names G-W5.
 
 **Why:** closed items stay in place as records, so links never break. `status:
 deprecated` is the OKF view of the same fact (G-W4). The message says why, e.g. `done in <commit>`.
@@ -592,6 +594,7 @@ or demoted to LATER.
    Append `- <key> (<actor>): answered by the owner: D-n`.
 4. Report what it unblocks: open items whose deps include it and whose deps are now all closed,
    plus everything in its `blocks`.
+5. If the question was at NOW, check NOW as in § task close and tell the owner.
 
 **Why:** an answer is a decision in the owner's own words. It is stamped so the words cannot
 drift, and closing the question points to the decision rather than burying the answer in a log

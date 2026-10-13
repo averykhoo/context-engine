@@ -289,6 +289,85 @@ def test_cli_close_of_the_only_now_item_exits_zero_and_prints_the_warning(eng, c
     assert "G-W5 is red until NOW is refilled" in out and f"`task promote <id> NOW` (NEXT holds {nxt.id})" in out
 
 
+@pytest.mark.criterion("AC-55")
+def test_answering_an_owner_question_at_now_says_g_w5_is_red_like_a_close(eng):
+    """CE-36: `ask answer` closes a board item too; a question at NOW leaves NOW short."""
+    key = started(eng)
+    q = eng.ask_new("Which way?", pri="NOW", **kw(key))
+    nxt = task(eng, key, "Next", pri="NEXT")
+    out = eng.ask_answer(q.id, "this way", title="This way", **kw(key))
+    short = "NOW holds 0 (none); the cap is exactly 1"
+    assert out == (f"{q.id}: answered as DEC-1, closed; unblocked none; G-W5 is red until NOW is refilled: {short}; "
+                   f"ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id})")
+    assert [f.message for f in guards(eng, "G-W5")] == [short]
+    q2 = eng.ask_new("Again?", pri="LATER", **kw(key))
+    assert eng.ask_answer(q2.id, "no", title="No", **kw(key)) == f"{q2.id}: answered as DEC-2, closed; unblocked none"  # not at NOW: not its doing
+    eng.promote(nxt.id, "NOW", **kw(key))
+    assert guards(eng, "G-W5") == []
+
+
+@pytest.mark.criterion("AC-55")
+def test_demoting_the_now_item_says_g_w5_is_red_and_other_moves_say_nothing(eng):
+    """CE-36: moving the NOW item down empties NOW as surely as closing it."""
+    key = started(eng)
+    now = task(eng, key, "Now", pri="NOW")
+    nxt = task(eng, key, "Next", pri="NEXT")
+    out = eng.promote(now.id, "LATER", **kw(key))
+    assert out == (f"{now.id}: NOW -> LATER; G-W5 is red until NOW is refilled: NOW holds 0 (none); the cap is exactly 1; "
+                   f"ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id})")
+    assert eng.promote(nxt.id, "NOW", **kw(key)) == f"{nxt.id}: NEXT -> NOW"
+    assert eng.promote(now.id, "NEXT", **kw(key)) == f"{now.id}: LATER -> NEXT"
+    assert guards(eng, "G-W5") == []
+
+
+def _engine(tmp_path, cfg):
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "ledger.md").write_text(LEDGER, encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text(NOTE.format(key="2026-10-07b"), encoding="utf-8")
+    (tmp_path / "CLAUDE.md").write_text(f"# contract\n\nframework: {FRAMEWORK}\n", encoding="utf-8")
+    return Engine(tmp_path, today=lambda: TODAY)
+
+
+@pytest.mark.criterion("AC-55")
+def test_the_close_says_nothing_of_g_w5_when_it_is_off_or_now_stays_at_or_over_its_cap(tmp_path):
+    """CE-36: the warning speaks for G-W5, so it is quiet when G-W5 is off, and when NOW is still at
+    or over its cap (refilling NOW is then not the remedy). Below a cap of 2 it speaks."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["guards"] = {"off": [*cfg.get("guards", {}).get("off", []), "G-W5"]}
+    e = _engine(tmp_path / "off", cfg)
+    key = started(e)
+    now = task(e, key, "Now", pri="NOW")
+    task(e, key, "Next", pri="NEXT")
+    assert e.close(now.id, "done", **kw(key)) == f"{now.id}: closed (done)"
+    assert guards(e, "G-W5") == []
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["caps"] = {"NOW": 3}
+    e = _engine(tmp_path / "over", cfg)
+    key = started(e)
+    ids = [task(e, key, f"N{i}", pri="NOW").id for i in range(3)]
+    task(e, key, "Next", pri="NEXT")
+    cfg["working"]["caps"] = {"NOW": 1}  # the owner lowers the cap: NOW is over it
+    e = _engine(tmp_path / "over", cfg)
+    assert e.close(ids[0], "done", **kw(key)) == f"{ids[0]}: closed (done)"  # still over: refilling is not the remedy
+    assert [f.message for f in guards(e, "G-W5")] == [f"NOW holds 2 ({ids[1]}, {ids[2]}); the cap is exactly 1"]
+    assert e.close(ids[1], "done", **kw(key)) == f"{ids[1]}: closed (done)"  # back at its cap
+    assert guards(e, "G-W5") == []
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["caps"] = {"NOW": 2}
+    e = _engine(tmp_path / "two", cfg)
+    key = started(e)
+    a, b = task(e, key, "A", pri="NOW"), task(e, key, "B", pri="NOW")
+    nxt = task(e, key, "Next", pri="NEXT")
+    out = e.close(a.id, "done", **kw(key))  # below a cap of 2
+    assert out.endswith(f"G-W5 is red until NOW is refilled: NOW holds 1 ({b.id}); the cap is exactly 2; "
+                        f"ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id})")
+    e.promote(nxt.id, "NOW", **kw(key))  # the remedy it names works
+    assert guards(e, "G-W5") == []
+
+
 @pytest.mark.criterion("AC-12")
 def test_state_and_status_disagreeing_fails_lint(eng):
     key = started(eng)
