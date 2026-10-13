@@ -177,3 +177,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** whether code carries out a decision is a reading judgement no operation can make; the op log `relink` line names session and actor, and the commit diff shows old and new side by side
 - **control:** individual: manual-mode.md § decision relink: relink only to where the same behaviour now lives, in the commit that moves it
 - **from:** CE-35, session 2026-10-13a
+
+## INV-25: a by-hand close (manual mode) or a raw edit still learns of the empty NOW only at the next gate run
+
+- **affects:** the session that closes the only NOW item, which until now learned of the red G-W5 only at its next gate run; the owner, whose call the next NOW item stays; every deployed repo, whose close result line and kit runbook copy change
+- **why not eliminated:** a by-hand step has no engine to warn it
+- **control:** collective: manual-mode.md § task close tells the by-hand closer to count NOW after closing a NOW item and ask the owner which to promote; G-W5 reds it at rest
+- **from:** CE-36, session 2026-10-13a

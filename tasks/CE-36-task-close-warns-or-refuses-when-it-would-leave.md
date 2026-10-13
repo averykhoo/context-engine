@@ -4,13 +4,15 @@ id: CE-36
 title: task close warns or refuses when it would leave NOW empty with NEXT empty
 brief: Closing the only NOW item with NEXT empty turns the gate red on G-W5; say so at close time, with the promote remedy
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-12e
 created: 2026-10-12
 moved: 2026-10-13a
 updated: 2026-10-13a
 review: [shipped]
+status: deprecated
+closed: 2026-10-13a
 ---
 
 Seen 2026-10-12e: closing CE-10 (the only NOW item; NEXT empty since 2026-10-12d) left NOW at 0, and the next gate run was red on G-W5 before anything could be committed. The close itself succeeded silently. Options: refuse unless a successor id is named (e.g. `--then CE-n`), or close and print the G-W5 consequence plus the promote remedy. Picking the next NOW item stays the owner's call either way.
@@ -27,3 +29,7 @@ F: goes stale if G-W5's NOW rule, `[working.caps]` or the close's result line ch
 A: by hand, manual-mode.md § task close says to count NOW after closing a NOW item and, if it is short while anything is open, ask the owner which item to promote before running the gate
 M: one helper, Engine._now_short, read by Engine.close and by G-W5 in Engine.lint; tests close through the engine and the CLI and run lint
 E: reuses G-W5's message and the close line's `; residuals filed as` clause shape; one paragraph in manual-mode § task close (both copies) and one sentence in FRAMEWORK §5.2 Closing
+
+## Log
+
+- 2026-10-13a (claude-code/claude-opus-5-5): closed: done in 896ef8d, dc1c1d3: close, ask answer and a demoting promote warn that G-W5 is red, with the promote remedy; never refuse
