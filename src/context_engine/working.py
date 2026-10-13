@@ -858,14 +858,11 @@ class Engine:
         raise Refusal(f"cannot tell how {target!r} is linked", f"pass --rel, one of {', '.join(LINK_RELS)}")
 
     def _code_exists(self, target: str) -> None:
-        """A `file` or `file::symbol` link: the file exists, case-exact, and names each part of the symbol."""
-        file, _, symbol = target.partition("::")
-        here = G.Files(self.root).case_exact(file)
-        if here is None:
-            raise Refusal(f"{file} does not exist (case-exact) in the repo", "link a file that exists, with its exact case")
-        missing = G.symbol_missing(here, symbol) if symbol else None
-        if missing:
-            raise Refusal(f"{file} has no {missing!r}", "grep for the symbol and link the name that exists")
+        """A `file` or `file::symbol` link names code: a repo file inside the root, case-exact, that
+        names each part of the symbol (guards.py::code_link_problem, the rule G-T3 applies)."""
+        problem = G.code_link_problem(G.Files(self.root), target)
+        if problem:
+            raise Refusal(*problem)
 
     def _criteria(self) -> set[str]:
         """The criterion ids: the first cell of each table row of ``[working] criteria``."""
@@ -935,8 +932,9 @@ class Engine:
         def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
             d = recs[rid].doc
             if d.get("status") == "deprecated":
-                later = ", ".join(D.as_list(d.get("superseded_by"))) or "its successor"
-                raise Refusal(f"{rid} is superseded, so its links are history", f"link the code to the decision that replaced it: `decision link {later} {new}`")
+                later = D.as_list(d.get("superseded_by")) or ["<successor>"]
+                cmds = " or ".join(f"`decision link {s} {new}`" for s in later)
+                raise Refusal(f"{rid} is superseded, so its links are history", f"link the code to the decision that replaced it: {cmds}")
             have = D.as_list(d.get("code"))
             if old not in have:
                 field = next((f for f in D.LINK_FIELDS if old in D.as_list(d.get(f))), None)

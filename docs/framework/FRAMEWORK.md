@@ -1045,7 +1045,7 @@ REJECTED, the link fields, `status`, `answers`, the provenance `actor`, `decided
 it never writes half a link or re-attributes a decision; CE-32), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
 backlink too), `decision.relink(id, old, new)` (moves one `code:` link of a current decision when
-the code moves, the new one checked as `link` checks it; id links never move and a superseded
+the code moves, the new one checked as `link` checks it, so it must name a repo file and symbol, never a blank, a directory or a path outside the repo; id links never move and a superseded
 decision's links are history; CE-35), `decision.find(text, tag, status, links_to)` (one-line rows),
 `decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
 task, criterion, decision or `file::symbol`, the decisions that link it, each with the field
@@ -1533,8 +1533,9 @@ Decisions as records follow once the core holds.
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
   **normative** text of a story, criterion, law doc or invariant exists in the code; history
   notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
-  lists, and the names in backticks there, and the `code:` links of every current decision
-  (a link whose code moved is moved with `decision.relink`, never by hand); HTTP routes are not
+  lists, and the names in backticks there, and the `code:` links of every current decision, by
+  the rule `decision.link` applies (a file inside the repo, written with `/`, and each dotted part
+  of a non-empty symbol; a link whose code moved is moved with `decision.relink`, never by hand); HTTP routes are not
   checked.
 - **G-T4:** structural-claim anchors resolve and their body hashes match the pins; re-pinning
   is an explicit, reviewed act.

@@ -313,6 +313,42 @@ def test_decision_set_runs_from_the_cli_with_set_and_unset(eng):
 # -- link, find, show and why() ------------------------------------------------------------------
 
 
+# Links that name no code (CE-35): each resolves to something under the old check (the root, a
+# directory, a file outside the repo, a whole file for an empty symbol, a Windows-only path).
+NO_CODE = [
+    ("", "names no file"),
+    (".", "names no file"),
+    ("src", "is a directory, not a file"),
+    ("..", "not a path inside the repo"),
+    ("../outside.py::f", "not a path inside the repo"),
+    ("/src/mod.py", "not a path inside the repo"),
+    ("src/mod.py::", "empty symbol part"),
+    ("src/mod.py::Store.", "empty symbol part"),
+    ("src\\mod.py::Store", r"written with `\\`"),
+]
+
+
+def outside(e):
+    """Make `../outside.py::f` resolve from the engine root, so only the inside-the-repo rule refuses it."""
+    (e.root.parent / "outside.py").write_text("def f():\n    pass\n", encoding="utf-8")
+
+
+@pytest.mark.criterion("AC-47")
+def test_lint_g_t3_fails_a_stored_code_link_that_names_no_code(eng):
+    rid = dec(eng)
+    outside(eng)
+
+    def store(recs):
+        recs[rid].doc.set("code", [t for t, _ in NO_CODE])
+        return {rid: ["code"]}
+
+    eng.store.update([rid], store, session=S, actor=ACTOR, op="link")  # a hand edit, as G-T3 would meet it
+    msgs = [f.message for f in eng.lint() if f.guard == "G-T3"]
+    assert len(msgs) == len(NO_CODE)
+    for msg, (t, m) in zip(msgs, NO_CODE):
+        assert msg.startswith(f"`code:` links `{t}`, but") and re.search(m, msg), msg
+
+
 @pytest.mark.criterion("AC-47")
 def test_lint_g_t3_fails_a_current_decisions_code_link_that_no_longer_resolves(eng):
     rid, gone = dec(eng), dec(eng, "Superseded")
@@ -335,6 +371,7 @@ def test_lint_g_t3_fails_a_current_decisions_code_link_that_no_longer_resolves(e
 @pytest.mark.criterion("AC-40")
 def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
     rid, tid = dec(eng), eng.new("task", "T", **W).id
+    outside(eng)
     sid = eng.record_new("story", "A story", "words", {"actor": "owner"}, **W).id
     eng.link(rid, tid, **W)
     eng.link(rid, "src/mod.py::Store.lint", **W)
@@ -346,7 +383,8 @@ def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
         ("CE-99", "", "no record CE-99"),
         ("US-9", "retires", "no record US-9"),
         ("src/Mod.py", "", "case-exact"),
-        ("src/mod.py::Missing", "", "has no 'Missing'"),
+        ("src/mod.py::Missing", "", "has no `Missing`"),
+        *[(t, "code", m) for t, m in NO_CODE],
         ("AC-3", "", "pass --rel"),
         ("AC-999", "creates", "not a record or a criterion in criteria.md"),
         ("AC-8", "amends", "not a record or a criterion"),  # named in prose, not a table row
@@ -393,20 +431,23 @@ def test_the_g_t3_remedy_for_a_moved_code_link_is_a_relink_that_turns_it_green(e
 
 @pytest.mark.criterion("AC-54")
 def test_relink_refuses_writing_nothing_unless_it_moves_an_existing_code_link_of_a_current_decision_to_code_that_exists(eng):
-    rid, gone, new, tid = dec(eng), dec(eng, "Old"), dec(eng, "New"), eng.new("task", "T", **W).id
+    rid, gone, new, other, tid = dec(eng), dec(eng, "Old"), dec(eng, "New"), dec(eng, "Also new"), eng.new("task", "T", **W).id
+    outside(eng)
     eng.link(rid, "src/mod.py::Store", **W)
     eng.link(rid, tid, **W)
     eng.link(gone, "src/mod.py::Store", **W)
     eng.supersede(gone, new, **W)
+    eng.supersede(gone, other, **W)  # two successors: one runnable `decision link` each
     before = {i: eng.store.get(i).path.read_bytes() for i in (rid, gone)}
     n_ops = len(ops(eng))
     for who, old, target, match in [
         (rid, "src/mod.py::Store", "src/mod.py::Store", "the same"),
         (rid, "src/mod.py::Store", "src/Mod.py::Store", "case-exact"),
-        (rid, "src/mod.py::Store", "src/mod.py::Missing", "has no 'Missing'"),
+        (rid, "src/mod.py::Store", "src/mod.py::Missing", "has no `Missing`"),
+        *[(rid, "src/mod.py::Store", t, m) for t, m in NO_CODE],
         (rid, "src/mod.py::Other", "src/mod.py::Store.lint", "has no `code:` link"),
         (rid, tid, "src/mod.py::Store.lint", f"in `tasks`, not `code`"),
-        (gone, "src/mod.py::Store", "src/mod.py::Store.lint", f"superseded.*decision link {new} src/mod.py::Store.lint"),
+        (gone, "src/mod.py::Store", "src/mod.py::Store.lint", f"superseded.*`decision link {new} src/mod.py::Store.lint` or `decision link {other} src/mod.py::Store.lint`"),
         (tid, "src/mod.py::Store", "src/mod.py::Store.lint", "not a decision"),
     ]:
         with pytest.raises(Refusal, match=match):

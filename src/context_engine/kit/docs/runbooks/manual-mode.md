@@ -311,7 +311,8 @@ Check every record, then the working state. `--working` does only the second hal
   text extension such as `.py` or `.md`) exists case-exact, and every `file::symbol` resolves as
   for G-D3. Spans with spaces, `*`, `<`, or a leading `.` or `/` are not names. Also, every
   `code:` link of a decision that is not `status: deprecated` names a file that exists
-  case-exact from the repo root and has each dotted part of its symbol as a word. *Why:
+  case-exact from the repo root and has each dotted part of its symbol as a word, by the rule
+  of § context-engine decision link. *Why:
   normative text that names a file which is gone states a rule nobody can follow, and `why()`
   answers from decision links.*
 - **G-D7**: in each file `[guards] signals` lists, outside fenced code: at most `warn_max` ⚠, at
@@ -805,8 +806,10 @@ Add `<target>` to one link field of a decision. `--rel` names the field; without
 item's id goes to `tasks` and anything with `::` or `/` to `code`; a decision needs
 `--rel relaxes` (which also adds this decision to the other's `narrowed_by`). Check the target
 first: a record id must exist; a criterion id must be a row (`| AC-n |`) of the criteria file
-`[working] criteria` names; any other id is refused; a `code` path must exist with its exact
-case, and every dotted part of its symbol must appear in the file. A target already in the
+`[working] criteria` names; any other id is refused; a `code` path must be written from the
+repo root with `/` (no `\`, no `..`, no leading `/` or drive), name a file (not a directory or
+the root) that exists with its exact case, and every dotted part of its symbol must be
+non-empty and appear in the file. A target already in the
 field is a no-op: stop.
 
 **Why:** `why()` answers from these links, so a link to something that does not exist answers
@@ -819,10 +822,11 @@ hand-edit `code:`.
 `decision relink <id> <old> <new>` replaces one `code:` link of a decision when the code it
 names moves. Refuse, and write nothing, when:
 - `<old>` and `<new>` are the same: nothing to do;
-- `<new>` does not resolve: the file must exist with its exact case and every dotted part of the
-  symbol must appear in it, as for § context-engine decision link;
+- `<new>` does not name code, as § context-engine decision link checks it: a blank, a directory
+  or a path outside the repo is refused, so a dead link is never replaced by nothing;
 - the decision is not a decision, or is `status: deprecated` (SUPERSEDED): its links are
-  history, and G-T3 does not check them; link the code to the decision that replaced it;
+  history, and G-T3 does not check them; link the code to the decision that replaced it (one
+  `decision link <successor> <new>` per successor);
 - `<old>` is not in its `code:`: if it is in another link field, that link is an id, and ids
   never move; otherwise name one of its `code:` links, or add one with `decision link`.
 

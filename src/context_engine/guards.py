@@ -162,6 +162,34 @@ def code_ref_problem(files: Files, file: str, symbol: str) -> str | None:
     return None
 
 
+def code_link_problem(files: Files, link: str) -> tuple[str, str] | None:
+    """Why a decision's `code:` link names no code, with its remedy, or None (CE-35). A link is
+    `file` or `file::symbol`: a path from the repo root, written with `/`, that stays inside the
+    repo and names a file (not a directory) existing case-exact, and a symbol whose every dotted
+    part is non-empty and named in the file as a word. `decision link` and `decision relink`
+    refuse what this names, and G-T3 fails a stored link it names, so a dead link cannot be
+    replaced by one that names nothing."""
+    file, sep, symbol = link.partition("::")
+    if "\\" in file:
+        return f"`{file}` is written with `\\`", "write the path with `/`: a `\\` path resolves on Windows only"
+    parts = Path(file).parts
+    if file.startswith("/") or re.match(r"[A-Za-z]:", file) or ".." in parts:
+        return f"`{file}` is not a path inside the repo", "link a path from the repo root, with no `..` and no leading `/` or drive"
+    if not parts:
+        return f"`{link}` names no file", "link a repo file: `path/to/file.py` or `path/to/file.py::Name`"
+    hit = files.case_exact(file)
+    if hit is None:
+        return f"`{file}` does not exist (case-exact)", "link a file that exists, with its exact case"
+    if not hit.is_file():
+        return f"`{file}` is a directory, not a file", "link a file in it, or a symbol in that file"
+    if sep and not all(symbol.split(".")):
+        return f"`{link}` has an empty symbol part", "name the symbol after `::`, dotted as `Class.method`, or drop the `::`"
+    missing = symbol_missing(hit, symbol) if symbol else None
+    if missing:
+        return f"`{file}` has no `{missing}`", "grep for the symbol and link the name that exists"
+    return None
+
+
 def slug(heading: str) -> str:
     """GitHub's anchor for a heading: link text kept, lower case, punctuation dropped, spaces to hyphens."""
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading)
@@ -359,7 +387,8 @@ def existence(e: Engine) -> list[Failure]:
 def decision_code(e: Engine, files: Files) -> list[Failure]:
     """G-T3 over the `code:` links of every current decision (`[working] decision`; a
     `status: deprecated` one is history): each file exists case-exact from the repo root and
-    names every dotted part of its symbol, as `decision link` checked when it wrote the link.
+    names every dotted part of its symbol, by `code_link_problem`, the check `decision link` and
+    `decision relink` made when they wrote the link.
 
     Not checked: a superseded decision's links, and the other link fields (ids: `decision link`
     refuses one that is not a record, and ids are never reused)."""
@@ -376,12 +405,9 @@ def decision_code(e: Engine, files: Files) -> list[Failure]:
             continue
         rel = st._rel(path)
         for link in D.as_list(doc.get("code")):
-            file, _, symbol = link.partition("::")
-            hit = files.case_exact(file)
-            missing = symbol_missing(hit, symbol) if hit is not None and symbol else None
-            problem = "does not exist (case-exact)" if hit is None else f"has no `{missing}`" if missing else ""
+            problem = code_link_problem(files, link)
             if problem:
-                out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but `{file}` {problem}", f"if the code moved, `decision relink {doc.get('id')} {link} <file::symbol>`; if what it did is gone, `decision supersede` the decision; do not hand-edit `code:`"))
+                out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but {problem[0]}",f"if the code moved, `decision relink {doc.get('id')} {link} <file::symbol>`; if what it did is gone, `decision supersede` the decision; do not hand-edit `code:`"))
     return out
 
 

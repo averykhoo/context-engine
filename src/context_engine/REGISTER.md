@@ -112,7 +112,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** the owner, whose words in decisions must survive verbatim; the next session, which reads decisions through find, why and the index; every deployed repo (adhoc's import is CE-7); a plain-git human who edits decisions by hand
 - **why not eliminated:** code moves on purpose, and whether the code a link names still carries out the decision is a reading judgement no operation can make
-- **control:** collective: `decision link` and `decision relink` (CE-35, AC-54) refuse a file or symbol that does not exist; G-T3 fails a current decision's `code:` link that stops resolving, in every gate (lint, AC-47), and its remedy is `decision relink` (or `decision supersede` when the behaviour is gone); a superseded decision's links are not checked
+- **control:** collective: `decision link` and `decision relink` (CE-35, AC-54) refuse a link that names no code (a file or symbol that does not exist, a blank path, a directory, a path outside the repo or written with `\`, an empty symbol part: `guards.py::code_link_problem`), so a dead link cannot be relinked to nothing; G-T3 fails a current decision's `code:` link that stops resolving, in every gate (lint, AC-47), and its remedy is `decision relink` (or `decision supersede` when the behaviour is gone); a superseded decision's links are not checked
 - **from:** CE-5, session 2026-10-12d
 
 ## INV-16: G-D3 and G-T3 grep each dotted part of a symbol as a word, so a renamed symbol whose old name still appears elsewhere in the file passes
