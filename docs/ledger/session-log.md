@@ -7,6 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-13a · kind: close
+
+- **rows:** CE-30, CE-31, CE-32, CE-35, CE-36 closed; CE-25 to NOW; CE-33, CE-26 to NEXT; CE-38..41
+  filed; ASK-3; CE-6, CE-7, CE-39 commented; US-17; DEC-28..31; DEC-18 amended
+- **receipts:**
+  - guards: 411 passed in 71.40s (0:01:11); lint: clean
+  - read: orient + board + CE-30/31/32/35/36/25 bodies
+  - asked: ASK-3
+- **summary** (the owner digest):
+  - Built, reviewed and closed CE-30 (G-D12 coverage guard), CE-31, CE-32 (decision set), CE-35
+    (decision relink), CE-36, as one sequential build -> adversarial review -> fix workflow; every
+    reviewer found a real defect
+  - Owner re-ranked: NOW CE-25 (design review written; blocked on ASK-3, five calls with
+    recommendations), NEXT CE-38, CE-33, CE-26
+  - US-17: the framework runs from files it owns; CLAUDE.md becomes a bootloader pointer (CE-38),
+    every agent role in the framework (CE-39), framework rules out of the global CLAUDE.md (CE-40)
+  - DEC-28 (D-27 imports BUILT, narrowed by D-29), DEC-29 (stale stubs: 3 sessions from last op),
+    DEC-30 (ultracode stays a judgement grant; MCP asks for it), DEC-31 (close by default when the
+    work is done), DEC-18 amended (fable: arbiter, proofs)
+  - Claude Code docs checked into docs/evidence/claude-code-hooks-2026-10-13.md: in-repo @-imports
+    load unprompted, SessionStart output reaches context but cannot block, ultracode is also a
+    setting
+  - AAR: the running MCP server was stale (refused session_start on route key max_bytes), so the CLI
+    carried the session; untracked paths need git add before git commit -o
+- **Still owed:**
+  - push: everything from ab0b155 on is unpushed (owner's call); restart Claude Code so the MCP
+    server loads current code
+
+---
+
 ## 2026-10-12e · kind: close
 
 - **rows:** CE-10,CE-30,CE-36,CE-37,CE-6
