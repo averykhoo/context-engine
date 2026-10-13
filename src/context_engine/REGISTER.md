@@ -352,3 +352,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** no reftable repo in the test matrix
 - **control:** individual: none beyond the detached-HEAD skip
 - **from:** CE-45, session 2026-10-13c
+
+## INV-50: a hand-forged retire line in the op log, or a deleted retire amendment, passes G-I2
+
+- **affects:** the owner, whose stories are retired and whose words record why; every agent session, which follows the G-I1 and G-I2 remedies and intake step 5; every repo the kit deploys to, whose stories retired by hand before adoption now go G-I2 red
+- **why not eliminated:** the op log and amendments are trusted as written, as G-W7 trusts them
+- **control:** individual: FRAMEWORK §8.1 G-I2 names it under Not checked; review at intake
+- **from:** CE-49, session 2026-10-13c
+
+## INV-51: a hand edit between live, unspecified and unconfirmed passes lint
+
+- **affects:** the owner, whose stories are retired and whose words record why; every agent session, which follows the G-I1 and G-I2 remedies and intake step 5; every repo the kit deploys to, whose stories retired by hand before adoption now go G-I2 red
+- **why not eliminated:** no op owns those moves, and the op log records keys, not values
+- **control:** individual: FRAMEWORK §8.1 G-I2 Not checked; a confirm op is the follow-up
+- **from:** CE-49, session 2026-10-13c
+
+## INV-52: supersedes and superseded_by not mirrored, a self link or a cycle passes, for stories and decisions both
+
+- **affects:** the owner, whose stories are retired and whose words record why; every agent session, which follows the G-I1 and G-I2 remedies and intake step 5; every repo the kit deploys to, whose stories retired by hand before adoption now go G-I2 red
+- **why not eliminated:** no mirror guard exists
+- **control:** individual: record retire writes both directions; a mirror guard is the follow-up
+- **from:** CE-49, session 2026-10-13c
