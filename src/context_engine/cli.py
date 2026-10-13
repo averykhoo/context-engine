@@ -266,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         code, out = run(argv)
     except Refusal as r:
+        sys.stderr.reconfigure(encoding="utf-8")  # as stdout below: a remedy may say "§"
         print(str(r), file=sys.stderr)
         return 2
     sys.stdout.reconfigure(encoding="utf-8")

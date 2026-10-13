@@ -98,9 +98,11 @@ When the file already exists it holds the owner's permission grants (Claude Code
 there), so `init` changes it only with the owner's yes: without a flag it refuses, naming the one
 entry it would append to `hooks.SessionStart`; show the owner, then run `init --merge-settings`
 (yes) or `init --skip-settings` (no). The merge parses the file strictly (it refuses, untouched,
-a file that is not JSON or repeats a key), keeps every other key and its order, re-reads the file
-right before an atomic replace, and is a no-op when the hook is there. By hand, add this entry,
-keeping every other key:
+a file that is not JSON, repeats a key, holds `NaN`, `Infinity` or a lone surrogate, sets
+`disableAllHooks`, is hard-linked or read-only, or already runs orient with another command, such
+as a moved repo's), keeps every other key and its order, re-reads the file right before an atomic
+replace (a grant Claude Code writes in the instant between is lost: no lock is shared with it),
+and is a no-op when the hook is there. By hand, add this entry, keeping every other key:
 
 ```json
 {

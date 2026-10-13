@@ -24,8 +24,10 @@ is what writes the first one.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
+import tempfile
 import sys
 import tomllib
 from pathlib import Path
@@ -89,20 +91,42 @@ def hook_settings(root: Path) -> str:
     return json.dumps({"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": command}]}]}}, indent=2) + "\n"
 
 
-def _holds_hook(doc: object) -> bool:
-    """Whether parsed settings already hold a SessionStart command that runs the engine's orient,
-    so a re-run of init neither asks for nor adds a hook that is there."""
+def _hook_state(doc: object, want: str) -> tuple[str, str]:
+    """``("ours", "")`` when the settings hold this repo's orient hook exactly: an entry with no
+    matcher running the very command init writes for this machine and root (whitespace aside);
+    ``("stale", <command>)`` when they hold another command running the engine's orient (a moved
+    repo, a rebuilt interpreter), which init must not take for the hook; else ``("none", "")``."""
+    stale = ""
     try:
-        entries = doc["hooks"]["SessionStart"]  # type: ignore[index]
-        commands = [h.get("command", "") for e in entries for h in e.get("hooks", [])]
+        for entry in doc["hooks"]["SessionStart"]:  # type: ignore[index]
+            for h in entry.get("hooks", []):
+                c = h.get("command", "")
+                if not isinstance(c, str):
+                    continue
+                if c.split() == want.split() and entry.get("matcher", "") in ("", "*"):
+                    return "ours", ""
+                if "context_engine" in c and "orient" in c:
+                    stale = stale or c
     except (KeyError, TypeError, AttributeError):
-        return False
-    return any("-m context_engine" in c and c.rstrip().endswith("orient") for c in commands if isinstance(c, str))
+        pass
+    return ("stale", stale) if stale else ("none", "")
+
+
+def _not_json(name: str) -> object:
+    raise ValueError(f"{name} is not JSON")
+
+
+def _finite(token: str) -> float:
+    value = float(token)
+    if math.isinf(value):
+        raise ValueError(f"{token} overflows a float, so it could not be written back as JSON")
+    return value
 
 
 def _strict_json(text: str) -> object:
-    """``json.loads``, refusing a key that appears twice: plain ``loads`` keeps the last one, and a
-    rewrite would then drop the other (the owner's grants live in this file)."""
+    """``json.loads``, refusing what a rewrite would change or lose: a key that appears twice (plain
+    ``loads`` keeps the last one and the rewrite drops the other; the owner's grants live in this
+    file), ``NaN`` and ``Infinity`` (not JSON), and a number that overflows a float."""
 
     def pairs(items: list[tuple[str, object]]) -> dict:
         keys = [k for k, _ in items]
@@ -111,7 +135,7 @@ def _strict_json(text: str) -> object:
             raise ValueError(f"the key {dup[0]!r} appears twice")
         return dict(items)
 
-    return json.loads(text, object_pairs_hook=pairs)
+    return json.loads(text, object_pairs_hook=pairs, parse_constant=_not_json, parse_float=_finite)
 
 
 def merged_settings(root: Path, old: str) -> str | None:
@@ -124,15 +148,25 @@ def merged_settings(root: Path, old: str) -> str | None:
         doc = _strict_json(old.removeprefix("\ufeff"))
     except ValueError as e:
         raise Refusal(f"{SETTINGS} is not JSON init can merge into ({e}), so it was left untouched", remedy) from None
-    if _holds_hook(doc):
+    if isinstance(doc, dict) and doc.get("disableAllHooks") is True:
+        raise Refusal(f"{SETTINGS} sets disableAllHooks, so no hook would run, and it was left untouched", "the owner turned hooks off: run init with --skip-settings, and run orient by hand at session start")
+    want = hook_entry(root)["hooks"][0]["command"]
+    state, other = _hook_state(doc, want)
+    if state == "ours":
         return None
+    if state == "stale":
+        raise Refusal(f"{SETTINGS} holds a SessionStart hook running the engine's orient with another command ({other}), so it was left untouched", f"have the owner replace that command with this machine's and this repo's: {want}; or run init with --skip-settings")
     hooks = doc.get("hooks", {}) if isinstance(doc, dict) else None
     starts = hooks.get("SessionStart", []) if isinstance(hooks, dict) else None
     if not isinstance(starts, list):
         raise Refusal(f"{SETTINGS} has no object at the top, at `hooks` or a list at `hooks.SessionStart`, so it was left untouched", remedy)
     doc.setdefault("hooks", hooks)
     hooks["SessionStart"] = starts + [hook_entry(root)]
-    text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+    text = json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as e:  # a lone surrogate escape parses, but has no UTF-8 form
+        raise Refusal(f"{SETTINGS} holds a string with a lone surrogate escape ({e.reason}), which cannot be written back as UTF-8, so it was left untouched", remedy) from None
     return ("\ufeff" if old.startswith("\ufeff") else "") + (text.replace("\n", "\r\n") if "\r\n" in old else text)
 
 
@@ -258,16 +292,17 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
                     "show the owner that change and ask: with a yes, run init again with --merge-settings; with a no, with --skip-settings (the hook can be added by hand later, kit README § Hook)",
                 )
             else:
+                _replaceable(root / SETTINGS)
                 writes[SETTINGS] = new
                 seen[SETTINGS] = old
                 labels[SETTINGS] = f"{SETTINGS} (the orient hook merged in)"
+                _check_ignore(root, skipped)
     else:
         writes[SETTINGS] = hook_settings(root)
-        ignore = root / SETTINGS_IGNORE
-        if not ignore.exists():
+        if not (root / SETTINGS_IGNORE).exists():
             writes[SETTINGS_IGNORE] = "settings.local.json\n"
-        elif "settings.local.json" not in ignore.read_bytes().decode("utf-8", "replace").split():
-            skipped.append(f"{SETTINGS_IGNORE} (it does not ignore settings.local.json, which holds this machine's paths: add that line)")
+        else:
+            _check_ignore(root, skipped)
     for d in KEEP:
         if not _used(d, uses):
             skipped.append(f"{d}/ (not in {C.CONFIG_NAME})")
@@ -285,6 +320,27 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
     return writes, [labels.get(k, k) for k in writes], skipped, seen
 
 
+def _check_ignore(root: Path, skipped: list[str]) -> None:
+    """Name a ``.claude/.gitignore`` that does not ignore the settings file init writes into, since
+    that file holds this machine's paths. Not checked: a repo-level ignore (``git check-ignore``
+    would need git, which init does not use)."""
+    ignore = root / SETTINGS_IGNORE
+    lines = ignore.read_bytes().decode("utf-8", "replace").split() if ignore.exists() else []
+    if "settings.local.json" not in lines:
+        skipped.append(f"{SETTINGS_IGNORE} (it does not ignore settings.local.json, which holds this machine's paths: add that line, or check the repo's own .gitignore does)")
+
+
+def _replaceable(path: Path) -> None:
+    """Refuse, at plan time and so before any write, a settings file the merge cannot replace
+    whole without harm: hard-linked (the replace would split the link) or not writable."""
+    target = Path(os.path.realpath(path))  # a symlink is followed: the file it names is replaced
+    remedy = "add the hook by hand (kit README § Hook), or run init with --skip-settings"
+    if target.stat().st_nlink > 1:
+        raise Refusal(f"{SETTINGS} is hard-linked, and replacing it would split the link, so it was left untouched", remedy)
+    if not os.access(target, os.W_OK):
+        raise Refusal(f"{SETTINGS} is not writable, so it was left untouched", "make it writable and run init again, or " + remedy)
+
+
 def _read_text(path: Path) -> str:
     try:
         return path.read_bytes().decode("utf-8")
@@ -292,27 +348,42 @@ def _read_text(path: Path) -> str:
         raise Refusal(f"{path.name} is not UTF-8 ({e.reason} at byte {e.start}), so it was left untouched", "save it as UTF-8, then run init again") from None
 
 
+def _current(path: Path) -> str | None:
+    return path.read_bytes().decode("utf-8", "replace") if path.exists() else None
+
+
 def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str]) -> None:
-    """Create ``rel``, refusing if it appeared after the plan; or, for a file the plan read
-    (``CLAUDE.md``, a settings file the hook is merged into), re-read it right before writing and
-    replace it whole, atomically, only if it still holds the text the plan read: Claude Code writes
-    the owner's permission grants into the settings file, and a grant written meanwhile is kept by
-    refusing, never lost."""
+    """Create ``rel``, refusing if it appeared after the plan; or, for a file the plan read, write
+    it only if it still holds the text the plan read. ``CLAUDE.md`` is written in place, so a
+    linked one stays linked. A settings file the hook is merged into is written to a temp file,
+    re-read, and replaced whole, atomically: Claude Code writes the owner's permission grants into
+    it, and a grant written before the re-read is kept by refusing. One written in the instant
+    between the re-read and the replace is lost: there is no lock shared with Claude Code."""
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     so_far = f"created so far: {', '.join(done) or 'none'}; run init again, it skips what exists"
+    if rel == CONTRACT_TARGET and rel in seen:
+        if _current(path) != seen[rel]:
+            raise Refusal(f"{rel} changed while init ran, so the bootloader was not appended", so_far)
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        done.append(rel)
+        return
     if rel in seen:
-        what = "the bootloader was not appended" if rel == CONTRACT_TARGET else "nothing was written to it"
-        tmp = path.with_name(f"{path.name}.init-{os.getpid()}.tmp")
+        target = Path(os.path.realpath(path))
+        fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=f"{target.name}.", suffix=".init.tmp")
         try:
-            with open(tmp, "x", encoding="utf-8", newline="") as f:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
                 f.write(text)
-            now = path.read_bytes().decode("utf-8", "replace") if path.exists() else None
-            if now != seen[rel]:
-                raise Refusal(f"{rel} changed while init ran, so {what}", so_far)
-            os.replace(tmp, path)
+            if _current(path) != seen[rel]:
+                raise Refusal(f"{rel} changed while init ran, so nothing was written to it", so_far)
+            try:
+                os.replace(tmp, target)
+            except OSError as e:
+                raise Refusal(f"{rel} could not be replaced ({e.strerror or e}), so nothing was written to it", f"close whatever holds it open, then run init again; {so_far}") from None
         finally:
-            tmp.unlink(missing_ok=True)
+            if os.path.exists(tmp):
+                os.unlink(tmp)
         done.append(rel)
         return
     mode = "x"  # create only: a file that appeared after the plan is refused, never overwritten

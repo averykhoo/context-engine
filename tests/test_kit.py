@@ -230,6 +230,11 @@ def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_i
     ("[]", "has no object at the top"),
     ('{"hooks": []}', "has no object at the top, at `hooks`"),
     ('{"hooks": {"SessionStart": {}}}', "a list at `hooks.SessionStart`"),
+    ('{"n": NaN}', "NaN is not JSON"),  # Python's json reads it; a rewrite would hand Claude Code a file it cannot parse
+    ('{"n": -Infinity}', "-Infinity is not JSON"),
+    ('{"n": 1E400}', "1E400 overflows a float"),
+    ('{"a": "' + chr(92) + 'ud800"}', "a lone surrogate escape"),
+    ('{"disableAllHooks": true, "permissions": {}}', "sets disableAllHooks, so no hook would run"),
 ])
 def test_merge_settings_refuses_what_it_cannot_merge_into_and_leaves_it_untouched(tmp_path, text, says):
     p = _settings(tmp_path, text)
@@ -240,6 +245,68 @@ def test_merge_settings_refuses_what_it_cannot_merge_into_and_leaves_it_untouche
     p.write_bytes(b'{"a": "\xe9"}')
     with pytest.raises(Refusal, match="is not UTF-8"):
         B.init(tmp_path, merge_settings=True)
+
+
+@pytest.mark.criterion("AC-57")
+@pytest.mark.parametrize("matcher", [None, "compact"])
+def test_an_orient_hook_with_another_command_is_never_taken_for_this_repos(tmp_path, matcher):
+    import json
+
+    gone = '"C:/gone/python.exe" -m context_engine --root "C:/elsewhere" orient'
+    entry = {"hooks": [{"type": "command", "command": gone}]}
+    if matcher:  # this repo's own command, but only on compaction
+        entry = {"matcher": matcher, "hooks": [{"type": "command", "command": B.hook_entry(tmp_path)["hooks"][0]["command"]}]}
+    text = json.dumps({"hooks": {"SessionStart": [entry]}})
+    p = _settings(tmp_path, text)
+    for flags in ({}, {"merge_settings": True}):
+        with pytest.raises(Refusal, match="holds a SessionStart hook running the engine's orient with another command") as e:
+            B.init(tmp_path, **flags)
+        assert B.hook_entry(tmp_path)["hooks"][0]["command"] in e.value.remedy and "--skip-settings" in e.value.remedy
+    assert p.read_bytes() == text.encode()
+
+
+@pytest.mark.criterion("AC-57")
+def test_merge_settings_refuses_a_hard_linked_or_read_only_file_before_writing_anything(tmp_path):
+    import os
+    import stat
+
+    p = _settings(tmp_path)
+    os.link(p, tmp_path / "twin.json")
+    with pytest.raises(Refusal, match="is hard-linked, and replacing it would split the link"):
+        B.init(tmp_path, merge_settings=True)
+    assert sorted(x.name for x in tmp_path.iterdir()) == [".claude", "twin.json"], "refused at plan time: nothing written"
+    (tmp_path / "twin.json").unlink()
+    os.chmod(p, stat.S_IREAD)
+    try:
+        with pytest.raises(Refusal, match="is not writable"):
+            B.init(tmp_path, merge_settings=True)
+        assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"]
+    finally:
+        os.chmod(p, stat.S_IREAD | stat.S_IWRITE)
+
+
+@pytest.mark.criterion("AC-31")
+def test_a_hard_linked_claude_md_stays_linked(tmp_path):
+    import os
+
+    (tmp_path / "CLAUDE.md").write_bytes(b"# Ours\n")
+    os.link(tmp_path / "CLAUDE.md", tmp_path / "AGENTS.md")
+    B.init(tmp_path)
+    assert B.BEGIN in (tmp_path / "AGENTS.md").read_text(encoding="utf-8"), "CLAUDE.md is written in place, never replaced"
+
+
+@pytest.mark.criterion("AC-57")
+def test_a_merge_names_a_gitignore_that_misses_the_settings_file_and_the_cli_refusal_is_utf8(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    _settings(tmp_path)
+    assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in B.init(tmp_path, merge_settings=True)
+    (tmp_path / B.SETTINGS).write_bytes(GRANTS.encode())
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8") and not k.startswith("CE_")}
+    r = subprocess.run([sys.executable, "-m", "context_engine", "--root", str(tmp_path), "init"], capture_output=True, env=env, timeout=120)
+    assert r.returncode == 2 and "kit README § Hook" in r.stderr.decode("utf-8"), r.stderr
 
 
 @pytest.mark.criterion("AC-57")
