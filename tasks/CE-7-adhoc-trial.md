@@ -3,13 +3,13 @@ type: Task
 id: CE-7
 title: "Adhoc trial cutover on a worktree branch, scored against the CE-4 rubric"
 brief: "One revertible commit; adhoc keeps its paths and ids; stop if adhoc has a live session"
-pri: LATER
+pri: NEXT
 state: open
 deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
-updated: 2026-10-13a
+moved: 2026-10-13b
+updated: 2026-10-13b
 closed:
 ---
 
@@ -27,3 +27,4 @@ the CE-4 baseline. The owner decides whether the branch merges.
 
 - 2026-10-08b: deps += CE-8 (owner, DEC-10: dogfood here before any other repo).
 - 2026-10-13a (claude-code/claude-opus-5-5): Owner, DEC-28: import adhoc D-27 as BUILT with D-29 linked as narrowing it (decision link D-29 D-27 --rel relaxes, as D-12/D-30), not as SUPERSEDED.
+- 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.

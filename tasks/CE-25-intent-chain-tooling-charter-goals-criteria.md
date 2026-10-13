@@ -3,13 +3,13 @@ type: Task
 id: CE-25
 title: 'Intent chain tooling: charter goals, criteria with statuses and refs, intake steps, and G-I1, G-I2, G-T1, G-T2, G-T6'
 brief: Charter and criteria stay hand-written today; build their checks after CE-14's lint frame, each sabotaged red
-pri: NOW
+pri: NEXT
 state: open
 deps: [CE-14]
 source: session 2026-10-12b
 created: 2026-10-12
-moved: 2026-10-13a
-updated: 2026-10-13a
+moved: 2026-10-13b
+updated: 2026-10-13b
 review: [guard, write-op, shipped]
 ---
 
@@ -44,3 +44,7 @@ E: reuses the guards frame, `Failure`, `[guards]` path scoping and the sabotage 
 
 - G-D3 can check a bare file name against a stale `build/` copy (CE-41): cite `src/context_engine/...` paths in full
 - Landing G-T1 turns the gate red at once (US-10, US-12, US-13 have no criterion): land the guard and the fixes in one commit
+
+## Log
+
+- 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.

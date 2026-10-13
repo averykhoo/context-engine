@@ -3,13 +3,13 @@ type: Task
 id: CE-38
 title: 'Bootloader contract: CLAUDE.md imports a framework-owned contract; SessionStart hook runs orient'
 brief: CLAUDE.md keeps a short pointer; the framework owns its rules; grants stay in owner-loaded files, never MCP output
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-13a
 created: 2026-10-13
-moved: 2026-10-13a
-updated: 2026-10-13a
+moved: 2026-10-13b
+updated: 2026-10-13b
 ---
 
 Owner, 2026-10-13a (words: the story filed this session on the bootloader): an adopted framework must not depend on the owner leaving `CLAUDE.md` alone; `CLAUDE.md` gets a short pointer, like a bootloader, and the framework runs from files it owns.
@@ -28,6 +28,7 @@ Before CE-7, so adhoc adopts this shape and does not migrate twice.
 ## Log
 
 - 2026-10-13a (claude-code/claude-opus-5-5): docs checked: docs/evidence/claude-code-hooks-2026-10-13.md. In-repo @-imports load at launch with no prompt (4 hops max; missing target not documented: probe it). SessionStart stdout reaches context on startup/resume/clear/compact/fork, is not trust-gated, and cannot block (a failing hook is quiet, so keep the orient fallback). Project allow rules need workspace trust. ultracode and workflowSizeGuideline are real settings; the inline keyword works only in prompts the owner types.
+- 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.
 
 ## Read first
 
