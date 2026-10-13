@@ -5,7 +5,9 @@ writers never lose each other's change, AC-9), checks the result against the kin
 before any byte is written (AC-5), writes atomically, and appends one line to the operation log
 carrying the session key and the actor (AC-6). Before the lock is let go, the write is committed
 by path with its op log line (``commit.commit``, FRAMEWORK §5.5 rule 4); inside ``batch()`` the
-commit waits for the batch's end, so one operation that writes several times commits once.
+commit waits for the batch's end, so one operation that writes several times commits once, and
+the lock is held across all of it. With ``[engine] commit = false`` nothing is committed but a
+pause, which is committed regardless.
 
 Deliberately not checked here: whether an actor is allowed to make a change (that is policy,
 in the operations built on this core), and whether an append-only body changed *before* it was
@@ -118,6 +120,8 @@ class Store:
         self.root = Path(root).resolve()
         self.config = config if config is not None else config_mod.load(self.root)
         self._batch = 0  # open batch() scopes; the commit waits for the outermost
+        self._held = False  # this Store holds the file lock (batch() holds it across an operation)
+        self._missed: commit_mod.Outcome | None = None  # a pause commit that did not happen
         self._wrote: str | None = None  # the session of a write not yet committed
         self.commit_title: str | None = None  # the next commit's title, when an operation names it
         self.commit_always = False  # the next commit is made even with `[engine] commit = false` (a pause)
@@ -383,42 +387,70 @@ class Store:
 
     @contextmanager
     def _lock(self) -> Iterator[None]:
-        """The repo lock; a write made under it is committed before it is let go, unless a
+        """The repo lock. A write made under it is committed before the lock is let go, unless a
         batch is open. It commits after a refusal too: what reached disk is in the op log, and
-        the op log at HEAD must not lag the files it names."""
+        the op log at HEAD must not lag the files it names. Re-entrant within this Store, so a
+        batch can hold it across all of an operation's writes."""
+        if self._held:
+            yield
+            return
         with self._file_lock():
+            self._held = True
             try:
                 yield
             finally:
-                if self._batch == 0:
-                    self._commit()
+                try:
+                    if self._batch == 0:
+                        self._commit()
+                finally:
+                    self._held = False
 
     @contextmanager
     def batch(self) -> Iterator[None]:
-        """One commit for every write inside, made when the outermost batch ends."""
-        self._batch += 1
-        try:
-            yield
-        finally:
-            self._batch -= 1
-            if self._batch == 0 and self._wrote:
-                with self._file_lock():
-                    self._commit()
+        """One commit for every write inside, made when the outermost batch ends. The lock is
+        held from the batch's start to that commit, so no other session's write lands between
+        this operation's writes. When the outermost batch ends without an exception and a
+        pause's commit (``commit_always``) did not happen, it refuses: the record stays, and the
+        refusal says how to commit it by hand. Before the engine committed every write, a pause
+        refused the same way."""
+        if self._batch:
+            self._batch += 1
+            try:
+                yield
+            finally:
+                self._batch -= 1
+            return
+        with self._lock():
+            self._batch = 1
+            try:
+                yield
+            finally:
+                self._batch = 0
+        missed, self._missed = self._missed, None
+        if missed is not None:
+            r = Refusal(
+                f"the pause record was written but not committed ({missed.note or 'git made no commit'})",
+                "commit it at once by hand (manual-mode.md § context-engine pause open, step 3): a pause left uncommitted in a shared tree can be lost",
+            )
+            r.reports_commit = True  # `Op.call` adds nothing: the refusal is about the commit
+            raise r
 
     def _commit(self) -> None:
         """Holding the lock: commit what the writes since the last commit put in the op log."""
         session, self._wrote = self._wrote, None
-        if not session:
-            return
         title, self.commit_title = self.commit_title, None
         always, self.commit_always = self.commit_always, False
+        if not session:
+            return
         if not (self.config.commit or always):
             self.last_commit = commit_mod.Outcome()
             return
         try:
             self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title)
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
-            self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its new lines name by hand")
+            self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
+        if always and not self.last_commit.sha:
+            self._missed = self.last_commit
 
     def _validate(self, kind: Kind, doc: okf.Document, path: Path) -> None:
         probs = self.problems(kind, doc, path)

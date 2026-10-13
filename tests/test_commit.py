@@ -3,8 +3,11 @@ HEAD lacks, with the files those lines name, so a clean checkout of any commit p
 its own, and nothing another session staged or left untracked rides along."""
 
 import dataclasses
+import json
+import re
+import shutil
 import subprocess
-import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,8 @@ import pytest
 from context_engine import commit as C
 from context_engine import mcp, ops
 from context_engine.config import load
+from context_engine.errors import Refusal
+from context_engine.lock import FileLock
 from context_engine.working import Engine
 
 from test_working import ACTOR, CONFIG, FRAMEWORK, LEDGER, NOTE, TODAY
@@ -43,12 +48,20 @@ def _init(root: Path, commit: bool = True) -> None:
         git(root, "commit", "-q", "-m", "base")
 
 
-@pytest.fixture
-def repo(tmp_path):
-    """A target repo under git with one base commit."""
-    root = tmp_path / "repo"
+@pytest.fixture(scope="module")
+def _template(tmp_path_factory):
+    root = tmp_path_factory.mktemp("template") / "repo"
     _write_target(root)
     _init(root)
+    return root
+
+
+@pytest.fixture
+def repo(tmp_path, _template):
+    """A target repo under git with one base commit: a copy of one made once per module, which
+    saves six git processes a test."""
+    root = tmp_path / "repo"
+    shutil.copytree(_template, root)
     return root
 
 
@@ -188,12 +201,33 @@ def test_a_root_below_the_top_of_the_work_tree_commits_its_own_paths(tmp_path):
     assert "svc/ops.jsonl" in names and any(n.startswith("svc/tasks/CE-1") for n in names)
 
 
-def test_the_first_commit_of_a_repo_with_no_commits_yet(tmp_path):
+def test_a_fresh_repo_commits_once_its_config_is_committed_or_staged(tmp_path):
+    """A clean checkout of an engine commit that lacks context.toml would not lint: until the kit
+    is committed (or staged) the engine says so instead of committing."""
     root = tmp_path / "fresh"
     _write_target(root)
     _init(root, commit=False)
-    start(root)
-    assert files_at(root) == ["ledger.md", "ops.jsonl"]  # the rest of the tree stays the owner's to commit
+    c = ops.Caller(actor=ACTOR)
+    _, line = run(root, "session_start", c)
+    assert "not committed: context.toml is not committed in this repo" in line and "rituals § Bootstrap" in line, line
+    git(root, "add", "context.toml", "CLAUDE.md", "HANDOFF.md")  # the bootstrap's kit commit, staged
+    _, line = run(root, "task_new", c, title="First")
+    assert "; committed" in line, line
+    task_file = next((root / "tasks").glob("CE-1-*.md")).relative_to(root).as_posix()
+    assert files_at(root) == sorted(["ledger.md", "ops.jsonl", task_file])  # --only: the staged kit stays staged
+    assert "A  context.toml" in git(root, "status", "--porcelain")
+
+
+def test_a_target_inside_an_unrelated_repo_never_commits_into_it(tmp_path):
+    outer = tmp_path / "outer"
+    outer.mkdir()
+    (outer / "README.md").write_text("outer\n", encoding="utf-8")
+    _init(outer)
+    _write_target(outer / "inner")
+    before = head(outer)
+    _, line = run(outer / "inner", "session_start", ops.Caller(actor=ACTOR))
+    assert "not committed: context.toml is not committed in this repo (this target is inner inside a larger repo)" in line, line
+    assert head(outer) == before
 
 
 # -- when it does not commit -------------------------------------------------------------------
@@ -271,6 +305,8 @@ def test_hooks_run_and_a_refusing_hook_leaves_the_write_uncommitted(repo):
     _, line = run(repo, "task_new", c, title="Hooked")
     assert "not committed: `git commit` failed (hook says no)" in line, line
     assert head(repo) == before
+    # its `git add` is taken back: a later plain `git commit` cannot carry the record without its line
+    assert re.search(r"^\?\? tasks/", git(repo, "status", "--porcelain", "--untracked-files=all"), re.MULTILINE)
     _hook(repo, 'touch hook-ran\nexit 0')
     _, line = run(repo, "task_new", c, title="Hook passes")
     assert "; committed" in line and (repo / "hook-ran").exists()  # never `--no-verify`
@@ -278,23 +314,139 @@ def test_hooks_run_and_a_refusing_hook_leaves_the_write_uncommitted(repo):
     assert any(n.startswith("tasks/CE-1") for n in names) and any(n.startswith("tasks/CE-2") for n in names)  # the refused one rode along
 
 
-def test_a_held_index_lock_is_waited_for(repo):
+def test_a_held_index_lock_is_waited_for(repo, monkeypatch):
+    """Deterministic: the lock goes away at the first retry's wait, so only a retry commits."""
     c = start(repo)
     lock = Path(git(repo, "rev-parse", "--absolute-git-dir").strip()) / "index.lock"
     lock.write_text("", encoding="utf-8")
-    threading.Timer(0.3, lock.unlink).start()
+    waits = []
+    monkeypatch.setattr(C.time, "sleep", lambda s: (waits.append(s), lock.unlink(missing_ok=True)))
     _, line = run(repo, "task_new", c, title="Waited")
+    assert "; committed" in line and waits, (line, waits)
+
+
+def test_a_timed_out_git_returns_on_time_and_names_the_lock_it_left(repo, monkeypatch):
+    """The output goes to files, not pipes: a hook's child holding a pipe would keep a Windows
+    `subprocess.run` waiting long past its timeout, and the engine lock with it."""
+    c = start(repo)
+    _hook(repo, "sleep 6")
+    monkeypatch.setattr(C, "GIT_TIMEOUT", 2)
+    t = time.monotonic()
+    _, line = run(repo, "task_new", c, title="Slow hook")
+    assert time.monotonic() - t < 5.5, line
+    assert "not committed: git took over 2s (a hook?)" in line, line
+
+
+@pytest.mark.parametrize("var", ["GIT_DIR", "GIT_INDEX_FILE"])
+def test_git_environment_variables_skip_the_commit_loudly(repo, tmp_path, monkeypatch, var):
+    """Inside a git hook git sets these; a commit would go to that repo or index, not this tree."""
+    c = start(repo)
+    before = head(repo)
+    monkeypatch.setenv(var, str(tmp_path / "elsewhere"))
+    _, line = run(repo, "task_new", c, title="From a hook")
+    monkeypatch.delenv(var)
+    assert f"; not committed: {var} is set (inside a git hook?)" in line, line
+    assert head(repo) == before
+
+
+def test_a_repo_git_refuses_says_so(repo, monkeypatch):
+    c = start(repo)
+    monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")  # what a `safe.directory` refusal looks like
+    _, line = run(repo, "task_new", c, title="Not mine")
+    monkeypatch.delenv("GIT_TEST_ASSUME_DIFFERENT_OWNER")
+    assert "; not committed: git refuses this repo (" in line and "dubious ownership" in line, line
+
+
+def test_an_op_log_missing_lines_head_has_is_not_committed(repo):
+    c = start(repo)
+    run(repo, "task_new", c, title="One")
+    log = repo / "ops.jsonl"
+    log.write_text(log.read_text(encoding="utf-8").splitlines(keepends=True)[0], encoding="utf-8")  # cut by hand
+    before = head(repo)
+    _, line = run(repo, "task_new", c, title="Two")
+    assert "; not committed: ops.jsonl lacks 1 line HEAD has" in line, line
+    assert head(repo) == before
+
+
+def test_a_line_naming_a_file_git_never_saw_and_a_bad_line_do_not_block_the_commit(repo):
+    c = start(repo)
+    with open(repo / "ops.jsonl", "a", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps({"session": c.session, "op": "new", "id": "CE-90", "path": "tasks/CE-90-gone.md", "fields": []}) + "\n")
+        f.write("not json\n")
+    _, line = run(repo, "task_new", c, title="After them")
     assert "; committed" in line, line
+    assert "not json" in git(repo, "show", "HEAD:ops.jsonl")
 
 
-def test_an_ignored_op_log_is_never_committed(repo):
+def test_a_refusal_after_a_write_says_what_became_of_the_write(repo):
+    c = start(repo)
+
+    def writes_then_refuses(e, c):
+        e.baton_add("stamp it", "ran out of time", session=c.session, actor=c.actor)
+        raise Refusal("something after the write", "retry")
+
+    o = ops.Op("probe", writes_then_refuses, True)
+    with pytest.raises(Refusal, match=r"retry \(what it wrote before the refusal was committed [0-9a-f]{7,}\)"):
+        o.call(o.target(repo), c)
+    assert any(n.startswith("working/BTN-1") for n in files_at(repo))
+
+
+def test_an_operation_holds_the_lock_from_its_first_write_to_its_commit(repo):
+    """So no other session's write lands between an operation's writes, and no other session's
+    commit carries half of it."""
+    e = eng(repo)
+    key = e.session_start(actor=ACTOR)
+    lockfile = repo / e.store.config.lockfile
+    with e.store.batch():
+        e.new("task", "First write", session=key, actor=ACTOR)
+        with pytest.raises(Refusal, match="was held"):
+            with FileLock(lockfile, timeout=0.2):
+                pass
+        e.new("task", "Second write", session=key, actor=ACTOR)
+    assert len([n for n in files_at(repo) if n.startswith("tasks/")]) == 2
+
+
+def test_thousands_of_named_paths_fit_no_command_line(repo):
+    """Paths go to git through a file: Windows caps a command line at 32k characters."""
+    c = start(repo)
+    (repo / "tasks").mkdir(exist_ok=True)
+    with open(repo / "ops.jsonl", "a", encoding="utf-8", newline="\n") as f:
+        for n in range(700):  # 700 paths of 56 characters: 39k, over the cap
+            rel = f"tasks/leftover-{n:04d}-with-a-name-long-enough-to-matter.md"
+            (repo / rel).write_text("x\n", encoding="utf-8")
+            f.write(json.dumps({"session": "2026-10-01a", "op": "set", "id": f"X-{n}", "path": rel, "fields": []}) + "\n")
+    _, line = run(repo, "task_new", c, title="After many")
+    assert "; committed" in line and "carrying lines left uncommitted by 2026-10-01a" in line, line
+    assert len(files_at(repo)) == 702
+
+
+def test_a_pause_that_cannot_be_committed_refuses_and_keeps_its_record(repo):
+    """AC-14: a pause is committed at once, or the session is told to do it by hand."""
+    c = start(repo)
+    git(repo, "checkout", "-q", "--detach")
+    with pytest.raises(Refusal, match=r"the pause record was written but not committed \(HEAD is detached"):
+        run(repo, "pause_open", c, in_flight="half done", resume="finish it")
+    assert next((repo / "working").glob("PAU-1-*.md")).exists()
+
+
+def test_an_ignored_op_log_is_never_committed_and_says_so(repo):
     (repo / ".gitignore").write_text("ops.jsonl\n", encoding="utf-8")
     git(repo, "add", ".gitignore")
     git(repo, "commit", "-q", "-m", "ignore the op log")
     before = count(repo)
     c = start(repo)
     _, line = run(repo, "task_new", c, title="Kept out")
-    assert count(repo) == before and "; committed" not in line and "not committed" not in line, line
+    assert count(repo) == before and "; not committed: ops.jsonl is gitignored" in line, line
+
+
+def test_an_ignored_record_is_named_as_left_out(repo):
+    (repo / ".gitignore").write_text("tasks/\n", encoding="utf-8")
+    git(repo, "add", ".gitignore")
+    git(repo, "commit", "-q", "-m", "ignore the board")
+    c = start(repo)
+    _, line = run(repo, "task_new", c, title="Hidden")
+    assert re.search(r"; committed [0-9a-f]{7,} \(left out as gitignored: tasks/CE-1-hidden\.md\)$", line), line
+    assert files_at(repo) == ["ops.jsonl"]
 
 
 # -- the pieces ---------------------------------------------------------------------------------

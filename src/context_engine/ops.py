@@ -21,6 +21,7 @@ from typing import Callable
 from . import bootstrap
 from . import ledger as L
 from .commit import Outcome
+from .errors import Refusal
 from .working import Engine
 
 
@@ -56,8 +57,16 @@ class Op:
             return self.fn(target, c, **kw)
         store = target.store
         store.last_commit = Outcome()
-        with store.batch():
-            code, text = self.fn(target, c, **kw)
+        try:
+            with store.batch():
+                code, text = self.fn(target, c, **kw)
+        except Refusal as r:
+            # refused after a write: what it wrote is committed too (the op log at HEAD must not
+            # lag the files it names), and the refusal says what became of it
+            line = store.last_commit.line()
+            if line and not getattr(r, "reports_commit", False):
+                raise Refusal(r.message, f"{r.remedy} (what it wrote before the refusal was{line[1:]})") from r
+            raise
         return code, text + store.last_commit.line()
 
     @property

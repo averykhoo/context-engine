@@ -21,11 +21,11 @@ WK = "src/context_engine/working.py"
 T = "tests/test_commit.py"
 S = [
  # the defect itself: no commit after a write, so a by-path task commit leaves the op log behind
- (ST, "                if self._batch == 0:\n                    self._commit()", "                pass", T + " -k library_call"),
+ (ST, "                    if self._batch == 0:\n                        self._commit()", "                    pass", T + " -k library_call"),
  (CM, "    if not _in_git_tree(root):\n        return Outcome()", "    return Outcome()\n    if not _in_git_tree(root):\n        return Outcome()", T + " -k mid_session"),
  # what rides along: a commit of the index as well takes another session's staged edit
  # (dropping `--only` alone is no sabotage: paths after `--` imply it)
- (CM, '"commit", "-q", "--only", "-F"', '"commit", "-q", "--include", "-F"', T + " -k nothing_else"),
+ (CM, '"commit", "--only", "-F", str(msg)', '"commit", "--include", "-F", str(msg)', T + " -k nothing_else"),
  # the sweep: only the op log, not the files its lines name
  (CM, 'wanted = list(dict.fromkeys([oplog, *(str(o["path"]) for o in ops if o.get("path"))]))', "wanted = [oplog]", T + " -k mid_session"),
  # the sweep: only this session's own lines' files, so a leftover record stays behind
@@ -37,30 +37,61 @@ S = [
  # in-progress states
  (CM, "        if (gitdir / name).exists():", "        if False:", T + " -k in_progress"),
  (CM, '        if (gitdir / name).exists():\n            return Outcome(note=f"{what} is in progress', '        if (gitdir / name).exists() and False:\n            return Outcome(note=f"{what} is in progress', T + " -k real_merge"),
- (CM, '    if git.run("symbolic-ref", "-q", "HEAD").returncode != 0:', "    if False:", T + " -k detached"),
+ (CM, '    if _detached(git, gitdir):', "    if False:", T + " -k detached"),
+ (CM, '    if text.startswith("ref: ") and text != "ref: refs/heads/.invalid":\n        return False', '    if True:\n        return False', T + " -k detached"),
  # hooks are never bypassed
- (CM, '"commit", "-q", "--only", "-F"', '"commit", "-q", "--no-verify", "--only", "-F"', T + " -k hooks_run"),
+ (CM, '"commit", "--only", "-F", str(msg)', '"commit", "--no-verify", "--only", "-F", str(msg)', T + " -k hooks_run"),
  # git's index.lock is waited for
  (CM, "LOCK_RETRIES = 10", "LOCK_RETRIES = 1", T + " -k index_lock"),
  # an ignored op log keeps the repo's choice
- (CM, "    if oplog not in paths:\n        return Outcome()", "    if False:\n        return Outcome()", T + " -k ignored_op_log"),
+ (CM, '    if codes.get(prefix + oplog) == "!!":', "    if False:", T + " -k ignored_op_log"),
  # a root below the top of the work tree
  (CM, "        code = codes.get(prefix + rel)", "        code = codes.get(rel)", T + " -k below_the_top"),
  # untracked files need an add before --only
- (CM, "    if untracked:\n", "    if False:\n", T + " -k nothing_else"),
+ (CM, "    if untracked:\n        a = git.write(", "    if False:\n        a = git.write(", T + " -k nothing_else"),
  # line endings in the op log
  (CM, "have = Counter(ln for ln in head.splitlines() if ln.strip())", 'have = Counter(ln for ln in head.split("\\n") if ln.strip())', T + " -k multiset"),
  (CM, "        if have[ln]:\n            have[ln] -= 1", "        if have[ln]:\n            pass", T + " -k multiset"),
  # the title cap
  (CM, "            if len(title) + len(sep) + len(p) + (len(more) if n < len(parts) - 1 else 0) > TITLE_MAX:", "            if False:", T + " -k title_stays"),
  # one operation, one commit; the CLI and MCP path
- (OP, "        with store.batch():\n            code, text = self.fn(target, c, **kw)", "        if True:\n            code, text = self.fn(target, c, **kw)", T + " -k writes_twice"),
+ (OP, "            with store.batch():\n                code, text = self.fn(target, c, **kw)", "            if True:\n                code, text = self.fn(target, c, **kw)", T + " -k writes_twice"),
  (OP, "        return code, text + store.last_commit.line()", "        return code, text", T + " -k mcp_tool"),
  (MC, "            _, text = o.call(e, c, **kw)", "            _, text = o.fn(e, c, **kw)", T + " -k mcp_tool"),
  # the off switch, and the pause that commits regardless (AC-14)
  (ST, "        if not (self.config.commit or always):", "        if not self.config.commit:", T + " -k commit_false"),
  (ST, "        if not (self.config.commit or always):", "        if not always:", T + " -k commit_false or nothing_else"),
  (WK, "            self.store.commit_always = True\n", "", T + " -k commit_false"),
+ # review fixes (2026-10-13c): a pause that cannot commit refuses (AC-14)
+ (ST, "        if missed is not None:", "        if False:", T + " -k pause_that_cannot"),
+ (ST, "        if always and not self.last_commit.sha:", "        if False:", T + " -k pause_that_cannot"),
+ # GIT_DIR-style variables (inside a hook) skip loudly
+ (CM, "    if set_env:", "    if False:", T + " -k git_environment"),
+ # output through files, not pipes: a timeout bounds the lock hold
+ (CM, "stdout=out, stderr=err, timeout=GIT_TIMEOUT", "stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=GIT_TIMEOUT", T + " -k timed_out"),
+ # context.toml must be tracked by the repo the commit goes to
+ (CM, '    if codes.get(prefix + CONFIG) in ("??", "!!") or not (root / CONFIG).exists():', "    if False:", T + " -k fresh_repo"),
+ (CM, '    if codes.get(prefix + CONFIG) in ("??", "!!") or not (root / CONFIG).exists():', "    if False:", T + " -k unrelated_repo"),
+ # a repo git refuses is loud
+ (CM, '        if "not a git repository" in p.stderr:', "        if True:", T + " -k git_refuses"),
+ # paths through a file, not the command line
+ (CM, "\"--only\", \"-F\", str(msg), f\"--pathspec-from-file={_pathspec(tmp, 'commit', paths)}\", \"--pathspec-file-nul\")", "\"--only\", \"-F\", str(msg), \"--\", *paths)", T + " -k thousands"),
+ (CM, "            if self.carried:", "            if False:", T + " -k thousands"),
+ # a gitignored named path is named, not hidden
+ (CM, "            left_out.append(rel)  # ignored", "            pass  # ignored", T + " -k ignored_record"),
+ # an op log that lost lines HEAD has
+ (CM, "    if lost:", "    if False:", T + " -k missing_lines"),
+ # the lock is held across an operation
+ (ST, "        with self._lock():\n            self._batch = 1", "        if True:\n            self._batch = 1", T + " -k holds_the_lock"),
+ # a refusal after a write says what became of it
+ (OP, '            if line and not getattr(r, "reports_commit", False):', "            if False:", T + " -k refusal_after"),
+ # a failed commit takes back its add
+ (CM, "    if c.returncode != 0:\n        _unstage(git, tmp, untracked)", "    if c.returncode != 0:\n        pass", T + " -k hooks_run"),
+ # a line naming a never-seen file, and a bad line, do not block the commit
+ (CM, "        if code is None and not (root / rel).exists():\n            continue", "        if False:\n            continue", T + " -k never_saw"),
+ (CM, "            continue  # G-W7 reports it; the line still rides with the op log", "            raise", T + " -k never_saw"),
+ # the pause line ends with the commit (AC-14's own test)
+ (WK, "{self.store.last_commit.line()}\"", "\"", "tests/test_working.py -k commits_only_itself"),
  # a non-git target says nothing
  (CM, "    if not _in_git_tree(root):\n        return Outcome()", "    if not _in_git_tree(root):\n        return Outcome(note='no git')", T + " -k not_a_git_repo"),
 ]

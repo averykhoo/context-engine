@@ -582,7 +582,7 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     assert sorted(committed) == sorted([rec.path.relative_to(root).as_posix(), "ops.jsonl"])
     status = _git(root, "status", "--porcelain")
     assert "wip.py" in status and "M  HANDOFF.md" in status
-    assert rec.id in out and "committed" in out
+    assert rec.id in out and re.search(r"; committed [0-9a-f]{7,}$", out), out
 
 
 def test_the_pause_commit_ends_with_a_session_trailer(eng):
