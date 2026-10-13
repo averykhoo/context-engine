@@ -84,6 +84,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-33](DEC-33-ce-25-design-criteria-are-rows-one-id-form-a-z.md): CE-25 design: criteria are rows; one id form [A-Z]+-[1-9][0-9]* so goals become G-n; a criterion's actor is its source's; draft planned criteria for US-10, US-12, US-13; split CE-25, guards first *(owner, 2026-10-13)*
 - [DEC-34](DEC-34-every-owner-question-carries-a-recommendation.md): Every owner question carries a recommendation, when one is cheap to reach *(owner, 2026-10-13)*
 - [DEC-35](DEC-35-this-repo-dogfoods-the-whole-framework-as-it-is.md): This repo dogfoods the whole framework as it is built, the CE-38 bootloader first *(owner, 2026-10-13)*
+- [DEC-36](DEC-36-the-engine-commits-at-milestones-not-at-every.md): The engine commits at milestones, not at every write; CE-55 builds it *(owner, 2026-10-13)*
 
 ## REJECTED
 
