@@ -20,7 +20,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Iterator
 
 from . import decisions as D
@@ -574,6 +574,9 @@ RITUAL_RE = re.compile(r"^###\s+(?P<num>5\.6|6\.\d+)\s+(?P<name>.+?)\s*$")  # `#
 GID_RE = re.compile(r"(?<![\w-])G-[A-Z]\d+(?!\w)")  # `G-D3`
 COVERAGE_FLOORS = {"component": 20, "ritual": 10, "G-id": 30}
 MAP_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})([a-z]*)")
+# Where a coverage map's table owns each class: (a header that marks the table, the header of the
+# column holding the key). A component row's `§` cell is not a ritual, nor is a guard row's.
+MAP_COLUMNS = {"component": ("Component", "Component"), "ritual": ("Ritual", "§"), "G-id": ("Guard", "Guard")}
 
 
 @dataclass(frozen=True)
@@ -622,41 +625,60 @@ def spec_items(text: str) -> dict[str, list[Owned]]:
 
 
 def coverage_maps(root: Path, pattern: str) -> tuple[list[Path], list[Path]]:
-    """(the maps the glob matches, newest first by the date and letter in the file name; the
-    matches with no date in their name)."""
+    """(the maps the repo-relative glob matches, newest first by the date and session letters in
+    the file name, ordered as session keys are (`z` before `aa`); the matches with no date in
+    their name)."""
     dated, undated = [], []
     for p in root.glob(pattern):
         if p.is_file():
             (dated if MAP_DATE_RE.search(p.name) else undated).append(p)
-    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name), reverse=True)
+    dated.sort(key=lambda p: (key_order("".join(MAP_DATE_RE.search(p.name).groups())), p.name), reverse=True)
     return dated, sorted(undated)
 
 
-def map_cells(text: str) -> set[str]:
-    """The first three cells of every table row of a coverage map, stripped."""
-    cells: set[str] = set()
-    for _, line in prose(text):
-        if line.lstrip().startswith("|"):
-            cells.update(c.strip() for c in line.strip().strip("|").split("|")[:3])
-    return cells
+def map_cells(text: str) -> dict[str, set[str]]:
+    """By class, the stripped cells of a coverage map's tables that can own it: in each table
+    whose header row has the class's marking header, the cells under its key column
+    (`MAP_COLUMNS`)."""
+    out: dict[str, set[str]] = {c: set() for c in MAP_COLUMNS}
+    header: list[str] | None = None
+    last = -2
+    for n, line in prose(text):
+        row = line.strip()
+        if not row.startswith("|") or n != last + 1:
+            header = None
+        last = n
+        if not row.startswith("|"):
+            continue
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        if header is None:
+            header = cells
+            continue
+        if all(set(c) <= set("-: ") for c in cells):  # the |---| separator
+            continue
+        for cls, (mark, column) in MAP_COLUMNS.items():
+            if mark in header and column in header and header.index(column) < len(cells):
+                out[cls].add(cells[header.index(column)])
+    return out
 
 
 def coverage(e: Engine) -> list[Failure]:
     """G-D12: every component (§2's table), ritual (§5.6, §6.n headings) and G-id the spec
     (`[guards] coverage_spec`) names is owned: a table row of the newest coverage map
-    (`[guards] coverage_maps`, a glob; newest by the date in the file name) names it in one of
-    its first three cells, or a board item, open or closed, names it. Red when a class extracts
-    fewer than its floor (`COVERAGE_FLOORS`), so a reworded format cannot pass by finding nothing;
-    when only one of the two keys is set; when the spec is missing or no map matches; and when a
-    matching map has no date in its name.
+    (`[guards] coverage_maps`, a repo-relative glob; newest by the date and session letters in
+    the file name) names it in its class's key column (`MAP_COLUMNS`: `Component`; `§` in a
+    table with a `Ritual` column; `Guard`), or a board item, open or closed, names it. Red when
+    a class extracts fewer than its floor (`COVERAGE_FLOORS`), so a reworded format cannot pass
+    by finding nothing; when only one of the two keys is set; when the spec is missing; when the
+    glob is not repo-relative or matches nothing; and when a matching map has no date in its name.
 
     Not checked: whether a board item's mention is ownership or a passing reference (a
-    judgement; the map's one-class-per-row rule carries it), whether a map row's class is right,
-    the rest of the spec (§3, §7 and §9 are context), and maps other than the newest."""
+    judgement; the map's one-class-per-table layout carries it), whether a map row's class is
+    right, the rest of the spec (§3, §7 and §9 are context), and maps other than the newest."""
     g = e.store.config.guards
     if not (g.coverage_spec or g.coverage_maps):
         return []
-    off = "or unset both coverage_spec and coverage_maps to switch G-D12 off"
+    off = 'or switch G-D12 off (`[guards] off = ["G-D12"]`, or unset both coverage_spec and coverage_maps)'
     if not (g.coverage_spec and g.coverage_maps):
         have, need = ("coverage_spec", "coverage_maps") if g.coverage_spec else ("coverage_maps", "coverage_spec")
         return [Failure("G-D12", CONFIG_NAME, f"[guards] sets {have} but not {need}", f"set {need} too, {off}")]
@@ -664,6 +686,10 @@ def coverage(e: Engine) -> list[Failure]:
     spec = e.root / g.coverage_spec
     if not spec.is_file():
         out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_spec names {g.coverage_spec}, which does not exist", f"fix the path, {off}"))
+    glob = PureWindowsPath(g.coverage_maps)  # reads `/` and `\` alike: a root or a drive on either OS is an anchor
+    if glob.anchor or ".." in glob.parts:
+        out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_maps ({g.coverage_maps}) is not a glob relative to the repo root", f"make it repo-relative with no `..` (e.g. docs/evidence/framework-coverage-*.md), {off}"))
+        return out
     maps, undated = coverage_maps(e.root, g.coverage_maps)
     for p in undated:
         out.append(Failure("G-D12", p.relative_to(e.root).as_posix(), "matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told", "rename it with its date, or narrow the coverage_maps glob"))
@@ -674,7 +700,7 @@ def coverage(e: Engine) -> list[Failure]:
     items = spec_items(_text(spec))
     for cls, floor in COVERAGE_FLOORS.items():
         if len(items[cls]) < floor:
-            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "update COMPONENT_RE, RITUAL_RE or GID_RE in guards.py to the spec's format, or lower COVERAGE_FLOORS with a provenance note if the spec shrank on purpose"))
+            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, RITUAL_RE, GID_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
     if out:
         return out
     map_rel = maps[0].relative_to(e.root).as_posix()
@@ -682,6 +708,6 @@ def coverage(e: Engine) -> list[Failure]:
     board = [_text(p) for p in sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})]  # tasks and questions may share a directory
     for cls in COVERAGE_FLOORS:
         for item in items[cls]:
-            if not any(item.in_cell(c) for c in cells) and not any(item.in_text(t) for t in board):
+            if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):
                 out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
     return out

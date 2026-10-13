@@ -316,15 +316,19 @@ Check every record, then the working state. `--working` does only the second hal
   normative text that names a file which is gone states a rule nobody can follow, and `why()`
   answers from decision links.*
 - **G-D12** (only when `[guards]` sets `coverage_spec` or `coverage_maps`; red if only one is
-  set, if the spec is missing, or if the `coverage_maps` glob matches no file or a file with no
-  `YYYY-MM-DD` in its name): outside fenced code in the spec, list (1) the bold component name
-  in each numbered row of §2's table, (2) each `### 5.6` and `### 6.n` heading as `§6.n`, and
-  (3) every `G-` id (`G-D3`); fewer than 20, 10 or 30 of a class is red (the engine's floors).
-  Take the newest map by the date (and session letter) in its file name. Each listed thing must
-  be a whole cell among the first three of some table row of that map (a component's cell may
-  add ` (...)`), or appear as a whole word in some board file, open or closed (`§6.1` is not
-  `§6.13`). *Why: a spec that gains a ritual or guard nothing owns drifts unseen; the map is
-  frozen, so the fix is a new dated map or a `task new` naming it, never an edit.*
+  set, if the spec is missing, or if the `coverage_maps` glob is absolute or has a `..`, matches
+  no file, or matches a file with no `YYYY-MM-DD` in its name): outside fenced code in the spec,
+  list (1) the bold component name in each numbered row of §2's table, (2) each `### 5.6` and
+  `### 6.n` heading as `§6.n`, and (3) every `G-` id (`G-D3`, not `XG-D3` or `G-D3x`); fewer
+  than 20, 10 or 30 of a class is red (the engine's floors; a repo whose spec they do not fit
+  sets `[guards] off = ["G-D12"]`). Take the newest map by the date and session letters in its
+  file name, ordered as session keys (`z` before `aa`). Each listed thing must be a whole cell
+  in its class's column of a table in that map: under `Component` for a component (the cell
+  may add ` (...)`), under `§` in a table with a `Ritual` column for a ritual, under `Guard`
+  for a G-id. Or it appears as a whole word in some board file, open or closed (`§6.1` is not
+  `§6.13`, `G-D1` is not `XG-D1`). *Why: a spec that gains a ritual or guard nothing owns
+  drifts unseen; the map is frozen, so the fix is a new dated map or a `task new` naming it,
+  never an edit.*
 - **G-D7**: in each file `[guards] signals` lists, outside fenced code: at most `warn_max` ⚠, at
   most `bold_caps_max` bold spans with a run of four capitals and no lower case (`**NEVER**`),
   and none of `retired_glyphs`. *Why: a signal ranks only while it is rare.*

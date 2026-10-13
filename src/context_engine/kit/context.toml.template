@@ -124,8 +124,8 @@ signals = ["CLAUDE.md", "HANDOFF.md", "docs/runbooks", "docs/charter.md", "docs/
 warn_max = 3                 # ⚠ per file (G-D7); provenance: JUDGEMENT, engine default; wrong if a real trap goes unmarked to stay under it
 bold_caps_max = 5            # bold all-caps spans per file (G-D7); provenance: JUDGEMENT, engine default; wrong as above
 retired_glyphs = []          # glyphs no file may use any more (G-D7)
-coverage_spec = ""           # G-D12: the framework spec (e.g. docs/framework/FRAMEWORK.md) whose components, rituals and G-ids must be owned; empty with coverage_maps is off
-coverage_maps = ""           # G-D12: a glob of frozen, dated coverage maps (e.g. docs/evidence/framework-coverage-*.md); the newest by file-name date is read
+coverage_spec = ""           # G-D12: the framework spec (e.g. docs/framework/FRAMEWORK.md) whose components, rituals and G-ids must be owned; empty with coverage_maps is off. The engine's patterns and floors (20 components, 10 rituals, 30 G-ids) fit FRAMEWORK.md's format: a spec they do not fit stays red, so leave both empty
+coverage_maps = ""           # G-D12: a repo-relative glob of frozen, dated coverage maps (e.g. docs/evidence/framework-coverage-*.md); the newest by file-name date and session letters is read
 
 # -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
 # Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,

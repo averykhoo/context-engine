@@ -93,7 +93,7 @@ class Guards:
     bold_caps_max: int = 5  # G-D7: bold all-caps spans (`**NEVER**`) per file
     retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
     coverage_spec: str = ""  # G-D12: the framework spec whose components, rituals and G-ids must be owned; unset (with coverage_maps) is off
-    coverage_maps: str = ""  # G-D12: a glob of dated coverage maps; the newest by the date in its file name is read
+    coverage_maps: str = ""  # G-D12: a repo-relative glob of dated coverage maps; the newest by the date and session letters in its file name is read
 
 
 @dataclass(frozen=True)

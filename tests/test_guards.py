@@ -275,17 +275,24 @@ def spec(components=LETTERS, rituals=11, gids=31, drop_section=False, ritual_hea
     return (
         f"# Spec\n\n## {'Two' if drop_section else '2.'} Components\n\n| # | Layer | Component | Question |\n|---|---|---|---|\n{rows}\n\n"
         f"## 5. Working\n\n{heads}\n\n## 7. Records\n\n| 1 | Layer | **Not a component** | a numbered bold row outside §2 |\n\n"
-        f"## 8. Guards\n\n{guards}\n\n```\n- **G-Z9:** fenced, not a guard\n```\n"
+        f"## 8. Guards\n\n{guards}\n\nXG-D99 and G-D98x are near misses, not guard ids.\n\n```\n- **G-Z9:** fenced, not a guard\n```\n"
     )
 
 
-def cov_map(date="2026-10-12", drop=(), components=LETTERS, rituals=11, gids=31) -> str:
-    rows = [f"| {i} | Component {c} | §2 | EXISTING CE-1 |" for i, c in enumerate(components, 1)]
-    rows[0] = rows[0].replace("Component A", "Component A (the first)")  # a component's cell may add a parenthesis
-    rows += [f"| Ritual | §{n} | PROSE-ONLY |" for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)]]
-    rows += [f"| G-D{i} | §8 | EXISTING CE-14 |" for i in range(1, gids + 1)]
-    rows = [r for r in rows if not any(f"| {d} |" in r or f"| Component {d} |" in r for d in drop)]
-    return f"# Coverage map, {date}\n\nFROZEN {date}.\n\n| Key | § | Class |\n|---|---|---|\n" + "\n".join(rows) + "\n"
+def cov_map(date="2026-10-12", drop=(), components=LETTERS, rituals=11, gids=31, edit=lambda row: row) -> str:
+    comps = [f"| {i} | Component {c} | §2 | EXISTING CE-1 |" for i, c in enumerate(components, 1)]
+    comps[0] = comps[0].replace("Component A", "Component A (the first)")  # a component's cell may add a parenthesis
+    rits = [f"| Ritual {n} | §{n} | PROSE-ONLY |" for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)]]
+    gds = [f"| G-D{i} | §8 | EXISTING CE-14 |" for i in range(1, gids + 1)]
+
+    def table(head: str, rows: list[str]) -> str:
+        rows = [edit(r) for r in rows if not any(f"| {d} |" in r or f"| Component {d} |" in r for d in drop)]
+        return f"| {head} |\n|{'---|' * (head.count('|') + 1)}\n" + "\n".join(rows) + "\n"
+
+    return (
+        f"# Coverage map, {date}\n\nFROZEN {date}.\n\n## Components\n\n{table('# | Component | § | Class', comps)}\n"
+        f"## Rituals\n\n{table('Ritual | § | Class', rits)}\n## Guards\n\n{table('Guard | § | Class', gds)}"
+    )
 
 
 def covered(tmp_path, **guards) -> Engine:
@@ -330,6 +337,10 @@ def test_g_d12_reads_the_newest_dated_map_and_refuses_an_undated_one(tmp_path):
     assert reds(e, "G-D12") == []
     write(tmp_path, "maps/coverage-2026-10-13b.md", cov_map("2026-10-13b", drop=("G-D9",)))
     assert reds(e, "G-D12") == [unowned("guard G-D9", "maps/coverage-2026-10-13b.md")]
+    write(tmp_path, "maps/coverage-2026-10-13z.md", cov_map("2026-10-13z"))
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-13aa.md", cov_map("2026-10-13aa", drop=("G-D5",)))  # after z, as session keys order
+    assert reds(e, "G-D12") == [unowned("guard G-D5", "maps/coverage-2026-10-13aa.md")]
     write(tmp_path, "maps/coverage-final.md", cov_map())
     assert reds(e, "G-D12") == ["maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told"]
 
@@ -346,6 +357,9 @@ def test_g_d12_is_red_when_a_class_extracts_under_its_floor_so_a_reworded_spec_c
     ]:
         write(tmp_path, "spec/FRAMEWORK.md", text)
         assert reds(e, "G-D12") == [f"spec/FRAMEWORK.md: {red}"]
+    # the floors are the engine's: a repo whose spec they do not fit is told how to switch G-D12 off
+    [red] = [f for f in e.lint() if f.guard == "G-D12"]
+    assert 'a repo whose spec they do not fit switches G-D12 off (`[guards] off = ["G-D12"]`' in red.remedy
 
 
 @pytest.mark.criterion("AC-56")
@@ -358,3 +372,34 @@ def test_g_d12_is_off_while_both_paths_are_unset_and_red_on_one_unset_or_a_missi
         "context.toml: [guards] coverage_spec names spec/FRAMEWORK.md, which does not exist",
         "context.toml: [guards] coverage_maps matches no file (maps/coverage-*.md)",
     ]
+    # a glob that is not repo-relative is red, not a crash, and is not read outside the repo
+    write(tmp_path, "spec/FRAMEWORK.md", spec())
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map())
+    for glob in [(tmp_path / "maps" / "coverage-*.md").as_posix(), "/maps/coverage-*.md", "C:/maps/coverage-*.md", "../maps/coverage-*.md", "maps/../maps/coverage-*.md"]:
+        [red] = [f for f in make(tmp_path, coverage_spec="spec/FRAMEWORK.md", coverage_maps=glob).lint() if f.guard == "G-D12"]
+        assert f"{red.path}: {red.message}" == f"context.toml: [guards] coverage_maps ({glob}) is not a glob relative to the repo root"
+        assert red.remedy.startswith("make it repo-relative with no `..`")
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_a_map_owns_a_class_only_in_its_own_key_column_and_a_near_miss_owns_nothing(tmp_path):
+    e = covered(tmp_path)  # the spec's near misses `XG-D99` and `G-D98x` are not guard ids
+    assert reds(e, "G-D12") == []
+    three = [unowned("component 'Component B' (§2)"), unowned("ritual §6.1 'Ritual 6.1'"), unowned("guard G-D7")]
+    # their own rows gone, each key sits in a cell that is not its class's key column
+    elsewhere = {
+        "| 1 | Component A (the first) | §2 |": "| 1 | Component A (the first) | §6.1 |",  # a component row's § cell
+        "| G-D8 | §8 |": "| G-D8 | §6.1 |",  # a guard row's § cell
+        "| G-D9 | §8 | EXISTING CE-14 |": "| G-D9 | §8 | G-D7 |",  # a cell past the key column
+        "| Ritual 5.6 |": "| Component B |",  # a ritual row's first cell
+    }
+    edit = lambda row: next((row.replace(a, b) for a, b in elsewhere.items() if a in row), row)  # noqa: E731
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(drop=("G-D7", "§6.1", "B"), edit=edit))
+    assert reds(e, "G-D12") == three
+    # only a component's key cell may add a parenthesis
+    rows = cov_map(drop=("G-D7", "§6.1", "B")).replace("| Ritual 6.2 | §6.2 |", "| Ritual 6.2 | §6.2 |\n| Ritual 6.1 | §6.1 (start) |")
+    write(tmp_path, "maps/coverage-2026-10-12.md", rows.replace("| G-D8 |", "| G-D7 (old) | §8 | x |\n| G-D8 |"))
+    assert reds(e, "G-D12") == three
+    # a board mention glued to a word on its left is not a mention
+    e.new("task", "glued", body="Mentions XG-D7, x§6.1 and XComponent B.", **W)
+    assert reds(e, "G-D12") == three

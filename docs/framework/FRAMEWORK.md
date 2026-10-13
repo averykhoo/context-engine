@@ -1593,11 +1593,15 @@ Decisions as records follow once the core holds.
   agrees with the record's own state key is G-W4.
 - **G-D12:** coverage: every component (§2's table), ritual (§5.6 and the §6 headings) and
   G-id this document names is owned, by a table row of the newest dated coverage map or by a
-  board item, open or closed, that names it. Config: `[guards] coverage_spec` and
-  `coverage_maps` (a glob; the newest by the date in its file name). Neither set is off; one
-  set, a missing spec, no matching map or an undated one is red. A class extracted under its
-  floor is red, so a reworded heading or id format cannot pass by finding nothing. The map is
-  frozen: a red clears with a new dated map or a board item, never an edit (CE-30).
+  board item, open or closed, that names it. A map row owns only its own table's class, in
+  that table's key column (`Component`; `§` beside `Ritual`; `Guard`). Config: `[guards]
+  coverage_spec` and `coverage_maps` (a repo-relative glob; the newest by the date and session
+  letters in its file name, ordered as session keys). Neither set is off; one set, a missing
+  spec, a glob that is absolute or climbs out with `..`, no matching map or an undated one is
+  red. A class extracted under its floor is red, so a reworded heading or id format cannot
+  pass by finding nothing; the floors and patterns are the engine's and fit this document, so
+  a repo whose spec they do not fit switches G-D12 off. The map is frozen: a red clears with a
+  new dated map or a board item, never an edit (CE-30).
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or
   `deprecated` (§9.3.1).

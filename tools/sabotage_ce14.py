@@ -3,7 +3,7 @@ CE-30 added the AC-56 rows (G-D12, framework coverage).
 
 Run from the repo root: `<interpreter> tools/sabotage_ce14.py [AC-n ...]` (no ids: every row). It
 restores every file it touches, byte for byte. The patterns are exact source text from 2026-10-12d
-(the AC-56 rows from 2026-10-13a); when the code moves, a
+(the AC-56 rows from 2026-10-13a, after the CE-30 review fixes); when the code moves, a
 pattern stops matching and the script stops with an AssertionError naming it, rather than
 passing quietly. G-T5 (mutation per criterion) replaces this hand table.
 
@@ -52,14 +52,15 @@ S = [
  ("AC-23", "docs/criteria.md", "# Criteria", "# Criteria `src/context_engine/nowhere.py`", "tests/test_repo_records.py"),
  ("AC-23", "HANDOFF.md", "## Banner (", "## 2026-10-01a notes\n\n## Banner (", "tests/test_repo_records.py"),
  # CE-30, G-D12 framework coverage (patterns from 2026-10-13a)
- ("AC-56", G, "            if not any(item.in_cell(c) for c in cells) and not any(item.in_text(t) for t in board):", "            if False:", T + " -k g_d12_every"),
+ ("AC-56", G, "            if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):", "            if False:", T + " -k g_d12_every"),
  ("AC-56", G, "        return cell == self.key or (", "        return True or (", T + " -k g_d12_every"),
  ("AC-56", G, "(?<![\\w-]){re.escape(self.key)}(?!\\w|\\.\\d)", "(?<![\\w-]){re.escape(self.key)}", T + " -k g_d12_every"),
  ("AC-56", G, "for p in e.store._files(e.store.config.kind(k))})]", "for p in e.store._files(e.store.config.kind(k))}) if \"state: closed\" not in _text(p)]", T + " -k g_d12_every"),
  ("AC-56", G, "        if section and m:", "        if m:", T + " -k g_d12_every"),
  ("AC-56", G, "    for _, line in prose(text):\n        h = HEADING_RE", "    for line in text.split(\"\\n\"):\n        h = HEADING_RE", T + " -k g_d12_every"),
  ("AC-56", G, "+ tool_owned(e) + coverage(e)", "+ tool_owned(e)", T + " -k g_d12_every"),
- ("AC-56", G, "    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name), reverse=True)", "    dated.sort(key=lambda p: (MAP_DATE_RE.search(p.name).groups(), p.name))", T + " -k g_d12_reads"),
+ ("AC-56", G, "(key_order(\"\".join(MAP_DATE_RE.search(p.name).groups())), p.name), reverse=True)", "(key_order(\"\".join(MAP_DATE_RE.search(p.name).groups())), p.name))", T + " -k g_d12_reads"),
+ ("AC-56", G, "(key_order(\"\".join(MAP_DATE_RE.search(p.name).groups())), p.name)", "(MAP_DATE_RE.search(p.name).groups(), p.name)", T + " -k g_d12_reads"),  # letters as text: z after aa
  ("AC-56", G, "    for p in undated:\n", "    for p in []:\n", T + " -k g_d12_reads"),
  ("AC-56", G, "COVERAGE_FLOORS = {\"component\": 20,", "COVERAGE_FLOORS = {\"component\": 0,", T + " -k g_d12_is_red"),
  ("AC-56", G, " \"ritual\": 10,", " \"ritual\": 0,", T + " -k g_d12_is_red"),
@@ -68,6 +69,17 @@ S = [
  ("AC-56", G, "    if not (g.coverage_spec and g.coverage_maps):", "    if False:", T + " -k g_d12_is_off"),
  ("AC-56", G, "    if not spec.is_file():", "    if False:", T + " -k g_d12_is_off"),
  ("AC-56", G, "    if not maps and not undated:", "    if False:", T + " -k g_d12_is_off"),
+ # CE-30 review fixes (2026-10-13a): repo-relative glob, class key columns, near misses, deployed-repo remedy
+ ("AC-56", G, "    if glob.anchor or \"..\" in glob.parts:", "    if False:", T + " -k g_d12_is_off"),
+ ("AC-56", G, "    if glob.anchor or \"..\" in glob.parts:", "    if glob.anchor:", T + " -k g_d12_is_off"),
+ ("AC-56", G, "    if glob.anchor or \"..\" in glob.parts:", "    if \"..\" in glob.parts:", T + " -k g_d12_is_off"),
+ ("AC-56", G, "            if mark in header and column in header", "            if column in header", T + " -k g_d12_a_map"),
+ ("AC-56", G, "                out[cls].add(cells[header.index(column)])", "                out[cls].update(cells)", T + " -k g_d12_a_map"),
+ ("AC-56", G, "(self.cls == \"component\" and cell.startswith(", "(cell.startswith(", T + " -k g_d12_a_map"),
+ ("AC-56", G, "rf\"(?<![\\w-]){re.escape(self.key)}", "rf\"{re.escape(self.key)}", T + " -k g_d12_a_map"),
+ ("AC-56", G, "GID_RE = re.compile(r\"(?<![\\w-])G-", "GID_RE = re.compile(r\"G-", T + " -k g_d12_a_map"),
+ ("AC-56", G, "G-[A-Z]\\d+(?!\\w)\")  # `G-D3`", "G-[A-Z]\\d+\")  # `G-D3`", T + " -k g_d12_a_map"),
+ ("AC-56", G, "a repo whose spec they do not fit switches G-D12 off", "edit guards.py", T + " -k g_d12_is_red"),
  ("AC-56", "docs/evidence/framework-coverage-2026-10-12.md", "| G-V2 | §8.5 | DEFERRED |", "| (row deleted) | §8.5 | DEFERRED |", "tests/test_repo_records.py"),
  ("AC-56", "docs/framework/FRAMEWORK.md", "- **G-D12:** coverage:", "- **G-Q9:** unowned.\n- **G-D12:** coverage:", "tests/test_repo_records.py"),
  ("AC-56", "context.toml", "coverage_spec = \"docs/framework/FRAMEWORK.md\"", "coverage_spec = \"docs/framework/FRAMEWORK-renamed.md\"", "tests/test_repo_records.py"),
