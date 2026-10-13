@@ -75,10 +75,13 @@ Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
    real one, and read every `provenance:` note in `context.toml`.
-3. `context-engine lint` is green; `context-engine session start` opens the first session.
+3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its own
+   writes (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. Then
+   `context-engine session start` opens the first session.
 4. The first clean close (FRAMEWORK §6.3): `session close`, then `banner show` (it says
    `no banner yet`, hash `none`) and `banner set --seen none --file <banner.md>`, which writes the
-   `## Banner (<key>)` heading. Commit by path.
+   `## Banner (<key>)` heading. The engine has committed each of these writes; commit by path
+   anything else the close changed.
 
 ## 2b. Bootstrap by hand
 
@@ -160,7 +163,8 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
 ## 5. The gate
 
 `<this repo's own test command> && context-engine lint`, from the repo root, before every
-commit that touches code, tests or records, and before every push. Guards the engine does not
+commit that touches code, tests or records (the engine's own commits of its writes excepted),
+and before every push. Guards the engine does not
 run yet are checked by hand (FRAMEWORK §11.1).
 
 ## Runbooks

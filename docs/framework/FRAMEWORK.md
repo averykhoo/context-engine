@@ -778,7 +778,8 @@ inside `HANDOFF.md`. So:
 - `orient()` hands open batons and pause records to the next session before anything else;
 - **expiry is mechanical:** housekeeping turns a baton older than two sessions into a task;
 - `pause.open` **fills in the branch and uncommitted paths itself** from `git status`, and
-  **commits its own record by path** immediately (§5.5 rule 4).
+  **commits its own record by path** immediately, with the op log, even where the repo turned
+  the engine's commits off; it refuses, keeping the record, when it cannot (§5.5 rule 4).
 
 Operations: `baton.add(step, why)`, `baton.done(id, evidence)`,
 `pause.open(in_flight, resume_step, evidence, deferred)`, `pause.resume(id)`.
@@ -802,34 +803,56 @@ These records are not ephemeral: they are tracked and committed, and they *expir
 3. **Baton and pause records are keyed by session.** Any session closes a baton by
    `baton.done` with evidence of the step done; a pause is closed by `pause.resume`;
    housekeeping expires them.
-4. **The engine commits its own writes by path, as it makes them.** Each write operation ends
-   in one docs-only commit, made under the engine lock, that carries **every op log line the
-   working tree has and HEAD lacks, every file those lines name, and the op log itself**.
-   - **Why the op log goes with every record:** lint reads the two together (G-W7 checks a
-     board item's session keys against the newest line that wrote them). A record committed
-     without its line, or a line without its record, fails lint on a clean checkout of that
-     commit, even though the shared tree passes.
+4. **The engine commits its own writes by path, as it makes them.** Each write operation on
+   the repo's records ends in one docs-only commit. It is made while the engine lock is held,
+   and carries **every op log line the working tree has and HEAD lacks, every file those lines
+   name, and the op log itself**. (`init` writes the kit's files, not records: it logs nothing
+   and commits nothing, and the session commits what it wrote.)
+   - **Why the op log goes with every record:** lint reads the two together. G-W7 checks a
+     board item's session keys against the newest line that wrote them, so a record committed
+     without its line fails lint on a clean checkout of that commit, even though the shared tree
+     passes. A line committed without its record is a history that lies, and no guard sees it
+     (G-W7 walks the records that exist), so the engine never makes one.
    - **Why every uncommitted line, not only this operation's:** the commit is derived from the
      op log against HEAD, not from what this process remembers. So a line left by a session
      that died, an older engine or a by-hand write goes in with the files it names, in the next
-     engine commit, and the message names whose it was. That is the commit its owner's close
-     would have made. Committing only this operation's lines would need a partial op log,
-     whose order on disk and at HEAD would then differ.
+     engine commit. That is the commit its owner's close would have made. The message names
+     whose lines they were, and so does the operation's line (`carrying lines left uncommitted
+     by <key>`). Committing only this operation's lines would need a partial op log, whose order
+     on disk and at HEAD would then differ.
    - **Why by path and under the lock:** `git commit --only` on those paths leaves what another
-     session staged or left untracked exactly as it was: nothing is unstaged, reset or stashed.
-     Holding the engine lock means no engine write is half-made in the tree while the commit
-     reads it. Hooks run; a hook's refusal is reported, never bypassed.
+     session staged or left untracked exactly as it was: nothing is unstaged, reset or stashed,
+     and a `git add` of a new file is taken back if the commit fails. The lock is held from an
+     operation's first write to its commit, so no other write lands between them, and the
+     commit never reads a half-made operation. Hooks run; a hook's refusal is reported, never
+     bypassed. A slow hook holds the lock for as long as it runs, so another session's write
+     can time out on the lock meanwhile; it refuses before it writes anything.
    - **One operation, one commit:** an operation that writes several files (an answer writes a
      decision and closes its question) commits them together, titled `engine: <op> <id>, ...`
-     (a pause keeps its own title) and ending in the `Session: <key>` trailer.
+     (a pause keeps its own title) and ending in the `Session: <key>` trailer. **No gate runs
+     before it:** the operation has already refused any write its schema forbids, and the gate
+     still runs before the session's own commits and before every push.
    - **It never undoes the write.** Where it cannot commit, the write stands and the
-     operation's line says why, naming the by-hand commit: a merge, rebase, cherry-pick, revert
-     or bisect in progress, a detached HEAD, a refusing hook, git missing beside a `.git`. A
-     target that is not a git repo commits nothing and says nothing.
+     operation's line says why (`not committed: <why>`), naming the by-hand commit. That covers:
+     a merge, rebase, cherry-pick, revert or bisect in progress; a detached HEAD; `GIT_DIR`,
+     `GIT_INDEX_FILE` or a like variable set (inside a git hook, where a commit would go to that
+     repo or index); `context.toml` not tracked by the enclosing repo (a target inside an
+     unrelated repo, or a new repo before its kit is committed); the op log gitignored, or
+     missing lines HEAD has; a refusing hook; git refusing the repo; git missing beside a
+     `.git`. Only a target in no git work tree at all commits nothing and says nothing. A named
+     file that git ignores is left out, and the line names it.
+   - **A refused operation's writes are committed too,** since the op log at HEAD must not lag
+     the files it names, and the refusal says what became of them. An operation that fails
+     with an error other than a refusal can leave a half-made change, which is committed as it
+     stands and named nowhere: lint then reports what is wrong with it.
+   - **Branches merge the op log line by line:** two branches that both wrote op lines would
+     conflict in it at every merge, so a repo keeps the op log on git's union merge driver
+     (`<op log> merge=union` in `.gitattributes`).
    - **A repo may turn it off** (`[engine] commit = false`): the session then commits the op
-     log with what it names, by path, at close or pause, as the by-hand fallback does. A pause
-     record is committed at once either way, since a pause left uncommitted in a shared tree
-     can be lost to another session's close.
+     log with what its uncommitted lines name, by path, as the by-hand fallback does, at the
+     latest at close or pause; no line reminds it. A pause record is committed at once either
+     way, and a pause that cannot be committed refuses, keeping its record: a pause left
+     uncommitted in a shared tree can be lost to another session's close.
 5. **Background agents, gates and engine writes use locks** (G-V3) keyed on the tree hash. Each
    concurrent session runs its own MCP server process (§8.0.2), so the engine's lock is a file
    lock.
@@ -973,7 +996,8 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 told. It stays open only when the owner says so; an awkward stopping point is a pause (§6.4), not
 an open stub. More work asked for after a close starts a new session.
 
-Write the records first, then run the gate, then commit. What a clean close does, numbered for
+Write the records first, then run the gate, then commit what the engine has not (it commits its
+own writes as it makes them, §5.5 rule 4). What a clean close does, numbered for
 citation (the order is below):
 
 0. **Every owner word given this session is recorded** (story, decision, or question answer).
@@ -1025,8 +1049,9 @@ cannot be recovered:
 replacement, runbook filing.
 
 **With the engine:** items 2 and 3 are `session.pause(rows, deferred)` plus `pause.open(...)`,
-which captures the branch and uncommitted paths itself and commits its record by path. The steps
-in order: `rituals.md` § Pause; picking the work up again: § Resume.
+which captures the branch and uncommitted paths itself. Each commits its own writes by path
+(§5.5 rule 4), the pause even where the repo turned that off. The steps in order: `rituals.md`
+§ Pause; picking the work up again: § Resume.
 
 **Enforcement:**
 - **G-W2:** at most N consecutive `kind: pause` ledger entries without a `kind: close`; N = 2.
@@ -1256,7 +1281,8 @@ Procedure may come from any of the three; a grant may not.
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the
-   repo already uses.
+   repo already uses, then commits the kit's files by path before the first session starts:
+   the engine commits only where `context.toml` is tracked (§5.5 rule 4).
 4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
    Then it sets the intent chain's sources in `[guards]` (§8.1): set before the first stories
    and criteria are recorded, the guards are red on a source that is still empty, and the first
@@ -1276,7 +1302,8 @@ to perform rituals. The agent sessions absorb the cost:
    `Closes: <id>` (§6.11). Small tasks may share a session: the gate goes green over all of
    them, then each is committed by path. The engine's own commits (§5.5 rule 4) carry the
    trailer too, and no task id: they record working state, not a task's work.
-2. **At session start, reconcile foreign commits** since the newest ledger entry (the steps and
+2. **At session start, reconcile foreign commits** since the newest ledger commit before this
+   session's own (its `session.start` commits the ledger at once; the steps and
    the entry's format: `rituals.md` § Foreign reconcile):
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
    - run the tier-1 trace-check over them (criteria or prose they may have staled);
@@ -1326,8 +1353,10 @@ the session approves the batch.
   6a).
 
 **Safety:**
-- every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in its own
-  commit by path with a `Session:` trailer (§5.5 rule 4), so `git revert` undoes it.
+- every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in an
+  engine commit by path with a `Session:` trailer (§5.5 rule 4), so `git revert` undoes it. A
+  commit whose message says it also carried another session's leftover lines reverts those
+  too: revert such a commit by path instead.
 - writes per run are counted and measured; a cap is optional and off by default (G-W10);
 - the run's report **is** its operation list, and it goes into the owner digest (§5.6);
 - the run takes the engine lock, because another session may be live in the same tree.
@@ -1371,7 +1400,8 @@ A session can end by undoing what it changed instead of saving it, without break
 humans or agents in the same checkout (a shared directory, not a worktree). Design notes: the
 shared-tree rules (§5.5) rule out `git stash`, `git reset` and checking out whole files another
 writer may also have touched; candidates are `git revert` of the session's own commits (found by
-`Session:` trailer) plus restoring only the paths the session's op log says it wrote, recorded as
+`Session:` trailer; one that carried another session's leftover lines, §5.5 rule 4, is reverted by
+path) plus restoring only the paths the session's op log says it wrote, recorded as
 a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its ritual
 fallback is a runbook section (P16). Not built yet (CE-18).
 
@@ -1885,7 +1915,8 @@ minimum set until the §8.0.3 trial reports.
 
 **The gate** of an adopting repo is its own test command followed by `context-engine lint`, run
 from the repo root before every commit that touches code, tests or records, and before every
-push. The kit's contract (§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
+push; the engine's own commits of its writes are the exception (§5.5 rule 4). The kit's contract
+(§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
 `context-engine lint` runs every one (plus the record schemas, G-D11, G-R1 and the other built
