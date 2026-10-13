@@ -32,7 +32,10 @@ def _section(text: str, start: str, end: str) -> str:
 def _frontmatter(text: str) -> dict[str, str]:
     m = re.match(r"---\n(.*?)\n---\n", text.replace("\r\n", "\n"), re.DOTALL)
     assert m, "no frontmatter"
-    return dict(ln.split(": ", 1) for ln in m.group(1).splitlines() if ": " in ln)
+    pairs = [ln.split(": ", 1) for ln in m.group(1).splitlines() if ": " in ln]
+    keys = [k for k, _ in pairs]
+    assert len(keys) == len(set(keys)), f"a frontmatter key repeats: {keys}"
+    return dict(pairs)
 
 
 def _routes(toml_text: str) -> dict[str, dict]:
@@ -64,7 +67,8 @@ def test_each_method_runbook_has_its_own_route_with_caps(config, name):
     routes = _routes((REPO / config).read_text(encoding="utf-8"))
     route = routes.get(f"docs/runbooks/{name}")
     assert route, f"{config} has no [[routes]] entry for docs/runbooks/{name}, so G-R1 cannot see it go"
-    assert route.get("max_lines", 0) > 0 and route.get("max_bytes", 0) > 0, f"{config}: the route for {name} has no G-D1 caps, so nothing keeps it short"
+    for cap in ("max_lines", "max_bytes", "max_width"):
+        assert route.get(cap, 0) > 0, f"{config}: the route for {name} has no G-D1 {cap}, so nothing keeps it short"
 
 
 @pytest.mark.criterion("AC-71")
@@ -77,8 +81,19 @@ def test_an_adopted_repo_that_loses_a_method_runbook_or_outgrows_it_is_red(tmp_p
     text = path.read_text(encoding="utf-8")
     path.unlink()
     assert any(f.guard == "G-R1" and rel in f.message for f in Engine(tmp_path).lint()), "a lost method runbook must fail G-R1"
-    path.write_text(text + "\nfiller\n" * 200, encoding="utf-8")
-    assert any(f.guard == "G-D1" and f.path == rel for f in Engine(tmp_path).lint()), "an overgrown method runbook must fail G-D1"
+    route = _routes((tmp_path / "context.toml").read_text(encoding="utf-8"))[rel]
+    cap, width = route.get("max_lines", 0), route.get("max_width", 0)
+    assert cap and width and route.get("max_bytes", 0), f"the kit template's route for {name} lacks a G-D1 cap, so an overgrown copy passes"
+    grown = {  # each breaks one cap and stays inside the other two
+        "lines": "x\n" * (cap + 1),
+        "bytes": ("y" * (width - 1) + "\n") * (cap - 1),
+        "wider": text + "z" * (width + 1) + "\n",
+    }
+    assert len(grown["bytes"].encode()) > route["max_bytes"], "the byte case must outgrow the byte cap within the line cap"
+    for says, body in grown.items():
+        path.write_text(body, encoding="utf-8")
+        d1 = [f.message for f in Engine(tmp_path).lint() if f.guard == "G-D1" and f.path == rel]
+        assert len(d1) == 1 and says in d1[0], f"an overgrown method runbook ({says}) must fail G-D1 on that cap alone: {d1}"
 
 
 def _steps(rows: list[str]) -> list[tuple[str, str]]:
@@ -90,7 +105,8 @@ def _steps(rows: list[str]) -> list[tuple[str, str]]:
 
 @pytest.mark.criterion("AC-71")
 def test_the_fan_out_build_rounds_are_framework_6_6s_steps():
-    six = _section(FRAMEWORK.read_text(encoding="utf-8"), "**Build rounds:**", "\n\n")
+    six = _section(_section(FRAMEWORK.read_text(encoding="utf-8"), "### 6.6 ", "\n### "), "**Build rounds:**", "\n\n")
+    six = re.sub(r"\n[ \t]+", " ", six)  # a step wrapped onto an indented line is still that step
     spec = re.findall(r"^(\d+)\. (.+)$", six, re.MULTILINE)
     runbook = _section((REPO / "docs" / "runbooks" / "fan-out.md").read_text(encoding="utf-8"), "## Build rounds", "\n## ")
     rows = [tuple(c.strip() for c in ln.strip("|").split("|")[:2]) for ln in runbook.splitlines() if re.match(r"\|\s*\d+\s*\|", ln)]

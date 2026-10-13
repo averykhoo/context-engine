@@ -262,7 +262,7 @@ continuity plan for a system it normally runs by machine.
 - **The fallback is a section of a runbook, named after the process:**
   `docs/runbooks/manual-mode.md` has one per engine operation, and `docs/runbooks/rituals.md` one
   per ritual, the housekeeping run included. A new engine operation is not done until its
-  fallback section exists. Both runbooks ship in the adoption kit (§6.9).
+  fallback section exists. Both ship in the adoption kit (§6.9), with the method runbooks (§7.5).
 - **Using a fallback is an event, not a workaround:** do the step by hand, then fix the process
   (runbook § When the engine and this runbook disagree), and note it in the session's review
   (§6.12).
@@ -1412,8 +1412,9 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 ### 7.5 Runbooks
 
 Runbooks hold **method**, which survives when the status around it is archived. Each is one file
-under `docs/runbooks/`, short, and routed (§2); it declares how it changes and how alive it is in
-its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 will check it, CE-33).
+under `docs/runbooks/`, short, and routed (§2). Each method runbook declares how it changes and
+how alive it is in its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 will check
+the liveness, CE-33).
 - `docs/runbooks/rituals.md`: every ritual's steps in order, each with its engine command, its
   by-hand step and its why; the only place a ritual's order is written (§6). A test in the engine
   repo checks that every §6 subsection has its steps or says why it has none, and that every
@@ -1432,9 +1433,9 @@ its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 will check it, C
 - `docs/runbooks/release.md`: tag, publish, confirm the version is live, and the fresh-user
   install trial of every published release.
 
-**Generic method, repo values** (CE-26): all six are the framework's. They ship in the adoption
-kit (§6.9) and `init` copies them, so they carry no repo values and no repo ids, and a test in
-the engine repo fails on a leaked id or path. A repo's own values stay in its contract
+**Generic method, repo values** (CE-26): every runbook here is the framework's. They ship in the
+adoption kit (§6.9) and `init` copies them, so they carry no repo values and no repo ids, and a
+test in the engine repo fails on the engine repo's own ids and machine paths. A repo's own values stay in its contract
 (`CLAUDE.md`), which the runbooks point at: its test command and interpreter, its CI workflow,
 its suites and their baselines outside the gate, its models, where its sabotage probes are kept,
 and its release steps, index and declared floor. In the engine repo each runbook is byte-equal

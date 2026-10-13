@@ -29,8 +29,8 @@ in its `CLAUDE.md`.
 - **A report is evidence, not a finding.** What heads for a record, a commit or a golden is
   verified first-hand by the session; reports that contradict each other are reconciled, never
   averaged. Agents audit; the session decides and deletes.
-- **A skeptic pass** gives each reviewer's findings to a second agent whose job is to refute
-  them, before the session acts on any: it removes false findings cheaply.
+- **A skeptic pass** is recommended after a review: a second agent tries to refute each
+  reviewer's findings before the session acts on any, which removes false findings cheaply.
 - **Clean up:** the session deletes the run's scratch files once their conclusions are in tracked
   files (P10), in the same session.
 
@@ -52,8 +52,8 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
 | 3 | BDD: criteria first, `planned` | write the criteria the work must meet, status `planned`, before the code | what "correct" means is fixed before the code it judges |
 | 4 | Build in waves with disjoint file ownership, and no fan-out on a dependency chain | in a wave, each builder owns files no other builder touches; work that needs another builder's output waits for the next wave | two writers on one file lose work; a chain split across agents makes each guess the other's interface |
 | 5 | Integrate, with sabotage | merge the waves, run the gate, and see every new check fail ([sabotage.md](sabotage.md)) | the waves are proven together, and no new check is believed unseen |
-| 6 | Adversarial review through several lenses | one reviewer per lens (for example: fidelity to the spec, a fresh deploy, checks that pass when they should fail), then a skeptic pass on the findings; the findings and residual risks go into the item's `## Design review` (FRAMEWORK §5.2) | one reader misses what a lens built to look for it finds |
-| 7 | Flip the statuses | a criterion moves to `tested` only when its claiming test was sabotaged; the item closes with its review, and closing files its residual risks in the register | a status says what is true only once it is |
+| 6 | Adversarial review through several lenses | one reviewer per lens (for example: fidelity to the spec, a fresh deploy, checks that pass when they should fail), then a skeptic pass on the findings; the findings and what became of each go into the item's `## Log`, and a risk that stays open becomes a `residual:` line in its `## Design review` where it has one (FRAMEWORK §5.2) | one reader misses what a lens built to look for it finds |
+| 7 | Flip the statuses | a criterion moves to `tested` once its claiming test exists (FRAMEWORK §3.3), and only after that test was sabotaged where the repo's contract requires it; the item closes, and closing files its residual risks in the register | a status says what is true only once it is |
 
 ## Worktrees for parallel builders
 

@@ -35,8 +35,8 @@ the repo root. Run it before every commit that touches code, tests or any record
 every push. Lint covers the record schemas, append-only bodies, bundles, the working state, the
 routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
 record or a dead route. How to run it so its result is true, and the test baselines:
-`docs/runbooks/gate.md`. No new test, guard or refusal is believed until it has been seen to
-fail: `docs/runbooks/sabotage.md`.
+`docs/runbooks/gate.md`. No guard is believed until it has been seen to fail (FRAMEWORK P7):
+`docs/runbooks/sabotage.md`.
 
 ## Rituals
 

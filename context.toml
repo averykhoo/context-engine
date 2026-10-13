@@ -169,7 +169,7 @@ path = "docs/runbooks/gate.md"
 mode = "replaced only through the kit copy (AC-37), LIVING"
 note = "running the gate so its result is true, and the test baselines"
 max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, the longest method runbook 70 lines, plus room for a few rows; wrong if a method step is left out to stay under it
-max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, the largest 4724 bytes, plus the same room; wrong as above
+max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, the largest 4897 bytes, plus the same room; wrong as above
 max_width = 100    # G-D1; provenance: JUDGEMENT 2026-10-13c, the prose wrap of the other runbooks; wrong if wrapping splits a command mid-line
 
 [[routes]]

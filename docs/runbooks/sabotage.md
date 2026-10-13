@@ -9,9 +9,10 @@ liveness: LIVING
 
 # Sabotage
 
-No test, guard or refusal is believed until it has been seen to fail (FRAMEWORK P7). This is the
-procedure. The repo's `CLAUDE.md` names where its scripted probes are kept and any mutation guard
-that does this mechanically (G-T5); where that guard runs, this file is its fallback (P16).
+No guard is believed until it has been seen to fail (FRAMEWORK P7); a repo's contract may ask the
+same of every new test and refusal, and tie a criterion's `tested` status to it. This is the
+procedure. The repo's `CLAUDE.md` names where its scripted probes are kept and, once the
+framework's mutation guard (G-T5) is built and run there, this file is its fallback (P16).
 
 ## The procedure
 
@@ -20,8 +21,8 @@ that does this mechanically (G-T5); where that guard runs, this file is its fall
 | 1 | Name, in one line, what the new check protects | a break of something else proves nothing |
 | 2 | Break exactly that: edit the code it guards, corrupt the fixture, drop the check, or plant the bad input (a missing file, a copy out of step, a forbidden id) | the cheapest break the check exists to catch |
 | 3 | Run the check and watch it go red for the right reason: read the failure, not only the exit code | a check red for an import error or a typo guards nothing |
-| 4 | Restore, run it again, and see it green; `git diff --exit-code <path>` shows the restore is whole | a check left sabotaged is worse than none |
-| 5 | Record it in the commit message: `Sabotage: <what was broken> -> <test> red` | the next reader can repeat it; a criterion moves to `tested` only on such a line |
+| 4 | Restore, run it again, and see it green; compare each file with the copy or hash saved before the break (`git diff --exit-code` alone passes an untracked file whatever it holds) | a check left sabotaged is worse than none |
+| 5 | Record it in the commit message: `Sabotage: <what was broken> -> <test> red` | the next reader can repeat it, and a repo that ties `tested` to sabotage reads it here |
 
 ## Traps
 

@@ -457,8 +457,15 @@ def test_the_contract_pins_the_framework_and_starts_a_session_alone():
 
 # -- no leaks from this repo ----------------------------------------------------------------
 
-LEAK = re.compile(r"\b(?:CE|DEC|US|AC)-\d+|spike/|C:/Users|context-engine/docs/evidence|docs/evidence/adhoc")
+# this repo's ids (an `ASK-n` is not one: ASK is the kit's own default question prefix), its probe
+# paths, and this machine's paths in any of the forms a shell writes them (CE-26)
+LEAK = re.compile(
+    r"\b(?:CE|DEC|US|AC|INV)-\d+|spike/|tools/sabotage|(?i:\b[a-z]:[\\/]users\b|/c/users/|anaconda3)"
+    r"|context-engine/docs/evidence|docs/evidence/adhoc"
+)
 BOARD_MARK = re.compile(r"\bCE-\d+\)")  # FRAMEWORK's `(CE-n)` build-status marks, explained in its Summary
+# known leaks awaiting their fix, which then removes the entry here (the test fails until it does)
+KNOWN_LEAKS = {"src/context_engine/kit/docs/runbooks/manual-mode.md": ["INV-15"]}
 
 
 def leaks(text: str, allow_marks: bool) -> list[str]:
@@ -476,7 +483,17 @@ def test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths():
     assert len(kit) >= 7, kit
     found = {p.relative_to(REPO).as_posix(): leaks(p.read_text(encoding="utf-8"), False) for p in kit}
     found["FRAMEWORK.md"] = leaks(FRAMEWORK.read_text(encoding="utf-8"), True)
-    assert {k: v for k, v in found.items() if v} == {}
+    found = {k: v for k, v in found.items() if v}
+    known = {k: [hit.split(": ", 1)[1] for hit in v] for k, v in found.items() if k in KNOWN_LEAKS}
+    assert known == KNOWN_LEAKS, f"a known leak was fixed or changed: update KNOWN_LEAKS to {known}"
+    assert {k: v for k, v in found.items() if k not in KNOWN_LEAKS} == {}
+
+
+@pytest.mark.parametrize("planted", ["INV-3", "tools/sabotage_x.py", "C:\\Users\\me", "c:/users/me", "/c/Users/me/x", "anaconda3/envs/x"])
+@pytest.mark.criterion("AC-33")
+def test_the_leak_check_sees_each_form(planted):
+    assert leaks(f"see {planted} here", False), planted
+    assert not leaks("ASK-n, INV-n, G-3, a T-1 task and C:/Program Files", False)
 
 
 # -- the runbooks ship in the kit (CE-24) ----------------------------------------------------

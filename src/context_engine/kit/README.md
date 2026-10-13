@@ -130,7 +130,11 @@ place:
 - each kind's `dir` and `prefix` point at the records and id series the repo already has. Ids are
   never renumbered: an existing `D-n` series stays `D-n`;
 - each `[[routes]]` `path` points at the existing file for that component;
-- a skeleton `init` wrote for a component the repo keeps elsewhere is deleted, not routed.
+- a skeleton `init` wrote for a component the repo keeps elsewhere is deleted, not routed;
+- a runbook `init` skipped because the repo already had a file of that name (`skipped` in its
+  output) is now the framework's runbook of that name: the contract points agents at it and its
+  route's caps apply. Merge the kit's copy into it by hand, or move the repo's own file aside
+  and run `init` again.
 
 `context-engine lint` then shows what still disagrees (dead routes, records that break the
 schema). Back-filled stories are reconstructions, never the owner's words (§11.4).
@@ -145,8 +149,9 @@ schema). Back-filled stories are reconstructions, never the owner's words (§11.
    move its gate command to a `## Gate` section below the end marker first, then replace the
    block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace every
    runbook in `docs/runbooks/` with the new kit's copy, unless the repo edited its own (then merge
-   by hand), and run `init` for any runbook the new kit adds (copying its `[[routes]]` entry from the new
-   `context.toml.template`): `init` never overwrites one, so an upgrade is the only time they move.
+   by hand), and run `init` for any runbook the new kit adds. Copy each new runbook's `[[routes]]`
+   entry from the new `context.toml.template` too: lint cannot tell that one is missing. `init`
+   never overwrites a runbook, so an upgrade is the only time they move.
 3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).
@@ -161,14 +166,14 @@ run yet are checked by hand (FRAMEWORK §11.1).
 ## Runbooks
 
 The kit ships the runbooks, and `init` copies them into the repo's `docs/runbooks/`, so a repo can
-run the framework from its own tree with no engine (FRAMEWORK P16). Two are the by-hand fallback:
+run the framework from its own tree with no engine (FRAMEWORK P16). The by-hand fallback:
 - `rituals.md`: the order of every ritual (session start, intake, clean close, pause, resume,
   push and CI, bootstrap, foreign reconcile, housekeeping), each step with its engine command, its
   by-hand step and its why. It is the only place the order is written.
 - `manual-mode.md`: every engine operation by hand, with its why; the reference for what the
   engine should have done when it errs.
 
-Four hold method (FRAMEWORK §7.5): `gate.md` (running the gate, and the test baselines),
+The method runbooks (FRAMEWORK §7.5): `gate.md` (running the gate, and the test baselines),
 `sabotage.md`, `fan-out.md` (delegation and the build rounds) and `release.md`. Each is routed on
 its own in `context.toml`, with caps. None carries a repo value: the repo's test command, suites,
 baselines outside the gate, models and release steps go in `CLAUDE.md`, which the runbooks point
