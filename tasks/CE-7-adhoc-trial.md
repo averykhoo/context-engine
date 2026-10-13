@@ -28,3 +28,4 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - 2026-10-08b: deps += CE-8 (owner, DEC-10: dogfood here before any other repo).
 - 2026-10-13a (claude-code/claude-opus-5-5): Owner, DEC-28: import adhoc D-27 as BUILT with D-29 linked as narrowing it (decision link D-29 D-27 --rel relaxes, as D-12/D-30), not as SUPERSEDED.
 - 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.
+- 2026-10-13b (claude-code/claude-opus-5-5): DEC-6 amended (owner, 2026-10-13b): adhoc confirmed for a QUICK trial; audio-workspace is the better testing ground and is next (CE-43). Keep the trial short: cutover, a few real sessions, score, owner decides the merge.
