@@ -465,7 +465,7 @@ LEAK = re.compile(
 )
 BOARD_MARK = re.compile(r"\bCE-\d+\)")  # FRAMEWORK's `(CE-n)` build-status marks, explained in its Summary
 # known leaks awaiting their fix, which then removes the entry here (the test fails until it does)
-KNOWN_LEAKS = {"src/context_engine/kit/docs/runbooks/manual-mode.md": ["INV-15"]}
+KNOWN_LEAKS: dict[str, list[str]] = {}
 
 
 def leaks(text: str, allow_marks: bool) -> list[str]:

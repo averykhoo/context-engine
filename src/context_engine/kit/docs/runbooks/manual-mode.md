@@ -195,7 +195,7 @@ counts too, because a session may have written the banner before its ledger entr
 
    - **rows:** T-8 (runbook written); S-11 (amended)
    - **receipts:**
-     - guards: gate pytest -q green, N passed; context-engine lint: ...
+     - guards: `<gate>` green, N passed; context-engine lint: ...
      - read: ...
      - asked: none open
    - **summary** (the owner digest):
@@ -909,7 +909,7 @@ what the code did is gone, the decision no longer describes the code, so superse
 **Why:** a moved file or renamed symbol leaves the link dead, G-T3 red and `why()` answering
 from nothing. `code:` is written by an operation, so a hand edit would skip the existence check
 and leave no op-log line. Whether the new code carries out the decision is a reading judgement
-no operation can make (INV-15).
+no operation can make (a residual in the engine's register).
 
 ### context-engine decision find
 
