@@ -381,7 +381,7 @@ def decision_code(e: Engine, files: Files) -> list[Failure]:
             missing = symbol_missing(hit, symbol) if hit is not None and symbol else None
             problem = "does not exist (case-exact)" if hit is None else f"has no `{missing}`" if missing else ""
             if problem:
-                out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but `{file}` {problem}", "restore what the link names; no operation rewrites a link yet, so do not hand-edit `code:`"))
+                out.append(Failure("G-T3", rel, f"`code:` links `{link}`, but `{file}` {problem}", f"if the code moved, `decision relink {doc.get('id')} {link} <file::symbol>`; if what it did is gone, `decision supersede` the decision; do not hand-edit `code:`"))
     return out
 
 

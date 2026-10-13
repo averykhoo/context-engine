@@ -1,6 +1,6 @@
 """Decision records (CE-5, FRAMEWORK §6.5): bracketed corrections, supersede and link in both
-directions, decision set (CE-32), find, show and why(), the generated index (G-D6), and the
-single-file log importer (AC-38 to AC-42, AC-53)."""
+directions, decision set (CE-32), relink (CE-35), find, show and why(), the generated index
+(G-D6), and the single-file log importer (AC-38 to AC-42, AC-53, AC-54)."""
 
 import datetime as dt
 import json
@@ -230,7 +230,7 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
         ("amends", "decision link"),
         ("retires", "decision link"),
         ("tasks", "decision link"),
-        ("code", "decision link"),
+        ("code", "decision relink"),
         ("refs", "decision link"),
     ],
 )
@@ -357,6 +357,64 @@ def test_link_infers_tasks_and_code_and_checks_the_target_exists(eng):
     ]:
         with pytest.raises(Refusal, match=match):
             eng.link(rid, target, rel, **W)
+
+
+@pytest.mark.criterion("AC-54")
+def test_relink_moves_a_code_link_in_place_and_logs_relink(eng):
+    rid = dec(eng)
+    eng.link(rid, "src/mod.py", **W)
+    eng.link(rid, "src/mod.py::Store.lint", **W)
+    eng.link(rid, "src/mod.py::Store", **W)
+    sha = eng.store.get(rid).doc.get("body_sha")
+    (eng.root / "src" / "store.py").write_text("class Store:\n    def check(self):\n        pass\n", encoding="utf-8")
+    assert eng.relink(rid, "src/mod.py::Store.lint", "src/store.py::Store.check", **W) == f"{rid}: code src/mod.py::Store.lint -> src/store.py::Store.check"
+    d = eng.store.get(rid).doc
+    assert d.get("code") == ["src/mod.py", "src/store.py::Store.check", "src/mod.py::Store"]  # in place, order kept
+    assert d.get("body_sha") == sha
+    assert [(o["op"], o["id"], o["fields"], o["session"], o["actor"]) for o in ops(eng)[-1:]] == [("relink", rid, ["code"], S, ACTOR)]
+    eng.relink(rid, "src/mod.py::Store", "src/store.py::Store.check", **W)  # onto a link it already has: kept once
+    assert eng.store.get(rid).doc.get("code") == ["src/mod.py", "src/store.py::Store.check"]
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-54")
+def test_the_g_t3_remedy_for_a_moved_code_link_is_a_relink_that_turns_it_green(eng):
+    rid = dec(eng)
+    eng.link(rid, "src/mod.py::Store.lint", **W)
+    (eng.root / "src" / "store.py").write_text("class Store:\n    def lint(self):\n        pass\n", encoding="utf-8")
+    (eng.root / "src" / "mod.py").unlink()
+    [red] = [f for f in eng.lint() if f.guard == "G-T3"]
+    cmd = re.search(r"`decision relink ([^`]*)`", red.remedy).group(1).replace("<file::symbol>", "src/store.py::Store.lint").split()
+    assert cmd[:2] == [rid, "src/mod.py::Store.lint"]
+    assert "decision supersede" in red.remedy and "hand-edit" in red.remedy
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "relink", *cmd]) == 0
+    assert [f for f in eng.lint() if f.guard == "G-T3"] == []
+
+
+@pytest.mark.criterion("AC-54")
+def test_relink_refuses_writing_nothing_unless_it_moves_an_existing_code_link_of_a_current_decision_to_code_that_exists(eng):
+    rid, gone, new, tid = dec(eng), dec(eng, "Old"), dec(eng, "New"), eng.new("task", "T", **W).id
+    eng.link(rid, "src/mod.py::Store", **W)
+    eng.link(rid, tid, **W)
+    eng.link(gone, "src/mod.py::Store", **W)
+    eng.supersede(gone, new, **W)
+    before = {i: eng.store.get(i).path.read_bytes() for i in (rid, gone)}
+    n_ops = len(ops(eng))
+    for who, old, target, match in [
+        (rid, "src/mod.py::Store", "src/mod.py::Store", "the same"),
+        (rid, "src/mod.py::Store", "src/Mod.py::Store", "case-exact"),
+        (rid, "src/mod.py::Store", "src/mod.py::Missing", "has no 'Missing'"),
+        (rid, "src/mod.py::Other", "src/mod.py::Store.lint", "has no `code:` link"),
+        (rid, tid, "src/mod.py::Store.lint", f"in `tasks`, not `code`"),
+        (gone, "src/mod.py::Store", "src/mod.py::Store.lint", f"superseded.*decision link {new} src/mod.py::Store.lint"),
+        (tid, "src/mod.py::Store", "src/mod.py::Store.lint", "not a decision"),
+    ]:
+        with pytest.raises(Refusal, match=match):
+            eng.relink(who, old, target, **W)
+    assert {i: eng.store.get(i).path.read_bytes() for i in (rid, gone)} == before
+    assert len(ops(eng)) == n_ops
+    argv = ["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "relink", rid]
+    assert main([*argv, "src/mod.py::Other", "src/mod.py::Store.lint"]) == 2  # a refusal exits 2
 
 
 @pytest.mark.criterion("AC-40")

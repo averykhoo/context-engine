@@ -89,6 +89,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body_sha", "body"]` |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
+| decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
@@ -772,7 +773,8 @@ operation owns. Values take the kind's declared types, as in § context-engine t
 - the key is `status`, `supersedes` or `superseded_by`: use `decision supersede`, which writes
   both directions and the derived OKF status;
 - the key is a link field (`relaxes`, `creates`, `amends`, `retires`, `tasks`, `code`, `refs`):
-  use `decision link`; no operation removes a link yet;
+  use `decision link`, or `decision relink` to move a `code` link; no operation removes an id
+  link (ids are never reused, so one never goes stale);
 - the key is `narrowed_by`: it is the backlink `relaxes` writes, so run `decision link <other>
   <id> --rel relaxes` on the decision that narrows this one;
 - the key is `answers` (written once by `ask answer`), or provenance: `actor`, `decided`,
@@ -809,8 +811,31 @@ field is a no-op: stop.
 
 **Why:** `why()` answers from these links, so a link to something that does not exist answers
 wrongly. Existence is checked when the link is written; G-T3 fails a current decision's link
-that later stops resolving. No operation removes or rewrites a link yet: restore what
-the link names, and do not hand-edit `code:`.
+that later stops resolving: move it with § context-engine decision relink, and do not
+hand-edit `code:`.
+
+### context-engine decision relink
+
+`decision relink <id> <old> <new>` replaces one `code:` link of a decision when the code it
+names moves. Refuse, and write nothing, when:
+- `<old>` and `<new>` are the same: nothing to do;
+- `<new>` does not resolve: the file must exist with its exact case and every dotted part of the
+  symbol must appear in it, as for § context-engine decision link;
+- the decision is not a decision, or is `status: deprecated` (SUPERSEDED): its links are
+  history, and G-T3 does not check them; link the code to the decision that replaced it;
+- `<old>` is not in its `code:`: if it is in another link field, that link is an id, and ids
+  never move; otherwise name one of its `code:` links, or add one with `decision link`.
+
+Re-read the file, then replace `<old>` with `<new>` in place in `code:` (if `<new>` is already
+there, drop `<old>` and keep `<new>` once). The body and `body_sha` do not change. Log one
+`relink` line with fields `["code"]`, then regenerate the index (§ context-engine decision
+index). **Relink only to where the same behaviour now lives**, in the commit that moves it: if
+what the code did is gone, the decision no longer describes the code, so supersede it.
+
+**Why:** a moved file or renamed symbol leaves the link dead, G-T3 red and `why()` answering
+from nothing. `code:` is written by an operation, so a hand edit would skip the existence check
+and leave no op-log line. Whether the new code carries out the decision is a reading judgement
+no operation can make (INV-15).
 
 ### context-engine decision find
 

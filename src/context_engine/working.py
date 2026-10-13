@@ -61,7 +61,8 @@ DECISION_OWNED = {
     "verified": "an owner's endorsement is the owner's words, which no operation can read: record them with `record amend <id> \"<the owner's words>\"`",
     **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
     "narrowed_by": "it is the backlink `relaxes` writes: run `decision link <other> <id> --rel relaxes` on the decision that narrows this one",
-    **{k: "use `decision link <id> <target> --rel <field>`; no operation removes a link yet" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by", "narrowed_by")},
+    **{k: "use `decision link <id> <target> --rel <field>`; no operation removes an id link (ids are never reused, so it never goes stale)" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by", "narrowed_by", "code")},
+    "code": "add one with `decision link <id> <file::symbol>`; move one when the code moves with `decision relink <id> <old> <new>`",
 }
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
@@ -918,6 +919,35 @@ class Engine:
 
         self.store.update(ids, mutate, session=session, actor=actor, op="link")
         return f"{rid}: {rel} + {target}" + (f"; {target}: narrowed_by + {rid}" if rel == "relaxes" else "")
+
+    def relink(self, rid: str, old: str, new: str, *, session: str, actor: str) -> str:
+        """Replace one `code:` link of a current decision with another when the code moves
+        (`decision.relink`, CE-35): in place, the new link checked as `link` checks it. Only
+        `code:` moves: id links never do (ids are never reused), and a superseded decision's
+        links are history."""
+        self._check(session, actor)
+        self._is_decision(rid)
+        old, new = old.strip(), new.strip()
+        if old == new:
+            raise Refusal(f"the old and new link are the same ({old!r})", "nothing to do")
+        self._code_exists(new)
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            d = recs[rid].doc
+            if d.get("status") == "deprecated":
+                later = ", ".join(D.as_list(d.get("superseded_by"))) or "its successor"
+                raise Refusal(f"{rid} is superseded, so its links are history", f"link the code to the decision that replaced it: `decision link {later} {new}`")
+            have = D.as_list(d.get("code"))
+            if old not in have:
+                field = next((f for f in D.LINK_FIELDS if old in D.as_list(d.get(f))), None)
+                if field:
+                    raise Refusal(f"{rid} links {old} in `{field}`, not `code`", "only a `code:` link moves; an id is never reused, so an id link never goes stale")
+                raise Refusal(f"{rid} has no `code:` link {old!r}", f"name one of its `code:` links ({', '.join(have) or 'it has none'}), or add a link with `decision link {rid} {new}`")
+            d.set("code", list(dict.fromkeys(new if v == old else v for v in have)))
+            return {rid: ["code"]}
+
+        self.store.update([rid], mutate, session=session, actor=actor, op="relink")
+        return f"{rid}: code {old} -> {new}"
 
     def _row(self, r: Record) -> str:
         d = r.doc

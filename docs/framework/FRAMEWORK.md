@@ -1044,7 +1044,9 @@ REJECTED, the link fields, `status`, `answers`, the provenance `actor`, `decided
 `attribution`, `imported_from` and `generated`, and `verified` (an endorsement is owner words), so
 it never writes half a link or re-attributes a decision; CE-32), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
-backlink too), `decision.find(text, tag, status, links_to)` (one-line rows),
+backlink too), `decision.relink(id, old, new)` (moves one `code:` link of a current decision when
+the code moves, the new one checked as `link` checks it; id links never move and a superseded
+decision's links are history; CE-35), `decision.find(text, tag, status, links_to)` (one-line rows),
 `decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
 task, criterion, decision or `file::symbol`, the decisions that link it, each with the field
 that does. Writing a decision costs only its own text; no session opens the log to append to it.
@@ -1498,7 +1500,7 @@ library operations. The CLI spells them `context-engine <noun> <verb>` (`session
 | Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg)`, `reopen`, `section.set(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.set`, `.link`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 
@@ -1531,8 +1533,9 @@ Decisions as records follow once the core holds.
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
   **normative** text of a story, criterion, law doc or invariant exists in the code; history
   notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
-  lists, and the names in backticks there, and the `code:` links of every current decision;
-  HTTP routes are not checked.
+  lists, and the names in backticks there, and the `code:` links of every current decision
+  (a link whose code moved is moved with `decision.relink`, never by hand); HTTP routes are not
+  checked.
 - **G-T4:** structural-claim anchors resolve and their body hashes match the pins; re-pinning
   is an explicit, reviewed act.
 - **G-T5 (mutation per criterion):** runs as a scheduled routine, or as the one slow background

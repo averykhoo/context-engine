@@ -56,6 +56,7 @@ CALLS = {
     "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
     "decision_set": (["DEC-1", "--set", "tags=a", "--unset", "reopen_if"], {"id": "DEC-1", "fields": {"tags": "a"}, "unset": ["reopen_if"]}),
     "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
+    "decision_relink": (["DEC-1", "a.py::f", "b.py::f"], {"id": "DEC-1", "old": "a.py::f", "new": "b.py::f"}),
     "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
     "decision_show": (["DEC-1", "--section", "Amendments"], {"id": "DEC-1", "section": "Amendments"}),
     "why": (["CE-1"], {"target": "CE-1"}),
@@ -173,6 +174,10 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("record_amend", id="DEC-2", text="widened")
     w("record_correct", id="DEC-2", after="Owner", text="sic")
     w("decision_link", id="DEC-2", target="CE-1")
+    for f in ("a.py", "b.py"):
+        (root / f).write_text("def f():\n    pass\n", encoding="utf-8")
+    w("decision_link", id="DEC-2", target="a.py::f")
+    w("decision_relink", id="DEC-2", old="a.py::f", new="b.py::f")
     w("decision_set", id="DEC-2", fields={"tags": "a, b"}, unset=["reopen_if"])
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")

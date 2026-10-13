@@ -167,6 +167,10 @@ def build() -> argparse.ArgumentParser:
     dl.add_argument("id")
     dl.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
     dl.add_argument("--rel", default="", help="tasks, creates, amends, retires, relaxes, code or refs")
+    drl = dc.add_parser("relink", help="move a decision's code: link when the code moves")
+    drl.add_argument("id")
+    drl.add_argument("old", help="the code: link to replace")
+    drl.add_argument("new", help="the file::symbol it moved to")
     df = dc.add_parser("find")
     df.add_argument("--text", default="")
     df.add_argument("--tag", default="")
@@ -220,6 +224,7 @@ CLI_OPS = {
     ("decision", "supersede"): "decision_supersede",
     ("decision", "set"): "decision_set",
     ("decision", "link"): "decision_link",
+    ("decision", "relink"): "decision_relink",
     ("decision", "find"): "decision_find",
     ("decision", "show"): "decision_show",
     ("decision", "index"): "hk_regen_index",

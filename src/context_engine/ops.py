@@ -302,6 +302,12 @@ def decision_link(e: Engine, c: Caller, id: str, target: str, rel: str = "") -> 
     return 0, e.link(id, target, rel, **c.kw)
 
 
+@op(write=True)
+def decision_relink(e: Engine, c: Caller, id: str, old: str, new: str) -> tuple[int, str]:
+    """Replace a current decision's `code:` link `old` with `new` (a `file::symbol` that exists) when the code moves. Only `code:` links move; a superseded decision's links are history."""
+    return 0, e.relink(id, old, new, **c.kw)
+
+
 @op(write=False, rest="narrow it with `status`, `tag`, `links_to` or `text`")
 def decision_find(e: Engine, c: Caller, text: str = "", tag: str = "", status: str = "", links_to: str = "") -> tuple[int, str]:
     """Decisions matching every filter given, one line each: `text` searches titles and bodies."""
