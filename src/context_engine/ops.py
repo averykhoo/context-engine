@@ -1,6 +1,7 @@
 """One function per operation (FRAMEWORK §8.0.2, AC-18). The CLI (``cli.run``) and the MCP
-server (``mcp``) both look the operation up in ``OPS`` and call it, so neither holds its own
-copy of what an operation does: they only turn their arguments into the parameters below.
+server (``mcp``) both look the operation up in ``OPS`` and run it with ``Op.call``, so neither
+holds its own copy of what an operation does (nor of the commit that follows a write): they only
+turn their arguments into the parameters below.
 
 Each function takes the engine, the ``Caller`` (session key and actor), then plain parameters
 (str, int, bool, lists, a str->str dict) that both entry points can supply. It returns
@@ -19,6 +20,7 @@ from typing import Callable
 
 from . import bootstrap
 from . import ledger as L
+from .commit import Outcome
 from .working import Engine
 
 
@@ -45,6 +47,18 @@ class Op:
     def target(self, root) -> "Engine | Path":
         """What the function's first parameter gets: an Engine on ``root``, or the root itself."""
         return Engine(root) if self.engine else Path(root)
+
+    def call(self, target: "Engine | Path", c: "Caller", /, **kw) -> tuple[int, str]:
+        """Run the operation on ``target`` (from ``self.target``), as the CLI and the MCP server
+        both do. A write runs in one store batch, so everything it wrote is committed once, by
+        path, with its op log lines (FRAMEWORK §5.5 rule 4), and its line says what the commit did."""
+        if not (self.write and self.engine):
+            return self.fn(target, c, **kw)
+        store = target.store
+        store.last_commit = Outcome()
+        with store.batch():
+            code, text = self.fn(target, c, **kw)
+        return code, text + store.last_commit.line()
 
     @property
     def params(self) -> list[inspect.Parameter]:

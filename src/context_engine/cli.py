@@ -259,7 +259,7 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
     args = build().parse_args(argv)
     o = ops.OPS[CLI_OPS[(args.group, getattr(args, "op", None))]]
     a = _params(args)
-    return o.fn(o.target(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
+    return o.call(o.target(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -20,6 +20,7 @@ lockfile = ".context/engine.lock"    # .context/ ignores itself; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]   # directories declared OKF bundles (lint G-D11)
 contract = "CLAUDE.md"               # the contract; its `framework: <major.minor>` must equal the engine's (lint G-D0)
 lock_timeout = 30.0                  # seconds to wait for the repo lock; provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
+commit = true                        # each engine write is committed by path with its op log lines (FRAMEWORK §5.5 rule 4); false leaves every commit but a pause's to the session
 
 # -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
 # Keys of a [kinds.<name>] table:

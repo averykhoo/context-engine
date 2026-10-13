@@ -113,6 +113,7 @@ class Config:
     bundles: tuple[str, ...] = ()
     lock_timeout: float = 30.0
     contract: str = "CLAUDE.md"  # the file holding `framework: <major.minor>` (lint G-D0, DEC-23)
+    commit: bool = True  # the engine commits its own writes by path (FRAMEWORK §5.5 rule 4, CE-45)
     working: Working = field(default_factory=Working)
     routes: tuple[Route, ...] = ()
     guards: Guards = field(default_factory=Guards)
@@ -158,8 +159,8 @@ def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> N
 
 
 TOP_KEYS = ("engine", "kinds", "working", "routes", "guards")
-ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract")
-ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str}
+ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract", "commit")
+ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": bool}
 KIND_KEYS = tuple(f for f in Kind.__dataclass_fields__ if f != "name")
 KIND_TYPES = {"type": str, "prefix": str, "dir": str, "mode": str, "required": list, "enums": dict, "extra_dirs": list, "types": dict}
 _PY = {str: str, int: int, tuple: list, dict: dict}
@@ -256,6 +257,7 @@ def from_dict(raw: dict) -> Config:
         bundles=tuple(engine.get("bundles", ())),
         lock_timeout=float(engine.get("lock_timeout", Config.lock_timeout)),
         contract=engine.get("contract", Config.contract),
+        commit=engine.get("commit", Config.commit),
         working=working,
         routes=tuple(routes),
         guards=guards,

@@ -76,7 +76,7 @@ def make_tool(o: ops.Op, root: Path, state: ops.Caller):
         c = ops.Caller(kw.pop("session", None) or state.session, kw.pop("actor", None) or state.actor)
         try:
             e = o.target(root)  # an Engine, or for `init` the bare root: there may be no context.toml yet
-            _, text = o.fn(e, c, **kw)
+            _, text = o.call(e, c, **kw)  # as the CLI does: the same function, and for a write the same commit
         except Refusal as r:
             raise ToolError(str(r)) from r  # the SDK passes a ToolError's text, remedy and all, to the agent
         if o.name == "session_start":

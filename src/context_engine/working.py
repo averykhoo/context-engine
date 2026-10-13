@@ -739,13 +739,14 @@ class Engine:
             "deferred": list(deferred or []),
         }
         body = f"**In flight:** {in_flight.strip()}\n\n**Resume step:** {resume_step.strip()}\n"
-        rec = self.store.new(self._role("pause"), fields, body, session=session, actor=actor)
-        rel = rec.path.relative_to(self.root).as_posix()
-        self._git("add", "--", rel)
-        # every agent commit ends with a `Session:` trailer (DEC-22); the second -m is its own paragraph
-        self._git("commit", "-q", "--only", "-m", f"pause {rec.id} ({session}): {fields['title'][:60]}", "-m", f"Session: {session}", "--", rel)
-        sha = self._git("rev-parse", "--short", "HEAD").strip()
-        return f"{rec.id}: pause recorded on {branch} ({len(dirty)} uncommitted paths), committed {sha}"
+        # The store commits the record with its op line when the batch ends (CE-45), under the
+        # pause's own title and even with `[engine] commit = false`: a pause is always committed
+        # at once (AC-14). Through `ops` the batch is the operation's, which reports the commit.
+        with self.store.batch():
+            rec = self.store.new(self._role("pause"), fields, body, session=session, actor=actor)
+            self.store.commit_title = f"pause {rec.id} ({session}): {fields['title'][:60]}"
+            self.store.commit_always = True
+        return f"{rec.id}: pause recorded on {branch} ({len(dirty)} uncommitted paths){self.store.last_commit.line()}"
 
     def pause_resume(self, rid: str, *, session: str, actor: str) -> str:
         self._check(session, actor)

@@ -802,11 +802,34 @@ These records are not ephemeral: they are tracked and committed, and they *expir
 3. **Baton and pause records are keyed by session.** Any session closes a baton by
    `baton.done` with evidence of the step done; a pause is closed by `pause.resume`;
    housekeeping expires them.
-4. **Commit working-state records by path, promptly.** A pause record left uncommitted in a
-   shared tree can be lost to another session's close. The engine commits its own working-state
-   writes by path as it makes them: a docs-only commit, which is cheap. *Built so far: only
-   `pause open` commits its own record; other writes are committed by the session by path at
-   close or pause.*
+4. **The engine commits its own writes by path, as it makes them.** Each write operation ends
+   in one docs-only commit, made under the engine lock, that carries **every op log line the
+   working tree has and HEAD lacks, every file those lines name, and the op log itself**.
+   - **Why the op log goes with every record:** lint reads the two together (G-W7 checks a
+     board item's session keys against the newest line that wrote them). A record committed
+     without its line, or a line without its record, fails lint on a clean checkout of that
+     commit, even though the shared tree passes.
+   - **Why every uncommitted line, not only this operation's:** the commit is derived from the
+     op log against HEAD, not from what this process remembers. So a line left by a session
+     that died, an older engine or a by-hand write goes in with the files it names, in the next
+     engine commit, and the message names whose it was. That is the commit its owner's close
+     would have made. Committing only this operation's lines would need a partial op log,
+     whose order on disk and at HEAD would then differ.
+   - **Why by path and under the lock:** `git commit --only` on those paths leaves what another
+     session staged or left untracked exactly as it was: nothing is unstaged, reset or stashed.
+     Holding the engine lock means no engine write is half-made in the tree while the commit
+     reads it. Hooks run; a hook's refusal is reported, never bypassed.
+   - **One operation, one commit:** an operation that writes several files (an answer writes a
+     decision and closes its question) commits them together, titled `engine: <op> <id>, ...`
+     (a pause keeps its own title) and ending in the `Session: <key>` trailer.
+   - **It never undoes the write.** Where it cannot commit, the write stands and the
+     operation's line says why, naming the by-hand commit: a merge, rebase, cherry-pick, revert
+     or bisect in progress, a detached HEAD, a refusing hook, git missing beside a `.git`. A
+     target that is not a git repo commits nothing and says nothing.
+   - **A repo may turn it off** (`[engine] commit = false`): the session then commits the op
+     log with what it names, by path, at close or pause, as the by-hand fallback does. A pause
+     record is committed at once either way, since a pause left uncommitted in a shared tree
+     can be lost to another session's close.
 5. **Background agents, gates and engine writes use locks** (G-V3) keyed on the tree hash. Each
    concurrent session runs its own MCP server process (§8.0.2), so the engine's lock is a file
    lock.
@@ -973,7 +996,8 @@ citation (the order is below):
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
      finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
      Its operation list goes into the digest.
-7. **Run the gate again, to prove this close,** then commit by path. Push only with permission,
+7. **Run the gate again, to prove this close,** then commit by path whatever the engine did not
+   (its own writes are committed as it makes them, §5.5 rule 4). Push only with permission,
    then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
@@ -1250,7 +1274,8 @@ to perform rituals. The agent sessions absorb the cost:
    One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
    repo's own, `[kinds.task] prefix`); a commit that finishes the task also carries
    `Closes: <id>` (§6.11). Small tasks may share a session: the gate goes green over all of
-   them, then each is committed by path.
+   them, then each is committed by path. The engine's own commits (§5.5 rule 4) carry the
+   trailer too, and no task id: they record working state, not a task's work.
 2. **At session start, reconcile foreign commits** since the newest ledger entry (the steps and
    the entry's format: `rituals.md` § Foreign reconcile):
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
@@ -1302,9 +1327,7 @@ the session approves the batch.
 
 **Safety:**
 - every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in its own
-  commit by path with a `Session:` trailer, so `git revert` undoes it. *Built so far: `baton
-  expire` (op `hk.expire_batons`) writes and logs but does not commit; the session commits it
-  by path.*
+  commit by path with a `Session:` trailer (§5.5 rule 4), so `git revert` undoes it.
 - writes per run are counted and measured; a cap is optional and off by default (G-W10);
 - the run's report **is** its operation list, and it goes into the owner digest (§5.6);
 - the run takes the engine lock, because another session may be live in the same tree.

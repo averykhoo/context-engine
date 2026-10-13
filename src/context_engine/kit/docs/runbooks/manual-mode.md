@@ -65,6 +65,7 @@ These hold for every operation below. The per-operation sections only list what 
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
 | **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 reads it. |
+| **Commit the write** | Commit the op log with every path its uncommitted lines name (`git diff HEAD -- docs/ledger/ops.jsonl` shows those lines), by path and at once: `git add -- <paths git has never seen>`, then `git commit --only -m "engine: <op> <id>" -m "Session: <key>" -- docs/ledger/ops.jsonl <paths>`. Lines another session left uncommitted go in too, with their files. Not during a merge, rebase, cherry-pick, revert or bisect, nor on a detached HEAD: commit when that is over. The engine does this itself and says `not committed: <why>` on the operation's line when it cannot; with `[engine] commit = false` the session does it at close or pause. | Lint reads the op log and the records together (G-W7), so a commit carrying one without the other fails lint on a clean checkout. By path, so what another session staged or left untracked stays as it was (FRAMEWORK §5.5 rule 4). |
 | **Engine-owned keys** | Never hand-edit `type`, `id` or `body_sha` on an existing record. | Ids are never reused or renumbered (P3). `body_sha` pins an owner's words (G-D10). |
 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
@@ -159,7 +160,8 @@ different case or one extra BOM gives a hash that never matches the engine's.*
 
    - **opened:** 2026-10-08T19:02:11+08:00 by claude-code/<model-id>
    ```
-4. Commit the ledger by path promptly. The engine leaves this commit to you.
+4. Commit the ledger and the op log by path at once (§ What every write does, **Commit the
+   write**). The engine makes this commit itself.
 
 `HANDOFF.md` may be missing, but if it exists it must have a `## Banner (<key>)` heading:
 without one, session start, orient and both banner commands refuse.
@@ -693,10 +695,12 @@ blocking orientation (G-W3).
 2. New `PAU-n`: `title` (first line of what was in flight, cut to 100 characters), `session`, `state: open`, `created`,
    `branch`, `uncommitted: [...]`, `resume_step`, `evidence` (or `none`), `deferred: [...]`. Body:
    `**In flight:** ...` + blank line + `**Resume step:** ...`.
-3. Commit that file alone, at once: `git add -- <path>`, then
-   `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" -m "Session: <key>" -- <path>`.
-   (`--only` on a file git has never seen fails without the `add`. The second `-m` is the
-   `Session:` trailer every agent commit ends with, FRAMEWORK §6.10.)
+3. Commit that file with the op log, at once: `git add -- <path>`, then
+   `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" -m "Session: <key>" -- <path> docs/ledger/ops.jsonl`,
+   adding any path the op log's other uncommitted lines name (§ What every write does,
+   **Commit the write**). (`--only` on a file git has never seen fails without the `add`. The
+   second `-m` is the `Session:` trailer every agent commit ends with, FRAMEWORK §6.10.) The
+   engine commits a pause even with `[engine] commit = false`.
 
 **Why:** the next session needs the exact state of the tree, which comes from git, not from
 memory. Committing at once keeps another session's close from sweeping it away (FRAMEWORK §5.5

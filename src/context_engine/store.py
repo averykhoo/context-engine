@@ -3,7 +3,9 @@
 Every write is one operation: it takes the repo lock, re-reads the record inside it (so two
 writers never lose each other's change, AC-9), checks the result against the kind's schema
 before any byte is written (AC-5), writes atomically, and appends one line to the operation log
-carrying the session key and the actor (AC-6).
+carrying the session key and the actor (AC-6). Before the lock is let go, the write is committed
+by path with its op log line (``commit.commit``, FRAMEWORK §5.5 rule 4); inside ``batch()`` the
+commit waits for the batch's end, so one operation that writes several times commits once.
 
 Deliberately not checked here: whether an actor is allowed to make a change (that is policy,
 in the operations built on this core), and whether an append-only body changed *before* it was
@@ -17,10 +19,12 @@ import json
 import os
 import re
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
+from . import commit as commit_mod
 from . import config as config_mod
 from . import decisions
 from . import okf
@@ -113,6 +117,11 @@ class Store:
     def __init__(self, root: Path | str, config: Config | None = None):
         self.root = Path(root).resolve()
         self.config = config if config is not None else config_mod.load(self.root)
+        self._batch = 0  # open batch() scopes; the commit waits for the outermost
+        self._wrote: str | None = None  # the session of a write not yet committed
+        self.commit_title: str | None = None  # the next commit's title, when an operation names it
+        self.commit_always = False  # the next commit is made even with `[engine] commit = false` (a pause)
+        self.last_commit = commit_mod.Outcome()  # what the newest commit attempt did
 
     # -- reading -----------------------------------------------------------------------
 
@@ -353,7 +362,7 @@ class Store:
                 "use `human:<id>`, `process:<id>` or `<producer>/<version>` (e.g. `claude-code/<model-id>`)",
             )
 
-    def lock(self) -> FileLock:
+    def lock(self):
         """The repo lock, for operations that write a non-record file (the ledger, the note)."""
         return self._lock()
 
@@ -364,13 +373,52 @@ class Store:
     def log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool = False) -> None:
         self._log(op, rec_id, path, session, actor, fields, mechanical)
 
-    def _lock(self) -> FileLock:
+    def _file_lock(self) -> FileLock:
         path = self.root / self.config.lockfile
         ignore = path.parent / ".gitignore"
         if path.parent != self.root and not ignore.exists():
             path.parent.mkdir(parents=True, exist_ok=True)  # other processes may race us here
             ignore.write_text("*\n", encoding="utf-8")  # the lock directory is never tracked
         return FileLock(path, timeout=self.config.lock_timeout)
+
+    @contextmanager
+    def _lock(self) -> Iterator[None]:
+        """The repo lock; a write made under it is committed before it is let go, unless a
+        batch is open. It commits after a refusal too: what reached disk is in the op log, and
+        the op log at HEAD must not lag the files it names."""
+        with self._file_lock():
+            try:
+                yield
+            finally:
+                if self._batch == 0:
+                    self._commit()
+
+    @contextmanager
+    def batch(self) -> Iterator[None]:
+        """One commit for every write inside, made when the outermost batch ends."""
+        self._batch += 1
+        try:
+            yield
+        finally:
+            self._batch -= 1
+            if self._batch == 0 and self._wrote:
+                with self._file_lock():
+                    self._commit()
+
+    def _commit(self) -> None:
+        """Holding the lock: commit what the writes since the last commit put in the op log."""
+        session, self._wrote = self._wrote, None
+        if not session:
+            return
+        title, self.commit_title = self.commit_title, None
+        always, self.commit_always = self.commit_always, False
+        if not (self.config.commit or always):
+            self.last_commit = commit_mod.Outcome()
+            return
+        try:
+            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title)
+        except Exception as exc:  # a commit never undoes, or hides, the write it follows
+            self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its new lines name by hand")
 
     def _validate(self, kind: Kind, doc: okf.Document, path: Path) -> None:
         probs = self.problems(kind, doc, path)
@@ -407,6 +455,7 @@ class Store:
         log.parent.mkdir(parents=True, exist_ok=True)
         with open(log, "a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self._wrote = session
 
     def new(self, kind_name: str, fields: dict[str, Any], body: str = "", *, session: str, actor: str, mechanical: bool = False) -> Record:
         """Create a record with the next free id in its series."""
