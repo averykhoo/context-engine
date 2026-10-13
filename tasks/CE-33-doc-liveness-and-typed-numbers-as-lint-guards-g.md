@@ -29,6 +29,8 @@ Split from CE-14 (2026-10-12d), which built the rest of the §8.3 doc guards in 
 
 ## Log
 
+- 2026-10-13c (claude-code/claude-opus-5-5): Built 2026-10-13c in worktree ce-33 (measure; build; false-pass, false-red/deploy and spec-fidelity lenses; a skeptic; fix): 8797518, 4ad8e13, fast-forwarded onto main. Measured first (docs/evidence/ce33-false-reds-2026-10-13.md): G-D4's shipped form gave 15 reds over 37 docs, all true; G-D5 fell from 3524 hits (every digit run) to 3 with a census of counted nouns plus P5's forms and a bound escape. G-D4: a block-opening line led by LIVING, ACTIVE-PLAN or FROZEN, a frontmatter liveness key, or ARCHIVED <date>, in the first 10 lines; docs whose top the repo does not own get [guards] liveness_given; history dirs (docs/evidence, spike) must be FROZEN or name an open item. G-D5 on here, off in the kit. FROZEN banners added to two evidence docs and spike/FINDINGS.md (bodies unchanged); AC-74, AC-75 added. Gate on main: 586 passed. First-hand sabotage: guards.py::liveness returning [] -> 5 G-D4 tests in tests/test_guards.py red. Closed through the CLI, whose engine commits carry no Closes: trailer yet (CE-55); the pre-restart MCP server refuses this repo's new [guards] keys.
+
 ## Design review
 
 affects: every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
