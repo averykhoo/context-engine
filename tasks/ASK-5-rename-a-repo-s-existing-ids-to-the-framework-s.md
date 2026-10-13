@@ -4,13 +4,16 @@ id: ASK-5
 title: Rename a repo's existing ids to the framework's form at adoption, or keep them?
 brief: 'Recommend: rename, keep the number, old id stays a resolvable alias; same prefix per kind, task prefix per repo'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-13b
 created: 2026-10-13
 moved: 2026-10-13b
 updated: 2026-10-13c
 last_asked: 2026-10-13c
+status: deprecated
+closed: 2026-10-13c
+answered: {on: 2026-10-13, session: 2026-10-13c, decision: DEC-37}
 ---
 
 **Question:** When a repo adopts the framework, are its existing ids renamed to the framework's form, or kept as they are?
@@ -27,3 +30,7 @@ last_asked: 2026-10-13c
 **Recommendation:** (c). It gives the homogeneous board without breaking the 600-odd references the repo already has: a commit or a docstring that says `D-27` or `1h` still resolves. For prefixes: a record kind uses the same prefix in every repo (`DEC`, `ASK`, `US`, `AC`), and tasks use a per-repo prefix (`CE` here; e.g. `AD` for adhoc), so a task id says which board it is on. So in adhoc: `D-27` -> `DEC-27`, `Q8` -> `ASK-8`, `1h` -> a new `AD-n`. Cost: an `aliases:` field and its lookup, inside CE-7.
 
 **Blocks:** CE-7 (its import)
+
+## Log
+
+- 2026-10-13c (claude-code/claude-opus-5-5): answered by the owner: DEC-37
