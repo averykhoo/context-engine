@@ -156,3 +156,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** copied runbooks go stale on upgrade by design (INV-13)
 - **control:** collective: the orient heading ships in the engine, so the instruction reaches them anyway
 - **from:** CE-37, session 2026-10-12e
+
+## INV-22: a raw edit that reopens a question and also deletes `answered:` passes lint, leaving a decision whose `answers:` names an open question
+
+- **affects:** the owner, whose answer (a stamped decision) an open question would contradict; the next session, which reads an open question as unanswered and may raise or re-answer it; a plain-git human reopening by hand from manual-mode.md; every deployed repo, which gets the engine refusal and the kit runbook copy
+- **why not eliminated:** telling a deliberate repair from a mistake needs the decision's history, and no guard yet joins decisions' `answers:` to the board
+- **control:** collective: manual-mode.md § task reopen and § task set say an answer changes only through its decision; the raw edit shows in the commit diff
+- **from:** CE-31, session 2026-10-13a

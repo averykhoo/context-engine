@@ -4,13 +4,15 @@ id: CE-31
 title: task reopen refuses an answered owner question
 brief: 'An answered ASK never reopens: its answer is a decision; revise that decision or ask a new question'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-12d
 created: 2026-10-12
 moved: 2026-10-13a
 updated: 2026-10-13a
 review: [guard, shipped]
+status: deprecated
+closed: 2026-10-13a
 ---
 
 Found during CE-20 (BTN-2, decided 2026-10-12d). `working.py::Engine.reopen` accepts an `ASK-n` and leaves `answered:` behind, so an open question claims an answer (the CE-20 asymmetry: `Engine.close` refuses a question, reopen does not).
@@ -48,3 +50,4 @@ E: mirrors CE-20's refusal in Engine.close; reuses G-W4, Refusal and the BOARD_O
 ## Log
 
 - 2026-10-13a (claude-code/claude-opus-5-5): Built (2026-10-13a): Engine.reopen refuses a question carrying answered: (remedy: record amend / decision supersede / ask new); answered joins BOARD_OWNED so task set cannot clear it; G-W4 reds an open question carrying answered:; a question closed without answered: still reopens. Runbook § task reopen, § task set, § lint G-W4 and FRAMEWORK §5.3/§8 updated. Above the threshold as [guard, shipped]; design review written before building. Awaiting review; not closed.
+- 2026-10-13a (claude-code/claude-opus-5-5): closed: reopen and ask answer refuse an answered question; answered is operation-owned; G-W4 flags open+answered (1741e1f, eb7009f)
