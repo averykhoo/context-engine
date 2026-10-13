@@ -436,3 +436,59 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** pre-existing in the shared reader
 - **control:** individual: none yet; a follow-up
 - **from:** CE-33, session 2026-10-13c
+
+## INV-62: a plain `git commit -o` naming a record whose op line rides along commits the record without its line, and G-W7 reds that commit on a clean checkout
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** a session or a human can always run git directly
+- **control:** collective: the contract and rituals name `context-engine commit`; CI lints the pushed tip; the next milestone carries the line
+- **from:** CE-55, session 2026-10-13c
+
+## INV-63: between milestones, board writes live only in the shared working tree, where a `git stash`, reset or checkout of those paths by anyone loses them
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** DEC-36 trades per-write commits for a shorter history; what rides along is cheap to redo
+- **control:** individual: the contract forbids stash; owner words, hand-offs and closes commit at once
+- **from:** CE-55, session 2026-10-13c
+
+## INV-64: another session's half-done hand edit that still parses is committed as it stands by any session's milestone
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** telling an op's change from a hand edit in the same file is not cheap
+- **control:** individual: the line names the sessions whose lines it carried; lint at the next gate
+- **from:** CE-55, session 2026-10-13c
+
+## INV-65: `context-engine commit` runs no gate, so a session can commit red code through it
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** git commit runs none either, and a gate inside would hold the lock for minutes
+- **control:** individual: contract § Gate and manual-mode § context-engine commit say to run the gate first; CI on every push
+- **from:** CE-55, session 2026-10-13c
+
+## INV-66: an upgraded repo saying `commit = true` moves from every write to milestones with no line saying so
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** CE-45's template wrote `true` as the default, and DEC-36 changes the default
+- **control:** individual: kit README § Upgrade says so and names `"every-write"` to keep the old behaviour
+- **from:** CE-55, session 2026-10-13c
+
+## INV-67: an older engine refuses the template's `commit = "milestones"`
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** kit version skew between machines
+- **control:** individual: kit README bootstrap and upgrade notes say to write `true` until every machine runs this engine
+- **from:** CE-55, session 2026-10-13c
+
+## INV-68: every adopting repo's G-D0 is red until it copies the changed kit contract
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** the contract's text changed without a framework version change
+- **control:** individual: G-D0 names the fix; kit README § Upgrade step 2
+- **from:** CE-55, session 2026-10-13c
+
+## INV-69: the foreign-reconcile baseline (the newest ledger commit this session did not make) can skip a foreign commit made while another session was open, and any milestone now touches the ledger
+
+- **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
+- **why not eliminated:** the baseline predates CE-55, which widens it
+- **control:** individual: rituals § Foreign reconcile only; follow-up filed
+- **from:** CE-55, session 2026-10-13c
