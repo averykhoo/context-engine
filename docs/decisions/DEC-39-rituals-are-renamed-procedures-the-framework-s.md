@@ -14,3 +14,7 @@ Yes to rename, and record in the items to look through the whole framework and l
 Then gate and push and babysit, when that's done we'll onboard the adhoc mic array repo
 
 (Asked "Which word should replace \"rituals\" across the framework?", the owner chose: procedures.)
+
+## Amendments
+
+- **2026-10-13e (claude-code/claude-opus-5-5):** Owner answers, 2026-10-14, on the terms the census found would ripple into code or decisions: keep "baton"; keep the `liveness` key and fix only the prose around it; keep "rung"; unify the component names now ("Residual-risk register" everywhere, "Non-functional requirements (NFRs)" for Law, the coverage guard accepting the old names so frozen maps still count).
