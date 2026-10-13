@@ -4,13 +4,15 @@ id: CE-38
 title: 'Bootloader contract: CLAUDE.md imports a framework-owned contract; SessionStart hook runs orient'
 brief: CLAUDE.md keeps a short pointer; the framework owns its rules; grants stay in owner-loaded files, never MCP output
 pri: NOW
-state: open
+state: closed
 deps: []
 source: session 2026-10-13a
 created: 2026-10-13
 moved: 2026-10-13b
 updated: 2026-10-13b
 review: [shipped, guard]
+status: deprecated
+closed: 2026-10-13b
 ---
 
 Owner, 2026-10-13a (words: the story filed this session on the bootloader): an adopted framework must not depend on the owner leaving `CLAUDE.md` alone; `CLAUDE.md` gets a short pointer, like a bootloader, and the framework runs from files it owns.
@@ -32,6 +34,8 @@ Before CE-7, so adhoc adopts this shape and does not migrate twice.
 - 2026-10-13b (claude-code/claude-opus-5-5): Owner, 2026-10-13b: "Let's try to get it ready for first use then trial it on a repo": CE-38 then CE-7 (the trial) lead; CE-25 waits on ASK-3.
 - 2026-10-13b (claude-code/claude-opus-5-5): Built (uncommitted, gate green 428): kit/bootloader.md appended to CLAUDE.md; kit/contract.md is the framework-owned file init copies to docs/framework/contract.md; init writes the SessionStart hook to .claude/settings.local.json when absent (ASK-4, option a); G-D0 checks the bootloader text and the imported contract (working.py::Engine._bootloader); orient opens with G-D0 reds (AC-57..59). Next: adversarial review, sabotage (tools/sabotage_ce38.py), commit.
 - 2026-10-13b (claude-code/claude-opus-5-5): DEC-32 (owner's answer to ASK-4: create when absent, merge with consent): init refuses on an existing .claude/settings.local.json without the hook, naming the one entry it would add; --merge-settings appends only that entry (strict parse, keys and order kept, re-read then atomic replace, idempotent); --skip-settings leaves it. Gate green 445; tools/sabotage_ce38.py 41 rows all red.
+- 2026-10-13b (claude-code/claude-opus-5-5): Owner-only follow-ups, not done here: (1) live probes in an interactive Claude Code session on an init'd scratch repo: rename docs/framework/contract.md and start a session (does Claude Code warn about the missing @-import?); check the orient text appears after startup, /resume, /clear and compaction; check which shell runs the hook on Windows (the command works in bash and cmd.exe, not PowerShell); point the hook at a missing interpreter and confirm the session goes on and what the owner sees. CE-7's trial is the natural place. (2) This repo does not use the bootloader: adopting it means editing CLAUDE.md and .claude/settings.local.json (owner-loaded files), so the exact change is in the CE-38 hand-back, not made. Never run init on this repo: its CLAUDE.md has no kit block, so init would append the bootloader.
+- 2026-10-13b (claude-code/claude-opus-5-5): closed: done: bootloader (kit/bootloader.md to CLAUDE.md, @-imports docs/framework/contract.md), framework-owned contract, SessionStart hook running orient (created by init; merged into an existing settings file only with the owner's yes, DEC-32), G-D0 bootloader and import checks, orient leads with G-D0 reds (AC-57..59). Two adversarial reviews (opus): 1+3 MAJOR, 5+4 MINOR, all fixed. tools/sabotage_ce38.py 51 rows all red; gate green 455
 
 ## Read first
 

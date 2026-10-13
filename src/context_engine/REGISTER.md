@@ -198,3 +198,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** frozen provenance is never edited (CLAUDE.md)
 - **control:** collective: the remedy text names both routes; filing a board item is one `task new`
 - **from:** CE-30, session 2026-10-13a
+
+## INV-28: Claude Code writes a grant into the settings file between init's re-read and its atomic replace, and that grant is lost
+
+- **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
+- **why not eliminated:** no lock is shared with Claude Code, so the window can be narrowed, not closed
+- **control:** reduce: init re-reads the file immediately before the replace and refuses when it changed; the merge runs once, with the owner present to approve it
+- **from:** CE-38, session 2026-10-13b
+
+## INV-29: the grants (ultracode, fable, push) now sit in a framework-owned file the repo may not edit, so an owner narrows one only by a rule in CLAUDE.md that the agent must rank above the contract
+
+- **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
+- **why not eliminated:** the framework owning the file is the point of the bootloader (US-17)
+- **control:** collective: the contract says CLAUDE.md, outside the markers, wins where it narrows or overrides a rule
+- **from:** CE-38, session 2026-10-13b
+
+## INV-30: the SessionStart hook does not run (another clone or machine, a moved interpreter, an existing local settings file init skipped), and a failing SessionStart hook is quiet by design
+
+- **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
+- **why not eliminated:** Claude Code documents that a SessionStart hook cannot block, and the local settings file is machine-specific and gitignored, so lint cannot see it
+- **control:** individual: the contract's session-start rule: if no orient output is in context, run session start and orient by hand and tell the owner the hook did not run
+- **from:** CE-38, session 2026-10-13b
+
+## INV-31: Claude Code's behaviour on a missing @-import target, whether hook output reaches context on resume and after /clear, and which shell runs a hook on Windows (the command runs under bash and cmd.exe, not PowerShell) are documented only in part and not probed on a live session
+
+- **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
+- **why not eliminated:** a probe needs an interactive Claude Code session, which an agent cannot launch
+- **control:** individual: G-D0 and orient make a missing target loud regardless; the owner runs the probes (task log, CE-38 close)
+- **from:** CE-38, session 2026-10-13b
+
+## INV-32: G-D0 reds an adopted repo after an engine reinstall whose kit contract changed within the same major.minor
+
+- **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
+- **why not eliminated:** equality with the installed kit is what makes "the framework owns the file" mechanical
+- **control:** collective: the red's remedy is one copy, the same step as the upgrade ritual (kit README § Upgrade)
+- **from:** CE-38, session 2026-10-13b
