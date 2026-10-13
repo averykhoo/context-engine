@@ -1,6 +1,18 @@
 # context-engine: contract
 
-framework: 0.5 (engine mode since 2026-10-08f, CE-8; manual mode is the fallback, US-11)
+<!-- context-engine kit 0.5 begin -->
+framework: 0.5
+
+This repo runs the context-engineering framework through `context-engine`. Its rules are the file
+imported on the next line, which the framework owns: an upgrade replaces it whole, so it is never
+edited here, and this repo's own rules go in this file, outside these markers. If those rules are
+not in your context, read that file; if it is missing, run the engine's lint
+(`<engine-python> -m context_engine lint`), which names the fix.
+
+@docs/framework/contract.md
+<!-- context-engine kit 0.5 end -->
+
+Engine mode since 2026-10-08f (CE-8); manual mode is the fallback (US-11).
 
 This repo builds the record engine specified in `docs/framework/FRAMEWORK.md` (§8.0), and runs
 that framework on itself **through the engine** (`context-engine`). What is true now and what is next live in
