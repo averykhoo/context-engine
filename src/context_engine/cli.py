@@ -26,6 +26,17 @@ def _fields(pairs: list[str], flag: str = "--set") -> dict[str, str]:
     return out
 
 
+def _read(path: Path) -> str:
+    """A file argument's text: UTF-8, with any BOM dropped (PowerShell 5.1 writes one), which is
+    no part of the words."""
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        raise Refusal(f"there is no file {path}", "check the path") from None
+    except UnicodeDecodeError:
+        raise Refusal(f"{path} is not UTF-8", "save it as UTF-8 (PowerShell 5.1: `Out-File -Encoding utf8` or `Set-Content -Encoding utf8`)") from None
+
+
 def _ids(text: str | None) -> list[str]:
     return [x.strip() for x in (text or "").replace(",", " ").split() if x.strip()]
 
@@ -270,12 +281,12 @@ def _params(args: argparse.Namespace) -> dict:
     if isinstance(a.get("ids"), list):
         a["ids"] = _ids(" ".join(a["ids"]))
     if args.group == "commit":
-        a["message"] = a["message_file"].read_text(encoding="utf-8-sig") if a.get("message_file") else "\n\n".join(a["message"])
+        a["message"] = _read(a["message_file"]) if a.get("message_file") else "\n\n".join(a["message"])
     if a.get("body_file") is not None:
-        a["body"] = a["body_file"].read_text(encoding="utf-8-sig")
+        a["body"] = _read(a["body_file"])
     if a.get("file") is not None:
         into = ("why" if a.get("op") == "retire" else "body") if args.group == "record" else "text"
-        a[into] = a["file"].read_text(encoding="utf-8-sig")  # a BOM (PowerShell 5.1 writes one) is no part of the words
+        a[into] = _read(a["file"])
     return a
 
 

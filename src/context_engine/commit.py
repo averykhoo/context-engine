@@ -1,17 +1,17 @@
 """The engine commits its writes by path, at milestones (FRAMEWORK §5.5 rule 4, DEC-36).
 
 ``[engine] commit`` says when (``store.Store._commit``): at a milestone (task close, the owner-words
-writes, a baton or pause, session close or pause), after every write, or never but a pause. A
-write that is not a milestone rides along with the next commit, which carries it whole. The
+writes, a baton or pause, session close or pause, the banner), after every write, or never but a
+pause. A write that is not a milestone rides along with the next commit, which carries it whole. The
 session's own commits go through ``commit`` too (``context-engine commit <paths> -m ...``), so
 they never split a record from its op line.
 
 A commit carries **every op log line the working tree has and HEAD lacks, every file those lines
 name, and the op log itself**. So the op log at HEAD never runs ahead of, or behind, the records
-it names, and a clean checkout of any commit passes G-W7 on its own. A session that dies leaves
-nothing for another session's close to sweep up. Lines another session left uncommitted (its
-own commit failed, or it ran by hand or on an older engine) go in too, with the files they name:
-that is the commit its own close would have made. The message and the operation's line both say
+it names, and a clean checkout of any commit passes G-W7 on its own. Lines another session left
+uncommitted (they rode along, its commit failed, it died, or it ran by hand or on an older
+engine) go in too, with the files they name: that is the commit its own milestone would have
+made. The message and the operation's line both say
 whose they were.
 
 It runs while the engine lock is held, so no engine operation is half-written in the tree when
@@ -26,16 +26,19 @@ the session commits those paths by hand (manual-mode § What every write does):
 - otherwise the line reads "not committed: ...". That covers: git missing beside a ``.git``; git
   refusing the repo; a merge, rebase, cherry-pick, revert or bisect in progress; a detached HEAD;
   ``GIT_DIR``-style variables set (inside a git hook); ``context.toml`` not tracked by the
-  enclosing repo; the op log gitignored, or missing lines HEAD has; and git refusing the commit
-  (a hook, the identity, ``index.lock`` held past its retries, a timeout).
+  enclosing repo; the op log gitignored, or missing lines HEAD has; a named record whose
+  frontmatter does not parse (a hand edit in progress); and git refusing the commit (a hook,
+  the identity, ``index.lock`` held past its retries, a timeout).
 
 Output, the message and the paths go through temporary files, never pipes. On Windows a hook's
 child process can hold a pipe open after git is killed, so a timeout would not bound the time
 the engine lock is held.
 
-Deliberately not handled: a path named by a line that another session is still editing by hand.
-Its half-edit is committed as it stands, and nothing is lost from the tree; the line names the
-other session whose lines were carried.
+Deliberately not handled: a path named by a line that another session is still editing by hand,
+when the half-edit still parses. It is committed as it stands, and nothing is lost from the
+tree; the line names the other session whose lines were carried. Under the milestone policy a
+record rides along until the next milestone, whoever makes it, so that window is wide; a
+half-edit that breaks the frontmatter stops the commit instead (INV-42).
 """
 
 from __future__ import annotations
@@ -50,9 +53,12 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import okf
+
 TITLE_MAX = 72
 OPS_MAX = 400  # characters of the `Ops:` line naming the op log lines a commit carries, when its title does not
 TRAILER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*: \S")  # `Token: value`, as git reads a trailer
+NOTHING = ("nothing to commit", "no changes added to commit", "nothing added to commit")  # git's own words
 # Seconds. Provenance: JUDGEMENT, a hook may run a check. Wrong if a normal hook takes longer. It is
 # longer than the engine lock's own 30 s default, so a hook slower than that makes another
 # session's write refuse (before it writes anything) while this one waits.
@@ -220,9 +226,20 @@ def _paragraphs(text: str) -> list[str]:
     return paras
 
 
+def _is_trailers(para: str) -> bool:
+    """A paragraph git reads as trailers: ``Token: value`` lines, a line led by whitespace
+    continuing the one before."""
+    lines = para.split("\n")
+    return bool(TRAILER_RE.match(lines[0])) and all(TRAILER_RE.match(ln) or ln[:1].isspace() for ln in lines[1:])
+
+
 def session_trailers(text: str) -> list[str]:
-    """The key of every ``Session:`` line in a commit message a session wrote."""
-    return [ln.split(":", 1)[1].strip() for ln in text.replace("\r\n", "\n").split("\n") if ln.startswith("Session:")]
+    """The key of every ``Session:`` trailer in a commit message: in its last paragraph, the only
+    one git reads as trailers, and never its title."""
+    paras = _paragraphs(text)
+    if len(paras) < 2 or not _is_trailers(paras[-1]):
+        return []
+    return [ln.split(":", 1)[1].strip() for ln in paras[-1].split("\n") if ln.startswith("Session:")]
 
 
 def session_message(text: str, lines: list[dict], session: str) -> str:
@@ -232,7 +249,7 @@ def session_message(text: str, lines: list[dict], session: str) -> str:
     where ``git interpret-trailers`` reads it, unless the message has one already."""
     paras = _paragraphs(text)
     tail = len(paras)
-    while tail > 1 and all(TRAILER_RE.match(ln) for ln in paras[tail - 1].split("\n")):
+    while tail > 1 and _is_trailers(paras[tail - 1]):
         tail -= 1
     ours = []
     if lines:
@@ -386,7 +403,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
                              f"commit the kit's files by path first (rituals § Bootstrap), then {remedy}"))
     if fresh and codes.get(prefix + oplog) == "!!":
         return Outcome(note=(f"{oplog} is gitignored, so no commit can carry it and G-W7 fails on every clone; "
-                             f"un-ignore it, or set `[engine] commit = false` and commit by hand"))
+                             f"un-ignore it, or set `[engine] commit = \"off\"` and commit by hand"))
     paths, untracked, left_out = [], [], []
     for rel in wanted:
         code = codes.get(prefix + rel)
@@ -398,6 +415,14 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         paths.append(rel)
         if code == "??":
             untracked.append(rel)
+    for rel in paths:  # a record the sweep carries must parse, or a clean checkout of the commit would not lint
+        if rel.endswith(".md") and (root / rel).is_file():
+            try:
+                okf.read_head(root / rel)
+            except Exception as exc:  # a Refusal from the YAML, or bytes that are not UTF-8
+                why = exc.message if hasattr(exc, "message") else type(exc).__name__
+                return Outcome(note=(f"{rel} does not parse ({why}): a hand edit in progress? A commit would carry it as it "
+                                     f"stands; finish or undo that edit, and the next commit carries it, or {remedy}"))
     for rel in given:  # the session's own paths go to git as given; a new file is added first
         if rel in wanted:
             continue
@@ -407,6 +432,10 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         paths.append(rel)
         if code == "??" and (root / rel).is_file():
             untracked.append(rel)
+        elif (root / rel).is_dir():  # git status lists a directory's new files, never the directory
+            under = prefix + rel + "/"
+            untracked += [k[len(prefix):] for k, v in codes.items() if v == "??" and k.startswith(under)]
+    untracked = list(dict.fromkeys(untracked))
     if untracked:
         a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
         if a.returncode != 0:
@@ -420,9 +449,14 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         raise
     if c.returncode != 0:
         _unstage(git, tmp, untracked)
+        if any(n in c.stdout for n in NOTHING):
+            return Outcome(note="nothing to commit: no path given has a change", paths=tuple(paths))
         return Outcome(note=f"`git commit` failed ({_first_error(c)}); {remedy}", paths=tuple(paths))
     m = SHA_RE.search(c.stdout)
     sha = m.group(1) if m else git.run("rev-parse", "--short", "HEAD").stdout.strip()
+    if text is not None:  # the session's own commit reports what git committed, not what it was given
+        shown = git.run("show", "--name-only", "-z", "--format=", "HEAD").stdout
+        paths = [x.strip("\n") for x in shown.split("\0") if x.strip("\n")]
     return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session))
 
 

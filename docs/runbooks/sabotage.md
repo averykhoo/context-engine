@@ -22,7 +22,7 @@ framework's mutation guard (G-T5) is built and run there, this file is its fallb
 | 2 | Break exactly that: edit the code it guards, corrupt the fixture, drop the check, or plant the bad input (a missing file, a copy out of step, a forbidden id) | the cheapest break the check exists to catch |
 | 3 | Run the check and watch it go red for the right reason: read the failure, not only the exit code | a check red for an import error or a typo guards nothing |
 | 4 | Restore, run it again, and see it green; compare each file with the copy or hash saved before the break (`git diff --exit-code` alone passes an untracked file whatever it holds) | a check left sabotaged is worse than none |
-| 5 | Record it in the commit message: `Sabotage: <what was broken> -> <test> red` | the next reader can repeat it, and a repo that ties `tested` to sabotage reads it here |
+| 5 | Record it in the commit message: `Sabotage: <what was broken> -> <test> red` (with the engine, in the task close's: `task close <id> -m "<msg>" --body-file <lines.md>`, once the work is committed) | the next reader can repeat it, and a repo that ties `tested` to sabotage reads it here |
 
 ## Traps
 

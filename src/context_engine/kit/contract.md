@@ -32,7 +32,8 @@ owner changes a rule there, never in this file. What is true now and what is nex
 
 This repo's own test command, as `CLAUDE.md` § Gate names it, then `context-engine lint`, from
 the repo root. Run it before every commit that touches code, tests or any record, and before
-every push. Lint covers the record schemas, append-only bodies, bundles, the working state, the
+every push; the engine's own commits of its writes are the one exception, and `context-engine
+commit` runs none, so run it first. Lint covers the record schemas, append-only bodies, bundles, the working state, the
 routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
 record or a dead route. How to run it so its result is true, and the test baselines:
 `docs/runbooks/gate.md`. No guard is believed until it has been seen to fail (FRAMEWORK P7):
@@ -79,8 +80,10 @@ pushed into agents, only verdicts kept.
 
 - **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
   Never fan out with fable: it wastes tokens.
-- Commit by path (`git commit -o <paths>`); never `git add -A`, never `git stash`: sessions may
-  share the working tree.
+- Commit by path, through `context-engine commit <paths> -m "<message>"`, which takes the op
+  lines still riding along and the records they name with them (a plain `git commit -o <paths>`
+  only for paths no uncommitted op line names); never `git add -A`, never `git stash`: sessions
+  may share the working tree.
 - Push (§6.8): gate before every push; push only with permission; a background CI watcher for
   every push, keyed on the commit hash; the push is not done until the watcher reports; the
   watcher only watches. A release also follows `docs/runbooks/release.md`.

@@ -181,7 +181,7 @@ TOP_KEYS = ("engine", "kinds", "working", "routes", "guards")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract", "commit")
 ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": (str, bool)}
 # FRAMEWORK §5.5 rule 4 (DEC-36): commit at milestones (task close, owner words, batons and pauses,
-# session close or pause), after every write, or never but a pause. A bool is CE-45's spelling,
+# session close or pause, the banner), after every write, or never but a pause. A bool is CE-45's spelling,
 # which init wrote into every repo as `commit = true`: true is the engine committing, now at
 # milestones, and false is off.
 COMMIT_POLICIES = ("milestones", "every-write", "off")

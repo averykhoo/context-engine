@@ -436,7 +436,7 @@ class Store:
         if missed is not None:
             r = Refusal(
                 f"the pause record was written but not committed ({missed.note or 'git made no commit'})",
-                "commit it at once by hand (manual-mode.md § context-engine pause open, step 3): a pause left uncommitted in a shared tree can be lost",
+                "commit it at once, when git allows: `context-engine commit -m \"pause <id>: ...\"` carries it with the op log and every path its lines name (by hand: manual-mode.md § context-engine pause open, step 3); a pause left uncommitted in a shared tree can be lost",
             )
             r.reports_commit = True  # `Op.call` adds nothing: the refusal is about the commit
             raise r

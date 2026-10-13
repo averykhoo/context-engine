@@ -18,8 +18,6 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import json
-import os
-import posixpath
 import re
 import subprocess
 from pathlib import Path
@@ -767,7 +765,7 @@ class Engine:
         runs the gate first, as before any commit."""
         self._check(session, actor)
         if not message.strip():
-            raise Refusal("a commit with no message", 'pass `-m "<id>: what changed"` (the task id leads the title, DEC-22); the engine adds the `Session:` trailer')
+            raise Refusal("a commit with no message", "give one (`-m` on the CLI) whose title leads with the task id (FRAMEWORK §6.10); the engine adds the `Session:` trailer")
         other = [k for k in C.session_trailers(message) if k != session]
         if other:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
@@ -790,12 +788,11 @@ class Engine:
         raw = str(given).strip()
         if not raw or raw.startswith(":"):
             raise Refusal(f"path {given!r} is empty or pathspec magic", "name each file or directory to commit")
-        q = Path(raw)
+        q = Path(raw.replace("\\", "/"))
         try:
-            rel = os.path.relpath(q if q.is_absolute() else self.root / q, self.root)
-        except ValueError:  # another drive, on Windows
-            raise Refusal(f"{given} is outside this repo", "commit it with git in its own repo") from None
-        rel = posixpath.normpath(rel.replace("\\", "/"))
+            rel = (q if q.is_absolute() else self.root / q).resolve().relative_to(self.root).as_posix()
+        except (ValueError, OSError):  # outside the root: `..`, another drive, a junction out
+            raise Refusal(f"{given} is outside this repo's root ({self.root})", "name paths under the root; commit anything else with git itself") from None
         if rel in (".", ""):
             raise Refusal(f"{given!r} is the whole repo", "name the paths to commit: by path, never the whole tree (FRAMEWORK §5.5)")
         return rel
@@ -837,7 +834,7 @@ class Engine:
         }
         body = f"**In flight:** {in_flight.strip()}\n\n**Resume step:** {resume_step.strip()}\n"
         # The store commits the record with its op line when the batch ends (CE-45), under the
-        # pause's own title and even with `[engine] commit = false`: a pause is always committed
+        # pause's own title and whatever the policy, `"off"` included: a pause is always committed
         # at once (AC-14). Through `ops` the batch is the operation's, which reports the commit.
         with self.store.batch():
             rec = self.store.new(self._role("pause"), fields, body, session=session, actor=actor)

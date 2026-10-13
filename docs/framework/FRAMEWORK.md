@@ -849,20 +849,21 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      clean close writes after its ledger entry (§6.3), so nothing of the close is left to ride.
 
    Every other write (a task's new, set, comment, touch, section, dep, promote and reopen; a
-   question's new, raised and later; baton done, pause resume; decision set, link and relink;
-   record stamp and correct; session start; housekeeping) **rides along**: it stays
+   question's new, raised and later; baton done, pause resume; decision set, link, relink and
+   import; record stamp and correct; session start; housekeeping) **rides along**: it stays
    in the working tree until the next commit, which carries it. That commit is made while the
    engine lock is held, and carries **every op log line the working tree has and HEAD lacks,
    every file those lines name, and the op log itself**, so it takes every write that rode
    along before it, this session's or another's. (`init` writes the kit's files, not records:
    it logs nothing and commits nothing, and the session commits what it wrote.)
    - **Why milestones, not every write:** a commit per write grew history by a commit per board
-     edit and cost every write a git process under the lock (about half a second on Windows),
-     for writes that cost little to lose: the next commit carries them, whoever makes it. What a
+     edit and cost every write a git process under the lock (about half a second on Windows,
+     2026-10-13), for writes that cost little to lose: the next commit carries them, whoever
+     makes it. What a
      milestone commits is what is dear to lose or must be at HEAD now.
    - **The policy is `[engine] commit`:** `"milestones"` (the default), `"every-write"` (each
-     write operation commits), or `"off"` (the session commits by hand, by path, as the by-hand
-     fallback does, at the latest at close or pause; no line reminds it). A pause record is
+     write operation commits), or `"off"` (the session commits by path, through `context-engine
+     commit` or by hand, at the latest at close or pause; no line reminds it). A pause record is
      committed at once whatever the policy, and a pause that cannot be committed refuses,
      keeping its record: a pause left uncommitted in a shared tree can be lost to another
      session's close. The older spelling still reads: `true` is `"milestones"`, `false` is
@@ -897,7 +898,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      decision and closes its question) commits them together, titled `engine: <op> <id>, ...`,
      this operation's first (a pause and a task close keep their own titles, with an `Ops:` line
      naming what the commit carries), and ending in the `Session: <key>` trailer. **No gate runs
-     before a milestone's commit,** the gate's one exception (§11): the operation has already
+     before the engine's own commits of its writes,** the gate's one exception (§11): the
+     operation has already
      refused any write its schema forbids, and the gate still runs before the session's own
      commits (`context-engine commit` among them) and before every push.
    - **It never undoes the write.** Where it cannot commit, the write stands and the
@@ -906,9 +908,11 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      `GIT_INDEX_FILE` or a like variable set (inside a git hook, where a commit would go to that
      repo or index); `context.toml` not tracked by the enclosing repo (a target inside an
      unrelated repo, or a new repo before its kit is committed); the op log gitignored, or
-     missing lines HEAD has; a refusing hook; git refusing the repo; git missing beside a
-     `.git`. Only a target in no git work tree at all commits nothing and says nothing. A named
-     file that git ignores is left out, and the line names it.
+     missing lines HEAD has; a record it would carry whose frontmatter does not parse (a hand
+     edit in progress, which it would commit as it stands); a refusing hook; git refusing the
+     repo; git missing beside a `.git`. Only a target in no git work tree at all commits nothing
+     and says nothing (the session's own `commit` refuses there). A named file that git ignores
+     is left out, and the line names it.
    - **A milestone that refuses after a write commits that write too,** since the op log at
      HEAD must not lag the files it names, and the refusal says what became of it; a close's
      `Closes:` is added only once its write is made, so a refused close never claims the item
@@ -1079,8 +1083,9 @@ numbered for citation (the order is below):
        refuses the close otherwise);
    - `Still owed:`.
 3. **Replace** the banner, safely for several writers (§5.5).
-4. Board operations: close, rank, mint (with the session key). Hand-rewrite the
-   summary / Traps / Read first of every NOW and NEXT item you touched.
+4. Board operations: close (once the task's work is committed: the close's commit carries its
+   `Closes:` and `Sabotage:` lines, §5.5 rule 4), rank, mint (with the session key).
+   Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
 5. Promote durable rules into the contract; file method lessons into runbooks (§6.7).
 6. Anything skipped becomes a baton.
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
@@ -1364,16 +1369,18 @@ to perform rituals. The agent sessions absorb the cost:
 
 1. **Agent commits carry a trailer** `Session: <key>`. Commits without one are **foreign**.
    One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
-   repo's own, `[kinds.task] prefix`); a commit that finishes the task also carries
-   `Closes: <id>` (§6.11). Small tasks may share a session: the gate goes green over all of
+   repo's own, `[kinds.task] prefix`). The task's close carries `Closes: <id>` in its own commit
+   (§5.5 rule 4), not its work commits; a commit made outside the engine that finishes a task
+   carries it instead, and housekeeping closes the item (§6.11). Small tasks may share a session: the gate goes green over all of
    them, then each is committed by path (`context-engine commit`, §5.5 rule 4). The engine's
-   own commits carry the trailer too; a task's close carries `Closes: <id>` and leads its title
-   with the id, and every other engine commit has no task id: it records working state, not a
-   task's work.
+   own commits carry the trailer too; a task's close leads its title with the id, and every
+   other engine commit has no task id: it records working state, not a task's work. An engine
+   commit also carries whatever rode along before it, other tasks' board writes included, and
+   its `Ops:` line names them: the one exception to one task per commit.
 2. **At session start, reconcile foreign commits** since the newest ledger commit before this
-   session's own (its `session.start` rides along, so that is the commit of an earlier
-   session's close or pause; the steps and the entry's format: `rituals.md` § Foreign
-   reconcile):
+   session's own (its `session.start` rides along, so that is the newest commit touching the
+   ledger that this session did not make; the steps and the entry's format: `rituals.md`
+   § Foreign reconcile):
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
    - run the tier-1 trace-check over them (criteria or prose they may have staled);
    - inbox-check them for intent: a commit message or doc edit that states a feature or
@@ -2021,7 +2028,7 @@ minimum set until the §8.0.3 trial reports.
 
 **The gate** of an adopting repo is its own test command followed by `context-engine lint`, run
 from the repo root before every commit that touches code, tests or records, and before every
-push; the engine's milestone commits are the one exception (§5.5 rule 4). The kit's contract
+push; the engine's own commits of its writes are the one exception (§5.5 rule 4). The kit's contract
 (§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
