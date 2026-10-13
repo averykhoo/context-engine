@@ -36,6 +36,18 @@ CONFIG = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _no_machine_git_config(tmp_path_factory, monkeypatch):
+    """Git in a test, and in every process a test starts, reads neither the machine's system
+    config nor the user's global one (CE-67): a GitHub runner's `/etc/gitconfig` trusts every
+    directory (`safe.directory = *`) and Git for Windows' turns on `core.autocrlf`, so a test that
+    leans on either is green on one machine and red on the other."""
+    empty = tmp_path_factory.getbasetemp() / "gitconfig-global"
+    empty.touch()
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
+
+
 @pytest.fixture
 def repo(tmp_path):
     """An empty target repo with a context.toml; returns a Store on it."""

@@ -1308,7 +1308,8 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
 
 ### 6.8 Push and CI
 
-- gate before every push;
+- gate before every push; where CI runs on another platform than the session's machine, also
+  CI's job on that platform, locally, in a container shaped like CI's runner (`gate.md`);
 - push only with permission;
 - a background CI watcher for every push, keyed on the commit hash; the push is not done until
   the watcher reports;

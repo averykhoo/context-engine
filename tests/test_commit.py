@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import time
+import types
 from pathlib import Path
 
 import pytest
@@ -332,7 +333,9 @@ def test_a_held_index_lock_is_waited_for(repo, monkeypatch):
     lock = Path(git(repo, "rev-parse", "--absolute-git-dir").strip()) / "index.lock"
     lock.write_text("", encoding="utf-8")
     waits = []
-    monkeypatch.setattr(C.time, "sleep", lambda s: (waits.append(s), lock.unlink(missing_ok=True)))
+    # the engine's own `time`, not the module: on Linux `subprocess` waits for git with `time.sleep`,
+    # and a patched module unlinks git's own live lock mid-write (CE-67)
+    monkeypatch.setattr(C, "time", types.SimpleNamespace(**{**vars(time), "sleep": lambda s: (waits.append(s), lock.unlink(missing_ok=True))}))
     _, line = run(repo, "task_new", c, title="Waited")
     assert "; committed" in line and waits, (line, waits)
 
@@ -503,7 +506,9 @@ def mrepo(tmp_path):
 
 def trailers(root, rev="HEAD") -> list[str]:
     msg = git(root, "log", "-1", "--format=%B", rev)
-    return subprocess.run(["git", "interpret-trailers", "--parse"], cwd=root, input=msg, capture_output=True, text=True, check=True).stdout.splitlines()
+    # bytes, not text: text mode on Windows sends `\r\n`, and git then unfolds no continuation line (CE-67)
+    p = subprocess.run(["git", "interpret-trailers", "--parse"], cwd=root, input=msg.encode("utf-8"), capture_output=True, check=True)
+    return p.stdout.decode("utf-8").splitlines()
 
 
 @pytest.mark.criterion("AC-76")
@@ -726,7 +731,7 @@ def test_the_session_commit_keeps_its_trailer_block_and_adds_session_to_it(mrepo
     assert git(mrepo, "log", "-1", "--format=%B").count("Session:") == 1  # the session's own trailer stands
     (mrepo / "a.py").write_text("a = 4\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: four\n\nSession: 2026-01-01a was the old key, in prose\n\nCloses: CE-1\n  continued")
-    assert trailers(mrepo) == ["Closes: CE-1", " continued", f"Session: {c.session}"], trailers(mrepo)  # the prose line is no trailer
+    assert trailers(mrepo) == ["Closes: CE-1 continued", f"Session: {c.session}"], trailers(mrepo)  # the prose line is no trailer
     (mrepo / "a.py").write_text("a = 5\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: five\n\nSession: 2026-01-01a was the old key,\nso say it in prose")  # prose, not a trailer
     assert trailers(mrepo) == [f"Session: {c.session}"], trailers(mrepo)

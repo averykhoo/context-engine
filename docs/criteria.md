@@ -155,6 +155,13 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-77 | A task close's commit is titled `<id>: close; <message>` (cut to 72 characters, the whole message then in the body), carries the close's optional body and `Closes: <id>` with `Session: <key>` in its trailer paragraph, and a close refused after its write commits that write without `Closes:` | DEC-36 | tested |
 | AC-78 | `context-engine commit [paths] -m ...` (and the MCP tool) commits the paths by path with every op log line HEAD lacks and the files they name, whatever the policy, adds a `Session:` trailer where git reads it, keeps what other sessions staged or left untracked as it was, and refuses (committing nothing, taking back any add) a missing message, another session's trailer, the whole repo, pathspec magic, an ignored path, nothing to commit, a path git does not know, and a root in no git work tree | DEC-36 | tested |
 
+## CI parity (CE-67)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-79 | `tools/linux_gate.py [rev]` runs CI's gate job on any commit, pushed or not, in a Linux container on the owner's machine, shaped like CI's runner (`ubuntu-latest`'s Ubuntu, git from the git-core PPA with the runner image's `safe.directory = *`, uid 1001, Python at the `requires-python` floor): a fresh clone of that commit, the workflow's install step, then its gate, exiting with the gate's status and naming the git and Python it ran; its steps stay in step with the workflow | US-18 | tested |
+| AC-80 | No test's result depends on the machine's git config or on platform-specific standard-library internals: git in a test reads no system or global config, and no test patches an attribute of a standard-library module | US-18 | tested |
+
 ## Drafted for live stories with none (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

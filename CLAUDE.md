@@ -63,6 +63,10 @@ CI runs the same gate on every push (`.github/workflows/gate.yml`, CE-10): a cle
 Python 3.12 (the `requires-python` floor), `pip install -e ".[dev]"`, then the gate;
 `tests/test_ci.py` keeps the workflow in step with this section and `pyproject.toml`. A red CI
 run is a red gate. Without CI, the by-hand fallback is those two commands in a fresh 3.12 env.
+**Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py`
+(CE-67; Docker in WSL, about a minute once the image is cached). This machine is Windows and CI is
+Linux, so a green local gate can be a red CI run (`39e09ca`, 2026-10-13;
+`docs/evidence/ci-divergence-2026-10-13.md` names the footguns). Push only when both are green.
 
 ## Sabotage rule (owner mandate, DEC-11)
 

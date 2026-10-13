@@ -1,9 +1,11 @@
 """The CI workflow runs exactly the gate, at the declared Python floor, on every push (CE-10)."""
 
+import importlib.util
 import re
 import tomllib
 from pathlib import Path
 
+import pytest
 from ruamel.yaml import YAML
 
 REPO = Path(__file__).resolve().parents[1]
@@ -47,6 +49,24 @@ def test_the_workflow_installs_dev_and_runs_exactly_the_gate():
     gate = re.search(r"`([^`]+)`", gate_section).group(1).replace("<interpreter>", "python")
     runs = [s["run"].strip() for s in _steps() if "run" in s]
     assert runs == ['python -m pip install -e ".[dev]"', gate], runs
+
+
+@pytest.mark.criterion("AC-79")
+def test_the_local_linux_gate_runs_the_workflow_s_steps_on_its_runner_s_shape():
+    """tools/linux_gate.py (CE-67) is CI's job on this machine: the same two steps, the floor's
+    Python, an Ubuntu image for `ubuntu-latest`, and the runner image's `safe.directory = *`."""
+    spec = importlib.util.spec_from_file_location("linux_gate", REPO / "tools" / "linux_gate.py")
+    lg = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lg)
+    runs = [s["run"].strip() for s in _steps() if "run" in s]
+    assert [lg.INSTALL.replace(" -q", ""), lg.GATE] == runs
+    (job,) = _workflow()["jobs"].values()
+    assert job["runs-on"] == "ubuntu-latest" and lg.RUNNER.startswith("ubuntu:"), (job["runs-on"], lg.RUNNER)
+    floor = re.fullmatch(r">=\s*(\d+\.\d+)", _pyproject()["project"]["requires-python"].strip()).group(1)
+    assert lg.floor() == floor
+    image, script = lg.dockerfile(floor), lg.script("0" * 40, floor)
+    assert "ppa:git-core/ppa" in image and "directory = *" in image and "-u 1001" in image, image
+    assert script.index("clone") < script.index("checkout -q " + "0" * 40) < script.index(lg.INSTALL) < script.index(lg.GATE), script
 
 
 def test_the_dev_extra_carries_the_build_system_requires():
