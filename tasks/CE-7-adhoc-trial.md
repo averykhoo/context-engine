@@ -5,7 +5,7 @@ title: "Adhoc trial cutover on a worktree branch, scored against the CE-4 rubric
 brief: "One revertible commit; adhoc keeps its paths and ids; stop if adhoc has a live session"
 pri: NOW
 state: open
-deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5]
+deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5, CE-74, CE-75]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-13b
@@ -38,7 +38,13 @@ the CE-4 baseline. The owner decides whether the branch merges.
 ## Traps
 
 - The body predates CE-38: there is no .mcp.json step and no rewriting of procedures into adhoc's CLAUDE.md. Run init from the engine's env (kit README); it appends the kit block and copies docs/framework/contract.md.
-- adhoc very likely has .claude/settings.local.json already, so init refuses until the owner says yes (--merge-settings) or no (--skip-settings) (DEC-32).
-- A session is live in adhoc's main checkout (untracked audio, 2026-10-13b): work only in a worktree branch, and re-check adhoc's HANDOFF and decisions for commits made after the import before the merge.
-- The import waits on ASK-5 (rename ids or keep them); leave [guards] charter, stories and tests unset until adhoc's charter holds the owner's goals (procedures § Bootstrap).
-- The first session there runs INV-31's live probes: does orient output appear on startup, resume, /clear and compaction; what a missing import or a broken interpreter path looks like.
+- Dry run 2026-10-14a (docs/evidence/adhoc-dryrun-2026-10-14.md) walked this cutover in a throwaway clone; its findings are the traps below, and CE-74, CE-75 and CE-76 fix the engine side.
+- Worktree and settings (dry run F36): a fresh worktree has no .claude/, so init there meets no settings file and the DEC-32 question (--merge-settings or --skip-settings) only comes up in adhoc main at merge. The hook written in the worktree names the worktree's root and goes when the worktree does.
+- Pin the engine for the trial (F18): G-D0 compares adhoc's contract.md with the installed kit's text, so an editable install picks up every kit change made here mid-trial and turns adhoc's lint red. Install a pinned commit into a separate env, or freeze kit changes for the trial.
+- adhoc's gate in a worktree (F10): `scripts/extract_text.py --check` exits 1 when the gitignored references/originals/ is missing, and tests skip without the gitignored data/. Copy or junction both into the worktree first. Pytest took 571 s, not "seconds".
+- Ids (DEC-37, CE-74): import renames D-n to DEC-n with D-n kept as an alias. Rejected rows get fresh numbers, so re-check adhoc's decisions.md for entries written after the import before the merge (F21). After import, freeze or redirect docs/decisions.md and change adhoc's CLAUDE.md, which tells sessions to append there (F23). Check each imported decision's status, because the import defaults most of them to BUILT (F22).
+- No board or question import tool (F25, F26): script it through `task new` and record each old id (`1h`, Q5..Q9) as an alias. Keep rank order and the D-n links by hand.
+- HANDOFF (F17, F27, F32): adhoc's 43 KB HANDOFF exceeds the kit caps and its banner holds durable facts (the best-rung table). Move those facts before any `banner set`. Its "still owed" is a .scratch inventory, not batons.
+- Lint on adhoc's docs went green from config plus 4 one-line edits (F13, F14). G-D5 flags adhoc's domain words "three kinds"/"six kinds" (F15): narrow count_nouns in [guards].
+- leave [guards] charter, stories and tests unset until adhoc's charter holds the owner's goals (procedures § Bootstrap).
+- The first session there runs INV-31's live probes: does orient output appear on startup, resume, /clear and compaction; what a missing import or a broken interpreter path looks like. The dry run saw the hook run rc 0 under bash and cmd.exe.
