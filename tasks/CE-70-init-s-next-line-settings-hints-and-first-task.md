@@ -4,13 +4,15 @@ id: CE-70
 title: "init's next: line, settings hints and first-task hint match the bootstrap procedure"
 brief: 'Audit 2026-10-14a D3, N2, N3, N4: init output names the gate step and commit, not the optional MCP server'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-10-14a
 created: 2026-10-14
 moved: 2026-10-14a
 updated: 2026-10-14a
 review: [shipped, write-op]
+status: deprecated
+closed: 2026-10-14a
 ---
 
 init's next: line, settings hints and first-task hint match the bootstrap procedure.
@@ -24,6 +26,8 @@ init's next: line, settings hints and first-task hint match the bootstrap proced
 - none yet
 
 ## Log
+
+- 2026-10-14a (claude-code/claude-opus-5-5): closed: done in 6f8b423: init's next: line, settings hints, dry-run preview and G-W5 remedy
 
 ## Design review
 

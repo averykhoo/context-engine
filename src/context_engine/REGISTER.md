@@ -507,3 +507,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a level-3 Gate is usually a subsection, not the repo's gate
 - **control:** individual: init's label quotes the heading it took; the kit README and manual-mode say which headings count
 - **from:** CE-51, session 2026-10-14a
+
+## INV-72: _ignored does not read .git/info/exclude, the global excludes file or nested ignore files
+
+- **affects:** the owner and first session in every adopting repo, who follow init's next: line and hints; a person using plain git, whose .claude/settings.local.json may be committed
+- **why not eliminated:** reproducing git's full ignore resolution is not cheap, and erring toward a warning is safe
+- **control:** individual: init warns or writes the ignore file; `git check-ignore` is the by-hand check (manual-mode § init)
+- **from:** CE-70, session 2026-10-14a
