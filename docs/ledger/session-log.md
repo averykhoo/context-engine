@@ -7,9 +7,17 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14b · kind: open
+## 2026-10-14b · kind: close
 
-- **opened:** 2026-10-14T12:01:52+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-6 answered as DEC-40; AC-42 reworded
+- **receipts:**
+  - guards: gate pytest -q green, 710 passed (2026-10-14); lint clean
+  - read: CLAUDE.md, contract; context carried from 2026-10-14a
+- **summary** (the owner digest):
+  - Owner answered ASK-6 (DEC-40): AC-42's foreign-prefix clause now describes DEC-37's
+    rename-with-alias instead of a refusal; the rest of AC-42 is unchanged.
+- **Still owed:**
+  - push needs the owner's yes
 
 ---
 
