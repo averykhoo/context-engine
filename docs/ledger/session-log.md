@@ -13,9 +13,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14c · kind: open
+## 2026-10-14c · kind: close
 
-- **opened:** 2026-10-14T13:48:18+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-77 filed; CE-78 filed
+- **receipts:**
+  - guards: gate pytest -q green, 714 passed in 247.54s (2026-10-14); CLI lint clean
+  - read: CLAUDE.md, contract, CE-7, procedures.md § Clean close, zanzibar docs/gate-runbook.md § 4
+    and scripts/gate_status.py
+- **summary** (the owner digest):
+  - Advised: CE-7's cutover runs from this repo (--root the adhoc worktree); its trial sessions must
+    be fresh Claude Code sessions started in adhoc, not subagents from here.
+  - Filed CE-77 (NEXT, after CE-7): procedures and repo adoption as skills, bundled with the
+    SessionStart hook and MCP server as a Claude Code plugin; the contract stays always-on.
+  - Filed CE-78 (NEXT, after CE-7): the code gate runs only when its scope changed, proven by a per-
+    scope content hash on each gate run's result (zanzibar's gate_status.py shape); no framework
+    edits until CE-7 is done (owner).
+  - Concurrent session 2026-10-14d: each session's engine commit carried the other's uncommitted op
+    lines (a1c22b5, 1cbeb52); nothing lost.
+  - The MCP lint reported G-D12 (NFRs, residual-risk register) while the CLI lint was clean: the MCP
+    server is probably running engine code older than the source, since /clear does not restart it.
+- **Still owed:**
+  - Confirm the MCP/CLI lint disagreement (G-D12) is a stale MCP server: restart Claude Code, then
+    run lint through both.
 
 ---
 
