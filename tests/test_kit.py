@@ -106,6 +106,77 @@ def test_an_older_kit_block_is_never_doubled(tmp_path):
     assert "CLAUDE.md (holds the kit 0.4 block: replace it" in out, out
 
 
+GATES = re.compile(r"^#{1,6}[ \t]+Gate\b", re.MULTILINE | re.IGNORECASE)
+NO_STUB = "CLAUDE.md (kit block appended without the Gate stub: it has its own "
+NUDGE = ": make it end with `&& context-engine lint`)"
+
+
+@pytest.mark.criterion("AC-31")
+@pytest.mark.parametrize("gate, heading, lint", [
+    ("## Gate\n\n`pytest -q`, from the repo root.\n", "## Gate", True),
+    ("# gate: tests\n\n`make test && context-engine lint`\n", "# gate: tests", False),
+    ("## Gate (CI runs the same)\r\n\r\n`pytest -q`\r\n", "## Gate (CI runs the same)", True),
+    ("Run `context-engine lint` now and then.\n\n## Gate\n\n`pytest -q`\n\n## Rules\n\n`context-engine lint` again\n", "## Gate", True),
+    ("## Gate\n\n`pytest -q && python -m context_engine lint`\n", "## Gate", False),
+    ("```\ncode\n```\n\n## Gate\n\n`pytest -q`\n", "## Gate", True),
+])
+def test_a_claude_md_with_its_own_gate_gets_the_kit_block_without_a_second_gate(tmp_path, gate, heading, lint):
+    """CE-51: the repo's Gate stays the only Gate; init says it left the stub out, quoting the
+    heading it took for the gate, and asks for `context-engine lint` when that Gate section (not
+    the file) lacks it; the next: line asks for a check of that gate."""
+    old = f"# Ours\n\n{gate}"
+    old = old.replace("\r\n", "\n").replace("\n", "\r\n") if "\r\n" in gate else old
+    (tmp_path / "CLAUDE.md").write_bytes(old.encode())
+    out = B.init(tmp_path)
+    new = (tmp_path / "CLAUDE.md").read_bytes().decode()
+    assert new.startswith(old) and len(GATES.findall(new)) == 1, new
+    assert B.kit_block(new)[1] == B.bootloader_body() and new.rstrip().endswith(B.END), "the whole kit block, and nothing after it"
+    assert B.GATE_PLACEHOLDER not in new and B.GATE_PLACEHOLDER not in out, out
+    assert f'{NO_STUB}"{heading}"' + (NUDGE if lint else ")") in out, out
+    assert "check CLAUDE.md § Gate runs the repo's tests and ends with `&& context-engine lint`" in out.split("; next: ")[1], out
+    assert ("\n" not in new.replace("\r\n", "")) if "\r\n" in old else ("\r" not in new), "the file's line endings are kept"
+    assert B.init(tmp_path).startswith("init: created 0"), "a re-run finds the kit block"
+
+
+@pytest.mark.criterion("AC-31")
+@pytest.mark.parametrize("text", [
+    "```markdown\n## Gate\n\nan example\n```\n",
+    "~~~~\n## Gate\n~~~\nstill in the fence\n~~~~\n",
+    "  ```\n## Gate\n  ```\n",
+    "<!--\n## Gate\n-->\n",
+    "```\nnever closed\n\n## Gate\n",
+    "## Deploy\n\n### Gate\n\nmanual approval by ops\n",
+    "## Gateway\n\n## Gate-keeping rules\n\n## Gates\n",
+])
+def test_a_gate_heading_that_is_not_the_repos_gate_leaves_the_stub_in(tmp_path, text):
+    """CE-51: a Gate heading in a code fence or an HTML comment is text, and `### Gate` under
+    another section or `## Gate-keeping` is not the repo's gate: the stub still goes in, and the
+    next: line asks for the test command."""
+    old = f"# Ours\n\n{text}"
+    (tmp_path / "CLAUDE.md").write_text(old, encoding="utf-8")
+    out = B.init(tmp_path)
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + "\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
+    assert NO_STUB not in out and f"replace `{B.GATE_PLACEHOLDER}`" in out, out
+
+
+@pytest.mark.criterion("AC-31")
+def test_inits_next_line_names_the_bootstrap_steps_in_order_and_the_mcp_server_as_optional(tmp_path):
+    """CE-70: the steps of kit README § 2a, in its order; the MCP server is optional, never a step."""
+    out = B.init(tmp_path)
+    nxt = out.split("; next: ")[1]
+    steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "run lint", "commit the kit's files by path", "then `session start`"]
+    assert [nxt.index(s) for s in steps] == sorted(nxt.index(s) for s in steps), nxt
+    assert nxt.endswith("(registering the MCP server is optional: kit README § 1)") and "register the MCP server," not in nxt, nxt
+    assert B.GATE_PLACEHOLDER in (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8"), "the step names the stub's real placeholder"
+    readme = (B.KIT / "README.md").read_text(encoding="utf-8")
+    one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
+    assert B.GATE_PLACEHOLDER in readme and "The MCP server is optional" in one, "the line's pointers name what is there"
+    assert "; next: " not in B.init(tmp_path), "a re-run that creates nothing has no next steps"
+    (tmp_path / "docs" / "charter.md").unlink()
+    again = B.init(tmp_path)
+    assert again.startswith("init: created 1 (docs/charter.md)") and "; next: " not in again, "a re-run that only fills a gap is no bootstrap"
+
+
 def _hook_command(root: Path) -> str:
     import json
 
@@ -179,12 +250,18 @@ def test_an_existing_settings_file_without_the_hook_refuses_showing_the_change_a
     import json
 
     p = _settings(tmp_path)
-    for dry in (False, True):
-        with pytest.raises(Refusal) as e:
-            B.init(tmp_path, dry_run=dry)
-        assert e.value.message.startswith(f"{B.SETTINGS} exists, so the hook goes into it: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart and change nothing else")
-        assert "ask" in e.value.remedy and "--merge-settings" in e.value.remedy and "--skip-settings" in e.value.remedy
+    with pytest.raises(Refusal) as e:
+        B.init(tmp_path)
+    assert e.value.message.startswith(f"{B.SETTINGS} exists, so the hook goes into it: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart and change nothing else")
+    assert "ask" in e.value.remedy and "--merge-settings" in e.value.remedy and "--skip-settings" in e.value.remedy
     assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"], "a refusal writes nothing at all"
+    dry = B.init(tmp_path, dry_run=True)  # the owner sees the whole plan, and the question, before answering it
+    assert dry.startswith("init (dry run): would create") and f"{B.SETTINGS} (exists without the orient hook)" in dry.split("; warning: ")[0], dry
+    assert f"; warning: {B.SETTINGS} is the owner's call: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart" in dry, dry
+    too = f"change nothing else in it, and would write {B.SETTINGS_IGNORE} holding settings.local.json beside it (nothing ignores that file)"
+    assert too in dry and too in e.value.message, "the question names everything a yes brings"
+    assert "--merge-settings" in dry and "--skip-settings" in dry and "; next: " not in dry
+    assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"], "a dry run writes nothing"
     out = B.init(tmp_path, skip_settings=True)
     assert p.read_bytes() == GRANTS.encode() and f"{B.SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)" in out, out
     assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "no ignore file for a settings file init did not write"
@@ -302,11 +379,87 @@ def test_a_merge_names_a_gitignore_that_misses_the_settings_file_and_the_cli_ref
     import sys
 
     _settings(tmp_path)
+    (tmp_path / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
     assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in B.init(tmp_path, merge_settings=True)
     (tmp_path / B.SETTINGS).write_bytes(GRANTS.encode())
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8") and not k.startswith("CE_")}
     r = subprocess.run([sys.executable, "-m", "context_engine", "--root", str(tmp_path), "init"], capture_output=True, env=env, timeout=120)
     assert r.returncode == 2 and "kit README § Hook" in r.stderr.decode("utf-8"), r.stderr
+
+
+@pytest.mark.criterion("AC-57")
+def test_a_merge_writes_the_missing_gitignore_and_every_rerun_repeats_a_gitignore_that_misses_the_line(tmp_path):
+    """CE-70 (N2): the hook init merged in holds this machine's paths, so a missing
+    .claude/.gitignore is written, as on a fresh init; one that misses the line is named on every
+    run that finds the hook, not only the merging one."""
+    _settings(tmp_path)
+    out = B.init(tmp_path, merge_settings=True)
+    assert (tmp_path / B.SETTINGS_IGNORE).read_bytes() == b"settings.local.json\n" and B.SETTINGS_IGNORE in out.split("; skipped")[0], out
+    (tmp_path / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
+    for flags in ({}, {"merge_settings": True}, {"skip_settings": True}):
+        again = B.init(tmp_path, **flags)
+        assert f"{B.SETTINGS} (holds the orient hook)" in again and f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in again, (flags, again)
+    assert (tmp_path / B.SETTINGS_IGNORE).read_bytes() == b"agents.local/\n", "an existing ignore file is never edited"
+    (tmp_path / B.SETTINGS_IGNORE).unlink()
+    again = B.init(tmp_path)
+    assert again.startswith("init: created 0") and f"; warning: {B.SETTINGS_IGNORE} is absent and nothing init reads ignores settings.local.json" in again, again
+    assert f"{B.SETTINGS_IGNORE}" not in again.split("; warning: ")[0], "an absent file is not reported as skipped"
+    assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "only the run that writes the hook writes the ignore file"
+    for line, ignored in ((".claude/settings.local.json", True), ("/.claude/", True), ("*.local.json", True), ("settings.json", False)):
+        (tmp_path / ".gitignore").write_text(f"# ours\n{line}\n", encoding="utf-8")
+        o = B.init(tmp_path)
+        assert ("; warning: " not in o) is ignored, (line, o)
+    for text, ignored in ((".claude/\n!.claude/settings.local.json\n", True),  # git cannot re-include under an excluded directory
+                          (".claude/*\n!.claude/settings.json\n", True),  # the usual split: shared settings tracked, local ones not
+                          (".claude/*\n!.claude/settings.local.json\n", False),  # the last match wins
+                          ("*.json\n!settings.local.json\n", False)):
+        (tmp_path / ".gitignore").write_text(text, encoding="utf-8")
+        o = B.init(tmp_path)
+        assert ("; warning: " not in o) is ignored, (text, o)
+    (tmp_path / ".gitignore").write_text(".claude/*\n!.claude/settings.json\n", encoding="utf-8")
+    (tmp_path / B.SETTINGS_IGNORE).write_text("settings.local.json\n", encoding="utf-8")
+    assert "; warning: " not in B.init(tmp_path), "init never warns about the ignore file it wrote itself"
+    (tmp_path / B.SETTINGS_IGNORE).write_text("settings.local.json\n!settings.local.json\n", encoding="utf-8")
+    assert f"; warning: {B.SETTINGS_IGNORE} (it does not ignore" in B.init(tmp_path), "a deeper negation wins"
+    (tmp_path / B.SETTINGS_IGNORE).unlink()
+    (tmp_path / ".gitignore").unlink()
+    (tmp_path / "x").mkdir()
+    _settings(tmp_path / "x")
+    (tmp_path / "x" / ".gitignore").write_text(".claude\n", encoding="utf-8")
+    B.init(tmp_path / "x", merge_settings=True)
+    assert not (tmp_path / "x" / B.SETTINGS_IGNORE).exists(), "a repo that ignores it already gets no second ignore file"
+
+
+@pytest.mark.criterion("AC-57")
+def test_skip_settings_says_the_hook_is_there_when_it_is_and_never_refuses(tmp_path):
+    """CE-70 (N3): --skip-settings asks for the hook by hand only when it is missing, and a file
+    init cannot read is the owner's to fix, never a refusal, under --skip-settings."""
+    import json
+
+    _settings(tmp_path)
+    B.init(tmp_path, merge_settings=True)
+    out = B.init(tmp_path, skip_settings=True)
+    assert f"{B.SETTINGS} (holds the orient hook)" in out and "by hand" not in out, out
+    by_hand = f"{B.SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)"
+    for text in (b"{not json", b'{"a": "\xe9"}', GRANTS.encode()):
+        (tmp_path / B.SETTINGS).write_bytes(text)
+        assert by_hand in B.init(tmp_path, skip_settings=True)
+        assert (tmp_path / B.SETTINGS).read_bytes() == text
+    hooked = json.loads(GRANTS)
+    hooked["hooks"]["SessionStart"] = [B.hook_entry(tmp_path)]
+    (tmp_path / B.SETTINGS).write_bytes(b"\xef\xbb\xbf" + json.dumps(hooked).encode())  # a BOM, as PowerShell 5.1 writes
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path, skip_settings=True)
+    (tmp_path / B.SETTINGS).write_text(json.dumps({**hooked, "disableAllHooks": True}), encoding="utf-8")
+    out = B.init(tmp_path, skip_settings=True)
+    assert f"{B.SETTINGS} (--skip-settings: it sets disableAllHooks, so no hook runs: run orient by hand at session start)" in out, out
+    gone = '"C:/gone/python.exe" -m context_engine --root "C:/elsewhere" orient'
+    hooked["hooks"]["SessionStart"] = [{"hooks": [{"type": "command", "command": gone}]}]
+    (tmp_path / B.SETTINGS).write_text(json.dumps(hooked), encoding="utf-8")
+    out = B.init(tmp_path, skip_settings=True)
+    assert f"its orient hook runs another command ({gone}): have the owner replace it with {B.hook_entry(tmp_path)['hooks'][0]['command']})" in out, out
+    (tmp_path / B.SETTINGS).unlink()
+    (tmp_path / B.SETTINGS).mkdir()
+    assert by_hand in B.init(tmp_path, skip_settings=True), "a settings path init cannot read is never a crash under --skip-settings"
 
 
 @pytest.mark.criterion("AC-57")

@@ -41,9 +41,17 @@ CONTRACT = "contract.md"  # the framework's rules; init copies it to CONTRACT_DE
 CONTRACT_DEST = "docs/framework/contract.md"  # where kit/bootloader.md's import points
 BOOTLOADER = "bootloader.md"  # what CLAUDE.md gets: the kit markers, the pin, the import
 CONTRACT_TARGET = "CLAUDE.md"
+GATE_PLACEHOLDER = "<this repo's own test command>"  # the bootloader's Gate stub, until the owner fills it in
 SETTINGS = ".claude/settings.local.json"  # the SessionStart hook: machine-local (absolute paths)
 SETTINGS_IGNORE = ".claude/.gitignore"
 IMPORT_RE = re.compile(r"^@(\S+)[ \t]*$", re.MULTILINE)  # a CLAUDE.md import: `@path` on a line of its own
+# the repo's own Gate heading (CE-51): level 1 or 2, the word Gate, then nothing or `(...`, `: ...`, ` - ...`
+GATE_RE = re.compile(r"^ {0,3}#{1,2}[ \t]+Gate(?:[ \t]*[(:\u2013\u2014].*|[ \t]+-.*)?[ \t]*$", re.MULTILINE | re.IGNORECASE)
+NEXT_HEADING_RE = re.compile(r"^ {0,3}#{1,2}[ \t]", re.MULTILINE)
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[`~]*[ \t]*$", re.MULTILINE | re.DOTALL)  # a closed code fence
+OPEN_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})", re.MULTILINE)  # left after FENCE_RE: a fence never closed
+COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+LINT_RE = re.compile(r"context[-_]engine\s+lint")  # a gate running lint: `context-engine lint` or `-m context_engine lint`
 BEGIN, END = "<!-- context-engine kit 0.5 begin -->", "<!-- context-engine kit 0.5 end -->"
 # any kit version's begin marker: an older block is the one an upgrade replaces, never a second one
 ANY_BEGIN = re.compile(r"<!-- context-engine kit (\S+) begin -->")
@@ -227,11 +235,13 @@ def _used(rel: str, uses: set[str]) -> bool:
     return any(u == rel or u.startswith(rel + "/") or rel.startswith(u + "/") for u in uses)
 
 
-def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "") -> tuple[dict[str, str], list[str], list[str], dict[str, str]]:
-    """(path -> text to write, created, skipped, seen). ``CLAUDE.md``'s text, and a settings file's
-    the hook is merged into, are the whole new file, and ``seen`` holds the text each was planned
-    from; every other write is a new file. ``settings`` is ``merge`` or ``skip`` for a settings file
-    that exists without the hook; with neither, that refuses, showing the change (DEC-32).
+def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "") -> tuple[dict[str, str], list[str], list[str], dict[str, str], list[str]]:
+    """(path -> text to write, created, skipped, seen, warnings). ``CLAUDE.md``'s text, and a
+    settings file's the hook is merged into, are the whole new file, and ``seen`` holds the text
+    each was planned from; every other write is a new file. ``settings`` is ``merge`` or ``skip``
+    for a settings file that exists without the hook; with neither, that refuses, showing the
+    change (DEC-32); ``preview`` (a dry run) names that question as a warning instead, so the
+    owner sees the whole plan before answering it. ``warnings`` are what the owner must act on.
 
     A ``context.toml`` already present is kept, once it loads, and a skeleton or directory is then
     written only where that config points: a repo that mapped a component elsewhere (§11.4) does
@@ -240,6 +250,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
     writes: dict[str, str] = {}
     skipped: list[str] = []
     seen: dict[str, str] = {}
+    warnings: list[str] = []
     text = config_text(prefixes)
     if (root / C.CONFIG_NAME).exists():
         cfg = _existing_config(root, prefixes)
@@ -255,6 +266,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             skipped.append(dst)
         else:
             writes[dst] = (KIT / src).read_text(encoding="utf-8")
+    labels: dict[str, str] = {}
     block = (KIT / BOOTLOADER).read_text(encoding="utf-8")
     claude = root / CONTRACT_TARGET
     if not claude.exists():
@@ -273,6 +285,11 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
         else:
             norm = old.replace("\r\n", "\n")
             sep = "" if not norm or norm.endswith("\n\n") else ("\n" if norm.endswith("\n") else "\n\n")
+            gate = gate_section(norm)
+            if gate:  # the repo's own gate stays the one gate: the kit block goes in without the stub (CE-51)
+                block = block[: block.index(END) + len(END)] + "\n"
+                lint = "" if LINT_RE.search(gate[1]) else ": make it end with `&& context-engine lint`"
+                labels[CONTRACT_TARGET] = f'{CONTRACT_TARGET} (kit block appended without the Gate stub: it has its own "{gate[0]}"{lint})'
             add = sep + block
             writes[CONTRACT_TARGET] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
             seen[CONTRACT_TARGET] = old
@@ -282,18 +299,24 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
         skipped.append(CONTRACT_DEST)
     else:
         writes[CONTRACT_DEST] = (KIT / CONTRACT).read_text(encoding="utf-8")
-    labels: dict[str, str] = {}
     if (root / SETTINGS).exists():  # it holds the owner's permission grants: changed only with their yes (DEC-32)
         if settings == "skip":
-            skipped.append(f"{SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)")
+            label, ours = _skip_label(root)
+            skipped.append(f"{SETTINGS} ({label})")
+            if ours:
+                _ensure_ignore(root, writes, skipped, warnings, write=False)
         else:
             old = _read_text(root / SETTINGS)
             new = merged_settings(root, old)
             if new is None:
                 skipped.append(f"{SETTINGS} (holds the orient hook)")
+                _ensure_ignore(root, writes, skipped, warnings, write=False)  # every run, not only the merging one (CE-70)
+            elif settings == "preview":  # a dry run shows the question with the plan, never refuses on it
+                skipped.append(f"{SETTINGS} (exists without the orient hook)")
+                warnings.append(f"{SETTINGS} is the owner's call: init would append {json.dumps(hook_entry(root))} to hooks.SessionStart and change nothing else{_ignore_too(root)}; with a yes, run init with --merge-settings, with a no, with --skip-settings")
             elif settings != "merge":
                 raise Refusal(
-                    f"{SETTINGS} exists, so the hook goes into it: init would append {json.dumps(hook_entry(root))} to hooks.SessionStart and change nothing else",
+                    f"{SETTINGS} exists, so the hook goes into it: init would append {json.dumps(hook_entry(root))} to hooks.SessionStart and change nothing else{_ignore_too(root)}",
                     "show the owner that change and ask: with a yes, run init again with --merge-settings; with a no, with --skip-settings (the hook can be added by hand later, kit README § Hook)",
                 )
             else:
@@ -301,13 +324,10 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
                 writes[SETTINGS] = new
                 seen[SETTINGS] = old
                 labels[SETTINGS] = f"{SETTINGS} (the orient hook merged in)"
-                _check_ignore(root, skipped)
+                _ensure_ignore(root, writes, skipped, warnings, write=True)
     else:
         writes[SETTINGS] = hook_settings(root)
-        if not (root / SETTINGS_IGNORE).exists():
-            writes[SETTINGS_IGNORE] = "settings.local.json\n"
-        else:
-            _check_ignore(root, skipped)
+        _ensure_ignore(root, writes, skipped, warnings, write=True)
     for d in KEEP:
         if not _used(d, uses):
             skipped.append(f"{d}/ (not in {C.CONFIG_NAME})")
@@ -322,17 +342,102 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             skipped.append(f"{d}/.gitignore")
         else:
             writes[f"{d}/.gitignore"] = "*\n"
-    return writes, [labels.get(k, k) for k in writes], skipped, seen
+    return writes, [labels.get(k, k) for k in writes], skipped, seen, warnings
 
 
-def _check_ignore(root: Path, skipped: list[str]) -> None:
-    """Name a ``.claude/.gitignore`` that does not ignore the settings file init writes into, since
-    that file holds this machine's paths. Not checked: a repo-level ignore (``git check-ignore``
-    would need git, which init does not use)."""
-    ignore = root / SETTINGS_IGNORE
-    lines = ignore.read_bytes().decode("utf-8", "replace").split() if ignore.exists() else []
-    if "settings.local.json" not in lines:
-        skipped.append(f"{SETTINGS_IGNORE} (it does not ignore settings.local.json, which holds this machine's paths: add that line, or check the repo's own .gitignore does)")
+def gate_section(text: str) -> tuple[str, str] | None:
+    """The Gate section of ``text`` (a ``CLAUDE.md``): its heading and its text up to the next
+    heading of level 1 or 2; None when it has none. Only a level 1 or 2 heading reading `Gate`
+    (optionally followed by a parenthesis, a colon or a dash and more words) counts, outside code
+    fences and HTML comments: the repo's own gate, which the kit block's stub must not double
+    (CE-51). A `### Gate` under another section, or `## Gate-keeping`, is not the repo's gate."""
+    prose = FENCE_RE.sub("", text.replace("\r\n", "\n").removeprefix("\ufeff"))
+    prose = prose[: m.start()] if (m := OPEN_FENCE_RE.search(prose)) else prose  # an unclosed fence runs to the end
+    prose = COMMENT_RE.sub("", prose)
+    m = GATE_RE.search(prose)
+    if not m:
+        return None
+    nxt = NEXT_HEADING_RE.search(prose, m.end())
+    return m.group(0).strip(), prose[m.end() : nxt.start() if nxt else len(prose)]
+
+
+def _skip_label(root: Path) -> tuple[str, bool]:
+    """What ``--skip-settings`` says of a settings file it leaves alone, and whether that file holds
+    this repo's orient hook. Read leniently: under ``--skip-settings`` a file init cannot read or
+    parse is the owner's to fix, never a refusal (CE-70)."""
+    by_hand = "--skip-settings: add the SessionStart hook by hand, kit README § Hook"
+    try:
+        doc = _strict_json(_read_text(root / SETTINGS).removeprefix("\ufeff"))
+    except (Refusal, ValueError, OSError):
+        return by_hand, False
+    if isinstance(doc, dict) and doc.get("disableAllHooks") is True:
+        return "--skip-settings: it sets disableAllHooks, so no hook runs: run orient by hand at session start", False
+    want = hook_entry(root)["hooks"][0]["command"]
+    state, other = _hook_state(doc, want)
+    if state == "ours":
+        return "holds the orient hook", True
+    if state == "stale":
+        return f"--skip-settings: its orient hook runs another command ({other}): have the owner replace it with {want}", False
+    return by_hand, False
+
+
+def _ensure_ignore(root: Path, writes: dict[str, str], skipped: list[str], warnings: list[str], *, write: bool) -> None:
+    """The settings file holds (or is about to hold) the hook, with this machine's paths, so git
+    must ignore it. When init writes the hook (``write``), it also writes a missing
+    ``.claude/.gitignore``; otherwise, and when one exists without the line, it names the gap, on
+    every run that finds the hook, so a re-run repeats the warning until it is fixed (CE-70)."""
+    if _ignored(root):
+        return
+    if not (root / SETTINGS_IGNORE).exists():
+        if write:
+            writes[SETTINGS_IGNORE] = "settings.local.json\n"
+        else:
+            warnings.append(f"{SETTINGS_IGNORE} is absent and nothing init reads ignores settings.local.json, which holds this machine's paths: create it holding that line, or ignore the file in the repo's own .gitignore")
+    else:
+        skipped.append(SETTINGS_IGNORE)
+        warnings.append(f"{SETTINGS_IGNORE} (it does not ignore settings.local.json, which holds this machine's paths: add that line, or check the repo's own .gitignore does)")
+
+
+def _ignore_too(root: Path) -> str:
+    """What else the owner's yes to the merge brings (DEC-32 asks for it knowing all of it): the
+    ``.claude/.gitignore`` that ``_ensure_ignore`` then writes, when nothing ignores the file."""
+    if _ignored(root) or (root / SETTINGS_IGNORE).exists():
+        return ""
+    return f" in it, and would write {SETTINGS_IGNORE} holding settings.local.json beside it (nothing ignores that file)"
+
+
+def _ignore_lines(path: Path) -> list[str]:
+    try:
+        text = path.read_bytes().decode("utf-8", "replace") if path.is_file() else ""
+    except OSError:
+        return []
+    return [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+
+
+def _ignored(root: Path) -> bool:
+    """Whether the repo's own ``.gitignore`` and then ``.claude/.gitignore`` ignore the settings
+    file, read the way git reads them: the last matching line wins, a negation (`!`) re-includes,
+    a deeper file overrides the root one, and an excluded ``.claude`` directory cannot be
+    re-included. An approximation of ``git check-ignore`` (init does not use git): it does not read
+    ``.git/info/exclude``, ``core.excludesFile`` or other nested files, so it errs toward writing
+    the ignore file, or a warning (CE-70)."""
+    import fnmatch
+
+    state = False
+    for ln in _ignore_lines(root / ".gitignore"):
+        neg = ln.startswith("!")
+        pat = (ln[1:] if neg else ln).lstrip("/")
+        if pat.rstrip("/") == ".claude":  # the directory itself: nothing under it can be re-included
+            if not neg:
+                return True
+            continue
+        if fnmatch.fnmatchcase(".claude/settings.local.json", pat) or ("/" not in pat and fnmatch.fnmatchcase("settings.local.json", pat)):
+            state = not neg
+    for ln in _ignore_lines(root / SETTINGS_IGNORE):
+        neg = ln.startswith("!")
+        if fnmatch.fnmatchcase("settings.local.json", (ln[1:] if neg else ln).lstrip("/")):
+            state = not neg
+    return state
 
 
 def _replaceable(path: Path) -> None:
@@ -400,6 +505,21 @@ def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str
     done.append(rel)
 
 
+def next_steps(claude: str) -> str:
+    """The bootstrap steps after init, in the kit README's order (§ 2a). The gate step replaces the
+    stub's placeholder while ``claude`` (CLAUDE.md as init left it) holds it, and otherwise asks for
+    a check of the gate the repo had; the MCP server is optional, so it is named as such, not as a
+    step (CE-70)."""
+    if GATE_PLACEHOLDER in claude:
+        gate = f"replace `{GATE_PLACEHOLDER}` in {CONTRACT_TARGET} § Gate with the repo's test command, "
+    else:
+        gate = f"check {CONTRACT_TARGET} § Gate runs the repo's tests and ends with `&& context-engine lint`, "
+    return (
+        f"fill docs/charter.md with the owner, {gate}run lint, commit the kit's files by path, then `session start`"
+        " (registering the MCP server is optional: kit README § 1)"
+    )
+
+
 def init(root: Path | str, prefixes: dict[str, str] | None = None, dry_run: bool = False, merge_settings: bool = False, skip_settings: bool = False) -> str:
     """Write what the repo is missing; return one line naming what was created and skipped.
     ``merge_settings`` (the owner said yes) adds the hook to a settings file that exists;
@@ -409,12 +529,14 @@ def init(root: Path | str, prefixes: dict[str, str] | None = None, dry_run: bool
         raise Refusal(f"{root} is not a directory", "pass the repo root with --root")
     if merge_settings and skip_settings:
         raise Refusal("--merge-settings and --skip-settings contradict each other", "pass the one the owner chose")
-    writes, created, skipped, seen = plan(root, prefixes, "merge" if merge_settings else "skip" if skip_settings else "")
+    writes, created, skipped, seen, warnings = plan(root, prefixes, "merge" if merge_settings else "skip" if skip_settings else "preview" if dry_run else "")
     if not dry_run:
         done: list[str] = []
         for rel, text in writes.items():
             _write(root, rel, text, seen, done)
     verb = "would create" if dry_run else "created"
     head = "init (dry run)" if dry_run else "init"
-    nxt = "" if dry_run or not created else "; next: fill docs/charter.md with the owner, register the MCP server, run lint"
-    return f"{head}: {verb} {len(created)} ({', '.join(created) or 'none'}); skipped {len(skipped)} ({', '.join(skipped) or 'none'}){nxt}"
+    bootstrap = C.CONFIG_NAME in writes or CONTRACT_TARGET in writes  # a re-run that only fills a gap is no bootstrap
+    nxt = "" if dry_run or not bootstrap else "; next: " + next_steps(writes.get(CONTRACT_TARGET) or _current(root / CONTRACT_TARGET) or "")
+    warn = "".join(f"; warning: {w}" for w in warnings)  # what the owner must act on, apart from what was skipped
+    return f"{head}: {verb} {len(created)} ({', '.join(created) or 'none'}); skipped {len(skipped)} ({', '.join(skipped) or 'none'}){warn}{nxt}"
