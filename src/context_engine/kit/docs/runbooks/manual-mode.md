@@ -1214,14 +1214,19 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    ignoring it, say so.
 5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/evidence` and `tasks`
    that does not exist, create it with an empty `.gitkeep`. Create
-   `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.
+   `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent. If no
+   line of the repo's `.gitignore` ignores `.context-engine/` (the engine's environment, kit
+   README § 1), append `# context-engine: the engine's pinned env (kit README § 1)` and
+   `.context-engine/` after a blank line, keeping the file's line endings (create the file if it
+   is absent).
 6. Report in one line what you created, what you skipped, and a warning for each thing the
    owner must act on (the settings file's ignore line; on a dry run, the settings question), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
    Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, then
    `session start`; registering the MCP server is optional. Never overwrite an existing file, and
-   never install anything into the repo's environment.
+   never install anything into the repo's environment (the engine's own is `.context-engine/env/`,
+   made before init, kit README § 1).
 
 **Why:** a new repo should get every file the procedures expect in one step, the runbooks
 included, so it can follow every procedure by hand from its own tree, and an existing repo

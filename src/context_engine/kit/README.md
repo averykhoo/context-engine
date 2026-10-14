@@ -22,17 +22,39 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 
 `init` also writes the `SessionStart` hook (§ Hook) and creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
 `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
-(each carrying its own `.gitignore`, holding `*`).
+(each carrying its own `.gitignore`, holding `*`). It appends `.context-engine/` (the engine's
+environment, § 1) to the repo's own `.gitignore`, creating that file if it is absent, unless a
+line there already ignores it.
 
 ## 1. Install and pin the engine
 
 The engine runs from **its own environment** and is pointed at the repo. It is never installed
-into the target repo's environment, and the target repo never imports it.
+into the target repo's environment, and the target repo never imports it. **That environment is
+`.context-engine/env/` in the repo's root**: a pinned, non-editable install of one engine
+ref, kept inside the repo's folder and gitignored. Everything the repo runs lives in the repo, the
+engine stays out of the repo's own environment, and a change to the engine's kit reaches the repo
+only when its pin moves (§ 4). From the repo root:
 
 ```
-<python3.12+> -m venv <engine-env>            # or: conda create -n context-engine python=3.12
-<engine-env-python> -m pip install "context-engine @ git+https://github.com/averykhoo/context-engine@<tag-or-commit-sha>"
+<python3.12+> -m venv .context-engine/env     # or: conda create -y -p .context-engine/env python=3.12
+<engine-python> -m pip install "context-engine @ git+https://github.com/averykhoo/context-engine@<tag-or-commit-sha>"
 ```
+
+**`<engine-python>`**, the interpreter every step below names, is that environment's:
+`.context-engine/env/bin/python` on Linux and macOS (venv or conda),
+`.context-engine/env/Scripts/python.exe` for a venv on Windows, and
+`.context-engine/env/python.exe` for a conda env on Windows. Tools that launch the engine look in
+`.context-engine/env/` for it, in that order. Make it with a Python of the engine's
+`requires-python` (3.12 or later), and never with `pip install -e`: an editable install follows
+the engine repo's working tree, which is no pin.
+
+**Ignore it:** `.context-engine/` must be in the repo's `.gitignore` before anything is committed,
+or a commit can carry the whole environment. `init` (§ 2a) appends the line when nothing there
+ignores it yet; by hand, add it yourself. The `.gitignore` is tracked, so every clone ignores the
+environment too. **On a clone**, `.context-engine/env/` is absent: rebuild it with the two lines
+above, at the ref the first ledger entry names (or the latest upgrade's ledger line, § 4). A repo
+may copy those two lines, with its ref and its machine's paths, into its own `CLAUDE.md`, outside
+the kit markers.
 
 **The pin** is two things: the ref in that install line (a release tag once there are releases;
 a full commit SHA until then), and the `framework: <major.minor>` line in `CLAUDE.md`, which
@@ -45,12 +67,12 @@ reports); the CLI carries every operation. To use it, register it once per machi
 repo root:
 
 ```
-claude mcp add --scope local context-engine -- <engine-env-python> -m context_engine.mcp
+claude mcp add --scope local context-engine -- <engine-python> -m context_engine.mcp
 ```
 
 This lives in `~/.claude.json`, not in the repo, because the interpreter path is machine-specific.
 Restart Claude Code once; from then on it starts the server in every session. Until the restart,
-use the CLI: `<engine-env-python> -m context_engine <group> <verb>`, with `CE_ACTOR` and
+use the CLI: `<engine-python> -m context_engine <group> <verb>`, with `CE_ACTOR` and
 `CE_SESSION` set.
 
 ## 2a. Bootstrap with the engine
@@ -58,12 +80,13 @@ use the CLI: `<engine-env-python> -m context_engine <group> <verb>`, with `CE_AC
 From the repo root:
 
 ```
-<engine-env-python> -m context_engine init [--prefix kind=P ...] [--dry-run]
+<engine-python> -m context_engine init [--prefix kind=P ...] [--dry-run]
 ```
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
-it skipped. It never overwrites a file. It appends the kit block (`bootloader.md`) to an existing
-`CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
+it skipped. It never overwrites a file. It appends `.context-engine/` to the repo's
+`.gitignore` unless that already ignores it (§ 1), keeping the file's line endings. It appends
+the kit block (`bootloader.md`) to an existing `CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
 block from an older kit, or the inline block of a kit from before `bootloader.md` (a block that
 holds the rules themselves), is left for the upgrade to replace (§4), never doubled. A `CLAUDE.md`
 that already has its own Gate (a level 1 or 2 heading reading `Gate`) keeps it as the one gate:
@@ -99,7 +122,8 @@ Then:
 Copy each kit file to where the table above says, with `bootloader.md` appended to `CLAUDE.md`
 (create it if absent) and `contract.md` copied to `docs/framework/contract.md`; add the hook
 (§ Hook). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
-and `.scratch/.gitignore` each holding the single line `*`. To change an id prefix, edit `prefix`
+and `.scratch/.gitignore` each holding the single line `*`, and add `.context-engine/` to the
+repo's `.gitignore` (§ 1) if no line there ignores it. To change an id prefix, edit `prefix`
 in that kind's `[kinds.<name>]` table; no two kinds may share one. Then follow steps 1 to 4
 above, in the order `docs/runbooks/procedures.md` gives, doing each operation by hand from
 `docs/runbooks/manual-mode.md` (both copied with the kit).
@@ -183,7 +207,14 @@ commit messages and code comments keep the old ids.
 
 ## 4. Upgrade (FRAMEWORK §8.0)
 
-1. Reinstall the engine in its own environment at the new ref.
+1. Rebuild the engine's environment, `.context-engine/env/` (§ 1), at the new ref: with no
+   session or MCP server running the engine from it (on Windows a running interpreter holds its
+   files open), delete the directory and run § 1's two lines with the new ref; the hook and the
+   MCP registration name the same interpreter path, so neither changes. A repo still on an
+   environment elsewhere (from before this convention) moves it here now: build the new one, point
+   the hook in `.claude/settings.local.json` (by hand, § Hook) and the MCP registration (§ 1) at
+   its interpreter, and check `.gitignore` ignores `.context-engine/` (`init` adds the line).
+   Delete the old environment only once nothing names it.
 2. Copy the new kit's `contract.md` over `docs/framework/contract.md` (the framework's file: it is
    replaced whole, never merged). If the engine's major.minor moved, replace the text between the
    kit markers in `CLAUDE.md`, markers included, with the new kit's `bootloader.md` block. **From
@@ -202,7 +233,8 @@ commit messages and code comments keep the old ids.
 3. `context-engine lint`; fix every failure (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).
-4. Write a ledger line naming the new ref (in the session's close summary).
+4. Write a ledger line naming the new ref (in the session's close summary): it is the ref a
+   clone rebuilds `.context-engine/env/` at.
 
 ## 5. The gate
 

@@ -14,8 +14,9 @@ board. The no-model housekeeping script is not built yet (`context-engine task s
 
 **To use it in a repo:** follow the adoption kit's guide,
 [`src/context_engine/kit/README.md`](src/context_engine/kit/README.md). It covers installing the
-engine into its own environment (never the target repo's), pinning it to a commit, `context-engine
-init`, bootstrapping by hand, and upgrading. Every operation also has a by-hand fallback in
+engine into its own pinned environment, `.context-engine/env/` inside the target repo (gitignored,
+never the target repo's own environment), pinning it to a commit, `context-engine init`,
+bootstrapping by hand, and upgrading. Every operation also has a by-hand fallback in
 [`docs/runbooks/manual-mode.md`](docs/runbooks/manual-mode.md).
 
 **To work on it:** read [`CLAUDE.md`](CLAUDE.md) (the rules and the gate) and

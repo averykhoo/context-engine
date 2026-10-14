@@ -718,7 +718,7 @@ ACTOR, KEY = "claude-code/test", "2026-10-12a"
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 22")
+    assert _cli(tmp_path, "init").startswith("init: created 23")
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)
@@ -908,3 +908,94 @@ def test_the_kit_readme_gives_the_provenance_form_g_d9_accepts():
     for form in forms:
         assert [t.problem for t in G.provenance_problems(f"cap = 3  {form}{tail.group(1)}")] == [""], form
         assert G.provenance_problems(f"cap = 3  {form}")[0].problem, "without the tail it is red"
+
+
+# -- CE-81: the engine's env lives in the repo, and the repo's .gitignore ignores it (DEC-41) -------
+
+
+def _check_ignore(root: Path, rel: str) -> bool:
+    """What git itself says: whether ``rel`` (a path inside the engine's env) is ignored in ``root``."""
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+    (root / rel).parent.mkdir(parents=True, exist_ok=True)
+    (root / rel).write_bytes(b"")
+    return subprocess.run(["git", "check-ignore", "-q", rel], cwd=root, capture_output=True).returncode == 0
+
+
+@pytest.mark.criterion("AC-31")
+def test_init_writes_a_gitignore_that_ignores_the_engine_env_and_a_rerun_leaves_it(tmp_path):
+    out = B.init(tmp_path)
+    assert (tmp_path / B.REPO_IGNORE).read_text(encoding="utf-8") == B.ENGINE_IGNORE
+    assert B.REPO_IGNORE in out.split("; skipped")[0], out
+    assert _check_ignore(tmp_path, f"{B.ENGINE_ENV}/python.exe"), "git ignores the engine's env"
+    before = snapshot(tmp_path)
+    again = B.init(tmp_path)
+    assert again.startswith("init: created 0 (none)") and f"{B.REPO_IGNORE} (ignores {B.ENGINE_DIR}/)" in again, again
+    assert snapshot(tmp_path) == before
+
+
+@pytest.mark.criterion("AC-31")
+@pytest.mark.parametrize("old", [b"*.pyc\r\nbuild/", b"*.pyc\nbuild/\n", b"*.pyc\n\n", b"", b"\xef\xbb\xbf# ours\r\n.env\r\n"])
+def test_init_appends_the_engine_env_to_an_existing_gitignore_keeping_every_byte_and_its_line_endings(tmp_path, old):
+    (tmp_path / B.REPO_IGNORE).write_bytes(old)
+    out = B.init(tmp_path)
+    new = (tmp_path / B.REPO_IGNORE).read_bytes()
+    assert new.startswith(old) and f"{B.REPO_IGNORE} ({B.ENGINE_DIR}/ appended)" in out, (new, out)
+    added = new[len(old) :]
+    if b"\r\n" in old:
+        assert b"\n" not in added.replace(b"\r\n", b""), "the appended lines keep the file's CRLF"
+    assert added.replace(b"\r\n", b"\n").lstrip(b"\n") == B.ENGINE_IGNORE.encode()
+    norm = new.replace(b"\r\n", b"\n")
+    assert not old or b"\n\n" + B.ENGINE_IGNORE.encode() in norm, "a blank line before the appended lines"
+    before = snapshot(tmp_path)
+    assert B.init(tmp_path).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
+    assert _check_ignore(tmp_path, f"{B.ENGINE_ENV}/bin/python")
+
+
+@pytest.mark.criterion("AC-31")
+@pytest.mark.parametrize("line,ignored", [
+    (".context-engine/", True), ("/.context-engine", True), (".context-engine/*", True), (".context-engine/**", True),
+    (".*", True), ("*", True), (".context-engine/env/", False), (".context-engine/\n!.context-engine/", False), (".context-engine-old/", False),
+])
+def test_init_leaves_a_gitignore_that_already_ignores_the_engine_env_untouched(tmp_path, line, ignored):
+    old = f"# ours\n{line}\n".encode()
+    (tmp_path / B.REPO_IGNORE).write_bytes(old)
+    out = B.init(tmp_path)
+    assert ((tmp_path / B.REPO_IGNORE).read_bytes() == old) == ignored, out
+    assert (f"{B.REPO_IGNORE} (ignores {B.ENGINE_DIR}/)" in out) == ignored, out
+
+
+@pytest.mark.criterion("AC-31")
+def test_init_refuses_a_gitignore_edited_after_its_plan_and_leaves_a_non_utf8_one_with_a_warning(tmp_path, monkeypatch):
+    (tmp_path / B.REPO_IGNORE).write_bytes(b"build/\n")
+    edited = b"build/\ndist/\n"
+    with monkeypatch.context() as m:
+        _plan_then(m, lambda root: (root / B.REPO_IGNORE).write_bytes(edited))
+        with pytest.raises(Refusal, match=r"\.gitignore changed while init ran, so \.context-engine/ was not appended"):
+            B.init(tmp_path)
+    assert (tmp_path / B.REPO_IGNORE).read_bytes() == edited
+    latin = b"# caf\xe9\nbuild/\n"
+    (tmp_path / B.REPO_IGNORE).write_bytes(latin)
+    out = B.init(tmp_path)
+    assert (tmp_path / B.REPO_IGNORE).read_bytes() == latin and f"; warning: {B.REPO_IGNORE} is not UTF-8" in out, out
+
+
+def test_the_kit_text_names_the_engine_env_convention():
+    """DEC-41's convention, `.context-engine/env/`, is stated where an adopter installs, bootstraps
+    and upgrades (kit README § 1 and § 4, FRAMEWORK §6.9 step 2 and the upgrade procedure, the
+    procedures' Bootstrap row), so CE-77's plugin and a by-hand adopter resolve the same path."""
+    readme = " ".join((B.KIT / "README.md").read_text(encoding="utf-8").split())
+    install = readme[readme.index("## 1. Install and pin the engine") : readme.index("## 2a.")]
+    upgrade = readme[readme.index("## 4. Upgrade") : readme.index("## 5.")]
+    for text in (install, upgrade):
+        assert f"{B.ENGINE_ENV}/" in text, text[:200]
+    assert f"{B.ENGINE_DIR}/" in readme[readme.index("`init` also writes") :].split("##", 1)[0]
+    framework = " ".join(FRAMEWORK.read_text(encoding="utf-8").split())
+    step2 = framework[framework.index("2. The agent installs the engine") : framework.index("3. `context-engine init` writes the kit")]
+    assert f"{B.ENGINE_ENV}/" in step2, step2
+    up = framework[framework.index("**Upgrade procedure:**") :].split("- **", 1)[0]
+    assert f"{B.ENGINE_ENV}/" in up, up
+    procedures = (B.KIT / "docs" / "runbooks" / "procedures.md").read_text(encoding="utf-8")
+    row = next(ln for ln in procedures.splitlines() if ln.startswith("| 2 | Install the engine"))
+    assert f"{B.ENGINE_ENV}/" in row, row
