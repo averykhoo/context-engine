@@ -892,3 +892,19 @@ def test_the_kit_readme_table_and_dirs_line_match_what_init_writes():
     assert sorted(named) == sorted(B.KEEP), keep
     named = re.findall(r"`([^`]+)/`", ignoring.split("(each carrying its own `.gitignore`", 1)[0])
     assert sorted(named) == sorted(B.SELF_IGNORING), ignoring
+
+
+# -- CE-76: the kit README gives the provenance note's form, `wrong if` and all ------------------
+
+
+def test_the_kit_readme_gives_the_provenance_form_g_d9_accepts():
+    """An adopter writes a cap's note from the README: each form it gives, with its `wrong if`
+    tail, passes G-D9 (docs/evidence/adhoc-dryrun-2026-10-14.md F16: the words were not said)."""
+    readme = (B.KIT / "README.md").read_text(encoding="utf-8").replace("\r\n", "\n")
+    flat = re.sub(r"\s*\n\s*", " ", readme)
+    forms = re.findall(r"`(# provenance: (?:MEASURED|JUDGEMENT) <[^>`]+>)`", flat)
+    tail = re.search(r"`(; wrong if <[^>`]+>)`", flat)
+    assert len(forms) == 2 and tail, (forms, tail)
+    for form in forms:
+        assert [t.problem for t in G.provenance_problems(f"cap = 3  {form}{tail.group(1)}")] == [""], form
+        assert G.provenance_problems(f"cap = 3  {form}")[0].problem, "without the tail it is red"

@@ -122,15 +122,21 @@ def parse_ledger(text: str) -> Ledger:
     return Ledger(text[: heads[0].start()], entries, newline)
 
 
+def _fill(text: str, first: str, rest: str) -> str:
+    """Wrap at spaces only: a break inside `context-engine` or a long path hides it from a grep
+    (CE-76, docs/evidence/adhoc-dryrun-2026-10-14.md F34); a word longer than a line overruns it."""
+    return textwrap.fill(text, WIDTH, initial_indent=first, subsequent_indent=rest, break_on_hyphens=False, break_long_words=False) + "\n"
+
+
 def bullet(name: str, value: str, bold_colon: bool = True) -> str:
     head = f"- **{name}:** " if bold_colon else f"- **{name}** "
-    return textwrap.fill(value, WIDTH, initial_indent=head, subsequent_indent="  ") + "\n"
+    return _fill(value, head, "  ")
 
 
 def sub_bullets(head: str, items: list[str]) -> str:
     out = head + "\n"
     for item in items:
-        out += textwrap.fill(item, WIDTH, initial_indent="  - ", subsequent_indent="    ") + "\n"
+        out += _fill(item, "  - ", "    ")
     return out
 
 

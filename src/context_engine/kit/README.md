@@ -77,7 +77,12 @@ Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
    real one (a `CLAUDE.md` with its own Gate got no stub: check that gate ends with
-   `&& context-engine lint`), and read every `provenance:` note in `context.toml`.
+   `&& context-engine lint`), and read every `provenance:` note in `context.toml`. Every number
+   you add there (a cap, a budget, a window) needs one as a comment on the number's own line, in
+   the form lint (G-D9) checks:
+   `# provenance: MEASURED <date, method>` or `# provenance: JUDGEMENT <why>`, then the literal
+   words `; wrong if <what would show it is wrong>` (`wrong as above` for a run of lines). A note
+   without `wrong if`, or one that cites an example, is red.
 3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its
    writes at milestones (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. The
    template's `commit = "milestones"` needs this engine or later on every machine: an older one

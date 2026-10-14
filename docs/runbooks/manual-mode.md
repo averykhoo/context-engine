@@ -822,9 +822,12 @@ orientation note), the hash is `none`.
 3. **The first banner** (the hash you saw was `none`): insert the same block just before the
    orientation note's first `## ` heading, so that heading still ends the banner; with no `## `
    heading, append it after a blank line. Create the orientation note if it does not exist.
+4. Say how many lines the old banner had and the new one has. When the old one had 10 or more and
+   the new one has fewer than half as many, warn: the lost lines may hold durable facts, which
+   belong in a tracked doc. When orient would cut the new banner at its cap, say so.
 
 **Why:** the banner carries exactly one session key, and a later close must not silently erase
-another session's banner (FRAMEWORK §5.5 rule 2).
+another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a long one.
 
 ## Append-only records (decisions and stories)
 

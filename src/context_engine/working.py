@@ -71,6 +71,7 @@ TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\
 SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
+BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
 
 
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
@@ -1283,7 +1284,22 @@ class Engine:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, L.replace_banner(note, session, text))
             self.store.log("banner.set", session, path, session, actor, ["banner"])
-        return f"banner {'replaced' if now else 'written (the first)'}, key {session}, new hash {self.banner().sha}"
+        new = self.banner()
+        was, has = (len(now.text.splitlines()) if now else 0), len(new.text.splitlines())
+        out = f"banner {'replaced' if now else 'written (the first)'} (lines {was} -> {has}), key {session}, new hash {new.sha}"
+        # CE-76 (docs/evidence/adhoc-dryrun-2026-10-14.md F32): a one-line banner silently replaced
+        # 113 lines of durable facts; say so when most of a long banner goes. JUDGEMENT: 10 lines
+        # is a banner that holds more than the state of one session; wrong if real shrinks of
+        # durable text slip under it, or routine closes trip it
+        if now and was >= 10 and has * 2 < was:
+            out += f"; WARNING: {was - has} of the old banner's {was} lines are gone from {self.w.handoff}: move any durable fact they held into a tracked doc (git history has the old text if it was committed)"
+        try:
+            cut = f"the rest: {BANNER_REST}]" in self.orient(session)
+        except Refusal:  # orient needs what banner set does not (a ledger); the banner is written either way
+            cut = False
+        if cut:
+            out +=f"; orient cuts this banner at its cap ({self.w.orient_max_bytes} bytes, after the must-act parts): trim it, or the rest is read only with `banner show`"
+        return out
 
     # -- orient (FRAMEWORK §6.1) --------------------------------------------------------
 
@@ -1295,7 +1311,7 @@ class Engine:
         # and the banner, last in line, takes what is left (CE-75): a long banner once starved
         # the batons out of orient altogether (docs/evidence/adhoc-dryrun-2026-10-14.md F29)
         sections: list[Part] = []
-        sections.append(Part(f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", "`context-engine banner show`", rank=3))
+        sections.append(Part(f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", BANNER_REST, rank=3))
         sections.append(Part("Batons and pauses: do these first", "\n".join(self.carried_lines(session)) or "none", "`context-engine baton list`", rank=0))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]

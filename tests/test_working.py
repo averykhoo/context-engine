@@ -660,6 +660,38 @@ def test_banner_set_refuses_a_stale_hash_and_takes_a_fresh_one(eng):
     assert note.read_text(encoding="utf-8").endswith("## Board\n\n| a | b |\n")
 
 
+def test_banner_set_says_how_many_lines_went_and_warns_when_most_of_a_long_banner_goes(eng):
+    """CE-76 (F32 of docs/evidence/adhoc-dryrun-2026-10-14.md): a one-line banner replaced 113 lines
+    of durable facts and said only `banner replaced`."""
+    key = started(eng)
+    out = eng.banner_set("- one\n- two", eng.banner().sha, **kw(key))
+    assert out.startswith(f"banner replaced (lines 1 -> 2), key {key}") and "WARNING" not in out
+    long = "\n".join(f"- durable fact {i}" for i in range(12))
+    eng.banner_set(long, eng.banner().sha, **kw(key))
+    out = eng.banner_set("- what is true now", eng.banner().sha, **kw(key))
+    assert out.startswith("banner replaced (lines 12 -> 1)")
+    assert "WARNING: 11 of the old banner's 12 lines are gone from HANDOFF.md: move any durable fact" in out
+    assert "orient cuts" not in out
+    out = eng.banner_set("\n".join(f"- still durable {i}" for i in range(6)), eng.banner().sha, **kw(key))
+    assert "WARNING" not in out, "6 of 12 is not most of it"
+
+
+def test_banner_set_says_when_orient_will_cut_the_new_banner(eng):
+    key = started(eng)
+    out = eng.banner_set(BIG_BANNER, eng.banner().sha, **kw(key))
+    assert out.endswith(f"; orient cuts this banner at its cap (4000 bytes, after the must-act parts): trim it, or the rest is read only with `banner show`")
+
+
+def test_the_ledger_wraps_at_spaces_only_so_a_grep_finds_every_command_and_path():
+    """CE-76 (F34): the guards receipt was wrapped as `context-` / `engine: clean`."""
+    value = "gate green: 653 passed; " + "x" * 64 + " context-engine: clean; " + "y" * 60 + " docs/evidence/adhoc-dryrun-2026-10-14-a-path-longer-than-one-line-" + "z" * 40 + ".md"
+    for text in (L.bullet("guards", value), L.sub_bullets("- **summary**", [value])):
+        assert "context-engine: clean" in text and "adhoc-dryrun-2026-10-14-a-path-longer-than-one-line-" + "z" * 40 + ".md" in text, text
+        assert len(text.splitlines()) > 1, "it still wraps"
+    edge = "x" * 77 + " context-engine: clean"  # `- **guards:** ` + 77 + ` context-` is 100 characters: the old break
+    assert L.bullet("guards", edge) == "- **guards:** " + "x" * 77 + "\n  context-engine: clean\n"
+
+
 # -- orient (AC-17) ----------------------------------------------------------------------
 
 
