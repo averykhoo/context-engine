@@ -20,7 +20,8 @@ achieve, its guards and its reasons; this file says what to do, in what order. E
   `mcp__context-engine__<group>_<verb>` (`init` is `mcp__context-engine__init`, `why` is
   `mcp__context-engine__why`), except `baton expire`, which is
   `mcp__context-engine__hk_expire_batons`, and `decision index`, which is
-  `mcp__context-engine__hk_regen_index`. `—` means the step is not an engine operation.
+  `mcp__context-engine__hk_regen_index`; from the Claude Code plugin the prefix is
+  `mcp__plugin_context-engine_engine__` instead. `—` means the step is not an engine operation.
 - **By hand**: the same step without the engine, as a link into
   [manual-mode.md](manual-mode.md), which does every operation by hand and says why.
 - **Why**: what the step protects, so a session whose engine erred knows what the right result
@@ -29,7 +30,9 @@ achieve, its guards and its reasons; this file says what to do, in what order. E
 When the engine errors, or refuses what it should allow, do that step by hand and fix the engine
 ([manual-mode § When the engine and this runbook disagree](manual-mode.md#when-the-engine-and-this-runbook-disagree)).
 A refusal with a sensible remedy is not an error: follow the remedy. `<gate>` below is the repo's
-gate: its own test command, then `context-engine lint`, as its contract states.
+gate: its own test command, then `context-engine lint`, as its contract states. With the engine's
+Claude Code plugin, each procedure below except session start is also a skill that names its section
+here and holds none of its steps (kit README § Claude Code plugin).
 
 ## Where each part of FRAMEWORK §6 is done
 

@@ -1,1 +1,2 @@
 docs/ledger/ops.jsonl merge=union
+plugin/scripts/* text eol=lf

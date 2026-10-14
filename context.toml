@@ -217,6 +217,12 @@ mode = "replaced; package data, so it ships with the engine; tests/test_kit.py k
 note = "what `context-engine init` copies into a repo (FRAMEWORK §6.9); README.md there is the install, bootstrap and upgrade guide"
 
 [[routes]]
+component = "Claude Code plugin"
+path = "plugin"
+mode = "replaced; the skills point at runbook sections and hold none of their steps; tests/test_plugin.py runs the hook and the server exactly as the manifests say"
+note = "the marketplace is .claude-plugin/marketplace.json at the root; the design is docs/evidence/plugin-design-2026-10-14.md (CE-77)"
+
+[[routes]]
 component = "Evidence"
 path = "docs"
 pattern = "evidence/<topic>-<date>.md"

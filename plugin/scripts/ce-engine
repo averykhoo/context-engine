@@ -1,0 +1,80 @@
+#!/bin/sh
+# ce-engine: run THIS repo's pinned context-engine for the Claude Code plugin (CE-77, DEC-41).
+#
+#   sh ce-engine <project dir> orient|mcp
+#
+# The plugin starts it in exec form as
+#   git -c alias.ce-run=!sh ce-run <this file> <project dir> <mode>
+# because git is the one real executable every framework repo has on PATH on every OS (exec form
+# on Windows needs a real .exe), and git runs the alias with the sh it ships
+# (docs/evidence/plugin-design-2026-10-14.md). Keep this file POSIX sh with LF line endings
+# (.gitattributes).
+
+# git exports its own repo discovery into an alias (and runs it from that repo's top level); the
+# engine runs git itself against the project, so none of it may leak through.
+unset GIT_DIR GIT_WORK_TREE GIT_PREFIX GIT_CONFIG_PARAMETERS GIT_CONFIG_COUNT GIT_INDEX_FILE GIT_COMMON_DIR
+
+root=${1:-}
+mode=${2:-}
+say() { printf '%s\n' "context-engine plugin: $*"; }
+
+case $mode in
+  orient|mcp) ;;
+  *) say "usage: ce-engine <project dir> orient|mcp (got '$mode')" >&2; exit 2 ;;
+esac
+if [ -z "$root" ] || [ ! -d "$root" ]; then
+  say "the project directory '$root' does not exist" >&2
+  exit 2
+fi
+
+# A repo the framework does not run: nothing to orient, no server to start.
+if [ ! -f "$root/context.toml" ]; then
+  if [ "$mode" = mcp ]; then
+    say "$root has no context.toml, so context-engine does not run it; the engine's MCP server does not start here" >&2
+    exit 1
+  fi
+  exit 0
+fi
+
+# Orient never runs twice: a SessionStart hook in the repo's own settings that runs the engine's
+# orient (init writes one) wins, and this one stays quiet.
+if [ "$mode" = orient ]; then
+  for s in "$root/.claude/settings.local.json" "$root/.claude/settings.json"; do
+    if [ -f "$s" ] && grep -Eq '"command"[[:space:]]*:[[:space:]]*".*context_engine.*orient' "$s"; then
+      exit 0
+    fi
+  done
+fi
+
+# The interpreter: the pointer file if the repo has one, else the pinned env's (DEC-41), in its
+# three layouts: posix venv or conda (bin/python), Windows conda -p (python.exe), Windows venv
+# (Scripts/python.exe).
+dir=$root/.context-engine
+py=
+if [ -f "$dir/engine-python" ]; then
+  py=$(sed -n '1{s/\r$//;p;}' "$dir/engine-python")
+  where="$dir/engine-python names '$py', which is not a file"
+  [ -n "$py" ] && [ -f "$py" ] || py=
+else
+  where="no engine env at $dir/env (looked for bin/python, python.exe and Scripts/python.exe) and no $dir/engine-python"
+  for c in "$dir/env/bin/python" "$dir/env/python.exe" "$dir/env/Scripts/python.exe"; do
+    if [ -f "$c" ]; then py=$c; break; fi
+  done
+fi
+if [ -z "$py" ]; then
+  fix="install the engine there, pinned (kit README § 1, DEC-41), or write the engine interpreter's path as the one line of $dir/engine-python"
+  if [ "$mode" = orient ]; then
+    # stdout reaches the session's context, where a silent failure would not (a failing
+    # SessionStart hook shows its error to the user only)
+    say "orient did not run: $where. Run orient by hand and tell the owner; to fix, $fix."
+    exit 0
+  fi
+  say "the MCP server did not start: $where. To fix, $fix." >&2
+  exit 1
+fi
+
+cd "$root" || exit 1
+if [ "$mode" = orient ]; then
+  exec "$py" -m context_engine --root "$root" orient
+fi
+exec "$py" -m context_engine.mcp --root "$root"

@@ -1,0 +1,8 @@
+{
+  "name": "context-engine",
+  "owner": {"name": "Avery Khoo"},
+  "description": "The context-engine Claude Code plugin",
+  "plugins": [
+    {"name": "context-engine", "source": "./plugin", "description": "Procedures as skills, the orient hook and the engine's MCP server, run with each repo's pinned engine"}
+  ]
+}

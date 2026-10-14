@@ -1606,6 +1606,12 @@ and its release steps, index and declared floor. In the engine repo each runbook
 to its kit copy, so a fix lands in both; in an adopted repo they are the repo's own from `init`
 on, and move only on upgrade.
 
+**Skills point, runbooks hold.** The engine's Claude Code plugin (§11.2) has a skill per
+procedure. A skill is what makes the procedure come to mind when it starts; it names its section
+of `procedures.md` and holds none of its steps, so there is no second copy to drift, and the
+runbook stays the source and the by-hand fallback (P16). The contract is never a skill: a skill
+that does not trigger fails silently (P7), and the contract must hold in every session.
+
 ---
 
 ## 8. Tooling and verification: the record engine and the guard catalogue
@@ -2042,7 +2048,7 @@ docs/
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; carries its own .gitignore, never tracked
 .claude/settings.local.json * # machine-local, gitignored (.claude/.gitignore): the SessionStart hook that runs orient
-.claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
+.claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none: the procedures' skills come with the engine's Claude Code plugin (§11.2) or are copied from it
 .scratch/                * # throwaway and gitignored: anything only there is lost (carries its own .gitignore)
 ```
 
@@ -2106,6 +2112,7 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 | `session.start` stubs are in use | G-W11 |
 | a task is above the design-review threshold (§5.2) | `review_triggers` and `register` in `[working]`; G-W12, G-W13 |
 | a bundle directory is declared OKF | G-D11 |
+| sessions skip a procedure's steps, or the hook and MCP set-up per machine is friction | the engine's Claude Code plugin: a skill per procedure that points at its runbook section, the `SessionStart` hook and the MCP server, each run with the repo's own pinned engine (kit README § Claude Code plugin) |
 
 ### 11.4 Migration (existing repos)
 

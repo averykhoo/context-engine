@@ -52,7 +52,7 @@ def build() -> argparse.ArgumentParser:
     ini.add_argument("--prefix", action="append", default=[], metavar="KIND=PREFIX", help="a kind's id prefix, e.g. task=PRJ; repeat for each")
     ini.add_argument("--dry-run", action="store_true", help="say what would be written, write nothing")
     ini.add_argument("--merge-settings", action="store_true", help="the owner said yes: add the SessionStart hook to an existing .claude/settings.local.json")
-    ini.add_argument("--skip-settings", action="store_true", help="the owner said no: leave an existing .claude/settings.local.json alone")
+    ini.add_argument("--skip-settings", action="store_true", help="the owner said no: leave an existing .claude/settings.local.json alone; with none, write no hook (the Claude Code plugin runs orient)")
 
     s = groups.add_parser("session").add_subparsers(dest="op", required=True)
     s.add_parser("start")
