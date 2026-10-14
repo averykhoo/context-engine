@@ -3,14 +3,13 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-14d)
+## Banner (2026-10-14e)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **The adhoc trial is live (CE-7, NOW), cut over 2026-10-14d** on adhoc's branch `context-engine-trial`, worktree
-  `PycharmProjects/adhoc-microphone-array-ce`: kit at engine `38ed38e`, decisions DEC-1..DEC-68, board AD-1..AD-14 + ASK-9,
-  HANDOFF 605 -> 78 lines. Owed there: real Claude Code sessions (INV-31 probes), scoring against CE-4 (CE-79, about
-  2026-10-21), the owner's merge decision (DEC-32 settings question, rebuild the engine env in main). Nothing pushed.
+- **The adhoc trial is live (CE-7, NOW), on adhoc main in its own folder since 2026-10-14e (DEC-42):** kit at engine
+  `38ed38e`, decisions DEC-1..DEC-68, board AD-1..AD-14 + ASK-9, HANDOFF 605 -> 78 lines; hook and MCP set up there.
+  Owed: real Claude Code sessions in adhoc (INV-31 probes) and scoring against CE-4 (CE-79, about 2026-10-21). Nothing pushed.
 - **A target repo's engine env is a pinned, non-editable install inside its folder, gitignored (DEC-41, amends DEC-1);**
   adhoc's is `.context-engine/env/`. The kit and FRAMEWORK still say only "its own env" (CE-81).
 - **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c; CE-7 trap F18): CE-77, CE-78 and CE-81 wait for it.
