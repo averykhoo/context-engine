@@ -514,3 +514,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** reproducing git's full ignore resolution is not cheap, and erring toward a warning is safe
 - **control:** individual: init warns or writes the ignore file; `git check-ignore` is the by-hand check (manual-mode § init)
 - **from:** CE-70, session 2026-10-14a
+
+## INV-73: ask answer wraps the words in `*"..."*`, so multi-paragraph words from --file render with stray asterisks
+
+- **affects:** the owner, whose words must land verbatim; the session doing intake, which must not pass words through a heredoc
+- **why not eliminated:** a blockquote would render well but the stored text would no longer be byte-verbatim
+- **control:** individual: the words are stored verbatim; the rendering is cosmetic
+- **from:** CE-73, session 2026-10-14a
