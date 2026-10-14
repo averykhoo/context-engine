@@ -15,8 +15,8 @@ a tool error carrying its remedy.
 later tool uses them unless it is passed ``session`` or ``actor`` itself (a subagent passes its
 own ``actor``). Before any ``session_start``, ``CE_SESSION`` and ``CE_ACTOR`` are the fallback.
 
-Deliberately not here: the ``hk_`` operations other than ``hk_expire_batons`` (CE-6), and any
-judgement: a tool carries out what the caller decided.
+Deliberately not here: the ``hk_`` operations other than ``hk_expire_batons`` and
+``hk_regen_index`` (CE-6), and any judgement: a tool carries out what the caller decided.
 """
 
 from __future__ import annotations

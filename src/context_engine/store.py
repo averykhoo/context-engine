@@ -235,7 +235,12 @@ class Store:
     def body_problem(self, kind: Kind, doc: okf.Document) -> tuple[str, str] | None:
         """G-D10: an append-only record's words as typed still match its stamp. ``body_sha`` is
         never replaced, and it hashes the body above ``## Amendments`` with every logged
-        correction undone, so dropping a `corrected:` line cannot pass a bracket off as typed."""
+        correction undone, so dropping a `corrected:` line cannot pass a bracket off as typed.
+
+        Not checked: the text under ``## Amendments`` other than its `corrected:` lines (an
+        edited or deleted ordinary amendment passes), a
+        record of a kind that is not append-only, and a file with no frontmatter (G-D11 reports
+        that)."""
         if kind.mode != "append-only" or not okf.has_frontmatter(doc):
             return None
         stamped = doc.get("body_sha")
@@ -337,7 +342,12 @@ class Store:
         return out
 
     def lint_bundles(self) -> list[Failure]:
-        """G-D11: every non-reserved .md in a bundle directory has frontmatter with a `type`."""
+        """G-D11: every non-reserved .md in a bundle directory has frontmatter with a `type`, and
+        no `index.md` carries frontmatter other than `okf_version`.
+
+        Not checked: an `index.md`'s list shape; whether `okf_version` sits only at the bundle
+        root; the other reserved files (`log.md`); a configured directory that does not exist
+        (skipped); and whether `status` agrees with the record's own state key (G-W4)."""
         out = []
         dirs = {*self.config.bundles, *(k.dir for k in self.config.kinds.values())}
         for d in sorted(dirs):

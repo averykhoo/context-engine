@@ -154,9 +154,11 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
 - Code is cited as `file::symbol`.
 - **One standard id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
   questions, register entries): `[A-Z]+-[1-9][0-9]*`, a prefix of capitals, a dash, and a number
-  with no leading zero (`G-3`, `S-12`). The prefixes are per-repo config (`[kinds.*].prefix`);
-  the form is not. Guard and drift names (`G-D3`, `DR1`) belong to this document, not to a
-  repo. A record stamped before a repo took up the form keeps its old ids verbatim (owner words
+  with no leading zero (`G-3`, `S-12`). The prefixes of record kinds are per-repo config
+  (`[kinds.*].prefix`); the form is not. Goals and register entries are not record kinds, so
+  their prefixes (`G`, `INV`) are fixed by the engine. *Not built yet (CE-56): the config does
+  not check a prefix against the form, and `init` accepts a prefix with digits.* Guard and
+  drift names (`G-D3`, `DR1`) belong to this document, not to a repo. A record stamped before a repo took up the form keeps its old ids verbatim (owner words
   are never rewritten), and the guards read a legacy goal id `G3` as `G-3`.
 
 **P4. Provenance on anything that can go stale:**
@@ -311,7 +313,7 @@ Regulations 2015 (S 428/2015).
 
   "Prefer a mechanical refusal over a doc warning" is this ladder. Example: a commit-trailer
   rule written only in the contract is individual and often forgotten; the engine writing the
-  trailer itself moves it to the top rung (CE-22).
+  trailer itself moves it to the top rung.
 - **Residual risks go to the register** (§7.4), which travels with the work: from a closed task
   into the repo, and from the engine into every repo it is deployed to (§11).
 - **Where it happens:** the design review of a task (§5.2) and a project's architectural design
@@ -525,7 +527,7 @@ Each criterion has:
 | `retired` | no longer intended | references the decision that retired it |
 
 **Owner sign-off** is separate from test status:
-- `verified: [{by: human:owner, at}]` in OKF terms;
+- `verified:` in OKF terms, naming `human:owner` and when (its shape is not settled, §9.3);
 - **inform and proceed:** agent-drafted criteria are live as soon as they are created. The
   owner is informed through the digest and pushes back if something is wrong;
 - a story the owner tags `sign-off: required` holds its criteria at `planned` until the owner
@@ -626,7 +628,7 @@ charter goal ─► story (owner) ─► criterion (agent) ─► test (agent) �
    "implemented as a sparse bitmap") may cite `file::symbol`. The citation is resolved, and
    pinned by a body hash. **Calibrate the pin:** pin only what the claim is about (e.g. the
    *shell* of a class), because a pin that trips on every edit gets re-pinned without anyone
-   reading the change.
+   reading the change. *Not built yet: the pins and their guard, G-T4 (§8.2).*
 
 ### 3.5 Deviation register
 
@@ -636,6 +638,9 @@ charter goal ─► story (owner) ─► criterion (agent) ─► test (agent) �
 - **The enforceable check (G-T7):** a `deviates` criterion must reference a register entry.
   No tool detects an *undeclared* deviation in general. A failing test is just a failing test,
   and P14 says the code is presumed wrong.
+
+*Not built yet: deferred until the code first deliberately departs from the spec (§11.2). No
+`[kinds.*]` entry, id prefix or schema is defined for a deviation yet, and G-T7 comes with it.*
 
 ---
 
@@ -676,7 +681,7 @@ else. The `read:` receipt records whether the orientation note was read (§6.3).
 
 **Replaced on clean close**, safely for several writers (§5.5). Batons and pause records are
 records of their own (§5.4), so the replaced part is only the banner and "next session". The
-banner is written with `banner.set(text, seen_hash)`, which refuses if the banner changed since
+banner is written with `banner.set(text, seen)`, which refuses if the banner changed since
 this session last saw it.
 
 **Caps:** the stacking check first; then lines, bytes and line width as backstops. A line cap
@@ -705,8 +710,9 @@ a single revertible cutover commit.
   updated, closed, source, labels`; a question also carries `last_asked`, `blocks` and, once
   answered, `answered`;
 - `brief`: ≤120 characters, **a constraint, not a summary**;
-- body: summary, `## Traps`, and `## Read first`, whose pointers lint resolves, with a floor
-  on how many there are; and `## Log`, which `comment` and `close` append to and which is never replaced.
+- body: summary, `## Traps`, and `## Read first`, whose relative links and `file::symbol`
+  pointers G-D3 resolves on an open item when the board directory is among the docs `[guards]
+  links` lists (*not built yet: a floor on how many there are*); and `## Log`, which `comment` and `close` append to and which is never replaced.
   Sessions keep reading the orientation note for item detail until items carry these sections.
 - **`## Design review`** (P17, P18), required before a task above the threshold is promoted to
   NOW. It names the affected persons; lists each foreseeable risk as *eliminated*, *reduced (how,
@@ -739,7 +745,7 @@ a single revertible cutover commit.
 - frontmatter changes only through operations carrying the session key;
 - `moved`, which drives staleness warnings, is never hand-edited;
 - bodies are rewritten whole by hand, or one section at a time
-  (`section.set`).
+  (`task.section`).
 
 **Ranking:** NOW (exactly 1), NEXT (≤5), LATER, SOMEDAY. An owner assignment overrides the
 ranking. Do not re-rank at session start; re-rank at clean close.
@@ -787,15 +793,15 @@ into the flat directory once the schema carries `state` (§11.4).
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
   recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
-  `ask answer` (CE-20).
+  `ask answer`.
 - **An answered question never reopens:** `task reopen` refuses a question carrying `answered:`
   and never clears it; the answer changes through its decision (amend or supersede), and a
-  follow-up is a new question citing both (CE-31). A question closed without an answer may reopen.
+  follow-up is a new question citing both. A question closed without an answer may reopen.
   `ask answer` likewise refuses a question that already carries `answered:`, so no question is
   answered by two decisions; the remedies name the decision that stands now, following `superseded_by`.
 - **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
-  receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, owner_words)` records
-  the words verbatim as a decision with `actor: owner`, closes the question, and reports which
+  receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, words, title)` records
+  the words verbatim as a decision with `actor: owner` under the given title, closes the question, and reports which
   tasks it unblocked.
 - **The agent never answers its own question.** If the agent can decide, it was not an owner
   question.
@@ -823,7 +829,7 @@ inside `HANDOFF.md`. So:
   what stays uncommitted.
 
 Operations: `baton.add(step, why)`, `baton.done(id, evidence)`,
-`pause.open(in_flight, resume_step, evidence, deferred)`, `pause.resume(id)`.
+`pause.open(in_flight, resume, evidence, deferred)`, `pause.resume(id)`.
 
 These records are not ephemeral: they are tracked and committed, and they *expire*.
 
@@ -838,7 +844,7 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      them;
    - **crashes detectable:** a stub never closed within the configured window is a session
      that died; housekeeping marks it `kind: abandoned` and files a baton (G-W11).
-2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen_hash)`
+2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen)`
    refuses when the banner's hash differs from the one this session last saw; re-read, merge
    and retry.
 3. **Baton and pause records are keyed by session.** Any session closes a baton by
@@ -935,7 +941,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      (`<op log> merge=union` in `.gitattributes`).
 5. **Background agents, gates and engine writes use locks** (G-V3) keyed on the tree hash. Each
    concurrent session runs its own MCP server process (§8.0.2), so the engine's lock is a file
-   lock.
+   lock. *Built so far: the engine's write lock, one per repo rather than keyed on the tree
+   hash; the lock on gate and background-agent runs is not built yet (CE-17).*
 
 Most sessions run however Claude Code runs by default: in the shared checkout, with a worktree
 only when opted into. So:
@@ -969,7 +976,7 @@ to the chat.
 
 **Deferred: an answer-in-place question file** for the owner: the engine generates a file of
 open questions on request, a human answers in place, and the answers are read back and filed
-against the questions (CE-19). Until such a file is needed, the channel stays Claude remote
+against the questions. Until such a file is needed, the channel stays Claude remote
 control.
 
 ---
@@ -993,7 +1000,7 @@ letter suffix); none is renumbered.
    product, mandates and gate, which imports the framework's own contract, §6.9), and subtree.
    In an adopted repo a `SessionStart` hook prints `orient` (the read in item 3) into the context at
    startup, resume, `/clear` and compaction. A failing hook is silent, so the contract keeps
-   the by-hand `orient` as the fallback (CE-38).
+   the by-hand `orient` as the fallback.
 2. **Open batons and pause records: execute or resume them first.**
 3. The board query, which prints the banner. **Raise NEXT-tier and overdue owner questions
    in chat now,** one line each (§5.3), together with any tier-2 flags from the background
@@ -1173,12 +1180,12 @@ supersedes: [D-157]
 superseded_by: []                 # backlink, maintained by the engine
 relaxes: []                       # narrowed_by likewise
 creates: [S-4]                    # amends: / retires: likewise
-tasks: [TK96]
+tasks: [T-96]
 tags: [working-state]
 answers: ASK-12                   # set by `ask answer` when the decision answers a question
 reopen_if:                        # REJECTED only: what would justify reopening it
 generated: { by: claude-code/<model-id>, at: 2026-10-08T14:02:00Z }
-verified: { by: human:owner, at: ... }   # optional: the owner explicitly endorsed it
+verified: ...                     # optional: the owner explicitly endorsed it; shape not settled (§9.3)
 sources: [{ id: ev1, resource: /docs/evidence/<file>.md }]
 body_sha: <hash>                  # covers everything above "## Amendments"
 ---
@@ -1198,11 +1205,11 @@ decision's own keys: `decision_status`, `reopen_if`, `tags`, `title`, `descripti
 `SUPERSEDED`, any status change on a superseded decision, `reopen_if` on a decision that is not
 REJECTED, the link fields, `status`, `answers`, the provenance `actor`, `decided`, `session`,
 `attribution`, `imported_from` and `generated`, and `verified` (an endorsement is owner words), so
-it never writes half a link or re-attributes a decision; CE-32), `decision.link(id, target, rel)` (a task,
+it never writes half a link or re-attributes a decision), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
 backlink too), `decision.relink(id, old, new)` (moves one `code:` link of a current decision when
 the code moves, the new one checked as `link` checks it, so it must name a repo file and symbol, never a blank, a directory or a path outside the repo; id links never move and a superseded
-decision's links are history; CE-35), `decision.find(text, tag, status, links_to)` (one-line rows),
+decision's links are history), `decision.find(text, tag, status, links_to)` (one-line rows),
 `decision.show(id, section)`, `decision.import(path)` (below), and **`why(target)`**: given a
 task, criterion, decision or `file::symbol`, the decisions that link it, each with the field
 that does. Writing a decision costs only its own text; no session opens the log to append to it.
@@ -1343,7 +1350,7 @@ which is the config schema), the kit block for `CLAUDE.md` and the contract it i
 repo can run every procedure by hand from its own tree, P16; and the method runbooks of §7.5), and a README with the install,
 bootstrap and upgrade steps. The steps in order: `procedures.md` § Bootstrap.
 
-**The kit block (CE-38):** an adopted framework must not depend on the owner leaving
+**The kit block:** an adopted framework must not depend on the owner leaving
 `CLAUDE.md` alone, so `CLAUDE.md` carries only a short block between the kit markers: the
 `framework:` line and an `@`-import of `docs/framework/contract.md`. The framework owns that
 file: an upgrade replaces it whole, G-D0 fails when it differs from the installed engine's copy,
@@ -1508,12 +1515,15 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 - **One entry per session, without exception:** `kind: open` (the stub `session.start` writes,
   §5.5), then `close` or `pause`; `abandoned` for a stub that housekeeping found was never closed; and
-  `foreign` for reconciled human commits (§6.10).
+  `foreign` for reconciled human commits (§6.10), which the session writes by hand from the runbook. *Not built
+  yet (CE-6): housekeeping does not write `abandoned`; until it does, a stale stub is marked by
+  hand (the runbook's housekeeping step).*
 - **Written by the engine:** `session.start`, `session.close`, `session.pause`. The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
 - Append-only, newest first, **in its own file**, keyed by session key: **one file under the
   engine lock**, not one file per entry, until a trial shows append collisions.
-- Rotate by period when it passes its cap; the current file indexes the periods.
+- Rotate by period when it passes its cap; the current file indexes the periods. *Not built
+  yet (CE-6): adopted by trial (§11.4) once a ledger cap is set.*
 - **Not an OKF `log.md`** (§9.3): it is a session journal, not a concept changelog.
 
 ### 7.2 Evidence and plan docs
@@ -1584,7 +1594,7 @@ LIVING`; P2), which G-D4 checks.
 - `docs/runbooks/release.md`: tag, publish, confirm the version is live, and the fresh-user
   install trial of every published release.
 
-**Generic method, repo values** (CE-26): every runbook here is the framework's. They ship in the
+**Generic method, repo values:** every runbook here is the framework's. They ship in the
 adoption kit (§6.9) and `init` copies them, so they carry no repo values and no repo ids, and a
 test in the engine repo fails on the engine repo's own ids and machine paths. A repo's own values stay in its contract
 (`CLAUDE.md`), which the runbooks point at: its test command and interpreter, its CI workflow,
@@ -1626,10 +1636,10 @@ on, and move only on upgrade.
   no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. `context-engine lint` checks
   every `framework:` line of the contract (`contract` in `[engine]`, `CLAUDE.md` by default),
   and the version in its kit block's begin marker. A missing contract, a missing line, or a value
-  that is not `major.minor` fails it too, and each failure names the remedy (CE-21). A kit block
+  that is not `major.minor` fails it too, and each failure names the remedy. A kit block
   of the engine's version must be the kit's block text (`kit/bootloader.md`), and the file it
-  imports must exist and equal the installed engine's `kit/contract.md`, line endings aside
-  (CE-38); `orient` opens with these failures, so a session whose contract did not load is told
+  imports must exist and equal the installed engine's `kit/contract.md`, line endings aside;
+  `orient` opens with these failures, so a session whose contract did not load is told
   at once.
 - **Upgrade procedure:** bump the engine's pinned ref (reinstall it in its own environment) and
   the contract's `framework:` line, run the lint, fix the failures, and write a ledger line
@@ -1649,8 +1659,8 @@ modes (P2):
 
 | Change mode | Kinds | The engine enforces |
 |---|---|---|
-| **append-only** | decisions, stories, deviations | a `body_sha` over the original body; `amend` appends a dated entry and is the only body change (`correct` is the logged exception for every append-only kind, §6.5, and keeps the stamp); G-D10 recomputes the hash with logged corrections undone |
-| **replaced body, tool-owned frontmatter** | tasks, owner questions (`ASK-n`) | frontmatter changes only through operations carrying the session key; bodies are hand-edited or set one section at a time (`section.set`) |
+| **append-only** | decisions, stories, deviations (*not built yet*, §3.5) | a `body_sha` over the original body; `amend` appends a dated entry and is the only body change (`correct` is the logged exception for every append-only kind, §6.5, and keeps the stamp); G-D10 recomputes the hash with logged corrections undone |
+| **replaced body, tool-owned frontmatter** | tasks, owner questions (`ASK-n`) | frontmatter changes only through operations carrying the session key; bodies are hand-edited or set one section at a time (`task.section`) |
 | **session-stamped** (`mode = "stamped"`) | batons, pause records | a session key on creation; expiry after two sessions; housekeeping converts the expired ones |
 
 **Not record kinds:** criteria (they live in `.feature` files or a criteria doc, plus test
@@ -1687,7 +1697,7 @@ session. There are no ports, and each concurrent session gets its own process.
   the owner to restart Claude Code. Fallback text: `manual-mode.md` § When the MCP tools are
   missing.
 - **A server process is not a framework session.** The process lives as long as the Claude Code
-  process, and a `/clear` probably leaves it running (UNVERIFIED, CE-13). So a session begins
+  process, and a `/clear` probably leaves it running (UNVERIFIED: not testable headless, as the engine repo's spike findings record). So a session begins
   with an explicit `session.start`, never with the process start; the server remembers the key
   and actor from it.
 - **Subagents share the parent's server process,** so the actor is recorded per call, not per
@@ -1704,21 +1714,23 @@ session. There are no ports, and each concurrent session gets its own process.
    each with a hard size cap (`read_max_bytes`) and a pointer to the rest.
 4. **Every refusal names its remedy** (§8.0); it reaches the agent as a tool error.
 
-**Names:** the dotted names in this document (`session.start`, `record.new`, `hk.close`) are the
-library operations. The CLI spells them `context-engine <noun> <verb>` (`session start`,
+**Names:** the dotted names in this document (`session.start`, `record.new`, `hk.expire_batons`)
+are the library operations. The CLI spells them `context-engine <noun> <verb>` (`session start`,
 `task list`, `record new`), and MCP tool names use underscores (`session_start`, `task_close`,
-`hk_close`), which agents see as `mcp__context-engine__<tool>`.
+`hk_expire_batons`), which agents see as `mcp__context-engine__<tool>`.
 
 | Group | Tools |
 |---|---|
-| Session | `session.start`; `session.close(summary, rows, receipts, owed)`; `session.pause(rows, deferred)` |
+| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)` |
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
-| Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
-| Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section.set(id, name, text)` |
+| Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
+| Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
-| Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
+| Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
+| Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
+| Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message)`: the session's own commit by path, with the op log lines HEAD lacks and the files they name; runs no gate (§5.5 rule 4) |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 
@@ -1778,7 +1790,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   of a non-empty symbol; a link whose code moved is moved with `decision.relink`, never by hand); HTTP routes are not
   checked.
 - **G-T4:** structural-claim anchors resolve and their body hashes match the pins; re-pinning
-  is an explicit, reviewed act.
+  is an explicit, reviewed act. *Not built yet: deferred until the spec makes structural claims
+  (§11.2).*
 - **G-T5 (mutation per criterion):** runs as a scheduled routine, or as the one slow background
   job, keyed on the hash, with results in a tracked evidence doc; it does not apply to formal
   theorems, where G-T4 substitutes. It mechanises the by-hand sabotage of P7. *Not built yet
@@ -1786,7 +1799,7 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 - **G-T6:** every criterion's `from` names a story or decision, and each resolves to a record.
   A criterion's actor is its source's (§3.3), so resolving the source is the whole check.
 - **G-T7:** every `deviates` criterion references a deviation-register entry; every `retired`
-  one references a decision.
+  one references a decision. *Not built yet: it comes with the deviation register (§3.5).*
 
 ### 8.3 Doc guards
 - **G-D1:** per-component caps (lines, bytes, line width), set in config with provenance:
@@ -1865,7 +1878,7 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   A class whose extraction yields fewer items than its floor is red, so a reworded heading or
   id format cannot pass by finding nothing; the floors and patterns are the engine's and fit
   this document, so a repo whose spec they do not fit switches G-D12 off. The map is frozen: a
-  failure clears with a new dated map or a board item, never an edit (CE-30).
+  failure clears with a new dated map or a board item, never an edit.
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or
   `deprecated` (§9.3.1).
@@ -1893,16 +1906,17 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   session. This repeated reminder is what makes the board the owner's tracker.
 - **G-W9:** every `--mechanical` close cites its evidence: a commit whose message carries
   `Closes: <id>`, or a ledger entry naming the item. `hk.close` checks it at write time; the
-  lint re-checks it in the stored files.
+  lint re-checks it in the stored files. *Not built yet (CE-6).*
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
   and the count goes into the run's report. **No budget by default:** change sizes vary by
   session, so a cap that suits a large session would be unreasonably large for most, and a
   smaller one would most likely be overridden. A repo may still configure a cap, with
   provenance (G-D9); hitting it stops the run and asks, and the owner may tell it to write
-  anyway.
+  anyway. *Not built yet: it comes with real housekeeping runs (CE-6).*
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window's value is to be measured in the trial
-  (§8.0.3) and given provenance (G-D9).
+  (§8.0.3) and given provenance (G-D9). *Not built yet (CE-6): until then a stale stub is marked
+  `abandoned` by hand (the runbook's housekeeping step).*
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.
@@ -1917,7 +1931,10 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   phase, a docs-only edit re-runs only the docs phase. *Not built yet (CE-17).*
 - **G-V2 (floors):** raw totals with zero headroom, raised by an automatic ratchet; floors on
   what a guard's extractor finds keep declared headroom (P7); one dated baseline per suite.
-- **G-V3:** a lock on gate runs and background-agent runs for the same tree.
+  *Built so far: G-D12's floors on what its extractor finds. Not built yet: the raw-total
+  floors, their ratchet and the per-suite baselines, deferred until a suite is large (§11.2).*
+- **G-V3:** a lock on gate runs and background-agent runs for the same tree. *Not built yet
+  (CE-17): it comes with the run ledger.*
 - **G-V4:** exit-code hygiene: no piping through `tail`/`tee`, one phase per command, logs from
   `mktemp`.
 - **G-M1:** the doc and lint tools are pinned by their own tests inside the gate.
@@ -1950,11 +1967,11 @@ OKF v0.2 (`GoogleCloudPlatform/open-knowledge-format`, `SPEC.md`):
 | component type | required `type:` (`Story`, `Criterion`, `Decision`, `Evidence`, `Invariant`, `Deviation`, `Runbook`, `Charter`) | — |
 | identity | concept id = path minus `.md` | **`id:`** extension: stable series ids that survive moves (P3) |
 | routing map / progressive loading | `index.md` per directory | **generated**, and checked by G-D6; the component → path mapping lives in `context.toml`, because `index.md`'s shape is fixed (§9.3.1) |
-| concept changelog | `log.md` | **generated** from decisions' `creates/amends/retires`; this is *not* the session ledger |
+| concept changelog | `log.md` | **generated** from decisions' `creates/amends/retires`; this is *not* the session ledger. *Not built yet: no `log.md` is generated* |
 | who and when | `generated: {by, at}`; actors `human:<id>` / `<producer>/<version>` | `actor:` in our vocabulary (§6.5); the writing agent (`claude-code/<model-id>`) goes into the op log per write. *Not built yet: `generated.by` is not written* |
-| owner sign-off | `verified: [{by: human:owner, at}]` → "human-reviewed" tier | distinct from `criterion_status: tested` |
+| owner sign-off | `verified:`, by `human:owner` at a time → "human-reviewed" tier | distinct from `criterion_status: tested`. *Not settled: no record carries `verified` yet and no operation owns it (`decision.set` refuses it, §6.5), so whether it is one mapping or a list of them is fixed when the first owner endorsement is recorded* |
 | no longer current | `status: deprecated` | **one mapping:** SUPERSEDED decision, `retired` story or criterion, FROZEN archive item, closed task → all carry `status: deprecated`, derived by the engine from the record's own state |
-| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item. Bound to `manual` criteria (re-run the driver by date) and register entries about something external |
+| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item. Bound to `manual` criteria (re-run the driver by date) and register entries about something external. *Not built yet: the engine does not read `stale_after`* |
 | provenance | `sources:` with ids, cited as footnotes | evidence docs cite their runs |
 | extensions | readers SHOULD preserve unknown keys and MUST NOT reject them | `supersedes`, `relaxes`, `retires`, `criterion_status`, `test`, `liveness`, `sign-off` |
 | attested results (later) | `type: Attested Computation`: a deterministic attester checks a receipt | candidate format for G-V1 run-ledger rows |
@@ -1967,12 +1984,12 @@ are deliberately permissive; our profile is strict on top of conformant files.
 
 | The spec says | What it means for us |
 |---|---|
-| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status`. G-W4 checks the two keys agree. |
+| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status`. G-W4 checks the two keys agree for board items, and G-I2 for stories. *Not built yet: no guard checks a decision's (SUPERSEDED exactly when `status: deprecated`), so a hand-set `status: deprecated` on a current decision passes lint and the doc guards skip it as history; and nothing reads `charter_status`.* |
 | **Concept id = the file's path minus `.md`** (§2) | Closing in place (§5.2) and never renaming a file on retitle keep record ids stable as OKF ids. The `id:` extension stays, for series ids that survive a migration. |
 | **Every non-reserved `.md` in a bundle needs frontmatter with a non-empty `type`** (§11) | **A bundle is a chosen set of directories, not the repo root;** otherwise README, CLAUDE.md and HANDOFF would all need frontmatter. Non-record files inside a bundle directory need a `type` too (e.g. `type: Readme`), and the engine filters on `type` rather than excluding files by name. |
 | **`index.md` and `log.md` are reserved at every level; `index.md` has no frontmatter (except `okf_version` at the bundle root) and a fixed list shape** (§3.1, §8) | The component → path mapping lives in `context.toml` (§8.0); `index.md` is a plain generated listing. |
 | **`log.md` headings must be `YYYY-MM-DD`** (§9) | Session keys like `2026-10-07c` cannot be log headings, so the ledger is not an OKF `log.md` (§7.1). |
-| **Actors: `<producer>/<version>`, `human:<id>`, `process:<id>`** (§7); trust tiers key off the `human:` prefix (§5.3) | Agent writes carry `claude-code/<model-id>`; the housekeeping script is `process:housekeep`; owner sign-off is `verified: {by: human:<id>}`. |
+| **Actors: `<producer>/<version>`, `human:<id>`, `process:<id>`** (§7); trust tiers key off the `human:` prefix (§5.3) | Agent writes carry `claude-code/<model-id>`; the housekeeping script is `process:housekeep`; owner sign-off is `verified` by `human:<id>`. |
 | **`stale_after` is an absolute instant** (§5.5) | Baton expiry counts sessions, so it is an extension key; `stale_after` may serve as a time backstop. |
 | **Producers MAY add keys; consumers SHOULD preserve unknown keys when round-tripping and MUST NOT reject them** (§4.1, §11) | The engine round-trips unknown keys (§8.0.1). |
 | Links: bundle-relative `/…` is recommended (§6.1) | Record links use bundle-relative paths, stable when files move within a directory. |

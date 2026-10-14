@@ -1,7 +1,7 @@
 """Working-state operations: sessions, the board, owner questions, batons, pauses, the banner,
 ``orient()`` and the working-state guards (FRAMEWORK §5, §6.1, §6.3, §6.4, §8.4).
 
-Every operation here is one function that the CLI (and, in CE-3, the MCP server) calls. Each
+Every operation here is one function that the CLI and the MCP server call. Each
 write goes through the store, so it is checked against its kind's schema, made under the repo
 lock and logged with the session key and the actor. Every write returns one line.
 
@@ -10,7 +10,7 @@ whose part is not configured refuses and says so.
 
 Deliberately not handled here: marking a dead session's stub ``abandoned`` and its window
 (G-W11; housekeeping, CE-6), rotating the ledger, and the `hk_` operations other than baton
-expiry (CE-6).
+expiry and regenerating the decision index (CE-6).
 """
 
 from __future__ import annotations
@@ -1359,7 +1359,10 @@ class Engine:
         return "\n".join(lines)
 
     def lint_routes(self) -> list[Failure]:
-        """G-R1: every routed path exists, so the table never points at a file that moved."""
+        """G-R1: every routed path exists, so the table never points at a file that moved.
+
+        Not checked: a route marked optional; that the path holds the component it is routed as;
+        and the path's case, on a filesystem that ignores case."""
         return [
             Failure("G-R1", "context.toml", f"route {r.component!r} points at {r.path}, which does not exist", "fix the path in [[routes]], or restore the file")
             for r in self.store.config.routes
@@ -1440,6 +1443,16 @@ class Engine:
         return out
 
     def lint_working(self) -> list[Failure]:
+        """G-W1 to G-W6 on the stored files, then G-W12 and G-W13 (``lint_review``): the banner
+        key against the newest close (G-W1); the run of pauses since the last close (G-W2); carried
+        batons and pause records by age (G-W3); each board item's ``state`` against its OKF
+        ``status``, and an open question carrying ``answered:`` (G-W4); the tier caps (G-W5); and
+        the newest close's ``guards:``, ``read:`` and ``rows:`` lines (G-W6).
+
+        Not checked: any close but the newest, and the ``asked:`` receipt, which ``session close``
+        checks when it writes the entry; the state key against ``status`` on decisions, stories
+        (G-I2 checks a retired story) and the charter; and a ledger, orientation note or board that
+        ``[working]`` does not configure."""
         out: list[Failure] = []
         led = self.read_ledger() if self.w.ledger else None
         ledger_rel = self.w.ledger
