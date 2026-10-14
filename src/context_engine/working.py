@@ -21,7 +21,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
 
 from . import __version__
 from . import decisions as D
@@ -1291,30 +1291,24 @@ class Engine:
         """The session-start read in one response, never over ``orient_max_bytes`` (AC-17)."""
         led = self.read_ledger()
         b = self.banner()
-        sections: list[tuple[str, str, str]] = []  # (heading, body, where the rest is)
-        note = self.w.handoff or "the orientation note"
-        sections.append((f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", f"{note} § Banner"))
-
-        carried = sorted(self._carried(), key=lambda r: (r.doc.get("session") != session, r.kind.prefix, int(r.id.rsplit("-", 1)[1])))
-        lines = []
-        for r in carried:
-            own = " (yours)" if session and r.doc.get("session") == session else ""
-            line = f"- {r.id} from {r.doc.get('session')}{own}: {r.doc.get('title')}"
-            if r.doc.get("resume_step"):
-                line += f"\n  resume: {r.doc.get('resume_step')} (branch {r.doc.get('branch')})"
-            lines.append(line)
-        sections.append(("Batons and pauses: do these first", "\n".join(lines) or "none", "`context-engine task show <id>` on each"))
+        # Shown in this order; the cap's bytes go to the must-act parts (`first`) before the rest,
+        # and the banner, last in line, takes what is left (CE-75): a long banner once starved
+        # the batons out of orient altogether (docs/evidence/adhoc-dryrun-2026-10-14.md F29)
+        sections: list[Part] = []
+        sections.append(Part(f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", "`context-engine banner show`", rank=3))
+        sections.append(Part("Batons and pauses: do these first", "\n".join(self.carried_lines(session)) or "none", "`context-engine baton list`", rank=0))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
-        sections.append(("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", self.w.ledger))
+        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
 
         top = [ln for ln in self.list(pri="NOW")]
-        sections.append(("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`"))
+        sections.append(Part("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`", rank=1))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
         raise_ = [f"- {i}: {qs[i].doc.get('title')} (last asked {qs[i].doc.get('last_asked') or 'never'}{', overdue' if i in overdue else ''})" for i in dict.fromkeys(pending + overdue)]
-        sections.append(("Raise in chat now, one line each", "\n".join(raise_) or "none", "`context-engine task list --pri NEXT`"))
+        asks = f"the {self.store.config.kind(self.w.question).prefix}- items in `context-engine task list`" if self.w.question else "`context-engine task list`"
+        sections.append(Part("Raise in chat now, one line each", "\n".join(raise_) or "none", asks, rank=0))
 
         now = [r for r in self._open_board() if r.doc.get("pri") == "NOW"]
         if now:
@@ -1323,19 +1317,36 @@ class Engine:
             parts = [f"brief: {rec.doc.get('brief') or 'none'}"]
             for name in ("Traps", "Read first"):
                 parts.append(f"{name}:\n{okf.get_section(body, name) or 'none'}")
-            sections.append((f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`context-engine task show {rec.id}`"))
+            sections.append(Part(f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`context-engine task show {rec.id}`", rank=2))
         else:
-            sections.append(("Top item", "no NOW item", "`context-engine task list`"))
+            sections.append(Part("Top item", "no NOW item", "`context-engine task list`", rank=2))
         pointer = self._engine_register_line()
         if pointer:
-            sections.append(("Engine register", pointer, "`context-engine register show --engine`"))
+            sections.append(Part("Engine register", pointer, "`context-engine register show --engine`", rank=2))
         # G-D0 first (CE-38): run by the SessionStart hook, orient is where a missing or stale
         # contract import is said out loud: what Claude Code does with a missing import is not
         # documented (docs/evidence/claude-code-hooks-2026-10-13.md), so nothing else may say it
         if "G-D0" not in self.store.config.guards.off and (bad := self.lint_contract()):
-            sections.insert(0, ("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`"))
+            sections.insert(0, Part("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`", rank=0))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
+
+    def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
+        """The open batons and pauses, ``session``'s own first, then pauses (work in flight, on a
+        branch) before batons, each pause with its resume step; ``why`` adds a baton's reason:
+        orient's must-act section, and `baton list` in full (CE-75)."""
+        pause = self.w.pause
+        carried = sorted(self._carried(), key=lambda r: (r.doc.get("session") != session, r.kind.name != pause, r.kind.prefix, int(r.id.rsplit("-", 1)[1])))
+        lines = []
+        for r in carried:
+            own = " (yours)" if session and r.doc.get("session") == session else ""
+            line = f"- {r.id} from {r.doc.get('session')}{own}: {r.doc.get('title')}"
+            if r.doc.get("resume_step"):
+                line += f"\n  resume: {r.doc.get('resume_step')} (branch {r.doc.get('branch')})"
+            if why and r.doc.get("why"):
+                line += f"\n  why: {r.doc.get('why')}"
+            lines.append(line)
+        return lines
 
     # -- working-state guards (FRAMEWORK §8.4) ------------------------------------------
 
@@ -1512,27 +1523,68 @@ class Engine:
         return out
 
 
-def fit(head: str, sections: list[tuple[str, str, str]], cap: int) -> str:
-    """Join the sections under ``cap`` bytes. Every heading always appears; a body that does not
-    fit is cut at a line and says where the rest is. Earlier sections are served first."""
-    out = head
-    for i, (title, body, rest) in enumerate(sections):
-        heading = f"\n## {title}\n"
-        reserve = sum(len(f"\n## {t}\n".encode()) + len(_cut_note(r).encode()) for t, _, r in sections[i + 1 :])
-        budget = cap - len(out.encode()) - len(heading.encode()) - reserve
-        text = body.rstrip("\n") + "\n"
-        if len(text.encode()) > budget:
-            note = _cut_note(rest)
-            keep = []
-            size = len(note.encode())
-            for line in text.splitlines(keepends=True):
-                if size + len(line.encode()) > budget:
-                    break
-                keep.append(line)
-                size += len(line.encode())
-            text = "".join(keep) + note if size <= budget else ""
-        out += heading + text
-    return out
+class Part(NamedTuple):
+    """One orient section: its heading, its body, where the rest is when the body is cut, and its
+    claim on the cap (lower ``rank`` is served first)."""
+
+    title: str
+    body: str
+    rest: str
+    rank: int = 0
+
+
+def _size(s: str) -> int:
+    return len(s.encode("utf-8"))
+
+
+def fit(head: str, sections: list[Part], cap: int) -> str:
+    """Join the sections, in the order given, in at most ``cap`` UTF-8 bytes. Every heading
+    appears; a body that does not fit is cut between items and ends in a note saying where the
+    rest is. Each section is first given its heading and its cut note (or its whole body, when
+    that is smaller); the bytes left over then go to the sections by rank, lowest first, and
+    within a rank smallest first. So a long banner (ranked last) never cuts a section a session
+    must act on, and one long must-act list cannot crowd out a short one.
+
+    Should the headings and cut notes alone pass the cap, the notes go first from the
+    lowest-ranked sections; only the headings themselves can then pass it. Text UTF-8 cannot
+    encode (a lone surrogate from a record) is replaced first, so what is counted is what prints."""
+    head = _printable(head)
+    heads = [_printable(f"\n## {p.title}\n") for p in sections]
+    texts = [_printable(p.body.rstrip("\n") + "\n") for p in sections]
+    notes = [_printable(_cut_note(p.rest)) for p in sections]
+    floor = [_size(h) + min(_size(t), _size(n)) for h, t, n in zip(heads, texts, notes)]
+    order = sorted(range(len(sections)), key=lambda i: (sections[i].rank, _size(texts[i]), i))
+    spare = cap - _size(head) - sum(floor)
+    for i in reversed(order):  # over the cap on headings and notes alone: drop notes, last-served first
+        if spare >= 0:
+            break
+        spare += floor[i] - _size(heads[i])
+        floor[i] = _size(heads[i])
+    out = [""] * len(sections)
+    for i in order:
+        budget = floor[i] + max(spare, 0) - _size(heads[i])
+        text = texts[i] if _size(texts[i]) <= budget else _cut(texts[i], notes[i], budget)
+        out[i] = heads[i] + text
+        spare -= _size(out[i]) - floor[i]
+    return head + "".join(out)
+
+
+def _printable(s: str) -> str:
+    return s.encode("utf-8", "replace").decode("utf-8")
+
+
+def _cut(text: str, note: str, budget: int) -> str:
+    """``text``'s leading items that fit ``budget`` bytes with ``note`` after them, or nothing
+    when the note alone does not fit. An item is a line and the indented lines under it, so a
+    pause is never shown without its resume step."""
+    items = re.split(r"(?<=\n)(?=[^ \t\r\n])", text)
+    keep, size = [], _size(note)
+    for item in items:
+        if size + _size(item) > budget:
+            break
+        keep.append(item)
+        size += _size(item)
+    return "".join(keep) + note if size <= budget else ""
 
 
 def _cut_note(rest: str) -> str:

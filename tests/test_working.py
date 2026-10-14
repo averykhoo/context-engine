@@ -709,8 +709,177 @@ def test_orient_never_exceeds_its_cap_and_says_where_the_rest_is(eng):
     out = eng.orient(key)
     assert len(out.encode()) <= eng.w.orient_max_bytes
     assert "[cut at the orient cap; the rest: `context-engine task show CE-1`]" in out
+    assert "NEXT    CE-2    A next item" in out, "the board is whole before the top item is served"
     for heading in ("## Banner", "## Batons", "## Other open", "## Board", "## Raise", "## Top item"):
         assert heading in out
+
+
+# A banner of multi-byte lines (2-, 3- and 4-byte characters) bigger than the fixture's 4000-byte
+# cap on its own, as adhoc's 6 KB banner was (docs/evidence/adhoc-dryrun-2026-10-14.md F29)
+BIG_BANNER = "\n".join(f"- fact {i}: § — ü 🎧 " + "y" * 60 for i in range(80))
+
+
+def _big_banner(eng, key="2026-10-07b"):
+    (eng.root / "HANDOFF.md").write_text(NOTE.replace("- The banner says where things stand.", BIG_BANNER).format(key=key), encoding="utf-8")
+
+
+@pytest.mark.criterion("AC-17")
+def test_a_banner_past_the_cap_never_cuts_what_the_session_must_act_on(eng):
+    """CE-75: the banner takes what is left after the batons, open sessions, questions and board."""
+    key, other = _busy_repo(eng)
+    steps = [f"carried step {i} " + "w" * 60 for i in range(5)]  # more than the banner's last cut line can leave over
+    for step in steps:
+        eng.baton_add(step, "", **kw(key))
+    _big_banner(eng)
+    out = eng.orient(key)
+    assert len(out.encode("utf-8")) <= eng.w.orient_max_bytes
+    for whole in (*[f": {s}\n" for s in steps], f"- BTN-2 from {key} (yours): my baton", f"- BTN-1 from {other}: their baton", f"- {other}, opened", "- ASK-1: Overdue question?", "NOW     CE-1    The top item", "NEXT    CE-2    A next item", "never move a file", "- trap one"):
+        assert whole in out, whole
+    banner = out.split("## Banner (2026-10-07b)\n", 1)[1].split("\n## ", 1)[0]
+    assert banner.startswith("- fact 0: § — ü 🎧 ") and banner.endswith("[cut at the orient cap; the rest: `context-engine banner show`]\n")
+    assert "[cut at" not in out.replace(banner, ""), "only the banner is cut"
+    longest = max(len(line.encode("utf-8")) + 1 for line in BIG_BANNER.splitlines())
+    assert eng.w.orient_max_bytes - len(out.encode("utf-8")) < longest, "the banner gets the bytes left, less part of one line"
+
+
+@pytest.mark.criterion("AC-17")
+def test_must_act_lists_past_the_cap_are_cut_between_items_and_name_a_command_that_lists_the_rest(eng):
+    """CE-75: when the batons alone pass the cap, they are cut whole items at a time, the short
+    must-act parts are still whole, and the note names `baton list`, which lists every one."""
+    from context_engine import ops
+
+    key, other = _busy_repo(eng)
+    for i in range(60):
+        eng.baton_add(f"carried step {i} " + "z" * 60, "", **kw(key))
+    out = eng.orient(key)
+    assert len(out.encode("utf-8")) <= eng.w.orient_max_bytes
+    batons = out.split("## Batons and pauses: do these first\n", 1)[1].split("\n## ", 1)[0]
+    assert batons.endswith("[cut at the orient cap; the rest: `context-engine baton list`]\n")
+    assert batons.startswith(f"- BTN-2 from {key} (yours): my baton\n")
+    for whole in (f"- {other}, opened", "- ASK-1: Overdue question?"):
+        assert whole in out, whole
+    code, listed = ops.OPS["baton_list"].call(eng, ops.Caller(key, ACTOR))
+    assert code == 0 and len(listed.splitlines()) == 62 and listed.splitlines()[-1] == f"- BTN-1 from {other}: their baton"
+    shown = [ln for ln in batons.splitlines() if ln.startswith("- BTN-")]
+    assert shown == listed.splitlines()[: len(shown)] and len(shown) < 62
+
+
+def test_a_cut_keeps_an_item_whole_with_its_indented_lines():
+    """CE-75: a pause is never shown without its resume step: the cut falls between items."""
+    from context_engine.working import Part, fit
+
+    body = "- a\n  more a\n- b\n  " + "b" * 40
+    out = fit("# h\n", [Part("T", body, "x")], 65)  # room for item a and the note, and for `- b` alone
+    assert out == "# h\n\n## T\n- a\n  more a\n[cut at the orient cap; the rest: x]\n"
+
+
+def test_spare_bytes_go_by_rank_then_smallest_first_whatever_the_display_order():
+    """CE-75: a short must-act list is whole before a long one is cut, and the board (rank 1) is
+    whole before the top item (rank 2) shown above it gets more than its note."""
+    from context_engine.working import Part, _cut_note, fit
+
+    top = "".join(f"- top item {i}\n" for i in range(5))
+    long = "".join(f"- long item {i:02}\n" for i in range(10))
+    short = "- s1 " + "x" * 20 + "\n- s2 " + "x" * 20 + "\n"  # 52 bytes: more than its 37-byte note
+    board = "".join(f"- board item {i}\n" for i in range(3))
+    parts = [Part("Top", top, "t", rank=2), Part("Long", long, "l"), Part("Short", short, "s"), Part("Board", board, "b", rank=1)]
+    out = fit("# h\n", parts, 242)  # the floors (189) plus 15 for Short, 30 for two Long items, 8 for Board
+    assert out == "# h\n" + "\n## Top\n" + _cut_note("t") + "\n## Long\n" + long[:30] + _cut_note("l") + "\n## Short\n" + short + "\n## Board\n" + board
+
+
+def test_text_utf8_cannot_encode_is_replaced_so_orient_still_prints_what_it_counted():
+    """CE-75: a lone surrogate in a record (YAML `"\\ud800"`) once crashed the count, and so the
+    silent SessionStart hook; it prints as `?`, inside the cap."""
+    from context_engine.working import Part, fit
+
+    out = fit("# h\n", [Part("T \ud800", "- bad \udc00 text", "x")], 100)
+    assert out == "# h\n\n## T ?\n- bad ? text\n" and len(out.encode("utf-8")) <= 100
+
+
+def test_when_headings_and_notes_pass_the_cap_the_last_served_notes_go_first():
+    """CE-75: the cap holds while the headings alone fit it; the banner's note goes before a baton's."""
+    from context_engine.working import Part, fit
+
+    parts = [Part("Banner", "b" * 200, "`context-engine banner show`", rank=3), Part("Batons", "- BTN-1 " + "z" * 200, "`context-engine baton list`", rank=0)]
+    out = fit("# o\n", parts, 90)
+    assert len(out.encode("utf-8")) <= 90
+    assert out == "# o\n\n## Banner\n\n## Batons\n[cut at the orient cap; the rest: `context-engine baton list`]\n"
+
+
+def test_baton_list_says_so_when_there_is_nothing_open(eng):
+    from context_engine import ops
+
+    key = started(eng)
+    assert ops.OPS["baton_list"].call(eng, ops.Caller(key, ACTOR)) == (0, "no open batons or pauses")
+    rid = eng.baton_add("one step", "Docker was down", **kw(key)).split(":")[0]
+    assert ops.OPS["baton_list"].call(eng, ops.Caller(key, ACTOR)) == (0, f"- {rid} from {key} (yours): one step\n  why: Docker was down")
+
+
+def test_a_pause_is_listed_before_any_other_sessions_baton(eng):
+    """CE-75: a pause is work in flight on a branch; with many batons, it must not be the part cut."""
+    from context_engine import ops
+
+    _git(eng.root, "init", "-q", "-b", "feature-x")
+    _git(eng.root, "config", "user.email", "t@example.com")
+    _git(eng.root, "config", "user.name", "t")
+    _git(eng.root, "add", "-A")
+    _git(eng.root, "commit", "-q", "-m", "base")
+    other = started(eng)
+    for i in range(3):
+        eng.baton_add(f"step {i}", "", **kw(other))
+    eng.pause_open("half-built parser", "run the gate", **kw(other))
+    _, listed = ops.OPS["baton_list"].call(eng, ops.Caller())
+    assert listed.splitlines()[:2] == [f"- PAU-1 from {other}: half-built parser", "  resume: run the gate (branch feature-x)"]
+    assert listed.splitlines()[2:] == [f"- BTN-{i} from {other}: step {i - 1}" for i in (1, 2, 3)]
+    batons = eng.orient().split("## Batons and pauses: do these first\n", 1)[1]
+    assert batons.startswith(f"- PAU-1 from {other}: half-built parser\n  resume: ")
+
+
+def _orient_cli(eng, key, stdout):
+    import sys
+
+    real = sys.stdout
+    sys.stdout = stdout
+    try:
+        assert main(["--root", str(eng.root), "--session", key, "orient"]) == 0
+    finally:
+        sys.stdout.flush()
+        sys.stdout = real
+
+
+@pytest.mark.criterion("AC-17")
+def test_the_cli_writes_orient_as_counted_lf_and_utf8_even_on_a_crlf_console(eng):
+    """CE-75 (F30): the cap counts UTF-8 bytes with LF, so stdout must write exactly those, even
+    where the console would turn each LF into CRLF (Windows) or encode in cp1252."""
+    import io
+
+    key, _ = _busy_repo(eng)
+    _big_banner(eng)
+    want = eng.orient(key).encode("utf-8")
+    buf = io.BytesIO()
+    console = io.TextIOWrapper(buf, encoding="cp1252", newline="\r\n")  # held: collecting it closes buf
+    _orient_cli(eng, key, console)
+    got = buf.getvalue()
+    assert b"\r" not in got and got == want
+    assert len(got) <= eng.w.orient_max_bytes
+
+
+@pytest.mark.criterion("AC-17")
+def test_a_real_orient_subprocess_delivers_no_more_bytes_than_the_cap(eng):
+    """CE-75 (F30): the bytes the SessionStart hook receives, from a real process's stdout."""
+    import sys
+
+    import os
+
+    import context_engine
+
+    key, _ = _busy_repo(eng)
+    _big_banner(eng)
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    env["PYTHONPATH"] = os.path.dirname(os.path.dirname(context_engine.__file__))  # the code under test, not another install
+    r = subprocess.run([sys.executable, "-m", "context_engine", "--root", str(eng.root), "--session", key, "orient"], capture_output=True, timeout=120, env=env)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    assert r.stdout == eng.orient(key).encode("utf-8") and len(r.stdout) <= eng.w.orient_max_bytes
 
 
 # -- the CLI ------------------------------------------------------------------------------

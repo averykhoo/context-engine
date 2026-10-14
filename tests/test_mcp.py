@@ -44,6 +44,7 @@ CALLS = {
     "ask_raised": (["ASK-1", "ASK-2,ASK-3"], {"ids": ["ASK-1", "ASK-2", "ASK-3"]}),
     "ask_later": (["ASK-1"], {"id": "ASK-1"}),
     "ask_answer": (["ASK-1", "the words", "--title", "T"], {"id": "ASK-1", "words": "the words", "title": "T"}),
+    "baton_list": ([], {}),
     "baton_add": (["step", "--why", "w"], {"step": "step", "why": "w"}),
     "baton_done": (["BTN-1", "e"], {"id": "BTN-1", "evidence": "e"}),
     "hk_expire_batons": ([], {}),
@@ -240,8 +241,20 @@ def test_session_start_is_remembered_and_a_subagent_can_name_its_own_actor(root,
 # -- the entry point ---------------------------------------------------------------------------
 
 
+def _stdio(root) -> StdioServerParameters:
+    """The server over stdio, running the code under test: without PYTHONPATH the child would
+    import whatever install the interpreter finds (in a worktree, the main checkout's)."""
+    import os
+
+    import context_engine
+    from mcp.client.stdio import get_default_environment
+
+    env = {**get_default_environment(), "PYTHONPATH": os.path.dirname(os.path.dirname(context_engine.__file__))}
+    return StdioServerParameters(command=sys.executable, args=["-m", "context_engine.mcp", "--root", str(root)], env=env)
+
+
 def test_python_dash_m_context_engine_mcp_serves_over_stdio(root):
-    params = StdioServerParameters(command=sys.executable, args=["-m", "context_engine.mcp", "--root", str(root)])
+    params = _stdio(root)
 
     async def go():
         async with Client(params) as c:
@@ -255,7 +268,7 @@ def test_python_dash_m_context_engine_mcp_serves_over_stdio(root):
 
 def test_the_server_instructions_reach_the_client_and_ask_for_ultracode_without_granting_it(root):
     """DEC-30: the instructions tell an agent to ask the owner for ultracode; they never grant it."""
-    params = StdioServerParameters(command=sys.executable, args=["-m", "context_engine.mcp", "--root", str(root)])
+    params = _stdio(root)
 
     async def go():
         async with Client(params) as c:

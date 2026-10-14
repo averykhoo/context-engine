@@ -144,6 +144,7 @@ def build() -> argparse.ArgumentParser:
     bd = b.add_parser("done")
     bd.add_argument("id")
     bd.add_argument("evidence")
+    b.add_parser("list", help="the open batons and pause records, yours first")
     b.add_parser("expire", help="housekeeping: turn expired batons and pauses into tasks")
 
     pz = groups.add_parser("pause").add_subparsers(dest="op", required=True)
@@ -244,6 +245,7 @@ CLI_OPS = {
     ("lint", None): "lint",
     **{("task", v): f"task_{v}" for v in ("new", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
     **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer")},
+    ("baton", "list"): "baton_list",
     ("baton", "add"): "baton_add",
     ("baton", "done"): "baton_done",
     ("baton", "expire"): "hk_expire_batons",
@@ -328,7 +330,10 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.reconfigure(encoding="utf-8")  # as stdout below: a remedy may say "§"
         print(str(r), file=sys.stderr)
         return 2
-    sys.stdout.reconfigure(encoding="utf-8")
+    # UTF-8 with LF line ends, on Windows too: a capped read (orient's `orient_max_bytes`) is
+    # counted in UTF-8 bytes with LF, and a CRLF translation added a byte a line past the cap
+    # (CE-75, docs/evidence/adhoc-dryrun-2026-10-14.md F30)
+    sys.stdout.reconfigure(encoding="utf-8", newline="\n")
     print(out)
     return code
 

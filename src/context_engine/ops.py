@@ -247,6 +247,12 @@ def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str) -> tuple[i
 # -- batons and pauses (FRAMEWORK §5.4) --------------------------------------------------
 
 
+@op(write=False, rest="open the records in the baton and pause directories (`state: open`)")
+def baton_list(e: Engine, c: Caller) -> tuple[int, str]:
+    """The open batons and pause records, the caller's own first, then pauses, each pause with its resume step and each baton with why it was skipped: orient's must-act section in full."""
+    return 0, "\n".join(e.carried_lines(c.session, why=True)) or "no open batons or pauses"
+
+
 @op(write=True)
 def baton_add(e: Engine, c: Caller, step: str, why: str = "") -> tuple[int, str]:
     """Hand a skipped step to the next session."""

@@ -237,14 +237,18 @@ skipped gates and commits pile up.
 
 ### context-engine orient
 
-Read and report, in this order, in under 6000 bytes in total (`orient_max_bytes`). If a part does
-not fit, cut it at a line and say where the rest is:
+Read and report, in this order, in at most 6000 bytes in total (`orient_max_bytes`), counted as
+UTF-8 with LF line ends. Every part's heading appears. The bytes go first to parts 0, 2, 3 and 5,
+which a session must act on, then to 4, then to 6 and 7, and the banner (1) takes what is left; so
+cut the banner first. Cut a part between items (a line and the indented lines under it) and end it
+with a note naming the command that lists the rest (`banner show`, `baton list`, a `grep` of the
+ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`):
 
 0. only when G-D0 fails (§ lint), and `[guards] off` does not name it: a `Contract: fix this
    first` section, one line per failure with its remedy;
 1. the banner (`HANDOFF.md` § Banner);
-2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, each pause
-   with its resume step and branch;
+2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, then
+   pauses before batons, each pause with its resume step and branch;
 3. other sessions with an open stub in the ledger, which the session then shows the owner, one
    line each (`procedures.md` § Session start); say `none` when there are none;
 4. board items at NOW and NEXT (as `context-engine task list`);
@@ -255,7 +259,8 @@ not fit, cut it at a line and say where the rest is:
 
 **Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: a contract that did not load, then work carried over from earlier sessions and live sessions,
-then new work. A `SessionStart` hook runs it in an adopted repo (kit README § Hook), with no
+then new work; the banner leads as the context for the rest, but it is the part cut first, so a
+long banner never hides what the session must act on. A `SessionStart` hook runs it in an adopted repo (kit README § Hook), with no
 session key; a failing hook is silent, so a session that finds no orient output in its context
 does this by hand.
 
@@ -719,6 +724,15 @@ refused), `session: <key>`, `state: open`, `created: <today>`, `why` (`''` if no
 
 **Why:** a step skipped at close must reach the next session as a record, not as a sentence in a
 note that the next banner overwrites (FRAMEWORK §5.4).
+
+### context-engine baton list
+
+Read-only. List every open baton and pause record (`docs/working/`, `state: open`), in orient's
+order (your own session's first, then pauses before batons), each pause with its resume step and
+branch and each baton with its `why`; `no open batons or pauses` when there are none.
+
+**Why:** orient's must-act part, in full: when that part is cut at the cap, this is where the rest
+is, without opening every record.
 
 ### context-engine baton done
 
