@@ -3,18 +3,20 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-14c)
+## Banner (2026-10-14d)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **Ready for the adhoc trial (CE-7, NOW), 2026-10-14a:** a sync audit (`docs/evidence/sync-audit-2026-10-14.md`) and a
-  cutover dry run in a clone of adhoc (`docs/evidence/adhoc-dryrun-2026-10-14.md`) found the drift and the blockers; fixed in
-  CE-69 (sync), CE-51/70 (init), CE-73 (`--file`), CE-74 (DEC-37: import renames ids, old ids stay aliases), CE-75 (orient
-  never cuts batons, sessions or questions); AC-42 reworded for it (DEC-40). CE-7 carries the trial's traps and commands.
-- **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c; CE-7 trap F18): CE-77 and CE-78 wait for it.
+- **The adhoc trial is live (CE-7, NOW), cut over 2026-10-14d** on adhoc's branch `context-engine-trial`, worktree
+  `PycharmProjects/adhoc-microphone-array-ce`: kit at engine `38ed38e`, decisions DEC-1..DEC-68, board AD-1..AD-14 + ASK-9,
+  HANDOFF 605 -> 78 lines. Owed there: real Claude Code sessions (INV-31 probes), scoring against CE-4 (CE-79, about
+  2026-10-21), the owner's merge decision (DEC-32 settings question, rebuild the engine env in main). Nothing pushed.
+- **A target repo's engine env is a pinned, non-editable install inside its folder, gitignored (DEC-41, amends DEC-1);**
+  adhoc's is `.context-engine/env/`. The kit and FRAMEWORK still say only "its own env" (CE-81).
+- **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c; CE-7 trap F18): CE-77, CE-78 and CE-81 wait for it.
 - **FRAMEWORK.md holds the framework only (DEC-26):** no history, no repo ids; unbuilt parts say *Not built yet*.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
-  close a task after its work is committed (`task close` carries `Closes:`).
+  close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures' order lives in `docs/runbooks/procedures.md`**; by hand in `manual-mode.md`; method in `gate.md`,
   `sabotage.md`, `fan-out.md`, `release.md`. Kit copies are byte-equal (CE-26). When the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** a cherry-pick or fresh checkout here writes kit files with CRLF and the kit byte tests go red; merge
@@ -22,9 +24,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push.
 - **Several tasks in one request:** a task agent per item in its own worktree, merged and verified at the top (DEC-16).
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
-  ask before every push; push only on a green gate** (DEC-22).
+  ask before every push; push only on a green gate** (DEC-22). Close a session when its work is done, without asking (DEC-31).
 - **Next after CE-7:** CE-78 (scoped gate: code tests only when code changed), CE-77 (procedures as skills, plugin),
-  CE-43 (audio-workspace), CE-64 (`Session:` trailer placement), CE-56 (DEC-38's standard prefixes).
+  CE-81 (DEC-41 into the kit), CE-43 (audio-workspace), CE-64 (`Session:` trailer placement), CE-56 (DEC-38's prefixes).
 
 ## Open batons and pause records
 
