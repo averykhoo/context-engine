@@ -45,6 +45,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 ### untagged
 
 - [DEC-24](DEC-24-a-baton-is-closed-by-baton-done-with-evidence.md): A baton is closed by baton done with evidence, from any session *(owner, 2026-10-10)*
+- [DEC-42](DEC-42-the-adhoc-trial-runs-in-adhoc-s-own-folder-on.md): The adhoc trial runs in adhoc's own folder, on main; the worktree is deleted *(owner, 2026-10-14)*
 
 ## PROVISIONAL
 

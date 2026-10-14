@@ -7,6 +7,12 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-14e · kind: open
+
+- **opened:** 2026-10-14T16:02:25+08:00 by claude-code/claude-opus-5-5
+
+---
+
 ## 2026-10-14d · kind: close
 
 - **rows:** CE-7 (cut over on adhoc's trial branch), CE-79 new, CE-80 new, CE-81 new, DEC-41 new,
