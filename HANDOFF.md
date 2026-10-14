@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-14b)
+## Banner (2026-10-14c)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -11,6 +11,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   cutover dry run in a clone of adhoc (`docs/evidence/adhoc-dryrun-2026-10-14.md`) found the drift and the blockers; fixed in
   CE-69 (sync), CE-51/70 (init), CE-73 (`--file`), CE-74 (DEC-37: import renames ids, old ids stay aliases), CE-75 (orient
   never cuts batons, sessions or questions); AC-42 reworded for it (DEC-40). CE-7 carries the trial's traps and commands.
+- **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c; CE-7 trap F18): CE-77 and CE-78 wait for it.
 - **FRAMEWORK.md holds the framework only (DEC-26):** no history, no repo ids; unbuilt parts say *Not built yet*.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`).
@@ -22,7 +23,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Several tasks in one request:** a task agent per item in its own worktree, merged and verified at the top (DEC-16).
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22).
-- **Next after CE-7:** CE-43 (audio-workspace), CE-64 (`Session:` trailer placement), CE-56 (DEC-38's standard prefixes).
+- **Next after CE-7:** CE-78 (scoped gate: code tests only when code changed), CE-77 (procedures as skills, plugin),
+  CE-43 (audio-workspace), CE-64 (`Session:` trailer placement), CE-56 (DEC-38's standard prefixes).
 
 ## Open batons and pause records
 
