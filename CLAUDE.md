@@ -100,8 +100,8 @@ This repo's values for those steps:
 - `<gate>` is `<interpreter> -m pytest -q` (§ Gate above); lint runs inside it.
 - Owner intent (procedures § Intake): `context-engine record new story "<title>" --file <words.md>
   --set actor=owner --set story_status=live --set goals=[G..]`, `context-engine record amend US-n
-  "<words>"`, `context-engine record new decision "<title>" --file <words.md> --set actor=owner
-  --set decision_status=PROVISIONAL`, or `context-engine ask answer ASK-n "<words>" --title
+  --file <words.md>`, `context-engine record new decision "<title>" --file <words.md> --set actor=owner
+  --set decision_status=PROVISIONAL`, or `context-engine ask answer ASK-n --file <words.md> --title
   "<decision title>"`. Write owner words to a file with the Write tool, not a heredoc (heredocs
   here can mangle backslashes and quotes).
 - Clean close: `context-engine task list` is the board; HANDOFF keeps no copy. `session close`
