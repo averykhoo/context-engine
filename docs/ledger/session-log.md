@@ -7,9 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-13e · kind: open
+## 2026-10-13e · kind: close
 
-- **opened:** 2026-10-13T23:49:06+08:00 by claude-code/claude-opus-5-5
+- **rows:** DEC-39 recorded and amended (owner words); CE-68 filed and closed; banner set
+- **receipts:**
+  - guards: pytest -q: 635 passed in 163.71s (rc=0), lint inside it clean, on the tree of 0f1d071;
+    tools/linux_gate.py on f8a19b4: 635 passed (git 2.55.0, Python 3.12.3); lint clean on f8a19b4
+  - read: orient + the CE-68 census (9 readers) and reconcile + the apply review, all via workflows;
+    FRAMEWORK §6.8 only first-hand
+- **summary** (the owner digest):
+  - Owner: DEC-39, rituals renamed procedures, and every strange turn of phrase in the framework
+    corrected in one change; amended with the owner's answers (keep baton, liveness, rung; unify the
+    component names).
+  - CE-68: a census workflow found the odd phrasing across FRAMEWORK, runbooks, kit, repo docs and
+    engine messages; one glossary was applied by five disjoint appliers, then reviewed.
+  - The review caught rewritten Log entries in four open tasks (restored), meaning drift in a few
+    rewrites and over-width runbook lines; all fixed before the gate.
+  - rituals.md is procedures.md in repo and kit; G-D12 still counts a frozen map's Ritual column and
+    the old component names (Invariants, Law / NFRs).
+  - Guards: no living framework text says ritual (test_kit); the G-D12 aliases (test_guards);
+    sabotaged red, tools/sabotage_ce68.py.
+  - Left: REGISTER entries still cite rituals.md (CE-56 rewrites the entries as RISK-n); the old
+    tools/sabotage_ce24/26 probes point at the old path (dated evidence).
+- **Still owed:**
+  - REGISTER.md entries citing rituals.md, under CE-56
 
 ---
 
