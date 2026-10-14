@@ -1,5 +1,5 @@
-# context-engine's own framework config (FRAMEWORK §8.0). The engine reads this; the record
-# kinds below describe the records this repo already keeps by hand (CLAUDE.md routing table).
+# context-engine's own framework config (FRAMEWORK §8.0). The engine reads this and writes the
+# records below through its operations; `context-engine routes` prints the routing table.
 
 [engine]
 oplog = "docs/ledger/ops.jsonl"     # one JSON line per engine write (AC-6)
@@ -95,6 +95,11 @@ max_bytes = 10000  # G-D1; provenance: MEASURED 2026-10-12d, 8086 bytes, plus th
 max_width = 125    # G-D1; provenance: MEASURED 2026-10-12d, widest prose line 121; wrong if wrapping starts to split commands mid-line
 
 [[routes]]
+component = "Framework contract"
+path = "docs/framework/contract.md"
+mode = "the framework's: imported by CLAUDE.md, replaced whole on upgrade, never edited here (G-D0 compares it with the engine's kit)"
+
+[[routes]]
 component = "Frozen provenance"
 path = "docs/framework"
 pattern = "FRAMEWORK-v0.*.md"
@@ -138,6 +143,12 @@ mode = "replaced at clean close; banner through `context-engine banner set`"
 max_lines = 130    # G-D1, the byte cap is the backstop to G-D8 (P6); provenance: MEASURED 2026-10-12d, 101 lines, plus about a quarter; wrong if a cold session needs more to orient than fits
 max_bytes = 10000  # G-D1; provenance: MEASURED 2026-10-12d, 7723 bytes, plus about a quarter; wrong as above
 max_width = 140    # G-D1; provenance: MEASURED 2026-10-12d, widest prose line 136; wrong if wrapping starts to split commands mid-line
+
+[[routes]]
+component = "Batons and pause records"
+path = "docs/working"
+pattern = "<id>-<slug>.md"
+mode = "session-stamped, through `context-engine baton`/`context-engine pause`"
 
 [[routes]]
 component = "Session ledger"
@@ -218,10 +229,20 @@ mode = "frozen per run"
 note = "FINDINGS.md is the result; the probes show how"
 
 [[routes]]
-component = "Sabotage probes"
+component = "Tests"
+path = "tests"
+mode = "replaced; criteria are claimed with `@pytest.mark.criterion(\"AC-n\")` (G-T2)"
+
+[[routes]]
+component = "CI"
+path = ".github/workflows/gate.yml"
+mode = "replaced; runs the gate on every push (CE-10); tests/test_ci.py keeps it in step with CLAUDE.md § Gate and pyproject.toml"
+
+[[routes]]
+component = "Tools"
 path = "tools"
-pattern = "sabotage_<task>.py"
-mode = "kept as evidence until G-T5 replaces them (CE-34)"
+mode = "replaced; linux_gate.py runs CI's job on Linux before every push (CE-67)"
+note = "sabotage_<task>.py are sabotage probes kept as evidence until G-T5 replaces them (CE-34)"
 
 [[routes]]
 component = "Scratch"

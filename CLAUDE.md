@@ -31,7 +31,7 @@ byte-equal by the gate.
 
 **Id prefixes** (zero collisions on 2026-10-08, DEC-7): tasks `CE-n`, decisions `DEC-n`,
 stories `US-n`, criteria `AC-n`, owner questions `ASK-n`, residual-risk register entries
-`INV-n` (DEC-27). Never reuse or renumber an id.
+`INV-n` (DEC-27), batons `BTN-n`, pause records `PAU-n`, goals `G-n`. Never reuse or renumber an id.
 OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_status`.
 
 ## Environment
@@ -85,10 +85,8 @@ old code and passes: a false green, seen 2026-10-08d.
 
 ## Procedures (FRAMEWORK §6, through `context-engine`)
 
-**Session start:** `context-engine session start` (prints the key; use it as `CE_SESSION`), then `context-engine orient`.
-Do the batons and pause records it lists first. Show the owner the other open sessions it lists (or
-"none"), one line each, so they can say what to stop. Raise every question it lists in chat,
-one line each, then `context-engine ask raised <ids>`. Read the top item with `context-engine task show <id>`.
+**Session start:** as the contract says, in the order `docs/runbooks/procedures.md` gives: the hook
+prints orient, a session that already holds a key keeps it, otherwise `context-engine session start`.
 
 **Every procedure's steps, in order, are in `docs/runbooks/procedures.md`, and only there**:
 intake, clean close, pause, resume, push and CI, bootstrap, reconciling foreign commits,
@@ -115,13 +113,14 @@ This repo's values for those steps:
 - **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
   the work to its own subagents or a workflow; the top level only reports progress, blockers
   and delays. Owner words and first-hand verification stay with the top-level session.
-- Commit by path (`git commit -o <paths>`); never `git add -A`, never `git stash`.
+- Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths
+  no uncommitted op line names); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
   change cannot be split. One task per commit, its id leading the title (`CE-n: what changed`);
   a commit serving no task has a plain title. Small tasks may be done together: gate green over
   all, then one commit per task by path (not surgical: a shared file goes with whichever task fits
-  best, DEC-22). Every agent commit ends with a
-  `Session: <key>` trailer, plus `Closes: CE-n` when it finishes the task.
+  best, DEC-22). Every agent commit ends with a `Session: <key>` trailer; `Closes: CE-n` is on the
+  engine's `task close` commit, made after the work is committed (CE-45).
 - Re-run `git status` and `git log -3` right before editing HANDOFF or the ledger and before
   committing: sessions here may run concurrently.
 - Frozen provenance is never edited (`context-engine routes`).

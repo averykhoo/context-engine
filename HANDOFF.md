@@ -75,11 +75,12 @@ None.
 ## Next session: start here
 
 1. `CLAUDE.md` (loads automatically): environment, gate, rules, and the procedures as `context-engine` commands.
-2. `context-engine session start`, then `context-engine orient` (the banner, batons, open sessions, the NEXT tier,
-   questions to raise and the top item's Traps and Read first, under 6000 bytes). Raise any
-   question it lists in chat, one line each, then `context-engine ask raised <ids>`.
-3. `context-engine task show CE-3` (the top item). The board is `context-engine task list`; this
-   orientation note keeps no copy.
+2. The `SessionStart` hook prints `context-engine orient` (the banner, batons, open sessions, the
+   NEXT tier, questions to raise and the top item, under 6000 bytes); then `context-engine session
+   start`, in the order `docs/runbooks/procedures.md` gives. Raise any question it lists in chat,
+   one line each, then `context-engine ask raised <ids>`.
+3. `context-engine task show <id>` for the top item orient names. The board is `context-engine task
+   list`; this orientation note keeps no copy.
 4. Read the rest of this orientation note only if needed, and say which in your ledger entry's `read:` line.
 
 ## Facts not derivable from the code (dated)
@@ -88,8 +89,8 @@ None.
   since 2026-10-09a, DEC-15; `ce` before) lands in the env's `Scripts/`, which is not on PATH. Set `CE_ACTOR=claude-code/<model-id>` and
   `CE_SESSION=<key>` for a session's writes.
 - **2026-10-08d, `tools/sabotage_ce1.py` no longer runs:** CE-2 rewrote `Store.set`, so its AC-9
-  row's pattern stops matching (by design). Its 13 red results stand as CE-1's evidence; CE-14's G-T5
-  replaces both tables.
+  row's pattern stops matching (by design). Its 13 red results stand as CE-1's evidence; G-T5 (CE-34, split
+  out of CE-14) replaces both tables.
 - **2026-10-08f, git checks committed files out with CRLF here** (autocrlf). The engine keeps
   each file's endings, but a script that string-matches source must normalise first, as
   `tools/sabotage_ce8.py` does; `tools/sabotage_ce2.py` was written before this caused trouble.
