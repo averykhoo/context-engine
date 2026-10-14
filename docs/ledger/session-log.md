@@ -7,9 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14a · kind: open
+## 2026-10-14a · kind: close
 
-- **opened:** 2026-10-14T09:14:45+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-69..CE-76 created; CE-51, CE-69, CE-70, CE-73, CE-74, CE-75, CE-76 closed; ASK-6
+  created; comments on CE-7, CE-46, CE-47, CE-56; INV-70..INV-83 filed
+- **receipts:**
+  - guards: gate pytest -q green, 708 passed (2026-10-14); lint clean; linux_gate run before push
+  - read: CLAUDE.md, contract, orient (hook), HANDOFF.md in full, task show CE-7
+  - asked: ASK-6 raised in chat
+- **summary** (the owner digest):
+  - Audited the framework for sync: 53 drifts across spec, kit, runbooks, records and deployability,
+    every one verified (docs/evidence/sync-audit-2026-10-14.md); no blockers, gate green before.
+  - Fixed them: FRAMEWORK.md marks unbuilt parts and matches the engine's names; kit, runbooks,
+    CLAUDE.md, context.toml routes, README and HANDOFF agree (CE-69).
+  - Dry-ran the adhoc cutover in a throwaway clone (docs/evidence/adhoc-dryrun-2026-10-14.md): 4
+    blockers; CE-7's traps and commands updated; adhoc untouched.
+  - Built for the trial: DEC-37 import renaming with resolvable aliases (CE-74); orient never cuts
+    batons, sessions or questions and honours its cap on Windows (CE-75); init fixes (CE-51, CE-70);
+    --file intake (CE-73); small fixes (CE-76).
+  - Trimmed the banner so orient shows it whole; moved its two banner-only rules into CLAUDE.md.
+  - Note: merging worktree commits with autocrlf writes kit files with CRLF; merge with
+    core.autocrlf=false (CE-46).
+- **Still owed:**
+  - push needs the owner's yes; CE-71 and CE-72 (LATER) left from the audit
 
 ---
 
