@@ -31,6 +31,7 @@ from . import okf
 from . import review as R
 from . import bootstrap as K  # the kit: its block markers, kit block and contract (G-D0)
 from . import commit as C
+from . import gate as GATE
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
@@ -791,6 +792,7 @@ class Engine:
         if other:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
         rels = [self._commit_path(x) for x in paths]
+        GATE.check_commit(self.root, self.store.config.gate, rels)  # a code path needs a green gate run on its scope (CE-78)
         out = self.store.commit_paths(message, rels, session)
         if not out.sha:
             raise Refusal(f"not committed: {out.note or 'git made no commit'}",

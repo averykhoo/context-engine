@@ -29,6 +29,21 @@ values (its test command, its interpreter, its CI workflow file, its suites) are
 | A failure you did not cause is reported, not fixed silently or buried under yours | the next reader must be able to tell whose failure it is ([procedures.md § Clean close](procedures.md#clean-close-63), item 1) |
 | Record the result verbatim in the close's `guards:` receipt ([procedures.md § Clean close](procedures.md#clean-close-63), item 2), naming the commit it ran on where you can | "tests passed" is worth recording only with what it passed on (P15) |
 
+## The scoped gate (FRAMEWORK §8.5 G-V1)
+
+Where `[gate]` in `context.toml` names the test command and its scopes, each run is recorded
+against each scope's content id, so the code gate runs only when the code changed. By hand:
+[manual-mode.md § The scoped gate](manual-mode.md#the-scoped-gate).
+
+| Do | Why |
+|---|---|
+| Run the gate as `context-engine gate run`, not the bare command | only a recorded run lets the next commit skip a re-run |
+| Before a commit, `context-engine gate status --require <scope>`, and run what it names | a green run on the scope's current id already covers the code |
+| After a change outside the scope only, `context-engine gate run --readers` | the readers read files the scope leaves out; they re-run on every file |
+| Exclude only what no test reads but the readers, and keep a guard that fails any other test that opens an excluded path | an exclusion fails open: an excluded file never makes a green run stale |
+| A run whose files changed while it ran (`INCONSISTENT`) counts for nothing: run it again | it tested no set of files anyone can name |
+| Push on a whole-gate run, plus CI's platform job | the id does not cover gitignored files or the environment |
+
 ## Test baselines
 
 One dated baseline per suite (P5): its pass count, and its time where that matters, with when it

@@ -12,6 +12,7 @@ import pytest
 from context_engine import __version__
 from context_engine import bootstrap as B
 from context_engine import config as C
+from context_engine import gate as GATE
 from context_engine import guards as G
 from context_engine.errors import Refusal
 from context_engine.ledger import EMPTY_LEDGER
@@ -542,7 +543,9 @@ def _keys(cls, drop=()) -> set[str]:
 def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     raw = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
     cfg = C.from_dict(raw)
-    assert _keys(C.Config, ("kinds", "working", "routes", "guards")) <= set(raw["engine"])
+    assert _keys(C.Config, ("kinds", "working", "routes", "guards", "gate")) <= set(raw["engine"])
+    assert _keys(GATE.Gate, ("skip",)) <= set(raw["gate"]) and _keys(GATE.Scope, ("name",)) <= set(raw["gate"]["scopes"]["all"])
+    assert cfg.gate.scopes and not cfg.gate.command and not cfg.gate.require, "the kit's gate is off until a repo sets its command"
     assert _keys(C.Working) <= set(raw["working"])
     kind_keys = set().union(*(set(k) for k in raw["kinds"].values()))
     assert _keys(C.Kind, ("name",)) <= kind_keys

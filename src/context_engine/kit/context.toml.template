@@ -147,6 +147,24 @@ stories = ""                 # G-I1, G-I2, G-T1, G-T6: the kind holding the stor
 tests = []                   # G-T2: files and directories where tests and drivers claim criteria (e.g. ["tests"])
 claim = '''criterion(?:\(\s*["']|:\s*)([A-Z]+-[1-9][0-9]*)'''   # G-T2: one group, the claimed id; this default reads `@pytest.mark.criterion("AC-n")` and a `criterion: AC-n` comment
 
+# -- the scoped gate (FRAMEWORK §8.5 G-V1): each gate run recorded against its scopes' content ids --
+# Off while `command` is empty. `context-engine gate run` runs `command` and appends its result to
+# `ledger` with each scope's id; `gate status` says which scopes a green run covers. Set `require`
+# to a scope and `context-engine commit` refuses a path in it until a green run covers it.
+[gate]
+command = []                 # the gate, as a list of words; "{python}" is the engine's interpreter, e.g. ["{python}", "-m", "pytest", "-q"]
+ledger = ".context/gate/runs.jsonl"   # the run ledger; must be gitignored (a fresh directory gets a `.gitignore` of `*`)
+require = ""                 # the scope a session's own commit of a path in it needs green (`context-engine commit`); empty is no check
+
+# A scope: repo-relative globs over whole `/` paths (`**` spans directories, `*` does not). An
+# exclusion fails open, since an excluded file can no longer make a green run stale: exclude only
+# what no test reads, and verify it (`readers` names the tests that may read an excluded path,
+# because what runs on every commit, lint, re-checks what they read).
+[gate.scopes.all]
+include = ["**"]
+exclude = []
+readers = []
+
 # -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
 # Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,
 # free text), pattern (how files under `path` are named), note, optional (may be absent), and the G-D1

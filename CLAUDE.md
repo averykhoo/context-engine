@@ -57,17 +57,17 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 
 ## Gate
 
-`<interpreter> -m pytest -q` from the repo root. Run it before every commit that touches
-`src/`, `tests/` or any record, and before every push. It includes `context-engine lint` on this repo's own
-records (AC-23), so a hand edit to a stamped story, a broken record or a dead route turns it red.
-CI runs the same gate on every push (`.github/workflows/gate.yml`, CE-10): a clean checkout,
-Python 3.12 (the `requires-python` floor), `pip install -e ".[dev]"`, then the gate;
-`tests/test_ci.py` keeps the workflow in step with this section and `pyproject.toml`. A red CI
-run is a red gate. Without CI, the by-hand fallback is those two commands in a fresh 3.12 env.
-**Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py`
-(CE-67; Docker in WSL, about a minute once the image is cached). This machine is Windows and CI is
-Linux, so a green local gate can be a red CI run (`39e09ca`, 2026-10-13;
-`docs/evidence/ci-divergence-2026-10-13.md` names the traps). Push only when both are green.
+`<interpreter> -m pytest -q` from the repo root; it runs `context-engine lint` on this repo's records too (AC-23). Run it
+as `context-engine gate run` (CE-78: `[gate]` in `context.toml`), which records the result against the `code` scope's
+content id. Before a commit touching `src/`, `tests/` or a record, `context-engine gate status --require code` says what
+is left: nothing, the readers (`gate run --readers`: tests that read records) or the whole gate; `context-engine commit`
+refuses a code path until it is green, and `tests/conftest.py` fails any other test that reads what the scope excludes.
+Every push runs the whole gate, and so does CI (`.github/workflows/gate.yml`, CE-10): a clean checkout, Python 3.12 (the
+`requires-python` floor), `pip install -e ".[dev]"`, then the gate; `tests/test_ci.py` keeps the workflow in step with
+this section and `pyproject.toml`. A red CI run is a red gate; without CI, run those two commands in a fresh 3.12 env.
+**Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py` (CE-67; Docker in WSL, about
+a minute once the image is cached). This machine is Windows and CI is Linux, so a green local gate can be a red CI run
+(`39e09ca`, 2026-10-13; `docs/evidence/ci-divergence-2026-10-13.md` names the traps). Push only when both are green.
 
 ## Sabotage rule (owner mandate, DEC-11)
 

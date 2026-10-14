@@ -68,7 +68,10 @@ CALLS = {
     "register_show": (["--engine"], {"engine": True}),
     "banner_show": ([], {}),
     "banner_set": (["--seen", "abc", "--text", "new"], {"seen": "abc", "text": "new"}),
+    "gate_run": (["--readers"], {"readers": True}),
+    "gate_status": (["--require", "code"], {"require": "code"}),
 }
+TOOLS = {n for n, o in ops.OPS.items() if o.mcp}  # every operation but the CLI-only ones (gate runs, FRAMEWORK §8.0.2)
 CLI_VERB = {name: verb for verb, name in cli.CLI_OPS.items()}
 
 
@@ -114,7 +117,8 @@ def test_every_cli_subcommand_is_one_operation_and_every_operation_one_tool(root
         async with Client(server(root)) as c:
             return {t.name for t in (await c.list_tools()).tools}
 
-    assert asyncio.run(names()) == set(ops.OPS)
+    assert asyncio.run(names()) == TOOLS
+    assert set(ops.OPS) - TOOLS == {"gate_run"}, "only a gate run is kept out of the MCP (FRAMEWORK §8.0.2)"
 
 
 def _same(params: dict) -> dict:
@@ -133,10 +137,13 @@ def test_the_cli_and_the_tool_call_the_same_function_with_the_same_parameters(na
         seen.append(_same(kw))
         return 0, "ok"
 
-    monkeypatch.setitem(ops.OPS, name, ops.Op(name, spy, o.write, o.rest, o.engine))
+    monkeypatch.setitem(ops.OPS, name, ops.Op(name, spy, o.write, o.rest, o.engine, o.mcp))
     argv, args = CALLS[name]
     g, verb = CLI_VERB[name]
     assert main(["--root", str(root), "--actor", ACTOR, "--session", "2026-10-08a", g, *([verb] if verb else []), *argv]) == 0
+    if not o.mcp:  # CLI only: the server has no tool to call
+        assert seen == [_same(args)], seen
+        return
     result = call(server(root), name, args)
     assert not result.is_error, text(result)
     assert len(seen) == 2 and seen[0] == seen[1], seen
@@ -262,7 +269,7 @@ def test_python_dash_m_context_engine_mcp_serves_over_stdio(root):
             return tools, text(await c.call_tool("orient", {}))
 
     tools, out = asyncio.run(go())
-    assert tools == set(ops.OPS)
+    assert tools == TOOLS
     assert out.startswith("# orient") and "## Banner (2026-10-07b)" in out  # the --root repo, not the cwd
 
 

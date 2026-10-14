@@ -79,6 +79,30 @@ decision_index = "docs/decisions/index.md"   # generated from the decisions' fro
 criteria = "docs/criteria.md"               # `decision link` checks a criterion id is a row here
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
 
+# The scoped gate (FRAMEWORK §8.5 G-V1, CE-78): `context-engine gate run` runs the gate and records
+# its result against each scope's content id; `context-engine commit` refuses a path in `require`'s
+# scope until a green run covers the scope and its readers. `gate status` says what is covered.
+[gate]
+command = ["{python}", "-m", "pytest", "-q"]   # CLAUDE.md § Gate; tests/test_ci.py keeps CI on the same command
+require = "code"
+
+# The code scope: every file but the records and the prose that only the lint test, and the readers
+# below, read. MEASURED 2026-10-14g by an audit-hook census of the whole suite (every file each test
+# opened, listed or started a process in); tests/conftest.py's scope guard fails any other test
+# that touches an excluded path, so a new reader cannot slip in unseen. The readers are re-run on
+# every file (`gate run --readers`): the lint test, the OKF byte round-trip over every record, an
+# orient of this repo, and the "ritual" sweep, which reads HANDOFF.md.
+[gate.scopes.code]
+exclude = ["tasks/**", "docs/decisions/**", "docs/stories/**", "docs/ledger/**", "docs/working/**", "docs/evidence/**", "spike/**", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md"]
+readers = [
+    "tests/test_repo_records.py::test_this_repos_records_pass_lint",
+    "tests/test_okf.py::test_every_record_in_this_repo_round_trips_byte_identical",
+    "tests/test_review.py::test_orient_points_at_the_engine_register_in_a_foreign_repo_only",
+    "tests/test_kit.py::test_no_living_framework_text_says_ritual",
+]
+
+[gate.scopes.all]   # every file: a green run here is the whole gate on exactly this tree
+
 # Where each framework component lives (FRAMEWORK §2). Moved here from CLAUDE.md in CE-8; print it
 # with `context-engine routes`. G-R1 fails lint if a path stops existing. `mode` is how the component changes.
 [[routes]]
