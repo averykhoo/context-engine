@@ -957,13 +957,24 @@ def test_init_appends_the_engine_env_to_an_existing_gitignore_keeping_every_byte
 @pytest.mark.parametrize("line,ignored", [
     (".context-engine/", True), ("/.context-engine", True), (".context-engine/*", True), (".context-engine/**", True),
     (".*", True), ("*", True), (".context-engine/env/", False), (".context-engine/\n!.context-engine/", False), (".context-engine-old/", False),
+    (".context-engine/  ", True), ("*\n!/build/", True), (" .context-engine/", False),
+    (".context-engine/*\n!.context-engine/env/", False), (".context-engine/*\n!env/", False), (".context-engine/*\n!**/env", False),
 ])
 def test_init_leaves_a_gitignore_that_already_ignores_the_engine_env_untouched(tmp_path, line, ignored):
+    """Left alone only when git itself ignores the env: init errs toward appending, never toward a
+    committed env (CE-81 review: a leading space, or a later `!` line reaching inside)."""
     old = f"# ours\n{line}\n".encode()
-    (tmp_path / B.REPO_IGNORE).write_bytes(old)
-    out = B.init(tmp_path)
-    assert ((tmp_path / B.REPO_IGNORE).read_bytes() == old) == ignored, out
+    git = tmp_path / "git"
+    git.mkdir()
+    (git / B.REPO_IGNORE).write_bytes(old)
+    assert not ignored or _check_ignore(git, f"{B.ENGINE_ENV}/python.exe"), "a case init leaves alone is one git ignores"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / B.REPO_IGNORE).write_bytes(old)
+    out = B.init(repo)
+    assert ((repo / B.REPO_IGNORE).read_bytes() == old) == ignored, out
     assert (f"{B.REPO_IGNORE} (ignores {B.ENGINE_DIR}/)" in out) == ignored, out
+    assert _check_ignore(repo, f"{B.ENGINE_ENV}/python.exe"), "after init, git ignores the env"
 
 
 @pytest.mark.criterion("AC-31")
@@ -999,3 +1010,20 @@ def test_the_kit_text_names_the_engine_env_convention():
     procedures = (B.KIT / "docs" / "runbooks" / "procedures.md").read_text(encoding="utf-8")
     row = next(ln for ln in procedures.splitlines() if ln.startswith("| 2 | Install the engine"))
     assert f"{B.ENGINE_ENV}/" in row, row
+
+
+def test_lint_walks_skip_the_engine_env(tmp_path):
+    """The engine's env sits in the repo (`.context-engine/env/`), so lint's walks skip it like
+    `.venv`: a bare name cited in a doc must not resolve to a file in its site-packages (a false
+    green in G-T3), and lint must not read its thousands of files (CE-81 review)."""
+    env = tmp_path / B.ENGINE_ENV / "Lib" / "site-packages" / "somepkg"
+    env.mkdir(parents=True)
+    (env / "only_in_env.py").write_text("def bar(): pass\n", encoding="utf-8")
+    (env / "README.md").write_text("# a package's readme\n", encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "ours.py").write_text("def bar(): pass\n", encoding="utf-8")
+    files = G.Files(tmp_path)
+    assert files.find("ours.py") == tmp_path / "src" / "ours.py", "the control: a repo file resolves"
+    assert files.find("only_in_env.py") is None
+    assert G.code_ref_problem(files, "only_in_env.py", "bar") == "`only_in_env.py` does not exist (case-exact)"
+    assert [rel for rel, _ in G.docs(tmp_path, (".",))] == [], "no doc is read from the env"

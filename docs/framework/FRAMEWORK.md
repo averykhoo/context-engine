@@ -2028,6 +2028,7 @@ AGENTS.md                  # workflow conventions (how agents work), read first
 CLAUDE.md                * # product contract: the kit block (framework: <version>, imports docs/framework/contract.md), mandates, gate, traps; push-hold line on top
 HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
 context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
+.gitignore               * # the repo's own; init creates it, or appends `.context-engine/` to it when it does not ignore that yet
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)
@@ -2047,6 +2048,7 @@ docs/
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; carries its own .gitignore, never tracked
+.context-engine/env/        # the engine's pinned, non-editable env, made before init (§6.9 step 2); gitignored, never the repo's own env
 .claude/settings.local.json * # machine-local, gitignored (.claude/.gitignore): the SessionStart hook that runs orient
 .claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
 .scratch/                * # throwaway and gitignored: anything only there is lost (carries its own .gitignore)

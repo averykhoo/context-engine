@@ -384,20 +384,26 @@ def _plan_engine_ignore(root: Path, writes: dict[str, str], skipped: list[str], 
 
 def _engine_ignored(text: str) -> bool:
     """Whether a root ``.gitignore`` holding ``text`` ignores ``ENGINE_DIR``, the last matching line
-    winning as in git (a `!` line re-includes). An approximation of ``git check-ignore``: a line
-    naming only something inside the directory (`.context-engine/env/`) does not count, so it errs
-    toward appending the line, which is harmless."""
+    winning as in git (a `!` line re-includes). An approximation of ``git check-ignore`` that errs
+    only toward appending the line, which is harmless (the appended line comes last, so a re-run
+    finds it): a line naming only something inside the directory (`.context-engine/env/`) does not
+    count, a leading space stays part of the pattern as in git, and a later `!` line that may
+    re-include anything inside it (`!.context-engine/env/`, or an unanchored `!env/`) undoes it."""
     import fnmatch
 
     state = False
     for ln in text.splitlines():
-        ln = ln.strip()
+        ln = ln.rstrip()  # git drops trailing spaces but keeps leading ones
         if not ln or ln.startswith("#"):
             continue
         neg = ln.startswith("!")
-        pat = (ln[1:] if neg else ln).lstrip("/").rstrip("/")
+        raw = (ln[1:] if neg else ln).rstrip("/")
+        pat = raw.lstrip("/")
+        top = pat.split("/")[0]
         if pat in (f"{ENGINE_DIR}/*", f"{ENGINE_DIR}/**") or fnmatch.fnmatchcase(ENGINE_DIR, pat):
             state = not neg
+        elif neg and ("/" not in raw or fnmatch.fnmatchcase(ENGINE_DIR, top)):  # a `*` or `**` top matches too
+            state = False  # unanchored, or anchored inside ENGINE_DIR: it may re-include part of the env
     return state
 
 
