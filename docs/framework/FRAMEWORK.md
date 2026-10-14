@@ -1393,7 +1393,11 @@ someone using plain git or writing code by hand**. Humans are never required to 
 procedures. The agent sessions absorb the cost:
 
 1. **Agent commits carry a trailer** `Session: <key>`. Commits without one are **foreign**.
-   One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
+   It sits in the message's last paragraph, the only one git reads as trailers, with every
+   other trailer (`Co-Authored-By:`, `Closes:`) and no blank line among them: a `Session:` line
+   followed by a blank line and another trailer is no trailer to git, so the commit reads as
+   foreign (seen 2026-10-13, three commits; the template is manual-mode § context-engine commit,
+   and a test reads it back with git). One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
    repo's own, `[kinds.task] prefix`). The task's close carries `Closes: <id>` in its own commit
    (§5.5 rule 4), not its work commits; a commit made outside the engine that finishes a task
    carries it instead, and housekeeping closes the item (§6.11). Small tasks may share a session: the gate goes green over all of

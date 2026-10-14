@@ -120,8 +120,8 @@ This repo's values for those steps:
   change cannot be split. One task per commit, its id leading the title (`CE-n: what changed`);
   a commit serving no task has a plain title. Small tasks may be done together: gate green over
   all, then one commit per task by path (not surgical: a shared file goes with whichever task fits
-  best, DEC-22). Every agent commit ends with a `Session: <key>` trailer; `Closes: CE-n` is on the
-  engine's `task close` commit, made after the work is committed (CE-45).
+  best, DEC-22). Every agent commit ends in one trailer paragraph, `Session: <key>` and `Co-Authored-By:`
+  with no blank line between (CE-64). `Closes: CE-n` goes on `task close`'s commit, after the work's (CE-45).
 - Re-run `git status` and `git log -3` right before editing HANDOFF or the ledger and before
   committing: sessions here may run concurrently.
 - Frozen provenance is never edited (`context-engine routes`).

@@ -93,6 +93,11 @@ pushed into agents, only verdicts kept.
   lines still uncommitted and the records they name with them (a plain `git commit -o <paths>`
   only for paths no uncommitted op line names); never `git add -A`, never `git stash`: sessions
   may share the working tree.
+- An agent commit's message ends in one trailer paragraph: `Session: <key>` with every other
+  trailer (`Co-Authored-By:`, and `Closes:` where FRAMEWORK §6.10 puts it), no blank line among
+  them and nothing after. Git reads trailers only from the last paragraph, so a `Session:` line
+  anywhere else leaves the commit foreign. `context-engine commit` adds `Session:` there; the
+  template is in `docs/runbooks/manual-mode.md` § context-engine commit.
 - Push (§6.8): gate before every push; push only with permission; a background CI watcher for
   every push, keyed on the commit hash; the push is not done until the watcher reports; the
   watcher only watches. A release also follows `docs/runbooks/release.md`.
