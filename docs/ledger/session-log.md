@@ -7,9 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14e · kind: open
+## 2026-10-14e · kind: close
 
-- **opened:** 2026-10-14T16:02:25+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-7 (moved onto adhoc main), DEC-42 new
+- **receipts:**
+  - guards: gate green: 717 passed in 187.21s (2026-10-14); lint clean
+  - read: CE-7, adhoc .claude/settings.local.json, adhoc banner
+- **summary** (the owner digest):
+  - Owner: the trial belongs in adhoc's own folder, not a worktree, and the worktree goes (DEC-42);
+    this also makes CE-7's merge decision.
+  - adhoc main fast-forwarded to eef0ecc; worktree and branch deleted (junctions unlinked first,
+    main's data intact); engine env rebuilt in adhoc at 38ed38e.
+  - adhoc: MCP server registered for its folder; orient hook merged into its settings (owner: yes,
+    DEC-32); adhoc session 2026-10-14b closed with the banner refreshed.
+  - After-action: confirm where the owner wants a trial to run before building it; read banner text
+    through UTF-8 (a cp1252 pipe turned the section sign into mojibake, caught before writing).
+- **Still owed:**
+  - CE-7: real Claude Code sessions in adhoc (INV-31 probes), scoring (CE-79); nothing pushed
 
 ---
 
