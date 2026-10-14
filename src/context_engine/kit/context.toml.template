@@ -219,6 +219,13 @@ optional = true
 note = "created by the first engine write"
 
 [[routes]]
+component = "Residual-risk register"
+path = "docs/invariants.md"
+mode = "entries appended by `context-engine task close` or by hand; an entry is edited only when the code changes"
+optional = true
+note = "INV-n (FRAMEWORK §7.4); the same path as [working] register; created by the first `task close` that files a residual risk"
+
+[[routes]]
 component = "Runbooks"
 path = "docs/runbooks"
 mode = "replaced"

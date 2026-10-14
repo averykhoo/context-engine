@@ -159,8 +159,9 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
    move its gate command to a `## Gate` section below the end marker first, then replace the
    block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace every
    runbook in `docs/runbooks/` with the new kit's copy, unless the repo edited its own (then merge
-   by hand), and run `init` for any runbook the new kit adds. Copy each new runbook's `[[routes]]`
-   entry from the new `context.toml.template` too: lint cannot tell that one is missing. `init`
+   by hand), and run `init` for any runbook the new kit adds. Copy every `[[routes]]` entry the
+   new `context.toml.template` adds (a runbook's or any other component's) into `context.toml`
+   too: lint cannot tell that one is missing. `init`
    never overwrites a runbook, so an upgrade is the only time they move. `[engine] commit` is a
    policy now (`"milestones"`, `"every-write"` or `"off"`, FRAMEWORK §5.5 rule 4). An older
    `true` reads as `"milestones"`, so the engine stops committing every write and commits at

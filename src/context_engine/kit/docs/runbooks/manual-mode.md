@@ -48,9 +48,10 @@ without it:
 
 **Why:** Claude Code starts MCP servers only when a session launches, so nothing done mid-session
 brings the tools in. The local registration carries the interpreter's absolute path outside the
-repo, so the checked-in `.mcp.json` stays machine-neutral. Its `${CE_PYTHON}` works only if the
-variable was in Claude Code's starting environment; an `env` block in
-`.claude/settings.local.json` reaches the agent's shell but not `.mcp.json`.
+repo, so no machine path is checked in. A repo that also keeps a `.mcp.json` naming the
+interpreter through a variable (`${CE_PYTHON}`, say) gets it only if the variable was in Claude
+Code's starting environment; an `env` block in `.claude/settings.local.json` reaches the agent's
+shell but not `.mcp.json`.
 
 ## What every write does
 
@@ -103,12 +104,15 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 
 | Kind | Id | Directory | Mode | Required keys | Enums and types |
 |---|---|---|---|---|---|
-| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key |
+| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
 | story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
-| task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels lists |
+| task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
-| baton | `BTN-n` | `docs/working` | session-stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
-| pause | `PAU-n` | `docs/working` | session-stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
+| baton | `BTN-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
+| pause | `PAU-n` | `docs/working` | stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
+
+The Mode column is the kind's `mode` value; `stamped` is the session-stamped mode (FRAMEWORK
+§8.0.1).
 
 The repo's own `context.toml` is the authority: its `[kinds.<name>]` tables set each kind's
 prefix, directory, required keys and types, and a repo may have changed any of them. Read it
@@ -167,8 +171,9 @@ different case or one extra BOM gives a hash that never matches the engine's.*
    into the next commit, yours or another session's (§ What every write does, **Commit the
    write**).
 
-`HANDOFF.md` may be missing, but if it exists it must have a `## Banner (<key>)` heading:
-without one, session start, orient and both banner commands refuse.
+`HANDOFF.md` may be missing, or have no `## Banner (<key>)` heading yet (before the first clean
+close): then no banner key counts in step 2, and nothing refuses (`orient` says `no banner`,
+`banner show` gives hash `none`, and the first `banner set` writes the heading).
 
 The engine re-renders the whole ledger on every write: the preamble ends in a `---` line, entries
 are separated by a blank line, `---` and a blank line, and the last entry has no `---` after it.
@@ -1134,9 +1139,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
 2. Otherwise copy `context.toml.template` to `context.toml`; to change a kind's id prefix, edit
    `prefix` in its `[kinds.<name>]` table (no two kinds may share one, and none may collide with
    ids the repo already uses).
-3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md`, `docs/ledger/session-log.md`,
-   `docs/runbooks/manual-mode.md` and `docs/runbooks/procedures.md` from the kit to the same paths,
-   skipping any that exist.
+3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md`, `docs/ledger/session-log.md` and
+   every runbook under the kit's `docs/runbooks/` (`manual-mode.md`, `procedures.md`, `gate.md`,
+   `sabotage.md`, `fan-out.md` and `release.md`) from the kit to the same paths, skipping any that
+   exist.
 4. `CLAUDE.md`: if it holds no `<!-- context-engine kit <version> begin -->` marker, append the
    kit's `bootloader.md` after a blank line (create the file with a `# <repo>: contract` title if
    it is absent), keeping the file's line endings. If it holds an older version's block, or a
@@ -1154,7 +1160,7 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
 6. Report in one line what you created and what you skipped. Never overwrite an existing file,
    and never install anything into the repo's environment.
 
-**Why:** a new repo should get every file the procedures expect in one step, the two runbooks
+**Why:** a new repo should get every file the procedures expect in one step, the runbooks
 included, so it can follow every procedure by hand from its own tree, and an existing repo
 must not lose a byte of what it has: it maps its components onto the routes instead of moving
 them (FRAMEWORK §11.4). The engine also refuses a file that appears while it runs (it creates

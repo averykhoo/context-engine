@@ -49,10 +49,13 @@ own key to the owner as another session. Otherwise run `context-engine session s
 the key; use it as `CE_SESSION`), then work from that orient output, or run `context-engine
 orient` if it is not in your context: **a failing hook is silent**, so when it is missing, say so
 to the owner. If
-orient opens with a `Contract` section, fix that first. Do the batons and pause records it lists first,
-show the owner the other open sessions it lists (or "none"), one line each, so they can say what
-to stop; raise every question it lists in chat, one line each, then `context-engine ask raised
-<ids>`; and read the top item with `context-engine task show <id>`.
+orient opens with a `Contract` section, fix that first. The steps' order is
+`docs/runbooks/procedures.md` § Session start: after `session start`, the start-of-session
+housekeeping (procedures § Housekeeping, at session start); then show the owner the
+other open sessions orient lists (or "none"), one line each, so they can say what to stop before
+work starts; then do the batons and pause records it lists, before any other work; raise every
+question it lists in chat, one line each, then `context-engine ask raised <ids>`; and read the
+top item with `context-engine task show <id>`.
 
 Every other procedure (intake, clean close, pause, resume, push and CI, reconciling foreign
 commits, housekeeping), in order, each step with its engine command and its by-hand step, is

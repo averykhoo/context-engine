@@ -97,7 +97,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 ## INV-13: an adopter's copied runbooks go stale against a newer engine, because init never overwrites them
 
-- **affects:** a session running a ritual by hand (no engine, or an engine that errs), the session adopting a repo, the adopting repo's owner and its plain-git humans, the next session with no context, every repo the engine is pointed at
+- **affects:** a session running a procedure by hand (no engine, or an engine that errs), the session adopting a repo, the adopting repo's owner and its plain-git humans, the next session with no context, every repo the engine is pointed at
 - **why not eliminated:** the copy in the repo is the adopter's own and may carry its edits, so neither init nor an upgrade may replace it unasked
 - **control:** individual: the kit README § Upgrade step to replace each kit runbook the repo has not edited; G-D0 flags a major.minor change
 - **from:** CE-24, session 2026-10-12d
@@ -232,7 +232,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
 - **why not eliminated:** equality with the installed kit is what makes "the framework owns the file" mechanical
-- **control:** collective: the red's remedy is one copy, the same step as the upgrade ritual (kit README § Upgrade)
+- **control:** collective: the red's remedy is one copy, the same step as the upgrade procedure (kit README § Upgrade)
 - **from:** CE-38, session 2026-10-13b
 
 ## INV-33: a test that carries the marker but does not check its criterion (a skipped test, an assert that cannot fail) satisfies G-T2
@@ -253,7 +253,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every later session, since lint runs in the gate (AC-23) and a false red stops all work; the owner, whose charter and stories the guards read and who answers the open questions below; every repo the kit deploys to, since G-I2, G-T1 and G-T2 are in the §11.1 minimum set and ship with `[guards]` defaults; a plain-git human who edits `docs/criteria.md` or a test by hand
 - **why not eliminated:** finding a contradiction or classing a criterion KEEP, rewrite or retire is judgement no lint can make (P8)
-- **control:** individual: rituals.md § Intake steps 5 and 6 and the census evidence doc; the next coverage map marks them deliberately prose-only, so G7 counts them
+- **control:** individual: procedures.md § Intake steps 5 and 6 and the census evidence doc; the next coverage map marks them deliberately prose-only, so G7 counts them
 - **from:** CE-25, session 2026-10-13b
 
 ## INV-36: an upgraded repo can lack the method runbooks with lint clean, since init never edits an existing context.toml and the new routes are added by hand while the contract names those files
@@ -330,7 +330,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every session in every repo the engine runs in, since each write now commits under the lock; other sessions sharing a working tree, whose uncommitted lines and files a sweep carries; the owner, whose history gains one commit per write; a plain-git human who commits by hand or merges branches carrying op lines
 - **why not eliminated:** union merge does not order lines
-- **control:** individual: lint after a merge; rituals § Foreign reconcile
+- **control:** individual: lint after a merge; procedures § Reconciling foreign commits
 - **from:** CE-45, session 2026-10-13c
 
 ## INV-47: every write is a commit, so history grows fast and each write costs about 0.5s under the lock on Windows
@@ -442,7 +442,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
 - **why not eliminated:** a session or a human can always run git directly
-- **control:** collective: the contract and rituals name `context-engine commit`; CI lints the pushed tip; the next milestone carries the line
+- **control:** collective: the contract and procedures name `context-engine commit`; CI lints the pushed tip; the next milestone carries the line
 - **from:** CE-55, session 2026-10-13c
 
 ## INV-63: between milestones, board writes live only in the shared working tree, where a `git stash`, reset or checkout of those paths by anyone loses them
@@ -491,5 +491,5 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every session in every repo the engine runs in, whose board writes now stay in the working tree until the next milestone; other sessions sharing a working tree, whose riding writes and hand edits any session's milestone sweeps; the owner, whose history gains a commit per milestone instead of per write, and whose task closes now commit with Closes:; adopting repos, whose `commit = true` now means milestones and whose G-D0 is red until they copy the changed contract; a plain-git human who commits records by hand
 - **why not eliminated:** the baseline predates CE-55, which widens it
-- **control:** individual: rituals § Foreign reconcile only; follow-up filed
+- **control:** individual: procedures § Reconciling foreign commits only; follow-up filed
 - **from:** CE-55, session 2026-10-13c

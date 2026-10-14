@@ -698,6 +698,7 @@ def test_no_living_framework_text_says_ritual():
     frozen before DEC-39 (G-D12 reads both), and the quoted "rituals" that count_nouns keeps so a
     count typed in an older doc is still caught."""
     files = [FRAMEWORK, REPO / "docs" / "framework" / "contract.md", REPO / "CLAUDE.md", REPO / "HANDOFF.md"]
+    files += [B.KIT.parent / "REGISTER.md"]  # the engine's register ships with it, so its controls are living text too (CE-69)
     files += sorted(p for p in B.KIT.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
     found = []
     for path in files:
@@ -705,3 +706,36 @@ def test_no_living_framework_text_says_ritual():
             if re.search(r"ritual", line.replace("`Ritual`", "").replace('"rituals"', ""), re.IGNORECASE):
                 found.append(f"{path.relative_to(REPO).as_posix()}:{n}: {line.strip()[:80]}")
     assert found == [], "living framework text still says ritual (DEC-39: say procedure):\n" + "\n".join(found)
+
+
+# -- CE-69: the kit README's file table and directory line are what init does ------------------
+
+
+def test_the_kit_readme_table_and_dirs_line_match_what_init_writes():
+    """The README's `| Kit file | Goes to | What it is |` table names every kit file (bootstrap.FILES,
+    the template, the bootloader and the contract), each going where init puts it, and its
+    `init also ... creates` line names exactly bootstrap.KEEP and SELF_IGNORING: a kit file added
+    without a row, or a directory init stops creating, turns this red."""
+    readme = (B.KIT / "README.md").read_text(encoding="utf-8").replace("\r\n", "\n")
+    head = readme.index("| Kit file | Goes to | What it is |")
+    table = readme[head:].split("\n\n", 1)[0].splitlines()[2:]
+    rows = {}
+    for line in table:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        kit_file = re.fullmatch(r"`([^`]+)`", cells[0])
+        assert kit_file, f"a README table row whose first cell is not one backticked kit file: {line!r}"
+        assert kit_file.group(1) not in rows, f"two README table rows for {kit_file.group(1)}"
+        rows[kit_file.group(1)] = cells[1]
+    assert set(rows) == set(B.FILES) | {B.TEMPLATE, B.BOOTLOADER, B.CONTRACT}, rows
+    shipped = {p.relative_to(B.KIT).as_posix() for p in B.KIT.rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+    assert set(rows) == shipped - {"README.md"}, "every file the kit ships has a row, and every row a file"
+    for src, dest in B.FILES.items():
+        assert rows[src] == f"`{dest}`", f"{src} goes to {dest}, the README says {rows[src]}"
+    assert rows[B.TEMPLATE] == f"`{C.CONFIG_NAME}`" and rows[B.CONTRACT] == f"`{B.CONTRACT_DEST}`"
+    assert rows[B.BOOTLOADER].startswith(f"appended to `{B.CONTRACT_TARGET}`")
+    line = " ".join(readme[readme.index("`init` also writes") :].split("\n\n", 1)[0].split())
+    keep, ignoring = line.split("(each with an empty `.gitkeep`)", 1)
+    named = re.findall(r"`([^`]+)/`", keep)
+    assert sorted(named) == sorted(B.KEEP), keep
+    named = re.findall(r"`([^`]+)/`", ignoring.split("(each carrying its own `.gitignore`", 1)[0])
+    assert sorted(named) == sorted(B.SELF_IGNORING), ignoring
