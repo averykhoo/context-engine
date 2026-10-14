@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14d · kind: open
+## 2026-10-14d · kind: close
 
-- **opened:** 2026-10-14T13:51:20+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-7 (cut over on adhoc's trial branch), CE-79 new, CE-80 new, CE-81 new, DEC-41 new,
+  DEC-1 amended
+- **receipts:**
+  - guards: gate green: 716 passed in 203.39s (2026-10-14); lint clean
+  - read: CLAUDE.md, docs/framework/contract.md, CE-7, DEC-1, kit README § 1-Hook,
+    docs/evidence/adhoc-dryrun-2026-10-14.md, procedures § Clean close
+- **summary** (the owner digest):
+  - Owner: the engine runs inside the adhoc repo; settled as DEC-41 (a pinned, non-editable engine
+    env in the target repo's folder, gitignored), amending DEC-1.
+  - CE-7: adhoc cut over on branch context-engine-trial (worktree adhoc-microphone-array-ce): kit at
+    38ed38e, DEC-1..68, AD-1..14 + ASK-9, HANDOFF 605 -> 78 lines; adhoc gate green.
+  - CE-79 filed: follow up on the trial about 2026-10-21. CE-80, CE-81 filed from trial findings;
+    CE-81 waits for CE-7 (no kit edits mid-trial).
+  - MCP server registered for the worktree (local scope; connects); the hook was already there.
+    adhoc main is untouched until the merge.
+  - After-action: register MCP during the cutover, not after; tell the owner which folder the trial
+    runs in; close without asking when the work is done (DEC-31).
+- **Still owed:**
+  - CE-7: real Claude Code sessions in the adhoc worktree (INV-31 probes), scoring (CE-79), owner's
+    merge decision; nothing pushed
 
 ---
 

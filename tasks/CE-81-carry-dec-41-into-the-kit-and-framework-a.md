@@ -5,7 +5,7 @@ title: "Carry DEC-41 into the kit and FRAMEWORK: a target repo's engine env is p
 brief: Kit README § 1, FRAMEWORK bootstrap step 2 and the upgrade procedure still say only 'its own env'; add the in-repo path
 pri: NEXT
 state: open
-deps: []
+deps: [CE-7]
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-14d
