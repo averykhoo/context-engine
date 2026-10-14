@@ -215,12 +215,12 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
         ("body_sha", "owned by the engine"),
         ("status", "decision supersede"),
         ("answers", "ask answer"),
-        ("actor", "fixed at birth"),
-        ("decided", "fixed at birth"),
-        ("session", "fixed at birth"),
-        ("attribution", "fixed at birth"),
-        ("imported_from", "fixed at birth"),
-        ("generated", "fixed at birth"),
+        ("actor", "fixed when the record is created"),
+        ("decided", "fixed when the record is created"),
+        ("session", "fixed when the record is created"),
+        ("attribution", "fixed when the record is created"),
+        ("imported_from", "fixed when the record is created"),
+        ("generated", "fixed when the record is created"),
         ("verified", "record amend"),
         ("supersedes", "decision supersede"),
         ("superseded_by", "decision supersede"),
@@ -234,7 +234,7 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
         ("refs", "decision link"),
     ],
 )
-def test_decision_set_refuses_keys_another_operation_or_birth_owns(eng, key, match):
+def test_decision_set_refuses_keys_another_operation_owns_or_creation_fixed(eng, key, match):
     rid = dec(eng)
     path = eng.store.get(rid).path
     before = path.read_bytes()

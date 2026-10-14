@@ -24,9 +24,10 @@ The routing table is `[[routes]]` in `context.toml`; print it with `context-engi
 if a routed path disappears. Record kinds, their directories and schemas are `[kinds.*]` in the
 same file. In short: the spec is `docs/framework/FRAMEWORK.md`; owner words are stories
 (`docs/stories/`) and decisions (`docs/decisions/`), both append-only; the board is `tasks/`;
-the ledger and op log are `docs/ledger/`; `docs/runbooks/rituals.md` orders every
-ritual and `docs/runbooks/manual-mode.md` does every `context-engine` operation by hand; both are
-copies of the kit's (`src/context_engine/kit/docs/runbooks/`), kept byte-equal by the gate.
+the ledger and op log are `docs/ledger/`; `docs/runbooks/procedures.md` gives every
+procedure's steps in order and `docs/runbooks/manual-mode.md` does every `context-engine`
+operation by hand; both are copies of the kit's (`src/context_engine/kit/docs/runbooks/`), kept
+byte-equal by the gate.
 
 **Id prefixes** (zero collisions on 2026-10-08, DEC-7): tasks `CE-n`, decisions `DEC-n`,
 stories `US-n`, criteria `AC-n`, owner questions `ASK-n`, residual-risk register entries
@@ -66,7 +67,7 @@ run is a red gate. Without CI, the by-hand fallback is those two commands in a f
 **Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py`
 (CE-67; Docker in WSL, about a minute once the image is cached). This machine is Windows and CI is
 Linux, so a green local gate can be a red CI run (`39e09ca`, 2026-10-13;
-`docs/evidence/ci-divergence-2026-10-13.md` names the footguns). Push only when both are green.
+`docs/evidence/ci-divergence-2026-10-13.md` names the traps). Push only when both are green.
 
 ## Sabotage rule (owner mandate, DEC-11)
 
@@ -82,42 +83,44 @@ dir>`, as `tools/sabotage_ce2.py` does). Python trusts a `.pyc` whose source has
 and the same mtime second, so a same-length sabotage written right after a restore runs the
 old code and passes: a false green, seen 2026-10-08d.
 
-## Rituals (FRAMEWORK §6, through `context-engine`)
+## Procedures (FRAMEWORK §6, through `context-engine`)
 
 **Session start:** `context-engine session start` (prints the key; use it as `CE_SESSION`), then `context-engine orient`.
-Do the batons and pauses it lists first. Show the owner the other open sessions it lists (or
+Do the batons and pause records it lists first. Show the owner the other open sessions it lists (or
 "none"), one line each, so they can say what to stop. Raise every question it lists in chat,
-one line each, then `context-engine ask raised <ids>`. Read the NOW item with `context-engine task show <id>`.
+one line each, then `context-engine ask raised <ids>`. Read the top item with `context-engine task show <id>`.
 
-**Every ritual's steps, in order, are `docs/runbooks/rituals.md`, and only there**: intake, clean
-close, pause, resume, push and CI, bootstrap, foreign reconcile, housekeeping. Each step gives its
-`context-engine` command, its by-hand step in `docs/runbooks/manual-mode.md`, and its why. **When
-`context-engine` errors or refuses something it should allow, do that step by hand from the
-runbooks, then fix the engine** (manual-mode § When the engine and this runbook disagree). A
-refusal with a sensible remedy is not an error: follow the remedy.
+**Every procedure's steps, in order, are in `docs/runbooks/procedures.md`, and only there**:
+intake, clean close, pause, resume, push and CI, bootstrap, reconciling foreign commits,
+housekeeping. Each step gives its `context-engine` command, its by-hand step in
+`docs/runbooks/manual-mode.md`, and why it is done. **When `context-engine` errors or refuses
+something it should allow, do that step by hand from the runbooks, then fix the engine**
+(manual-mode § When the engine and this runbook disagree). A refusal with a sensible remedy is
+not an error: follow the remedy.
 
 This repo's values for those steps:
 - `<gate>` is `<interpreter> -m pytest -q` (§ Gate above); lint runs inside it.
-- Owner intent (rituals § Intake): `context-engine record new story "<title>" --file <words.md>
+- Owner intent (procedures § Intake): `context-engine record new story "<title>" --file <words.md>
   --set actor=owner --set story_status=live --set goals=[G..]`, `context-engine record amend US-n
   "<words>"`, `context-engine record new decision "<title>" --file <words.md> --set actor=owner
   --set decision_status=PROVISIONAL`, or `context-engine ask answer ASK-n "<words>" --title
   "<decision title>"`. Write owner words to a file with the Write tool, not a heredoc (heredocs
   here can mangle backslashes and quotes).
-- Clean close: `context-engine task list` is the board; HANDOFF keeps no copy. `session close
-  --summary` is repeated once per digest line, at most 7. **Ask before every push, and push only
+- Clean close: `context-engine task list` is the board; HANDOFF keeps no copy. `session close`
+  takes one `--summary` per line of the digest, at most 7. **Ask before every push, and push only
   on a green gate** (DEC-22); every push gets a CI watcher (global `CLAUDE.md`).
 
 ## Rules
 
 - **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
   the work to its own subagents or a workflow; the top level only reports progress, blockers
-  and delays. Owner words and first-hand verification stay at the top.
+  and delays. Owner words and first-hand verification stay with the top-level session.
 - Commit by path (`git commit -o <paths>`); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
   change cannot be split. One task per commit, its id leading the title (`CE-n: what changed`);
   a commit serving no task has a plain title. Small tasks may be done together: gate green over
-  all, then one commit per task by path (not surgical). Every agent commit ends with a
+  all, then one commit per task by path (not surgical: a shared file goes with whichever task fits
+  best, DEC-22). Every agent commit ends with a
   `Session: <key>` trailer, plus `Closes: CE-n` when it finishes the task.
 - Re-run `git status` and `git log -3` right before editing HANDOFF or the ledger and before
   committing: sessions here may run concurrently.
@@ -132,6 +135,6 @@ This repo's values for those steps:
   it; when necessary, minimize its cost (DEC-18, FRAMEWORK §6.6).
 - **Keep `FRAMEWORK.md` current as we build** (DEC-19, §6.12): change in place; archive to
   `FRAMEWORK-v<version>.md` only what the future must reference. Every programmatic process has
-  a ritual fallback in a runbook (DEC-20, P16).
+  a by-hand fallback in a runbook (DEC-20, P16).
 - **After-action review** (US-12, §6.12) is an open idea, not built: if a session has a note on
   what worked or could improve, put it in the ledger `summary:` for now.

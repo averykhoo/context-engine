@@ -575,7 +575,7 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     key = started(eng)
     (root / "wip.py").write_text("x = 1\n", encoding="utf-8")
     (root / "HANDOFF.md").write_text("# changed\n", encoding="utf-8")
-    _git(root, "add", "HANDOFF.md")  # staged by someone else: must not ride along
+    _git(root, "add", "HANDOFF.md")  # staged by someone else: must not go into the commit
     out = eng.pause_open("half-built parser", "run the gate, then commit wip.py", evidence="docs/evidence/x.md", **kw(key))
     rec = next(eng.store.records("pause"))
     assert rec.doc.get("branch") == "feature-x"
@@ -767,7 +767,7 @@ def test_record_new_writes_a_stamped_decision_and_fills_only_now_keys(eng, capsy
     rec = eng.store.get("DEC-1")
     assert (rec.doc.get("decided"), rec.doc.get("session"), rec.doc.get("actor")) == (dt.date.today(), key, "owner")  # main() builds its own engine on the real clock
     assert "keep it\nin one file" in rec.doc.body
-    assert eng.lint() == []  # stamped at birth
+    assert eng.lint() == []  # stamped when created
     assert main([*base, "record", "new", "decision", "No actor", "--body", "x", "--set", "decision_status=BUILT"]) == 2
     assert "no `actor`" in capsys.readouterr().err  # an actor is never guessed
     assert main([*base, "record", "new", "task", "Not here", "--body", "x"]) == 2
@@ -833,7 +833,7 @@ def test_a_framework_pin_equal_to_the_engines_major_minor_passes(eng, text):
 @pytest.mark.parametrize("text, version, says, remedy", [
     ("framework: 0.4\n", "0.5.0.dev0", "`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "otherwise run an engine 0.4.x"),
     ("framework: 1.5\n", "0.5.0", "`framework: 1.5` does not match the installed engine 0.5.0 (framework 0.5)", "set `framework: 0.5`"),
-    ("framework: 0.5.*\n", "0.6.1", "`framework: 0.5.*` does not match the installed engine 0.6.1 (framework 0.6)", "follow the upgrade ritual"),
+    ("framework: 0.5.*\n", "0.6.1", "`framework: 0.5.*` does not match the installed engine 0.6.1 (framework 0.6)", "follow the upgrade procedure"),
 ])
 def test_a_framework_pin_with_another_major_minor_fails_lint_naming_the_remedy(eng, text, version, says, remedy):
     [(path, message, rem)] = pinned(eng, text, version)
@@ -858,12 +858,12 @@ def test_a_missing_or_garbled_framework_pin_fails_lint(eng, text, says):
 def test_every_pin_and_the_kit_block_marker_must_match(eng):
     stale = "framework: 0.5\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
     got = pinned(eng, stale)
-    assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 contract block, but the installed engine is framework 0.5"]
+    assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 block, but the installed engine is framework 0.5"]
     assert "kit/bootloader.md" in got[1][2]
     current = "framework: 0.5\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8")
     copy_contract(eng)
     assert pinned(eng, current) == []
-    assert [m for _, m, _ in pinned(eng, current.replace("0.5", "0.4"))] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)"] * 2 + ["holds the kit 0.4 contract block, but the installed engine is framework 0.5"]
+    assert [m for _, m, _ in pinned(eng, current.replace("0.5", "0.4"))] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)"] * 2 + ["holds the kit 0.4 block, but the installed engine is framework 0.5"]
 
 
 # -- G-D0's bootloader half (CE-38): the kit block and the contract it imports ----------------
@@ -933,7 +933,7 @@ def test_the_inline_block_from_before_the_bootloader_fails_g_d0_naming_the_upgra
     copy_contract(eng)
     inline = f"# Ours\n\n{K.BEGIN}\nframework: 0.5\n\n### Gate\n\n`make test`\n{K.END}\n"
     [(path, message, remedy)] = pinned(eng, inline)
-    assert path == "CLAUDE.md" and message == "holds the inline kit 0.5 block, which copies the framework's rules instead of importing them"
+    assert path == "CLAUDE.md" and message == "holds a kit 0.5 block that copies the framework's rules instead of importing them"
     assert "`## Gate`" in remedy and "kit/bootloader.md" in remedy and "kit README § Upgrade" in remedy
 
 

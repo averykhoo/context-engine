@@ -5,7 +5,7 @@ the fan-out runbook's build rounds are FRAMEWORK §6.6's steps.
 
 Byte equality with the kit copies and the leak check are tests/test_kit.py's (AC-37, AC-33), which
 read every kit file. Not checked here: whether a runbook's method is right (the review does that),
-and rituals.md and manual-mode.md's liveness lines (they have none yet; G-D4 is CE-33)."""
+and procedures.md and manual-mode.md's liveness lines (they have none yet; G-D4 is CE-33)."""
 
 import re
 import tomllib

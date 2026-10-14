@@ -18,37 +18,37 @@ turned one non-goal into an anti-goal (ASK-1, answered as DEC-10; words verbatim
 
 **The whole system described in `docs/framework/FRAMEWORK.md`, built as something the owner
 can deploy across all their repos** (US-9): the components (charter, stories, criteria,
-contract, orientation note, board, batons and pauses, decisions, ledger, deviations, evidence,
-archive), the rituals that run them, the guard catalogue that checks them (§8.1 to §8.5), and
+contract, orientation note, board, batons and pause records, decisions, ledger, deviations,
+evidence, archive), the procedures that run them, the guard catalogue that checks them (§8.1 to §8.5), and
 the bootstrap and adoption path for new and existing repos (§6.9, §10, §11).
 
 **The record engine (§8.0) is the first piece and the backbone:** one Python package that owns
 every component that is a set of id'd records, stores them as OKF markdown, and exposes them
-through a CLI, a per-session MCP server, and a no-model housekeeping script. It is pointed at a
-repo; it is never installed into one.
+through a CLI, a per-session MCP server, and a housekeeping script that calls no model. It is
+pointed at a repo; it is never installed into one.
 
 **Order (DEC-10):** build it here and dogfood it on this repo first; work out how other repos
 adopt it after that.
 
 ## Goals, each with how it is measured
 
-Goal ids take the one id form `G-n` (DEC-33, owner 2026-10-13). Stories stamped before then name
-them `G1` to `G7` in `goals:`; lint (G-I1) reads `G1` as `G-1`, and owner words are never rewritten.
+Goal ids take the standard id form `G-n` (DEC-33, owner 2026-10-13). Stories stamped before then
+name them `G1` to `G7` in `goals:`; lint (G-I1) reads `G1` as `G-1`, and owner words are never rewritten.
 
 | # | Goal | Measured by | Stories |
 |---|---|---|---|
 | G-1 | **Sessions stop spending context on reading and re-reading files to edit records** | context read at session start and clean close, against a baseline taken by hand before cutover (CE-4 / CE-7) | US-1, US-6 |
-| G-2 | **Every place has room for its records and checks on what is inside** | each record kind has a schema, a cap and a way out; each rule has a write-time refusal and a rest-time lint that has been shown to fail (sabotage) | US-2 |
+| G-2 | **Every component has room for its records and checks on what is inside** | each record kind has a schema, a cap and a way out (archive or promotion); each rule has a write-time refusal and a lint check on the stored files that has been shown to fail (sabotage) | US-2 |
 | G-3 | **Routine upkeep is done by tools, not by hand** | housekeeping operations replace hand edits for stamps, comments, expiry and evidence-backed closes; no `hk_` operation can make a judgement call | US-3, US-8 |
-| G-4 | **Nothing to run by hand: it is text in a repo that Claude Code manages** | committed files (`.mcp.json`, `context.toml`, `CLAUDE.md`) are the whole setup; any server is started and stopped by Claude Code as part of a session ritual | US-4, US-9 |
+| G-4 | **Nothing to run by hand: it is text in a repo that Claude Code manages** | committed files (`.mcp.json`, `context.toml`, `CLAUDE.md`) are the whole setup; any server is started and stopped by Claude Code as part of a session | US-4, US-9 |
 | G-5 | **Records stay plain files that humans and git can read and edit** | records are OKF markdown; a hand edit is legal and is caught by lint if it breaks something; no database is a source of truth | US-5, US-7 |
 | G-6 | **Works for every repo the owner has**, whatever its language or environment | dogfooded here first (CE-8), then adopted by the owner's other repos (adhoc, intervals, zanzibar, audio-workspace) | US-9 |
-| G-7 | **The whole framework is built, not just the engine** | every component, ritual and guard in FRAMEWORK.md is either built (tool, guard or skill), or written down as deliberately prose-only, or explicitly deferred with a reason | US-9 |
+| G-7 | **The whole framework is built, not just the engine** | every component, procedure and guard in FRAMEWORK.md is either built (tool, guard or skill), or written down as deliberately prose-only, or explicitly deferred with a reason | US-9 |
 
 ## Anti-goals (must not happen)
 
 - **A server the owner has to start or manage** (owner: *"not just a non-goal, its an
-  anti-goal"*, US-9). Claude Code may start its own server as a ritual; the owner never does.
+  anti-goal"*, US-9). Claude Code may start its own server during a session; the owner never does.
 
 ## Non-goals (owner's words)
 
@@ -67,7 +67,7 @@ Proposed by the agent; the owner found it *"not incorrect"* (DEC-10):
 1. **Never lose owner words or evidence** (FRAMEWORK P9, P10).
 2. **Files stay human-readable and git-friendly** over speed or cleverness (G-5).
 3. **A mechanical refusal beats a written warning** (FRAMEWORK §0.2).
-4. **Less context per ritual** over more features (G-1).
+4. **Less context per procedure** over more features (G-1).
 5. **One versioned implementation**, built and dogfooded here; never copy engine code into a
    target repo (DEC-1, DEC-2, DEC-10).
 

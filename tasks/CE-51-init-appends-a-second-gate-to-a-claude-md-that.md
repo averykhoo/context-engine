@@ -12,4 +12,4 @@ moved: 2026-10-13c
 updated: 2026-10-13c
 ---
 
-From CE-26's deploy review (2026-10-13c, finding D#7, already on main before CE-26): running init on a repo whose CLAUDE.md already has a ## Gate section appends the bootloader's stub next to it, leaving two Gate sections. Recommendation: init detects an existing ## Gate and leaves the stub out, saying so in its output, or lint reds a duplicate heading in CLAUDE.md.
+From CE-26's deploy review (2026-10-13c, finding D#7, already on main before CE-26): running init on a repo whose CLAUDE.md already has a ## Gate section appends the kit block's stub next to it, leaving two Gate sections. Recommendation: init detects an existing ## Gate and leaves the stub out, saying so in its output, or lint fails on a duplicate heading in CLAUDE.md.

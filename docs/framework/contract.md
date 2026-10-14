@@ -33,13 +33,13 @@ owner changes a rule there, never in this file. What is true now and what is nex
 This repo's own test command, as `CLAUDE.md` § Gate names it, then `context-engine lint`, from
 the repo root. Run it before every commit that touches code, tests or any record, and before
 every push; the engine's own commits of its writes are the one exception, and `context-engine
-commit` runs none, so run it first. Lint covers the record schemas, append-only bodies, bundles, the working state, the
+commit` does not run the gate, so run the gate first. Lint covers the record schemas, append-only bodies, bundles, the working state, the
 routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
 record or a dead route. How to run it so its result is true, and the test baselines:
 `docs/runbooks/gate.md`. No guard is believed until it has been seen to fail (FRAMEWORK P7):
 `docs/runbooks/sabotage.md`.
 
-## Rituals
+## Procedures
 
 **Session start:** a `SessionStart` hook (`context-engine init` writes it to
 `.claude/settings.local.json`) prints `context-engine orient` into your context at startup,
@@ -49,14 +49,14 @@ own key to the owner as another session. Otherwise run `context-engine session s
 the key; use it as `CE_SESSION`), then work from that orient output, or run `context-engine
 orient` if it is not in your context: **a failing hook is silent**, so when it is missing, say so
 to the owner. If
-orient opens with a `Contract` section, fix that first. Do the batons and pauses it lists first,
+orient opens with a `Contract` section, fix that first. Do the batons and pause records it lists first,
 show the owner the other open sessions it lists (or "none"), one line each, so they can say what
 to stop; raise every question it lists in chat, one line each, then `context-engine ask raised
 <ids>`; and read the top item with `context-engine task show <id>`.
 
-Every other ritual (intake, clean close, pause, resume, push and CI, foreign reconcile,
-housekeeping), in order, each step with its engine command and its by-hand step, is
-`docs/runbooks/rituals.md` in this repo; every operation by hand is `docs/runbooks/manual-mode.md`.
+Every other procedure (intake, clean close, pause, resume, push and CI, reconciling foreign
+commits, housekeeping), in order, each step with its engine command and its by-hand step, is
+`docs/runbooks/procedures.md` in this repo; every operation by hand is `docs/runbooks/manual-mode.md`.
 When the engine errors or refuses something it should allow, do that step by hand from those
 runbooks, then report the engine bug. A refusal with a sensible remedy is not an error: follow the
 remedy.
@@ -66,7 +66,7 @@ remedy.
 **Ultracode** (the `Workflow` tool, multi-agent orchestration) needs no per-request opt-in when
 it keeps the session's own context and tokens down: bulky reading, auditing or verification
 pushed into agents, only verdicts kept.
-- The test is shape, not permission: a real fan-out with a reconcile step;
+- What decides is the shape of the work, not permission: a real fan-out with a reconcile step;
 - not a cheap lookup, and not coupled work split up to go "faster".
 
 **Several tasks in one session:** when one request asks for more than one task,
@@ -81,7 +81,7 @@ pushed into agents, only verdicts kept.
 - **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
   Never fan out with fable: it wastes tokens.
 - Commit by path, through `context-engine commit <paths> -m "<message>"`, which takes the op
-  lines still riding along and the records they name with them (a plain `git commit -o <paths>`
+  lines still uncommitted and the records they name with them (a plain `git commit -o <paths>`
   only for paths no uncommitted op line names); never `git add -A`, never `git stash`: sessions
   may share the working tree.
 - Push (§6.8): gate before every push; push only with permission; a background CI watcher for

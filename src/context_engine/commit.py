@@ -1,32 +1,31 @@
 """The engine commits its writes by path, at milestones (FRAMEWORK §5.5 rule 4, DEC-36).
 
-``[engine] commit`` says when (``store.Store._commit``): at a milestone (task close, the owner-words
-writes, a baton or pause, session close or pause, the banner), after every write, or never but a
-pause. A write that is not a milestone rides along with the next commit, which carries it whole. The
-session's own commits go through ``commit`` too (``context-engine commit <paths> -m ...``), so
-they never split a record from its op line.
+``[engine] commit`` says when (``store.Store._commit``): at a milestone (task close, the
+owner-words writes, a baton or pause, session close or pause, the banner), after every write, or
+never but a pause. A write that is not a milestone stays uncommitted and goes into the next
+commit, which carries it whole. The session's own commits go through ``commit`` too
+(``context-engine commit <paths> -m ...``), so they never split a record from its op line.
 
 A commit carries **every op log line the working tree has and HEAD lacks, every file those lines
 name, and the op log itself**. So the op log at HEAD never runs ahead of, or behind, the records
 it names, and a clean checkout of any commit passes G-W7 on its own. Lines another session left
-uncommitted (they rode along, its commit failed, it died, or it ran by hand or on an older
-engine) go in too, with the files they name: that is the commit its own milestone would have
-made. The message and the operation's line both say
-whose they were.
+uncommitted (they were not yet committed, its commit failed, it died, or it ran by hand or on an
+older engine) go in too, with the files they name: that is the commit its own milestone would
+have made. The message and the operation's reply both say whose they were.
 
 It runs while the engine lock is held, so no engine operation is half-written in the tree when
 it reads. It runs ``git commit --only`` on those paths, after a ``git add`` only for paths git
 has never seen (undone if the commit fails). What another session staged on other paths stays
 staged; nothing is unstaged, reset or stashed; hooks run.
 
-It never undoes the write it follows. When it cannot commit, the operation's line says why, and
+It never undoes the write it follows. When it cannot commit, the operation's reply says why, and
 the session commits those paths by hand (manual-mode § What every write does):
-- it says nothing when the root is in no git work tree (no ``.git`` in it or above it), or the
-  policy makes no commit now (the session's own commit says so instead: it was asked for);
-- otherwise the line reads "not committed: ...". That covers: git missing beside a ``.git``; git
-  refusing the repo; a merge, rebase, cherry-pick, revert or bisect in progress; a detached HEAD;
-  ``GIT_DIR``-style variables set (inside a git hook); ``context.toml`` not tracked by the
-  enclosing repo; the op log gitignored, or missing lines HEAD has; a named record whose
+- it says nothing when the root is not inside a git work tree (no ``.git`` in it or above it), or
+  the policy makes no commit now (the session's own commit says so instead: it was asked for);
+- otherwise the reply reads "not committed: ...". That covers: a ``.git`` directory present but
+  no git executable; git refusing the repo; a merge, rebase, cherry-pick, revert or bisect in
+  progress; a detached HEAD; ``GIT_DIR``-style variables set (inside a git hook);
+  ``context.toml`` not tracked by the enclosing repo; the op log gitignored, or missing lines HEAD has; a named record whose
   frontmatter does not parse (a hand edit in progress); and git refusing the commit (a hook,
   the identity, ``index.lock`` held past its retries, a timeout).
 
@@ -36,8 +35,8 @@ the engine lock is held.
 
 Deliberately not handled: a path named by a line that another session is still editing by hand,
 when the half-edit still parses. It is committed as it stands, and nothing is lost from the
-tree; the line names the other session whose lines were carried. Under the milestone policy a
-record rides along until the next milestone, whoever makes it, so that window is wide; a
+tree; the reply names the other session whose lines were carried. Under the milestone policy a
+record stays uncommitted until the next milestone, whoever makes it, so that window is wide; a
 half-edit that breaks the frontmatter stops the commit instead (INV-42).
 """
 
@@ -94,11 +93,11 @@ class Outcome:
     carried: tuple[str, ...] = field(default_factory=tuple)
 
     def line(self) -> str:
-        """The suffix for the operation's one line."""
+        """The suffix for the operation's one-line reply."""
         if self.sha:
             extra = []
             if self.carried:
-                extra.append(f"carrying lines left uncommitted by {', '.join(self.carried)}")
+                extra.append(f"including op lines that {', '.join(self.carried)} left uncommitted")
             if self.left_out:
                 extra.append(f"left out as gitignored: {', '.join(self.left_out)}")
             return f"; committed {self.sha}" + (f" ({'; '.join(extra)})" if extra else "")
@@ -197,7 +196,7 @@ def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[s
     """An engine commit's message. The title is ``engine: <op> <id>, ...``, naming the session's
     own ops, this operation's first; an operation that names its own title (a pause, a task
     close) gets an ``Ops:`` line naming them instead, when there is more than one. Then the
-    operation's ``body``, a paragraph naming any other session whose lines ride along, then
+    operation's ``body``, a paragraph naming any other session whose uncommitted lines go in, then
     ``trailers`` and the ``Session:`` trailer, in one block."""
     parts = _parts(lines, session, lead)
     paras = []
@@ -244,7 +243,7 @@ def session_trailers(text: str) -> list[str]:
 
 def session_message(text: str, lines: list[dict], session: str) -> str:
     """A session's own commit message as it wrote it, plus what the engine carries: an ``Ops:``
-    line naming the op log lines it sweeps in, and the paragraph naming other sessions, both
+    line naming the uncommitted op log lines it takes in, and the paragraph naming other sessions, both
     before the closing trailer paragraphs; and a ``Session:`` trailer in the last paragraph,
     where ``git interpret-trailers`` reads it, unless the message has one already."""
     paras = _paragraphs(text)
@@ -284,7 +283,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     if set_env:
         return Outcome(note=f"{', '.join(set_env)} is set (inside a git hook?), so a commit would go to that repo or index; outside it, {remedy}")
     if not _in_git_tree(root):
-        return Outcome(note=f"{root} is in no git work tree") if asked else Outcome()
+        return Outcome(note=f"{root} is not inside a git work tree") if asked else Outcome()
     git = _Git(root)
     try:
         p = git.run("rev-parse", "--absolute-git-dir", "--show-prefix")
@@ -295,7 +294,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     if p.returncode != 0:
         if "not a git repository" in p.stderr:
             # a `.git` above that is not a repo of this tree: nothing to commit to
-            return Outcome(note=f"{root} is in no git work tree") if asked else Outcome()
+            return Outcome(note=f"{root} is not inside a git work tree") if asked else Outcome()
         return Outcome(note=f"git refuses this repo ({_first_error(p)}); {remedy}")
     gitdir, prefix = (p.stdout.splitlines() + ["", ""])[:2]
     gitdir = Path(gitdir.strip())
@@ -323,7 +322,7 @@ def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
 
 def pending(root: Path, oplog: str) -> set[str]:
     """The paths, from the top of the work tree as `git status` gives them, that the next
-    commit's sweep carries: the op log and every path its lines HEAD lacks name. Empty when
+    commit carries: the op log and every path its lines HEAD lacks name. Empty when
     there is no git, or nothing is uncommitted. A pause reads it to leave those paths out of its
     own list of uncommitted paths, since its commit carries them (INV-45)."""
     log = root / oplog
@@ -384,7 +383,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         try:
             o = json.loads(ln)
         except ValueError:
-            continue  # G-W7 reports it; the line still rides with the op log
+            continue  # G-W7 reports it; the line still goes in with the op log
         if isinstance(o, dict):
             ops.append(o)
     wanted = list(dict.fromkeys([oplog, *(str(o["path"]) for o in ops if o.get("path"))])) if fresh else []
@@ -400,7 +399,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     if fresh and CONFIG not in given and (codes.get(prefix + CONFIG) in ("??", "!!") or not (root / CONFIG).exists()):
         where = f" (this target is {prefix.rstrip('/')} inside a larger repo)" if prefix else ""
         return Outcome(note=(f"{CONFIG} is not committed in this repo{where}, so a clean checkout would lack it; "
-                             f"commit the kit's files by path first (rituals § Bootstrap), then {remedy}"))
+                             f"commit the kit's files by path first (procedures § Bootstrap), then {remedy}"))
     if fresh and codes.get(prefix + oplog) == "!!":
         return Outcome(note=(f"{oplog} is gitignored, so no commit can carry it and G-W7 fails on every clone; "
                              f"un-ignore it, or set `[engine] commit = \"off\"` and commit by hand"))
@@ -415,7 +414,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         paths.append(rel)
         if code == "??":
             untracked.append(rel)
-    for rel in paths:  # a record the sweep carries must parse, or a clean checkout of the commit would not lint
+    for rel in paths:  # a record the commit carries must parse, or a clean checkout of the commit would not lint
         if rel.endswith(".md") and (root / rel).is_file():
             try:
                 okf.read_head(root / rel)

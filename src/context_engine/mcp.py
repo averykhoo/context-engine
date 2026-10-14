@@ -6,7 +6,7 @@ which Claude Code sets to the project it started in. Agents see the tools as
 
 Each tool runs its operation with ``ops.Op.call``, as the CLI does (AC-18): the same function
 and, for a write, the same commit (FRAMEWORK §5.5 rule 4). This module only adds the caller and
-caps the reads. A write returns its one line; a read longer than
+caps the reads. A write returns its one-line reply; a read longer than
 ``read_max_bytes`` is cut at a line and says where the rest is (AC-19). A refusal comes back as
 a tool error carrying its remedy.
 

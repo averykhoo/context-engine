@@ -17,7 +17,9 @@ appends every ``residual:`` line to the register: one markdown file of ``## INV-
 entries, appended idempotently (keyed on the task id and the risk text).
 
 The engine's own register ships inside the package (:data:`PACKAGED`), so a repo the engine is
-pointed at can read it (``register show --engine``): that is the handover (P17, regs. 7, 11).
+pointed at can read it (``register show --engine``). That is how the engine hands its residual
+risks over to every repo that adopts it (P17: regulations 7 and 11 of Singapore's Design for
+Safety Regulations).
 
 Deliberately not here: deciding whether a task is above the threshold (its author declares it),
 and turning the register into a record kind.
@@ -37,7 +39,7 @@ FAME = ("F", "A", "M", "E")
 RISK_KEYS = ("rung", "why", "control", "affects")
 ENTRY_FIELDS = ("affects", "why not eliminated", "control", "from")
 PACKAGED = "REGISTER.md"  # package data: the engine's own register, handed over with it
-TEMPLATE = """affects: <who can be hurt: the building session, the next session, the owner, a plain-git human, every deployed repo>
+TEMPLATE = """affects: <who can be hurt: the building session, the next session, the owner, a person using plain git, every deployed repo>
 - eliminated: <a risk the design cannot produce>
 - reduced: <risk> | rung: <reduce|collective> | control: <the refusal, guard or rule, by name>
 - residual: <risk> | rung: <reduce|collective|individual> | why: <why it was not eliminated> | control: <the guard or rule, by name>
@@ -137,7 +139,7 @@ def problems(rv: Review | None, section: str | None = None) -> list[str]:
             elif r.cls == "residual" and rung == "eliminate":
                 out.append(f"{name} is at rung eliminate, so it is not residual")
             elif r.cls == "reduced" and rung == "individual":
-                out.append(f"{name} is held only at rung individual, so it is residual: write it as `- residual:` with `why:` (P17)")
+                out.append(f"{name} is controlled only at rung individual, so it is residual: write it as `- residual:` with `why:` (P17)")
         if r.cls == "residual":
             for k in ("why", "control"):
                 if not r.fields.get(k):

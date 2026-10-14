@@ -3,11 +3,11 @@
 The kit is text in ``kit/`` beside this module, shipped as package data, so a plain
 ``pip install`` of the engine carries it and anyone can read it in the engine repo. ``init``
 copies the files a repo is missing and creates the empty record directories. It only ever
-creates: an existing file is never touched, except that ``CLAUDE.md`` gets the kit's bootloader
+creates: an existing file is never touched, except that ``CLAUDE.md`` gets the kit block
 appended when no kit block (of any version) is in it yet. An existing ``context.toml`` is kept,
 so init can be re-run after it is edited to fill in what is still missing.
 
-The bootloader (CE-38, US-17) is a few lines between the kit markers: the ``framework:`` pin and
+The kit block (CE-38, US-17) is a few lines between the kit markers: the ``framework:`` pin and
 an ``@``-import of the framework's own contract (``docs/framework/contract.md``), which an upgrade
 replaces whole and lint G-D0 compares with the installed kit. The ``SessionStart`` hook that runs
 ``orient`` goes into ``.claude/settings.local.json``: its command names this machine's engine
@@ -53,9 +53,9 @@ FILES = {
     "docs/charter.md": "docs/charter.md",
     "docs/criteria.md": "docs/criteria.md",
     "docs/ledger/session-log.md": "docs/ledger/session-log.md",
-    # the by-hand fallback (P16): every operation, and every ritual in order; the repo's own copy
+    # the by-hand fallback (P16): every operation, and every procedure's steps in order; the repo's own copy
     "docs/runbooks/manual-mode.md": "docs/runbooks/manual-mode.md",
-    "docs/runbooks/rituals.md": "docs/runbooks/rituals.md",
+    "docs/runbooks/procedures.md": "docs/runbooks/procedures.md",
     # the method runbooks (FRAMEWORK §7.5): framework-generic; the repo's values stay in its CLAUDE.md
     "docs/runbooks/gate.md": "docs/runbooks/gate.md",
     "docs/runbooks/sabotage.md": "docs/runbooks/sabotage.md",
@@ -79,7 +79,7 @@ def kit_block(text: str) -> tuple[str, str | None] | None:
 
 
 def bootloader_body() -> str:
-    """The text the kit's bootloader holds between its markers: what G-D0 expects there."""
+    """The text the kit block (`kit/bootloader.md`) holds between its markers: what G-D0 expects there."""
     block = kit_block((KIT / BOOTLOADER).read_text(encoding="utf-8"))
     assert block and block[1] is not None, "kit/bootloader.md has no complete kit block"
     return block[1]
@@ -160,11 +160,11 @@ def merged_settings(root: Path, old: str) -> str | None:
     if state == "ours":
         return None
     if state == "stale":
-        raise Refusal(f"{SETTINGS} holds a SessionStart hook running the engine's orient with another command ({other}), so it was left untouched", f"have the owner replace that command with this machine's and this repo's: {want}; or run init with --skip-settings")
+        raise Refusal(f"{SETTINGS} holds a SessionStart hook running the engine's orient with another command ({other}), so it was left untouched", f"have the owner replace that command with the one for this machine and this repo: {want}; or run init with --skip-settings")
     hooks = doc.get("hooks", {}) if isinstance(doc, dict) else None
     starts = hooks.get("SessionStart", []) if isinstance(hooks, dict) else None
     if not isinstance(starts, list):
-        raise Refusal(f"{SETTINGS} has no object at the top, at `hooks` or a list at `hooks.SessionStart`, so it was left untouched", remedy)
+        raise Refusal(f"{SETTINGS} is not shaped as init expects (an object at the top level, an object at `hooks`, a list at `hooks.SessionStart`), so it was left untouched", remedy)
     doc.setdefault("hooks", hooks)
     hooks["SessionStart"] = starts + [hook_entry(root)]
     text = json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
@@ -266,8 +266,8 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             found = kit_block(old)
             if found and found[1] is not None and IMPORT_RE.search(found[1]):
                 skipped.append(CONTRACT_TARGET)
-            else:  # the inline block from before the bootloader: its gate line may be filled in, so never by init
-                skipped.append(f"{CONTRACT_TARGET} (holds the inline kit {have.group(1)} block: replace it with kit/{BOOTLOADER} by hand, kit README § Upgrade)")
+            else:  # a block from before `kit/bootloader.md` that inlines the rules: its gate line may be filled in, so never by init
+                skipped.append(f"{CONTRACT_TARGET} (holds a kit {have.group(1)} block that inlines the rules: replace it with kit/{BOOTLOADER} by hand, kit README § Upgrade)")
         elif have:  # never a second block beside an older one: the upgrade replaces it (kit README § Upgrade)
             skipped.append(f"{CONTRACT_TARGET} (holds the kit {have.group(1)} block: replace it with kit/{BOOTLOADER} by hand, kit README § Upgrade)")
         else:
@@ -276,7 +276,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             add = sep + block
             writes[CONTRACT_TARGET] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
             seen[CONTRACT_TARGET] = old
-    # the framework's own files, wherever the config maps the rest: the bootloader imports the
+    # the framework's own files, wherever the config maps the rest: the kit block imports the
     # contract by this path, and the hook is what runs orient
     if (root / CONTRACT_DEST).exists():
         skipped.append(CONTRACT_DEST)
@@ -369,7 +369,7 @@ def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str
     so_far = f"created so far: {', '.join(done) or 'none'}; run init again, it skips what exists"
     if rel == CONTRACT_TARGET and rel in seen:
         if _current(path) != seen[rel]:
-            raise Refusal(f"{rel} changed while init ran, so the bootloader was not appended", so_far)
+            raise Refusal(f"{rel} changed while init ran, so the kit block was not appended", so_far)
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(text)
         done.append(rel)

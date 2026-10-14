@@ -213,9 +213,9 @@ def test_g_d8_one_banner_no_session_layers_and_dated_facts_are_fine(tmp_path):
     write(tmp_path, "HANDOFF.md", good + "\n## Banner (2026-10-07b)\n\nold\n")
     assert reds(e, "G-D8") == ["HANDOFF.md: 2 banner headings (2026-10-08a, 2026-10-07b)"]
     write(tmp_path, "HANDOFF.md", good + "\n## 2026-10-07b · kind: close\n\n### Session 2026-10-07a\n")
-    assert reds(e, "G-D8") == ["HANDOFF.md: 2 headings carry a session key (the first: '## 2026-10-07b · kind: close'): session history in the note"]
+    assert reds(e, "G-D8") == ["HANDOFF.md: 2 headings carry a session key (the first: '## 2026-10-07b · kind: close'): session history in the orientation note"]
     write(tmp_path, "HANDOFF.md", good.replace("- **State:**", "- **2026-10-07b:** did a thing\n- **State:**"))
-    assert reds(e, "G-D8") == ["HANDOFF.md: 1 banner lines start with a session key (the first: '- **2026-10-07b:** did a thing'): a layered banner"]
+    assert reds(e, "G-D8") == ["HANDOFF.md: 1 banner lines start with a session key (the first: '- **2026-10-07b:** did a thing'): a stacked banner"]
 
 
 # -- G-D9 ----------------------------------------------------------------------------------
@@ -270,9 +270,9 @@ LETTERS = "ABCDEFGHIJKLMNOPQRSTU"  # 21 components, over the floor of 20
 COV = {"coverage_spec": "spec/FRAMEWORK.md", "coverage_maps": "maps/coverage-*.md"}
 
 
-def spec(components=LETTERS, rituals=11, gids=31, drop_section=False, ritual_head="### {n} Ritual {n}", gid="G-D{i}") -> str:
+def spec(components=LETTERS, procedures=11, gids=31, drop_section=False, procedure_head="### {n} Procedure {n}", gid="G-D{i}") -> str:
     rows = "\n".join(f"| {i} | Layer | **Component {c}** | what? |" for i, c in enumerate(components, 1))
-    heads = "\n\n".join(ritual_head.format(n=n) for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)])
+    heads = "\n\n".join(procedure_head.format(n=n) for n in ["5.6"] + [f"6.{i}" for i in range(1, procedures)])
     guards = "\n".join(f"- **{gid.format(i=i)}:** a guard" for i in range(1, gids + 1))
     return (
         f"# Spec\n\n## {'Two' if drop_section else '2.'} Components\n\n| # | Layer | Component | Question |\n|---|---|---|---|\n{rows}\n\n"
@@ -281,10 +281,11 @@ def spec(components=LETTERS, rituals=11, gids=31, drop_section=False, ritual_hea
     )
 
 
-def cov_map(date="2026-10-12", drop=(), components=LETTERS, rituals=11, gids=31, edit=lambda row: row) -> str:
+def cov_map(date="2026-10-12", drop=(), components=LETTERS, procedures=11, gids=31, edit=lambda row: row, column="Procedure") -> str:
+    """A dated map; `column` heads the procedures' table (`Ritual` in a frozen map from before DEC-39)."""
     comps = [f"| {i} | Component {c} | §2 | EXISTING CE-1 |" for i, c in enumerate(components, 1)]
     comps[0] = comps[0].replace("Component A", "Component A (the first)")  # a component's cell may add a parenthesis
-    rits = [f"| Ritual {n} | §{n} | PROSE-ONLY |" for n in ["5.6"] + [f"6.{i}" for i in range(1, rituals)]]
+    procs = [f"| Procedure {n} | §{n} | PROSE-ONLY |" for n in ["5.6"] + [f"6.{i}" for i in range(1, procedures)]]
     gds = [f"| G-D{i} | §8 | EXISTING CE-14 |" for i in range(1, gids + 1)]
 
     def table(head: str, rows: list[str]) -> str:
@@ -293,7 +294,7 @@ def cov_map(date="2026-10-12", drop=(), components=LETTERS, rituals=11, gids=31,
 
     return (
         f"# Coverage map, {date}\n\nFROZEN {date}.\n\n## Components\n\n{table('# | Component | § | Class', comps)}\n"
-        f"## Rituals\n\n{table('Ritual | § | Class', rits)}\n## Guards\n\n{table('Guard | § | Class', gds)}"
+        f"## Procedures\n\n{table(f'{column} | § | Class', procs)}\n## Guards\n\n{table('Guard | § | Class', gds)}"
     )
 
 
@@ -309,11 +310,11 @@ def unowned(label: str, map_rel: str = "maps/coverage-2026-10-12.md") -> str:
 
 
 @pytest.mark.criterion("AC-56")
-def test_g_d12_every_component_ritual_and_g_id_is_owned_by_the_map_or_a_board_item_closed_ones_included(tmp_path):
+def test_g_d12_every_component_procedure_and_g_id_is_owned_by_the_map_or_a_board_item_closed_ones_included(tmp_path):
     e = covered(tmp_path)
     assert reds(e, "G-D12") == []
     write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(drop=("G-D7", "§6.1", "B")))  # three map rows deleted
-    assert reds(e, "G-D12") == [unowned("component 'Component B' (§2)"), unowned("ritual §6.1 'Ritual 6.1'"), unowned("guard G-D7")]
+    assert reds(e, "G-D12") == [unowned("component 'Component B' (§2)"), unowned("procedure §6.1 'Procedure 6.1'"), unowned("guard G-D7")]
     # a near miss is not a mention: `§6.10` does not name §6.1, `G-D70` does not name G-D7
     t = e.new("task", "near misses", body="Covers §6.10 and G-D70 and Component BB.", **W)
     assert len(reds(e, "G-D12")) == 3
@@ -344,7 +345,7 @@ def test_g_d12_reads_the_newest_dated_map_and_refuses_an_undated_one(tmp_path):
     write(tmp_path, "maps/coverage-2026-10-13aa.md", cov_map("2026-10-13aa", drop=("G-D5",)))  # after z, as session keys order
     assert reds(e, "G-D12") == [unowned("guard G-D5", "maps/coverage-2026-10-13aa.md")]
     write(tmp_path, "maps/coverage-final.md", cov_map())
-    assert reds(e, "G-D12") == ["maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told"]
+    assert reds(e, "G-D12") == ["maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the engine cannot tell which map is newest"]
 
 
 @pytest.mark.criterion("AC-56")
@@ -354,7 +355,7 @@ def test_g_d12_is_red_when_a_class_extracts_under_its_floor_so_a_reworded_spec_c
     for text, red in [
         (spec(drop_section=True), f"0 components extracted, under the floor of 20: {floor}"),  # §2's heading reworded
         (spec(components=LETTERS[:19]), f"19 components extracted, under the floor of 20: {floor}"),
-        (spec(ritual_head="### Ritual {n}"), f"0 rituals extracted, under the floor of 10: {floor}"),  # numbers dropped from headings
+        (spec(procedure_head="### Procedure {n}"), f"0 procedures extracted, under the floor of 10: {floor}"),  # numbers dropped from headings
         (spec(gid="GD{i}"), f"0 G-ids extracted, under the floor of 30: {floor}"),  # the id format changed
     ]:
         write(tmp_path, "spec/FRAMEWORK.md", text)
@@ -387,24 +388,42 @@ def test_g_d12_is_off_while_both_paths_are_unset_and_red_on_one_unset_or_a_missi
 def test_g_d12_a_map_owns_a_class_only_in_its_own_key_column_and_a_near_miss_owns_nothing(tmp_path):
     e = covered(tmp_path)  # the spec's near misses `XG-D99` and `G-D98x` are not guard ids
     assert reds(e, "G-D12") == []
-    three = [unowned("component 'Component B' (§2)"), unowned("ritual §6.1 'Ritual 6.1'"), unowned("guard G-D7")]
+    three = [unowned("component 'Component B' (§2)"), unowned("procedure §6.1 'Procedure 6.1'"), unowned("guard G-D7")]
     # their own rows gone, each key sits in a cell that is not its class's key column
     elsewhere = {
         "| 1 | Component A (the first) | §2 |": "| 1 | Component A (the first) | §6.1 |",  # a component row's § cell
         "| G-D8 | §8 |": "| G-D8 | §6.1 |",  # a guard row's § cell
         "| G-D9 | §8 | EXISTING CE-14 |": "| G-D9 | §8 | G-D7 |",  # a cell past the key column
-        "| Ritual 5.6 |": "| Component B |",  # a ritual row's first cell
+        "| Procedure 5.6 |": "| Component B |",  # a procedure row's first cell
     }
     edit = lambda row: next((row.replace(a, b) for a, b in elsewhere.items() if a in row), row)  # noqa: E731
     write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(drop=("G-D7", "§6.1", "B"), edit=edit))
     assert reds(e, "G-D12") == three
     # only a component's key cell may add a parenthesis
-    rows = cov_map(drop=("G-D7", "§6.1", "B")).replace("| Ritual 6.2 | §6.2 |", "| Ritual 6.2 | §6.2 |\n| Ritual 6.1 | §6.1 (start) |")
+    rows = cov_map(drop=("G-D7", "§6.1", "B")).replace("| Procedure 6.2 | §6.2 |", "| Procedure 6.2 | §6.2 |\n| Procedure 6.1 | §6.1 (start) |")
     write(tmp_path, "maps/coverage-2026-10-12.md", rows.replace("| G-D8 |", "| G-D7 (old) | §8 | x |\n| G-D8 |"))
     assert reds(e, "G-D12") == three
     # a board mention glued to a word on its left is not a mention
     e.new("task", "glued", body="Mentions XG-D7, x§6.1 and XComponent B.", **W)
     assert reds(e, "G-D12") == three
+
+
+@pytest.mark.criterion("AC-56")
+def test_g_d12_a_frozen_map_under_the_old_names_still_owns_what_dec_39_renamed(tmp_path):
+    """DEC-39 renamed rituals to procedures and two §2 components; a frozen map is never edited, so
+    its `Ritual` column and a row under a component's old name still own them."""
+    e = covered(tmp_path)
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(column="Ritual"))  # a map from before DEC-39
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map(column="Rituals"))  # a header that is neither name
+    assert unowned("procedure §6.1 'Procedure 6.1'") in reds(e, "G-D12")
+    renamed = spec().replace("**Component B**", "**Residual-risk register**").replace("**Component C**", "**Non-functional requirements (NFRs)**")
+    write(tmp_path, "spec/FRAMEWORK.md", renamed)
+    old = cov_map().replace("| Component B |", "| Invariants (residual-risk register) |").replace("| Component C |", "| Law / NFRs |")
+    write(tmp_path, "maps/coverage-2026-10-12.md", old)
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-12.md", old.replace("| Law / NFRs |", "| Law |"))  # not an earlier name
+    assert reds(e, "G-D12") == [unowned("component 'Non-functional requirements (NFRs)' (§2)")]
 
 
 # -- G-D4 liveness (CE-33) -----------------------------------------------------------------
@@ -487,7 +506,7 @@ def test_g_d4_a_history_doc_is_frozen_or_active_plan_while_the_item_it_names_is_
     write(tmp_path, "evidence/orphan-2026-10-13.md", "# Orphan\n\nACTIVE-PLAN, for nothing on the board (CE-99).\n")
     assert reds(e, "G-D4") == [
         "evidence/live-2026-10-13.md: is LIVING, but it sits in a history directory ([guards] history), which holds provenance",
-        "evidence/orphan-2026-10-13.md: is ACTIVE-PLAN but names no board item in its first 10 lines, so nobody can tell when it lands",
+        "evidence/orphan-2026-10-13.md: is ACTIVE-PLAN but names no board item in its first 10 lines, so nobody can tell when its item closes",
     ]
     (tmp_path / "evidence/live-2026-10-13.md").unlink()
     (tmp_path / "evidence/orphan-2026-10-13.md").unlink()
@@ -561,21 +580,21 @@ def test_g_d5_a_count_of_the_tree_typed_in_prose_is_red_and_p5_forms_pass(tmp_pa
     e = make(tmp_path, numbers=["docs"])
     write(tmp_path, "docs/a.md", COUNTED)
     assert reds(e, "G-D5") == [
-        "docs/a.md: line 5: `23 components` is a count of the tree typed in prose",
-        "docs/a.md: line 5: `seven steps` is a count of the tree typed in prose",
-        "docs/a.md: line 6: `12 open tasks` is a count of the tree typed in prose",
-        "docs/a.md: line 6: `1,157 tests` is a count of the tree typed in prose",
-        "docs/a.md: line 6: `40 new rows` is a count of the tree typed in prose",
-    ] + [f"docs/a.md: line 11: `{c}` is a count of the tree typed in prose" for c in ("23 checks", "1234 tests", "nine checks", "23 Tests", "3 closed items")] + [
-        "docs/a.md: line 12: `9 tasks` is a count of the tree typed in prose",
-        "docs/a.md: line 13: `31 rows` is a count of the tree typed in prose",
+        "docs/a.md: line 5: `23 components` is a hand-typed count of things in the tree",
+        "docs/a.md: line 5: `seven steps` is a hand-typed count of things in the tree",
+        "docs/a.md: line 6: `12 open tasks` is a hand-typed count of things in the tree",
+        "docs/a.md: line 6: `1,157 tests` is a hand-typed count of things in the tree",
+        "docs/a.md: line 6: `40 new rows` is a hand-typed count of things in the tree",
+    ] + [f"docs/a.md: line 11: `{c}` is a hand-typed count of things in the tree" for c in ("23 checks", "1234 tests", "nine checks", "23 Tests", "3 closed items")] + [
+        "docs/a.md: line 12: `9 tasks` is a hand-typed count of things in the tree",
+        "docs/a.md: line 13: `31 rows` is a hand-typed count of things in the tree",
     ]
     [red, *_] = [f for f in e.lint() if f.guard == "G-D5"]
     assert red.remedy.startswith("delete the number and point at its home")
     # the nouns are configured: a research repo counts its runs
     assert reds(make(tmp_path, numbers=["docs"], count_nouns=["runs"]), "G-D5") == []
     write(tmp_path, "docs/a.md", "LIVING.\n\nWe did 14 runs.\n")
-    assert reds(make(tmp_path, numbers=["docs"], count_nouns=["runs"]), "G-D5") == ["docs/a.md: line 3: `14 runs` is a count of the tree typed in prose"]
+    assert reds(make(tmp_path, numbers=["docs"], count_nouns=["runs"]), "G-D5") == ["docs/a.md: line 3: `14 runs` is a hand-typed count of things in the tree"]
     for nouns, says in (([], "`count_nouns` is empty"), (["tests", "a b"], "holds 'a b', which is not a word")):
         with pytest.raises(Refusal, match=says):
             from_dict(config(numbers=["docs"], count_nouns=nouns))
@@ -596,6 +615,6 @@ def test_g_d5_a_frozen_or_active_plan_doc_is_provenance_and_a_list_of_only_those
     e = make(tmp_path, numbers=["docs"], liveness_given={"docs/v0.*.md": "FROZEN"})
     assert reds(e, "G-D5") == ["context.toml: [guards] numbers (docs) holds no doc that is not FROZEN or ACTIVE-PLAN, so G-D5 checks nothing"]
     write(tmp_path, "docs/live.md", "# L\n\nLIVING." + body)
-    assert reds(e, "G-D5") == ["docs/live.md: line 5: `23 components` is a count of the tree typed in prose"]
+    assert reds(e, "G-D5") == ["docs/live.md: line 5: `23 components` is a hand-typed count of things in the tree"]
     assert "context.toml: [guards] numbers names gone.md, which does not exist" in reds(make(tmp_path, numbers=["docs", "gone.md"], liveness_given={"docs/v0.*.md": "FROZEN"}), "G-D5")
     assert reds(make(tmp_path), "G-D5") == [] and reds(make(tmp_path, numbers=["docs"], off=["G-D5"]), "G-D5") == []

@@ -227,8 +227,8 @@ def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_i
 @pytest.mark.parametrize("text, says", [
     ("{not json", "is not JSON init can merge into"),
     ('{"permissions": {"allow": ["A"]}, "permissions": {"allow": []}}', "the key 'permissions' appears twice"),
-    ("[]", "has no object at the top"),
-    ('{"hooks": []}', "has no object at the top, at `hooks`"),
+    ("[]", "is not shaped as init expects"),
+    ('{"hooks": []}', "is not shaped as init expects (an object at the top level, an object at `hooks`"),
     ('{"hooks": {"SessionStart": {}}}', "a list at `hooks.SessionStart`"),
     ('{"n": NaN}', "NaN is not JSON"),  # Python's json reads it; a rewrite would hand Claude Code a file it cannot parse
     ('{"n": -Infinity}', "-Infinity is not JSON"),
@@ -326,7 +326,7 @@ def test_an_inline_kit_block_is_left_for_the_upgrade_and_the_contract_still_land
     (tmp_path / "CLAUDE.md").write_text(inline, encoding="utf-8")
     out = B.init(tmp_path)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == inline
-    assert f"CLAUDE.md (holds the inline kit 0.5 block: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
+    assert f"CLAUDE.md (holds a kit 0.5 block that inlines the rules: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
     assert (tmp_path / B.CONTRACT_DEST).exists()
     assert "## 4. Upgrade" in (B.KIT / "README.md").read_text(encoding="utf-8")
     boot = tmp_path / "boot"
@@ -498,7 +498,7 @@ def test_the_leak_check_sees_each_form(planted):
 
 # -- the runbooks ship in the kit (CE-24) ----------------------------------------------------
 
-RUNBOOKS = ("manual-mode.md", "rituals.md", "gate.md", "sabotage.md", "fan-out.md", "release.md")
+RUNBOOKS = ("manual-mode.md", "procedures.md", "gate.md", "sabotage.md", "fan-out.md", "release.md")
 
 
 @pytest.mark.criterion("AC-37")
@@ -515,13 +515,13 @@ def test_the_kit_runbooks_are_this_repos_runbooks():
 @pytest.mark.criterion("AC-37")
 def test_init_copies_the_runbooks_and_keeps_an_edited_one(tmp_path):
     (tmp_path / "docs" / "runbooks").mkdir(parents=True)
-    ours = b"# our own rituals\n"
-    (tmp_path / "docs" / "runbooks" / "rituals.md").write_bytes(ours)
+    ours = b"# our own procedures\n"
+    (tmp_path / "docs" / "runbooks" / "procedures.md").write_bytes(ours)
     out = B.init(tmp_path)
     assert "docs/runbooks/manual-mode.md" in out.split("; skipped")[0], out
     assert (tmp_path / "docs" / "runbooks" / "manual-mode.md").read_bytes() == (B.KIT / "docs" / "runbooks" / "manual-mode.md").read_bytes()
-    assert (tmp_path / "docs" / "runbooks" / "rituals.md").read_bytes() == ours
-    assert "docs/runbooks/rituals.md" in out.split("; skipped")[1], out
+    assert (tmp_path / "docs" / "runbooks" / "procedures.md").read_bytes() == ours
+    assert "docs/runbooks/procedures.md" in out.split("; skipped")[1], out
 
 
 @pytest.mark.criterion("AC-37")
@@ -687,3 +687,21 @@ def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_p
     note = tmp_path / "HANDOFF.md"
     note.write_text(note.read_text(encoding="utf-8").replace("## Banner (", "## Old banner ("), encoding="utf-8")
     assert "G-W1" in lint()
+
+
+# -- DEC-39: the framework's living text says "procedure", never "ritual" (CE-68) ---------------
+
+
+def test_no_living_framework_text_says_ritual():
+    """FRAMEWORK, the framework contract, CLAUDE.md, HANDOFF.md and every kit file say "procedure".
+    The only uses left are names a frozen file still carries: the `Ritual` column of a coverage map
+    frozen before DEC-39 (G-D12 reads both), and the quoted "rituals" that count_nouns keeps so a
+    count typed in an older doc is still caught."""
+    files = [FRAMEWORK, REPO / "docs" / "framework" / "contract.md", REPO / "CLAUDE.md", REPO / "HANDOFF.md"]
+    files += sorted(p for p in B.KIT.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+    found = []
+    for path in files:
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if re.search(r"ritual", line.replace("`Ritual`", "").replace('"rituals"', ""), re.IGNORECASE):
+                found.append(f"{path.relative_to(REPO).as_posix()}:{n}: {line.strip()[:80]}")
+    assert found == [], "living framework text still says ritual (DEC-39: say procedure):\n" + "\n".join(found)

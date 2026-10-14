@@ -53,7 +53,7 @@ class Op:
         """Run the operation on ``target`` (from ``self.target``), as the CLI and the MCP server
         both do. A write runs in one store batch, so whatever commit the policy makes after it
         (FRAMEWORK §5.5 rule 4: at a milestone, after every write, or only a pause's) is made
-        once, by path, with its op log lines, and its line says what the commit did."""
+        once, by path, with its op log lines, and its reply says what the commit did."""
         if not (self.write and self.engine):
             return self.fn(target, c, **kw)
         store = target.store
@@ -96,7 +96,7 @@ def _rel(e: Engine, path) -> str:
 
 @op(write=True, engine=False)
 def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: bool = False, merge_settings: bool = False, skip_settings: bool = False) -> tuple[int, str]:
-    """Write the adoption kit's missing files into the repo (config, bootloader, contract, hook, skeletons); never overwrites. `prefix` maps kind -> id prefix. An existing .claude/settings.local.json without the hook refuses until the owner chooses: merge_settings (yes) or skip_settings (no)."""
+    """Write the adoption kit's missing files into the repo (config, kit block, contract, hook, skeletons); never overwrites. `prefix` maps kind -> id prefix. An existing .claude/settings.local.json without the hook refuses until the owner chooses: merge_settings (yes) or skip_settings (no)."""
     return 0, bootstrap.init(root, prefix or {}, dry_run=dry_run, merge_settings=merge_settings, skip_settings=skip_settings)
 
 
@@ -163,7 +163,7 @@ def task_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None
 
 @op(write=True)
 def task_promote(e: Engine, c: Caller, id: str, pri: str) -> tuple[int, str]:
-    """Move an item to another tier; NOW holds exactly one, NEXT at most five. Moving the NOW item down while others stay open says G-W5 is red until the owner picks one to promote."""
+    """Move an item to another tier; NOW holds exactly one, NEXT at most five. Moving the NOW item down while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
     return 0, e.promote(id, pri, **c.kw)
 
 
@@ -187,7 +187,7 @@ def task_touch(e: Engine, c: Caller, id: str, mechanical: bool = False) -> tuple
 
 @op(write=True)
 def task_close(e: Engine, c: Caller, id: str, msg: str = "", body: str = "") -> tuple[int, str]:
-    """Close an item; `msg` says what finished it and is required. A milestone: the engine commits it with `Closes: <id>`, and `body` goes in that commit's message (the `Sabotage:` and receipt lines). Closing the NOW item while others stay open says G-W5 is red until the owner picks one to promote."""
+    """Close an item; `msg` says what finished it and is required. A milestone: the engine commits it with `Closes: <id>`, and `body` goes in that commit's message (the `Sabotage:` and receipt lines). Closing the NOW item while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
     return 0, e.close(id, msg, body=body, **c.kw)
 
 
@@ -240,7 +240,7 @@ def ask_later(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 @op(write=True)
 def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str) -> tuple[int, str]:
-    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. Answering a question at NOW while others stay open says G-W5 is red until the owner picks one to promote."""
+    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. Answering a question at NOW while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
     return 0, e.ask_answer(id, words, title=title, **c.kw)
 
 
@@ -267,7 +267,7 @@ def hk_expire_batons(e: Engine, c: Caller) -> tuple[int, str]:
 
 @op(write=True)
 def pause_open(e: Engine, c: Caller, in_flight: str, resume: str, evidence: str = "", deferred: list[str] | None = None) -> tuple[int, str]:
-    """Record a pause block (branch and dirty paths from git) and commit it."""
+    """Write a pause record (branch and dirty paths from git) and commit it."""
     return 0, e.pause_open(in_flight, resume, evidence=evidence, deferred=deferred or [], **c.kw)
 
 
@@ -282,7 +282,7 @@ def pause_resume(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 @op(write=True)
 def record_new(e: Engine, c: Caller, kind: str, title: str, body: str, fields: dict[str, str] | None = None) -> tuple[int, str]:
-    """A new decision or story, stamped at birth. Owner words go in `body` verbatim; set actor=owner in `fields`."""
+    """A new decision or story, stamped when it is created. Owner words go in `body` verbatim; set actor=owner in `fields`."""
     rec = e.record_new(kind, title, body, fields or {}, **c.kw)
     return 0, f"{rec.id}: created and stamped ({_rel(e, rec.path)})"
 
@@ -307,7 +307,7 @@ def record_correct(e: Engine, c: Caller, id: str, after: str, text: str) -> tupl
 
 @op(write=True)
 def record_retire(e: Engine, c: Caller, id: str, why: str, by: str, superseded_by: str = "") -> tuple[int, str]:
-    """Retire a story: story_status retired, status deprecated, `why` as an amendment. `by` is `owner` or `human:<id>` (then `why` is their words, verbatim) or `agent` (only with `superseded_by`, the story recorded again; it gets `supersedes`). Final: a retire is never undone."""
+    """Retire a story: story_status retired, status deprecated, `why` as an amendment. `by` is `owner` or `human:<id>` (then `why` is their words, verbatim) or `agent` (only with `superseded_by`, the replacement story, a new record with the same words; it gets `supersedes`). A retirement is final: it is never undone."""
     return 0, e.retire(id, why, by=by, superseded_by=superseded_by, **c.kw)
 
 
@@ -382,14 +382,14 @@ def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None) -
 
 @op(write=False, rest="read the register file itself")
 def register_show(e: Engine, c: Caller, engine: bool = False) -> tuple[int, str]:
-    """The residual-risk register's entries; `engine` reads the one shipped with the engine (the handover)."""
+    """The residual-risk register's entries; `engine` reads the one shipped with the engine (the risks it hands over to every repo that adopts it)."""
     return 0, e.register_show(engine=engine)
 
 
 # -- the banner (FRAMEWORK §5.5) ----------------------------------------------------------
 
 
-@op(write=False, rest="the note's § Banner")
+@op(write=False, rest="the orientation note's § Banner")
 def banner_show(e: Engine, c: Caller) -> tuple[int, str]:
     """The banner and its hash; pass the hash to banner_set."""
     b = e.banner()

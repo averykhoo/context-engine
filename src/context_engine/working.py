@@ -29,7 +29,7 @@ from . import guards as G
 from . import ledger as L
 from . import okf
 from . import review as R
-from . import bootstrap as K  # the kit: its block markers, bootloader and contract (G-D0)
+from . import bootstrap as K  # the kit: its block markers, kit block and contract (G-D0)
 from . import commit as C
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
@@ -56,12 +56,12 @@ BOARD_OWNED = {
 }
 # A decision's keys that `decision set` refuses (CE-32), each with the remedy. The engine-owned
 # `type`, `id` and `body_sha` are refused by Store.set itself.
-_FIXED = "it is fixed at birth (provenance of the decision); note a correction with `record amend <id> \"<text>\"`"
+_FIXED = "it is fixed when the record is created (provenance of the decision); note a correction with `record amend <id> \"<text>\"`"
 DECISION_OWNED = {
     "status": "use `decision supersede <id> <new>`: OKF status is derived from SUPERSEDED",
     "answers": "it is written by `ask answer` and never changes",
     **{k: _FIXED for k in ("actor", "decided", "session", "attribution", "imported_from", "generated")},
-    "verified": "an owner's endorsement is the owner's words, which no operation can read: record them with `record amend <id> \"<the owner's words>\"`",
+    "verified": "an owner's endorsement must be the owner's own words, which no operation can supply: record them with `record amend <id> \"<the owner's words>\"`",
     **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
     "narrowed_by": "it is the backlink `relaxes` writes: run `decision link <other> <id> --rel relaxes` on the decision that narrows this one",
     **{k: "use `decision link <id> <target> --rel <field>`; no operation removes an id link (ids are never reused, so it never goes stale)" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by", "narrowed_by", "code")},
@@ -92,8 +92,8 @@ def _milestone(fn):
     name. Milestones are what must reach HEAD at once: a task's close, owner words (a story or
     decision recorded, amended, retired or superseded; a question answered), a hand-off to the
     next session (a baton, a pause), the session's own close or pause, and the banner, which a
-    clean close writes after the session's close. Every other write rides along with the next
-    commit."""
+    clean close writes after the session's close. Every other write stays uncommitted and goes
+    into the next commit."""
 
     @functools.wraps(fn)
     def run(self, *args, **kw):
@@ -118,7 +118,8 @@ def _one(items) -> str:
 
 def _same_words(a: okf.Document, b: okf.Document) -> bool:
     """Two append-only records carry the same words as typed (above `## Amendments`, logged
-    corrections undone): the test of a story recorded again (`record retire --by agent`)."""
+    corrections undone): the test of a replacement story, a new record with the same words (`record retire --by
+    agent`)."""
     try:
         return okf.typed_sha(a.body) == okf.typed_sha(b.body)
     except ValueError:
@@ -137,7 +138,7 @@ class Engine:
     def _role(self, role: str) -> str:
         name = getattr(self.w, role)
         if not name:
-            raise Refusal(f"no kind plays the {role} part", f"set `{role} = \"<kind>\"` in [working] of context.toml")
+            raise Refusal(f"no kind is configured as the {role}", f"set `{role} = \"<kind>\"` in [working] of context.toml")
         return name
 
     def _path(self, setting: str) -> Path:
@@ -265,7 +266,7 @@ class Engine:
         """A three-line ``kind: pause`` entry over the stub (FRAMEWORK §6.4, AC-11)."""
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
-            raise Refusal("a pause needs rows and deferred", "name the items touched and the steps deferred (the gate, the commit, ...)")
+            raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
         self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred), "session.pause")
         return f"session {key} paused: ledger entry written"
 
@@ -428,8 +429,8 @@ class Engine:
 
     def _now_left(self, was: list[str]) -> str:
         """CE-36: taking an item off NOW (`close`, `ask answer`, a demoting `promote`) can leave NOW
-        below its cap while items stay open, which G-W5 reds at the next gate. Say so on the op's
-        line, with the remedy; never refuse, never promote: the next NOW item is the owner's call.
+        below its cap while items stay open, which fails G-W5 at the next gate. Say so in the op's
+        reply, with the remedy; never refuse, never promote: the next NOW item is the owner's call.
         Quiet when G-W5 is off, and when NOW is still at or over its cap (refilling is then not
         the remedy; G-W5 says what is)."""
         if was != ["NOW"] or "G-W5" in self.store.config.guards.off:
@@ -682,7 +683,7 @@ class Engine:
             led = self.read_ledger()
             stub = led.get(session)
             if stub is None or stub.kind != "open":
-                raise Refusal(f"session {session} closed while raising", "record the receipt by hand in the ledger entry")
+                raise Refusal(f"session {session} closed while its questions were being raised", "record the receipt by hand in the ledger entry")
             already = ID_RE.findall(stub.field("asked") or "")
             named = already + [i for i in ids if i not in already]
             text = re.sub(r"^- \*\*asked:\*\*.*(?:\n  .*)*\n?", "", stub.text, flags=re.MULTILINE)
@@ -776,7 +777,7 @@ class Engine:
                           "fix what it names and run it again; by hand: manual-mode.md § context-engine commit")
         extra = []
         if out.carried:
-            extra.append(f"carrying lines left uncommitted by {', '.join(out.carried)}")
+            extra.append(f"including op lines that {', '.join(out.carried)} left uncommitted")
         if out.left_out:
             extra.append(f"left out as gitignored: {', '.join(out.left_out)}")
         n = len(out.paths)
@@ -801,7 +802,7 @@ class Engine:
         try:
             p = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, encoding="utf-8")
         except FileNotFoundError:
-            raise Refusal("git is not installed", "install git, or write the pause block by hand") from None
+            raise Refusal("git is not installed", "install git, or write the pause record by hand") from None
         if p.returncode != 0:
             raise Refusal(f"`git {' '.join(args)}` failed: {p.stderr.strip()[:200]}", "run the engine inside a git checkout and fix the git error")
         return p.stdout
@@ -868,8 +869,8 @@ class Engine:
 
     @_milestone
     def record_new(self, kind: str, title: str, body: str, raw: dict[str, str], *, session: str, actor: str) -> Record:
-        """A new decision or story, stamped at birth. A required key the caller left out is filled
-        when it can only mean now: a date-typed key with today, a key-typed one with this session."""
+        """A new decision or story, stamped when it is created. A required key the caller left out
+        is filled when its only possible value is the present: a date-typed key with today, a key-typed one with this session."""
         self._check(session, actor)
         k = self.store.config.kind(kind)
         if k.mode != "append-only":
@@ -889,22 +890,22 @@ class Engine:
 
     def _story_checks(self, fields: dict[str, Any]) -> None:
         """The write-time twins of G-I2 and G-I1, by the same checks: a story's provenance from the
-        vocabulary, and goals that are the charter's, in the one id form (`G-n`)."""
+        vocabulary, and goals that are the charter's, in the standard id form (`G-n`)."""
         off = self.store.config.guards.off
         problems = [] if "G-I2" in off else G.story_problems(fields)
         if "G-I2" not in off:
             if str(fields.get("story_status")) == "retired":
-                problems.insert(0, "would be born `retired`, which only `record retire` sets (it records who retired a story and why)")
-            born = [f"`{k}`" for k in G.RETIRE_KEYS if k in fields] + (["`status: deprecated`"] if str(fields.get("status")) == "deprecated" else [])
-            if born:
-                problems.insert(0, f"would be born with {born[0]}, which only `record retire` writes")
+                problems.insert(0, "would be created as `retired`, which only `record retire` sets (it records who retired a story and why)")
+            preset = [f"`{k}`" for k in G.RETIRE_KEYS if k in fields] + (["`status: deprecated`"] if str(fields.get("status")) == "deprecated" else [])
+            if preset:
+                problems.insert(0, f"would be created with {preset[0]}, which only `record retire` writes")
         known, bad = G.known_goals(self)
         if known is not None and "G-I1" not in off:
             if not known:  # the charter is missing or yields no goal: no story's goals can be checked
                 raise Refusal(f"no story can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
-            problems += G.goal_problems(fields.get("goals"), known, legacy=False)  # the charter's own reds are lint's (G-I1)
+            problems += G.goal_problems(fields.get("goals"), known, legacy=False)  # the charter's own failures are lint's (G-I1)
         if problems:
-            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed (`retired`, `status: deprecated`, `supersedes` and `superseded_by` are `record retire`'s), and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
+            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed (`retired`, `status: deprecated`, `supersedes` and `superseded_by` are set only by `record retire`), and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""
@@ -938,10 +939,11 @@ class Engine:
         """Retire a story (FRAMEWORK §3.2): `story_status: retired` with the derived OKF
         `status: deprecated`, `superseded_by` on it and `supersedes` on its successor when one
         replaces it, and the reason as an amendment, all in one write. ``by`` says whose call it
-        is: `owner` or `human:<id>`, whose words ``why`` is, or `agent`, only for a story recorded
-        again (``superseded_by``, carrying the same words as typed). A retire is never undone,
-        nor redone: a story a logged retire retired is refused, whatever its frontmatter says now.
-        A story retired by hand, with no logged retire, may be retired here to record who and why."""
+        is: `owner` or `human:<id>`, whose words ``why`` is, or `agent`, only when a replacement
+        story exists (``superseded_by``, a new record with the same words as typed). A retirement is
+        never undone, nor redone: a story that a logged `retire` retired is refused, whatever its
+        frontmatter says now. A story retired by hand, with no logged `retire`, may be retired here
+        to record who and why."""
         self._check(session, actor)
         kind = self.store.config.guards.stories
         if not kind:
@@ -952,12 +954,12 @@ class Engine:
             raise Refusal(f"{rid} is not a story", not_story)
         by, why, new = by.strip(), why.strip("\n"), superseded_by.strip()
         if not G.RETIRE_BY_RE.fullmatch(by):
-            raise Refusal(f"`by: {by}` is none of `owner`, `human:<id>` or `agent`", "say whose call it is: `owner` (or `human:<id>`), with their words verbatim in `why`; or `agent`, for a story recorded again, with `superseded_by`")
+            raise Refusal(f"`by: {by}` is none of `owner`, `human:<id>` or `agent`", "say whose call it is: `owner` (or `human:<id>`), with their words verbatim in `why`; or `agent`, with `superseded_by` naming the replacement story (a new record with the same words)")
         if not why.strip():
             raise Refusal("no reason", "pass `why`: the owner's words verbatim (`by owner`), or what was wrong with the story (`by agent`)")
         if by == "agent" and not new:
-            raise Refusal(f"an agent retires a story only when it was recorded again, and no `superseded_by` names the story that replaces {rid}",
-                          f"record it again with `record new story` (the owner's words as they are, the right fields), then pass `superseded_by`; withdrawing {rid} is the owner's call: `by owner` with their words")
+            raise Refusal(f"an agent retires a story only in favour of a replacement story (a new record with the same words), and no `superseded_by` names one for {rid}",
+                          f"record the replacement story with `record new story` (the owner's words as they are, the right fields), then pass `superseded_by`; withdrawing {rid} is the owner's call: `by owner` with their words")
         if new:
             if new == rid:
                 raise Refusal(f"{rid} cannot supersede itself", "name the story that replaces it")
@@ -967,18 +969,18 @@ class Engine:
         def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
             o = recs[rid].doc
             done = G.logged_retires(self).get(rid)
-            if done is not None:  # final, even when a hand edit has since undone it (G-I2 reds that)
+            if done is not None:  # final, even when a hand edit has since undone it (G-I2 fails that)
                 now = o.get("story_status")
                 if now == "retired":
-                    raise Refusal(f"{rid} is already retired (`record retire` in session {done.get('session')})", "a retire is final: to bring the intent back, record it as a new story (`record new story`) with the owner's words")
+                    raise Refusal(f"{rid} is already retired (`record retire` in session {done.get('session')})", "a retirement is final: to bring the intent back, record it as a new story (`record new story`) with the owner's words")
                 raise Refusal(f"{rid} was retired by `record retire` in session {done.get('session')}, and a hand edit has since made it `{now}`",
-                              "a retire is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record a new story (`record new story`)")
+                              "a retirement is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record a new story (`record new story`)")
             if new:
                 n = recs[new].doc
                 if n.get("story_status") == "retired":
                     raise Refusal(f"{new} is retired, so it cannot replace {rid}", "name a story that stands, or record the new story first (`record new story`)")
                 if by == "agent" and not _same_words(o, n):
-                    raise Refusal(f"{new} does not carry {rid}'s words as typed, so it is no recording of {rid} again, and an agent retires a story only for that",
+                    raise Refusal(f"{new} does not carry {rid}'s words as typed, so it is not {rid} recorded again with the same words, and an agent retires a story only for that",
                                   f"record {rid} again with its body as it is (`record new story --file`, the right fields; redo any `record correct`), or, if the owner withdrew it or replaced it with new words, `by owner` with their words")
             o.set("story_status", "retired")
             o.set("status", "deprecated")
@@ -1049,7 +1051,7 @@ class Engine:
             was = str(rec.doc.get(D.STATUS_KEY))
             if was == "SUPERSEDED" and (D.STATUS_KEY in changes or D.STATUS_KEY in unset):
                 later = ", ".join(D.as_list(rec.doc.get("superseded_by"))) or "<DEC>"
-                raise Refusal(f"{rid} is SUPERSEDED by {later}, so its status is history", f"a superseded decision stays superseded; to bring it back, record a new decision and `decision supersede {later} <new>`")
+                raise Refusal(f"{rid} is SUPERSEDED by {later}, so its status is kept as history and does not change", f"a superseded decision stays superseded; to bring it back, record a new decision and `decision supersede {later} <new>`")
             if "reopen_if" in changes or D.STATUS_KEY in changes or D.STATUS_KEY in unset:
                 status = None if D.STATUS_KEY in unset else changes.get(D.STATUS_KEY, rec.doc.get(D.STATUS_KEY))
                 reopen = None if "reopen_if" in unset else changes.get("reopen_if", rec.doc.get("reopen_if"))
@@ -1152,7 +1154,7 @@ class Engine:
             if d.get("status") == "deprecated":
                 later = D.as_list(d.get("superseded_by")) or ["<successor>"]
                 cmds = " or ".join(f"`decision link {s} {new}`" for s in later)
-                raise Refusal(f"{rid} is superseded, so its links are history", f"link the code to the decision that replaced it: {cmds}")
+                raise Refusal(f"{rid} is superseded, so its links are kept as history and do not change", f"link the code to the decision that replaced it: {cmds}")
             have = D.as_list(d.get("code"))
             if old not in have:
                 field = next((f for f in D.LINK_FIELDS if old in D.as_list(d.get(f))), None)
@@ -1222,7 +1224,7 @@ class Engine:
         `file::symbol`), one line each with the field that links it (`why()`)."""
         target = target.strip()
         if not target:
-            raise Refusal("why what?", "name a task, criterion, decision or `file::symbol`")
+            raise Refusal("no target given", "name a task, criterion, decision or `file::symbol`")
         out = []
         for r in sorted(self.store.heads(self._decision_kind()), key=lambda r: int(r.id.rsplit("-", 1)[1])):
             via = self._links_to(r.doc, target)
@@ -1290,7 +1292,7 @@ class Engine:
         led = self.read_ledger()
         b = self.banner()
         sections: list[tuple[str, str, str]] = []  # (heading, body, where the rest is)
-        note = self.w.handoff or "the note"
+        note = self.w.handoff or "the orientation note"
         sections.append((f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", f"{note} § Banner"))
 
         carried = sorted(self._carried(), key=lambda r: (r.doc.get("session") != session, r.kind.prefix, int(r.id.rsplit("-", 1)[1])))
@@ -1368,10 +1370,11 @@ class Engine:
         """G-D0 (DEC-23): every `framework:` line in the contract, and the version in its kit
         block's begin marker, equal the installed engine's major.minor. `0.5.*` is a synonym of
         `0.5`. A missing contract, a contract with no `framework:` line, or a value that is not
-        `major.minor` is a red too: the pin is what says which engine the repo's rules assume.
+        `major.minor` fails too: the pin is what says which engine the repo's rules assume.
 
-        The bootloader (CE-38): a kit block of the engine's version holds exactly the kit's
-        bootloader text (an inline block from before it, or a hand edit, is red), and every file it
+        The kit block (CE-38): a kit block of the engine's version holds exactly the text of the
+        kit's `kit/bootloader.md` (a block from before it that inlines the rules, or a hand edit, is
+        red), and every file it
         `@`-imports exists and equals the installed engine's ``kit/contract.md``, line endings
         aside, since the framework owns that file and Claude Code loads nothing from a missing one.
         Not checked: a contract with no kit block (a hand-written contract, like the engine repo's
@@ -1397,24 +1400,24 @@ class Engine:
             if not v:
                 out.append(Failure("G-D0", rel, f"`framework: {value}` is not a major.minor version", f"write it as `framework: {want}` (or `{want}.*`): the framework has no patch number and no `-draft` suffix (DEC-23)"))
             elif (have := f"{v['major']}.{v['minor']}") != want:
-                out.append(Failure("G-D0", rel, f"`framework: {value}` does not match the installed engine {version} (framework {want})", f"if the repo has moved to framework {want}, follow the upgrade ritual (FRAMEWORK §8.0; kit README § Upgrade) and set `framework: {want}`; otherwise run an engine {have}.x"))
+                out.append(Failure("G-D0", rel, f"`framework: {value}` does not match the installed engine {version} (framework {want})", f"if the repo has moved to framework {want}, follow the upgrade procedure (FRAMEWORK §8.0; kit README § Upgrade) and set `framework: {want}`; otherwise run an engine {have}.x"))
         for marker in ANY_BEGIN.findall(text):
             if marker != want:
-                out.append(Failure("G-D0", rel, f"holds the kit {marker} contract block, but the installed engine is framework {want}", f"replace the block between its markers with the engine's kit/bootloader.md block (kit README § Upgrade), or run an engine {marker}.x"))
+                out.append(Failure("G-D0", rel, f"holds the kit {marker} block, but the installed engine is framework {want}", f"replace the block between its markers with the engine's kit/bootloader.md block (kit README § Upgrade), or run an engine {marker}.x"))
         block = K.kit_block(text)
         if block and block[0] == want:  # a block of another version is red above
             out += self._bootloader(rel, path, want, block[1])
         return out
 
     def _bootloader(self, rel: str, path: Path, want: str, body: str | None) -> list[Failure]:
-        """G-D0's bootloader half: the kit block's text, and every file it imports."""
+        """G-D0's kit-block half: the kit block's text, and every file it imports."""
         if body is None:
             return [Failure("G-D0", rel, f"has the kit {want} begin marker but no end marker after it", "restore the block from the engine's kit/bootloader.md, both markers included")]
         out: list[Failure] = []
         imports = K.IMPORT_RE.findall(body)
         if body != K.bootloader_body():
             if not imports:
-                out.append(Failure("G-D0", rel, f"holds the inline kit {want} block, which copies the framework's rules instead of importing them", f"move its gate command to `## Gate` below the end marker, replace the text between the markers with the engine's kit/bootloader.md block, then run `context-engine init`, which writes {K.CONTRACT_DEST} (kit README § Upgrade)"))
+                out.append(Failure("G-D0", rel, f"holds a kit {want} block that copies the framework's rules instead of importing them", f"move its gate command to `## Gate` below the end marker, replace the text between the markers with the engine's kit/bootloader.md block, then run `context-engine init`, which writes {K.CONTRACT_DEST} (kit README § Upgrade)"))
             else:
                 out.append(Failure("G-D0", rel, f"the text between the kit {want} markers is not the engine's kit/bootloader.md block", "copy the block from the engine's kit/bootloader.md; this repo's own rules go outside the markers"))
         want_text = (K.KIT / K.CONTRACT).read_text(encoding="utf-8").replace("\r\n", "\n")
@@ -1445,7 +1448,7 @@ class Engine:
             b = self.banner() if self.w.handoff else None
             if closes and self.w.handoff:
                 newest_close = max((e.key for e in closes), key=key_order)
-                if b is None:  # a session closed, so a banner is owed: a missing or renamed heading is a red
+                if b is None:  # a session closed, so a banner is owed: a missing or renamed heading fails
                     out.append(Failure("G-W1", self.w.handoff, f"no `## Banner (<key>)` heading, but {newest_close} closed", "write it at clean close (`banner set`, with `--seen none` for the first)"))
                 elif key_order(b.key) < key_order(newest_close):
                     out.append(Failure("G-W1", self.w.handoff, f"banner key {b.key} is older than the newest close {newest_close}", "replace the banner at clean close (`banner set`)"))

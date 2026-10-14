@@ -1,6 +1,6 @@
 """The engine commits its writes by path (FRAMEWORK §5.5 rule 4, CE-45): every op log line HEAD
 lacks, with the files those lines name, so a clean checkout of any commit passes lint on its
-own, and nothing another session staged or left untracked rides along. When it commits is the
+own, and nothing another session staged or left untracked goes into the commit. When it commits is the
 `[engine] commit` policy (DEC-36, CE-55): at milestones by default, after every write, or only a
 pause. The session's own commits sweep the same way (`context-engine commit`).
 
@@ -117,7 +117,7 @@ def test_a_mid_session_commit_passes_lint_on_its_own(repo, tmp_path):
     (repo / "parser.py").write_text("x = 1\n", encoding="utf-8")
     git(repo, "add", "parser.py")
     task_file = next((repo / "tasks").glob("CE-1-*.md")).relative_to(repo).as_posix()
-    git(repo, "add", task_file)  # a no-op when the engine committed it; else the old ritual's add
+    git(repo, "add", task_file)  # a no-op when the engine committed it; else the old procedure's add
     # the per-task commit a session makes by path: its code and the board item, never `-A`
     git(repo, "commit", "-q", "-o", "parser.py", task_file, "-m", "CE-1: the parser", "-m", f"Session: {c.session}")
     clone = tmp_path / "clone"
@@ -218,7 +218,7 @@ def test_a_fresh_repo_commits_once_its_config_is_committed_or_staged(tmp_path):
     _init(root, commit=False)
     c = ops.Caller(actor=ACTOR)
     _, line = run(root, "session_start", c)
-    assert "not committed: context.toml is not committed in this repo" in line and "rituals § Bootstrap" in line, line
+    assert "not committed: context.toml is not committed in this repo" in line and "procedures § Bootstrap" in line, line
     git(root, "add", "context.toml", "CLAUDE.md", "HANDOFF.md")  # the bootstrap's kit commit, staged
     _, line = run(root, "task_new", c, title="First")
     assert "; committed" in line, line
@@ -431,7 +431,7 @@ def test_thousands_of_named_paths_fit_no_command_line(repo):
             (repo / rel).write_text("x\n", encoding="utf-8")
             f.write(json.dumps({"session": "2026-10-01a", "op": "set", "id": f"X-{n}", "path": rel, "fields": []}) + "\n")
     _, line = run(repo, "task_new", c, title="After many")
-    assert "; committed" in line and "carrying lines left uncommitted by 2026-10-01a" in line, line
+    assert "; committed" in line and "including op lines that 2026-10-01a left uncommitted" in line, line
     assert len(files_at(repo)) == 702
 
 
@@ -490,7 +490,7 @@ MILESTONE_CONFIG["guards"] = {**CONFIG["guards"], "stories": "story"}
 MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions/index.md", "baton_max_age": 0}  # 0: expiry has work at once
 # DEC-36's milestones: a task's close, the owner-words writes, a hand-off (baton, pause) and the
 # session's own close or pause; and the banner, which a clean close writes after the session's
-# close (CE-55's call: DEC-36 names it in neither list). Every other write rides along.
+# close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
 MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "decision_supersede",
               "baton_add", "pause_open", "session_close", "session_pause", "banner_set"}
 OWNER = {"actor": "owner", "story_status": "live"}
@@ -644,7 +644,7 @@ def test_a_milestones_settings_are_spent_by_its_own_commit_or_refusal(mrepo):
     e.new("task", "One", session=key, actor=ACTOR)
     e.close("CE-1", "done", session=key, actor=ACTOR, body="Sabotage: x -> y red")
     before = count(mrepo)
-    e.new("task", "Two", session=key, actor=ACTOR)  # rides along: no commit, and nothing of the close's
+    e.new("task", "Two", session=key, actor=ACTOR)  # stays uncommitted: no commit, and nothing of the close's
     with pytest.raises(Refusal, match="already closed"):
         e.close("CE-1", "again", session=key, actor=ACTOR)  # its milestone mark is spent by its own lock exit
     e.new("task", "Three", session=key, actor=ACTOR)
@@ -691,7 +691,7 @@ def test_an_upgraded_repo_saying_commit_true_commits_at_milestones(mrepo):
 @pytest.mark.criterion("AC-78")
 def test_the_session_commit_carries_its_paths_with_the_op_log_and_the_records_it_names(mrepo, tmp_path):
     """The defect a milestone policy would bring back: the session commits its code mid-task
-    while board writes ride along uncommitted; a commit of a record without its line fails
+    while board writes stay uncommitted until the next commit; a commit of a record without its line fails
     lint on a clean checkout. `commit` sweeps them in, so every commit lints on its own."""
     c = start(mrepo)
     run(mrepo, "task_new", c, title="Build the parser")
@@ -825,7 +825,7 @@ def test_the_session_commit_outside_git_refuses(tmp_path):
     root = tmp_path / "plain"
     _write_target(root, MILESTONE_CONFIG)
     (root / "a.py").write_text("a = 1\n", encoding="utf-8")
-    with pytest.raises(Refusal, match="in no git work tree"):
+    with pytest.raises(Refusal, match="not inside a git work tree"):
         run(root, "commit", ops.Caller("2026-10-13a", ACTOR), paths=["a.py"], message="CE-1: a")
 
 

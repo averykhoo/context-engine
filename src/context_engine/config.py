@@ -82,14 +82,14 @@ class Route:
     max_width: int = 0  # characters per line; table rows are exempt
 
 
-LIVENESS = ("LIVING", "ACTIVE-PLAN", "FROZEN")  # FRAMEWORK P2: how alive a doc is
+LIVENESS = ("LIVING", "ACTIVE-PLAN", "FROZEN")  # FRAMEWORK P2: whether a doc is kept current (its liveness)
 # G-D5's counted nouns (FRAMEWORK P5): a number directly before one of these is a census of the tree.
 # Plurals only: after a spelled number a singular is a modifier ("three entry points"). Measured
 # 2026-10-13c (CE-33, docs/evidence/ce33-false-reds-2026-10-13.md): this list over this repo's
 # docs flags 6 lines: 2 bounds (`at most 2 entries`, escaped), 1 in a doc now FROZEN, 2 real counts.
 COUNT_NOUNS = (
     "tests", "checks", "guards", "criteria", "stories", "decisions", "tasks", "items", "rows", "questions",
-    "records", "components", "rituals", "goals", "runbooks", "kinds", "principles", "steps", "files",
+    "records", "components", "rituals", "procedures", "goals", "runbooks", "kinds", "principles", "steps", "files",
     "entries", "ids", "scenarios",
 )
 
@@ -110,7 +110,7 @@ class Guards:
     warn_max: int = 3  # G-D7: ⚠ per file
     bold_caps_max: int = 5  # G-D7: bold all-caps spans (`**NEVER**`) per file
     retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
-    coverage_spec: str = ""  # G-D12: the framework spec whose components, rituals and G-ids must be owned; unset (with coverage_maps) is off
+    coverage_spec: str = ""  # G-D12: the framework spec whose components, procedures and G-ids must be owned; unset (with coverage_maps) is off
     coverage_maps: str = ""  # G-D12: a repo-relative glob of dated coverage maps; the newest by the date and session letters in its file name is read
     charter: str = ""  # G-I1: the charter, whose table rows led by a goal id (`G-n`) are the goals a story's `goals` may name; unset is off
     stories: str = ""  # G-I1, G-I2, G-T1, G-T6: the record kind holding the stories; unset turns all four off
@@ -118,9 +118,9 @@ class Guards:
     claim: str = CLAIM  # G-T2: a regex whose one group is the criterion id a test or driver claims
     liveness: tuple[str, ...] = ()  # G-D4: files and directories whose docs declare their liveness near the top; empty is off
     history: tuple[str, ...] = ()  # G-D4: directories of provenance, whose docs must be FROZEN, or ACTIVE-PLAN while their item is open
-    liveness_given: dict[str, str] = field(default_factory=dict)  # G-D4: repo-relative glob -> liveness, for docs whose top the repo does not own
+    liveness_given: dict[str, str] = field(default_factory=dict)  # G-D4: repo-relative glob -> liveness, for docs whose opening lines the repo may not edit
     liveness_lines: int = 10  # G-D4: how many lines from the top the declaration may sit (the window)
-    numbers: tuple[str, ...] = ()  # G-D5: files and directories where a count of the tree may not be typed in prose; empty is off
+    numbers: tuple[str, ...] = ()  # G-D5: files and directories where a count of things in the tree may not be typed in prose; empty is off
     count_nouns: tuple[str, ...] = COUNT_NOUNS  # G-D5: the nouns a number counts when it stands directly before one
 
 
@@ -157,14 +157,14 @@ class Config:
 
 
 def _known(table: str, got: dict, allowed) -> None:
-    """Refuse a key the engine does not read, so a typo is a red rather than a silent default."""
+    """Refuse a key the engine does not read, so a typo fails rather than becoming a silent default."""
     extra = sorted(set(got) - set(allowed))
     if extra:
         raise Refusal(f"{table} has unknown key {extra[0]!r}", f"use only {', '.join(allowed)} (the kit's context.toml.template is the schema)")
 
 
 def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> None:
-    """Refuse a value of the wrong TOML type, so `orient_max_bytes = "big"` is a red too."""
+    """Refuse a value of the wrong TOML type, so `orient_max_bytes = "big"` fails too."""
     for key, want in spec.items():
         if key not in got:
             continue
@@ -243,7 +243,7 @@ def from_dict(raw: dict) -> Config:
         raise Refusal("[working] sets `decision_index` but names no `decision` kind", "set `decision = \"<kind>\"` in [working], or drop `decision_index`")
     caps = w.get("caps", {})
     tiers = sorted({p for n in w.get("board", ()) for p in kinds[n].enums.get("pri", ())})
-    if tiers:  # a cap names a board tier, so a typo (`NEXTT`) is a red, not an uncapped tier
+    if tiers:  # a cap names a board tier, so a typo (`NEXTT`) fails rather than leaving a tier uncapped
         _known("[working.caps]", caps, tiers)
     _typed("[working.caps]", caps, {t: int for t in caps})
     working = Working(

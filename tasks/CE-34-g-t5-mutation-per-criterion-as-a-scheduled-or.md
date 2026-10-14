@@ -14,7 +14,7 @@ updated: 2026-10-12d
 
 Split from CE-14 (2026-10-12d). FRAMEWORK §8.2 G-T5: mutation per criterion, run as a scheduled routine or the one slow background job, keyed on the hash, results in a tracked evidence doc; it mechanises the hand sabotage of P7 (`CLAUDE.md` § Sabotage rule, DEC-11). Not for formal theorems (G-T4 substitutes).
 
-Until it exists, each task keeps a hand sabotage table (`tools/sabotage_<task>.py`, the Sabotage probes route). Those tables are the seed: each row is a mutation with the test that must go red.
+Until it exists, each task keeps a by-hand sabotage table (`tools/sabotage_<task>.py`, the Sabotage probes route). Those tables are the seed: each row is a mutation with the test that must go red.
 
 ## Traps
 

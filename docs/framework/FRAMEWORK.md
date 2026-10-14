@@ -29,9 +29,11 @@ It does this with plain files in git, organised in layers:
 
 - **Intent:** a charter, the owner's stories in the owner's words, criteria that define correct
   behaviour, and decisions. Every link from goal to story to criterion to test is guarded.
-- **Rules:** a short contract, a routing map of where everything lives, invariants and runbooks.
+- **Rules:** a short contract, a routing map of where everything lives, a residual-risk register
+  and runbooks.
 - **Working state:** an orientation note with a one-session banner, a board of tasks and owner
-  questions, and stamped batons and pause records for work a session skipped or left mid-flight.
+  questions, and session-stamped batons and pause records for work a session skipped or left
+  mid-flight.
 - **Record:** a session ledger with receipts, evidence docs, and an archive.
 - **Verification:** tests, plus guards that fail the gate when a component drifts, bloats or
   loses its links.
@@ -39,7 +41,7 @@ It does this with plain files in git, organised in layers:
 Anything that is a set of id'd records (tasks, questions, batons, pauses, decisions, stories,
 deviations) is written through **one tool, the record engine** (`context-engine`), which stores
 records as OKF files, refuses bad writes and names the remedy, and is reachable as a library, a
-CLI and a per-session MCP server. Prose is written by hand. **Rituals** (session start, intake,
+CLI and a per-session MCP server. Prose is written by hand. **Procedures** (session start, intake,
 clean close, pause) are engine operations, and every one has a by-hand fallback in a runbook.
 
 A `CE-n` in parentheses, as in *Not built yet (CE-n)*, points at the record engine's own board in
@@ -56,8 +58,8 @@ item.
 | 3 | The intent layer and the correctness chain | Charter, stories, criteria (including research repos), the chain from goal to test and its guards, the deviation register |
 | 4 | Drift: kinds and guards | Each way records drift from reality, and the guard (or the absence of one) for it |
 | 5 | Working state | The orientation note, the board, owner questions as board rows, batons and pause records, rules for several writers, the owner digest |
-| 6 | Rituals | Session start, intake, clean close, pause, decision recording, delegation, promotion, push, bootstrap, humans outside the rituals, housekeeping, keeping this document current, rollback |
-| 7 | Record layer details | Ledger, evidence docs, archive, invariants as the residual-risk register, runbooks |
+| 6 | Procedures | Session start, intake, clean close, pause, decision recording, delegation, promotion, push, bootstrap, humans outside the procedures, housekeeping, keeping this document current, rollback |
+| 7 | Record layer details | Ledger, evidence docs, archive, the residual-risk register, runbooks |
 | 8 | Tooling and verification | The record engine (config, record kinds, CLI / MCP / housekeeping entry points, trial before adoption) and the guard catalogue |
 | 9 | Storage, persistence and OKF | What persists, storage tiers, how OKF is used and its constraints, what comes later |
 | 10 | Layout for a new repo | The directory tree |
@@ -78,7 +80,7 @@ The **owner does not write code**. The owner gives **intent**:
 
 **Agents do everything else:**
 - turn intent into precise criteria, criteria into tests, and tests into code;
-- keep the docs, guards and rituals that make the work continuous across sessions.
+- keep the docs, guards and procedures that make the work continuous across sessions.
 
 Agent autonomy is expected to keep rising. The less the owner supervises, the more the repo
 itself must carry intent, correctness and continuity.
@@ -89,7 +91,8 @@ Four jobs:
 2. **Make correctness checkable.** Every piece of intent traces to something executable that
    has been shown to fail when the behaviour breaks.
 3. **Make continuity cheap.** A cold session, even a new model with no memory, can orient in
-   minutes from a single query, resume mid-flight, and leave the repo better oriented. This is
+   minutes from a single query, resume mid-flight, and leave the repo easier for the next session
+   to orient in. This is
    *measured*, not assumed: see the `read:` receipt in §6.3.
 4. **Spend owner attention only where it is irreplaceable.** Agents decide what they may
    decide, record it, and ration what they raise.
@@ -124,31 +127,32 @@ Four jobs:
 **P1. One home per statement; everywhere else points to it.** A table of where things live is
 a pointer and nothing more.
 
-**P2. Every artifact declares how it changes and how alive it is.** These are two separate
-properties.
+**P2. Every artifact declares how it changes and whether it is kept current (its liveness).**
+These are two separate properties.
 
 How it changes:
 - **replaced:** rewritten in place; git holds the history;
 - **append-only:** entries are never edited; corrections are dated additions;
 - **generated:** produced by a tool, and checked against a regeneration **and** for content;
-- **stamped:** an entry carries a session key and expires (batons, pause records).
+- **session-stamped** (`mode = "stamped"` in config): an entry carries a session key and
+  expires (batons, pause records).
 
-How alive it is:
+Whether it is kept current (its liveness):
 - **LIVING:** maintained, true today;
-- **ACTIVE-PLAN:** being executed; the body is provenance, corrections are appended at the top
-  with dates;
+- **ACTIVE-PLAN:** being executed; the body is provenance, dated corrections are added at the
+  top;
 - **FROZEN:** provenance only, with a visible banner.
 
 **For records, the change mode is per-kind config that the engine enforces** (§8.0.1):
-append-only kinds carry a body hash and accept only `amend`; stamped kinds expire mechanically;
+append-only kinds carry a body hash and accept only `amend`; session-stamped kinds expire mechanically;
 replaced kinds have tool-owned frontmatter and hand-written bodies.
 
 **P3. Stable ids, never reused, and never renumbered.**
 - Applies to stories, criteria, decisions, tasks and questions, and also to rule numbers,
-  ritual step numbers, guard check numbers and the section numbers of this document.
+  procedure step numbers, guard check numbers and the section numbers of this document.
 - Cite stable keys, never line numbers.
 - Code is cited as `file::symbol`.
-- **One id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
+- **One standard id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
   questions, register entries): `[A-Z]+-[1-9][0-9]*`, a prefix of capitals, a dash, and a number
   with no leading zero (`G-3`, `S-12`). The prefixes are per-repo config (`[kinds.*].prefix`);
   the form is not. Guard and drift names (`G-D3`, `DR1`) belong to this document, not to a
@@ -158,7 +162,8 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
 **P4. Provenance on anything that can go stale:**
 - **who:** the actor vocabulary in §6.5, with the model id for agents;
 - **when:** a date or session key;
-- **how it is known:** READ / REASONED / UNVERIFIED. Scouting is a deliverable.
+- **how it is known:** READ / REASONED / UNVERIFIED. Finding out how a claim is known is part of
+  the work, not overhead.
 
 **P5. Numbers that can be derived from the tree are generated. Measurements may be typed with
 a date.**
@@ -173,25 +178,26 @@ a date.**
 **P6. Cap the dimension that actually grows, target the mechanism of growth, and give every
 component a way out.**
 - A guard bounds what it measures, and the growth moves to what it does not.
-- A note under a replace rule regrows by **append-layering**: each session adds its layer on
-  top. So the targeted guard is a layer detector (the banner carries exactly one session key),
-  and a byte cap is only the backstop.
+- A note meant to be replaced, not added to, grows back by **stacking**: each session stacks
+  its update on top. So the targeted guard is a stacking check (the banner carries exactly one
+  session key), and a byte cap is only the backstop.
 - A component with no exit path bloats: session logs kept inside the orientation note, a
   single-file decision log, an uncapped contract.
 
 **P7. Every tracked text component has a schema and a cap; every rule that matters has a guard;
 every guard has been shown to fail.**
-- **A place needs room, and checks on what is inside it:**
+- **Every component needs room, and checks on what is inside it:**
   - **room:** a schema, a cap, and a way out (archive or promotion), so it never has to bloat;
   - **a write-time check:** the engine refuses a bad write when it is made, and names the
     remedy;
-  - **a rest-time check:** a lint in the gate. Both are needed, because humans and hand edits
+  - **a check on the stored files:** a lint in the gate. Both are needed, because humans and hand edits
     bypass the tool (§6.10).
 - Sabotage what a guard protects and watch it go red before believing it.
 - Guard the guards:
   - **floors are raw totals with zero headroom, plus an automatic ratchet**, so deleting a
     corpus cannot lint clean;
-  - **floors that measure an instrument keep declared headroom;**
+  - **floors that check what a guard's own extractor finds (G-D12's, for one) keep declared
+    headroom;**
   - **the doc tools are themselves pinned by tests inside the gate.**
 - **Each guard's docstring says what it deliberately does NOT check.**
 
@@ -199,21 +205,21 @@ every guard has been shown to fail.**
 - **The "who decides" test:**
   - agents make engineering and architecture calls and record their reasoning;
   - only goals, priorities and genuine preferences go to the owner;
-  - a consult with another model is a recommendation, not an order.
+  - a consultation with another model is a recommendation, not an order.
 - **Ration what is raised:** standing owner questions are bounded by the NEXT cap (§5.3).
 
 **P9. Skip what can be recovered; never skip what would be lost.**
-- Rituals may be shortened at an awkward stopping point (§6.4).
+- Procedures may be shortened at an awkward stopping point (§6.4).
 - What may never be skipped:
   - unrecorded owner words;
   - evidence still in scratch;
-  - an undescribed uncommitted tree;
+  - uncommitted changes that nobody has described;
   - the session's ledger entry.
 
-**P10. Evidence goes into a tracked file the same hour.** `.scratch/` is a crash bag: what is
+**P10. Evidence goes into a tracked file the same hour.** `.scratch/` is throwaway space: anything
 recorded only there is already lost.
 
-**P11. Delegate reading for context; parallelise building only when file ownership is
+**P11. Delegate reading to save context; parallelise building only when file ownership is
 disjoint. Judgement stays with the session.**
 - Reading and auditing go to subagents, which return verdicts, not file dumps (§6.6).
 - Several tasks in one request: one subagent per task, and the top level only reports (§6.6).
@@ -234,7 +240,7 @@ disjoint. Judgement stays with the session.**
   yours.
 
 **P13. Behaviour claims are checked against the code, never against the decision log.**
-Rewriting a requirement against the decision log is not the same as checking it against the
+Restating a requirement from the decision log is not the same as checking it against the
 code. Decisions say what was *meant*; only the code says what *is*.
 
 **P14. Honesty norm: criteria, goldens and oracles are never edited to make a test pass.**
@@ -253,18 +259,18 @@ code. Decisions say what was *meant*; only the code says what *is*.
 - This principle is the reason for P4 (provenance), P5 (generate what is derivable), P9 and P10
   (never lose what cannot be recovered), and P12 (other sessions are such readers too). The
   mechanisms that serve it: `orient()` (§6.1), batons and pause records (§5.4), ledger receipts
-  (§7.1), and the run ledger, with tiles keyed on their inputs' hash (G-V1, §8.5).
+  (§7.1), and the run ledger, with parts keyed on their inputs' hash (G-V1, §8.5).
 
-**P16. Every programmatic process has a ritual-based fallback,** as a business keeps a
+**P16. Every programmatic process has a by-hand fallback,** as a business keeps a
 continuity plan for a system it normally runs by machine.
-- The engine, its guards, the housekeeping run and the MCP server are conveniences over rituals,
-  not replacements for them. For each one, the framework keeps a written procedure a session can
-  do by hand when the programme is missing, broken, or wrong.
+- The engine, its guards, the housekeeping run and the MCP server are conveniences over steps a
+  session can do by hand, not replacements for them: for each one, a runbook gives the by-hand
+  steps for when the program is missing, broken, or wrong.
 - **The fallback is a section of a runbook, named after the process:**
-  `docs/runbooks/manual-mode.md` has one per engine operation, and `docs/runbooks/rituals.md` one
-  per ritual, the housekeeping run included. A new engine operation is not done until its
+  `docs/runbooks/manual-mode.md` has one per engine operation, and `docs/runbooks/procedures.md`
+  one per procedure, the housekeeping run included. A new engine operation is not done until its
   fallback section exists. Both ship in the adoption kit (§6.9), with the method runbooks (§7.5).
-- **Using a fallback is an event, not a workaround:** do the step by hand, then fix the process
+- **Using a fallback is something to act on, not a quiet workaround:** do the step by hand, then fix the process
   (runbook § When the engine and this runbook disagree), and note it in the session's review
   (§6.12).
 - A refusal with a sensible remedy is not a failure of the process (§8.0); the fallback is for
@@ -287,7 +293,7 @@ Regulations 2015 (S 428/2015).
   - whoever builds and notices a foreseeable risk reports it (reg. 10(1)); designers and
     builders are given the information they need, and the designer passes on what is needed
     to build and maintain the work (regs. 5(3), 9(3)).
-- **Here:** the *structure* is the engine, a record kind, a guard, a ritual or a repo layout.
+- **Here:** the *structure* is the engine, a record kind, a guard, a procedure or a repo layout.
   The *affected persons* are the session building it, the next session with no context (P15),
   the owner, a human using plain git (§6.10), and every repo the engine is deployed to.
   *Harm* is lost work in a shared checkout, a false green, owner words lost or altered, a git
@@ -310,7 +316,7 @@ Regulations 2015 (S 428/2015).
   into the repo, and from the engine into every repo it is deployed to (§11).
 - **Where it happens:** the design review of a task (§5.2) and a project's architectural design
   stage (§10). Like the regulation, which applies only to projects of S$10 million or more, the
-  review has a threshold (§5.2), so small work carries no ceremony (P8).
+  review has a threshold (§5.2), so small work needs no design review (P8).
 
 **P18. Design for maintainability: F.A.M.E.** Adopted from the Singapore Building and
 Construction Authority's Design for Maintainability (DfM), which integrates maintenance
@@ -338,7 +344,7 @@ work. Its principles, as BCA states them, then what each means here:
 BCA turns F.A.M.E. into five design considerations: design strategy and collaboration, access
 for maintenance, materials and finishes, design and detailing, and integrating technology.
 
-**Use:** walk F.A.M.E. and P17 as a checklist at a project's architectural design stage (a new
+**Use:** go through F.A.M.E. and P17 as a checklist at a project's architectural design stage (a new
 repo, §10, or a new engine subsystem) and in a task's design review (§5.2). **When a process
 here breaks or a rule is unclear, re-derive the intent from P17 and P18** and fix the process
 from them, not from the broken process.
@@ -352,16 +358,16 @@ from them, not from the broken process.
 | 1 | Intent | **Charter** | What are we building, why, what is out of scope, which principle wins a tradeoff? | replaced (rarely), LIVING | owner; the agent proposes |
 | 2 | Intent | **Stories** (incl. use cases, interactions) | What does the owner want to happen, in the owner's words? | **record**, append-only (amendments are dated additions; a body hash pins the owner's words) | owner |
 | 3 | Intent | **Criteria (the spec)** | Exactly what behaviour counts as correct? | replaced, with ids and statuses | agent drafts; owner may veto |
-| 4 | Intent | **Law / NFRs** (optional) | Cross-cutting invariants: data model, performance, security | replaced, LIVING, with its own invariant → test map | agent, from owner intent |
+| 4 | Intent | **Non-functional requirements (NFRs)** (optional) | Cross-cutting invariants: data model, performance, security | replaced, LIVING, with its own invariant → test map | agent, from owner intent |
 | 5 | Intent | **Deviation register** | Where the system deliberately differs from the spec | **record**, append-only | agent; owner approves material ones |
-| 6 | Rules | **Contract** | How do I work here? Gate, mandates, footguns | replaced, capped | promotion only |
+| 6 | Rules | **Contract** | How do I work here? Gate, mandates, traps | replaced, capped | promotion only |
 | 7 | Rules | **Routing map** | Where does each kind of statement live, and how do framework components map onto this repo? | replaced, small | agent |
-| 8 | Rules | **Invariants** (durable traps; the residual-risk register) | What is load-bearing, and must not be rediscovered the hard way? | replaced; changes only when the code does | agent |
+| 8 | Rules | **Residual-risk register** | What is load-bearing, and must not be rediscovered the hard way? | replaced; changes only when the code does | agent |
 | 9 | Rules | **Runbooks** (method) | How do we run the gate, sabotage, fan-out, release, and every engine operation by hand? | replaced. Archive the status, keep the method | agent |
 | 10 | Working state | **Orientation note** | What is true now; what must the next session not miss? | replaced at every clean close; banner = one session key, stamped by the engine, written only if unchanged since read (§5.5) | agent |
 | 11 | Working state + Record | **Tasks and the board** (tasks **and** owner questions) | What is next, in what order, what is waiting on the owner, and what happened on each item? | each task is a **durable record** (body, comments, op log, links to decisions; it stays when closed, **in place**, with `state: closed`). Only the ranking fields and the board *view* are volatile | agent ranks; owner assignment overrides |
-| 12 | Working state | **Batons and pause records** | What did a session skip, or leave mid-flight? | **record**, stamped, one file each; closed by `baton done` with evidence (a pause by `pause resume`), or expired after two sessions by housekeeping | agent |
-| 13 | Working state | **Unverified hazards** | What is suspected dangerous right now, do not fix blind? | replaced | agent |
+| 12 | Working state | **Batons and pause records** | What did a session skip, or leave mid-flight? | **record**, session-stamped, one file each; closed by `baton done` with evidence (a pause by `pause resume`), or expired after two sessions by housekeeping | agent |
+| 13 | Working state | **Unverified hazards** | What is suspected to be dangerous right now, and must not be fixed without checking first? | replaced | agent |
 | 14 | Record | **Decisions** (with negative results) | Why is it this way, and what was rejected? | **record**, one file per decision, append-only (§6.5) | stamped with actor |
 | 15 | Record | **Session ledger** | What happened in each session, with receipts? | append-only, one entry per session, written by `session.*` operations (one file under the engine lock, not a record kind, §8.0.1) | agent |
 | 16 | Record | **Evidence and plan docs** | What did we measure; what is the plan for item X? | ACTIVE-PLAN → FROZEN | agent |
@@ -374,28 +380,29 @@ from them, not from the broken process.
 | 23 | Ephemeral | **Memory** | What has the owner taught agents that isn't a rule yet? | accretes; promoted or pruned | agent records the owner's feedback |
 
 **Terms:**
-- A **baton** is a stamped note of a step a session skipped.
-- A **pause record** is a stamped note of work left mid-flight (§6.4).
+- A **baton** is a session-stamped note of a step a session skipped.
+- A **pause record** is a session-stamped note of work left mid-flight (§6.4).
 - A **session key** is `YYYY-MM-DD` plus a letter, minted by `session.start` under a lock
   (§5.5).
 - A **record** is one OKF file of a **record kind** the engine owns (§8.0.1). The engine owns
   its frontmatter and lifecycle; its body is prose. Components marked **record** in the table
   above are record kinds; the rest are hand-written documents checked by the doc guards.
 - **Housekeeping** is the repair pass the engine runs at session start and before close
-  (§6.11): a no-model script first, small tool-restricted agents only where reading is needed.
+  (§6.11): first a script that calls no model, then small agents with restricted tools only
+  where something must be read.
 
 ### 2.1 Separations that are load-bearing
 
 | Kept apart | Why |
 |---|---|
-| Orientation note vs session ledger | Otherwise the banner becomes a second log, layered session on session (P6). |
-| Owner-question **row** vs free-floating **badge** | An unbounded marker drifts into meaning "see also". Each owner question is a **board row** in its own id series (`ASK-n`), ranked under the same caps. A separate question queue would be a second list beside the board. |
+| Orientation note vs session ledger | Otherwise the banner becomes a second log, stacked session on session (P6). |
+| Owner-question **row** vs free-floating **badge** | A marker with no limit on where it may appear drifts into meaning "see also". Each owner question is a **board row** in its own id series (`ASK-n`), ranked under the same caps. A separate question queue would be a second list beside the board. |
 | Board vs baton | Batons that never expire become a second backlog: a baton that survives two sessions is not a baton, it is backlog. |
 | Contract vs decision log | A contract that indexes the decision log grows without bound; the contract holds rules, decisions hold reasons. |
-| Contract vs invariants | Invariants are durable traps, not a second contract. |
-| Invariants (durable) vs unverified hazards (volatile) | Merged, a durable lesson would be deleted whenever a hazard is "fixed". |
+| Contract vs residual-risk register | The register holds residual risks, the traps a session must know, not a second contract. |
+| Residual-risk register (durable) vs unverified hazards (volatile) | Merged, a durable lesson would be deleted whenever a hazard is "fixed". |
 | Status vs method | Runbooks survive when the status around them is archived. |
-| Stories vs criteria | The owner speaks in stories, not test-grade prose; criteria must be precise. The seam is accepted, guarded (G-T1, G-T6) and synced (§6.1). |
+| Stories vs criteria | The owner speaks in stories, not test-grade prose; criteria must be precise. The gap between the two is accepted, guarded (G-T1, G-T6) and kept in step (§6.1). |
 | Ledger vs archive | The ledger records events; the archive receives pruned material verbatim and never repairs it. |
 
 ---
@@ -411,7 +418,7 @@ from them, not from the broken process.
 - owner mandates;
 - the humans who give intent, and their roles (§6.5).
 
-**Rule:** one charter per repo, owner-stamped. Agents change it only through an owner question,
+**Rule:** one charter per repo, signed off by the owner. Agents change it only through an owner question,
 then a decision, then the edit. Every goal is served by at least one story (G-I1).
 
 **Goal ids:** each goal leads a row of the charter's goal table with its id, `G-n` (P3), so the
@@ -461,30 +468,31 @@ The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words g
 **Retiring a story** is owner intent too, so it is an operation that records who and why:
 `record.retire(id, why, by, superseded_by)` (CLI `record retire`).
 - **Whose call:** `by: owner` (or `human:<id>`), with their words verbatim as `why`; or `by:
-  agent`, only for a story recorded again to replace a broken record (the wrong goal, actor or
-  status at birth), named in `superseded_by`, which must carry the story's words as typed (the
+  agent`, only to replace a broken record (the wrong goal, actor or status when it was created)
+  with a new story named in `superseded_by`, which must carry the story's words as typed (the
   body above `## Amendments`, logged corrections undone; a correction is redone on the new
   record). An agent never withdraws owner intent on its own.
 - **What it writes, in one write:** `story_status: retired` and the derived `status: deprecated`
   (§9.3); `superseded_by` on the story and `supersedes` on its successor, both directions as
   `decision.supersede` writes them; and the reason as an amendment (`retired (by <who>): <why>`,
-  or `retired (by <who>; superseded by <id>): <why>`), so the why lives with the story. One op log
-  line per record, the successor's first: its `supersedes` is idempotent, so a write that fails
-  between the two is completed by a retry.
+  or `retired (by <who>; superseded by <id>): <why>`), so the why lives with the story. It writes
+  one op log line per record, the successor's first; because setting `supersedes` is idempotent,
+  a retry completes a write that failed between the two.
 - **It refuses** a successor that is not a story, is the story itself or is retired; a story
-  whose hash does not match; and a story a logged retire retired, even when a hand edit has
-  since undone it.
-- **A retire is final.** No operation undoes it: to bring the intent back, record a new story. A
-  story retired by hand (no logged retire) may be retired by the operation, which records who
-  and why; an adopting repo's stories retired before the engine are retired so, with the owner's
-  words from the one batched answer of §11.4. `record.new` refuses a story born `retired`, with
+  whose hash does not match; and a story that a logged `retire` retired, even when a hand edit
+  has since undone it.
+- **A retirement is final.** No operation undoes it: to bring the intent back, record a new
+  story. A story retired by hand (no logged `retire`) may be retired by the operation, which
+  records who and why; stories that an adopting repo retired before it adopted the engine are
+  retired the same way, with the owner's words from the one batched answer of §11.4.
+  `record.new` refuses a story created as `retired`, with
   `status: deprecated`, or with a story link (`supersedes`, `superseded_by`: lists of story ids,
   written only by `record.retire`).
-- **Lint (G-I2)** fails a retired story no logged retire retired, a story a logged retire retired
-  that is no longer `retired` with `status: deprecated`, and a story that is deprecated but not
-  retired. A retired story is history: G-I1, G-I2's provenance checks and G-T1 do not read it.
-  When a live story replaced one that criteria come from, G-T1's remedy says to add it to their
-  `from` cells.
+- **Lint (G-I2)** fails a story marked retired that no logged `retire` retired, a story that a
+  logged `retire` retired but that is no longer `retired` with `status: deprecated`, and a story
+  that is deprecated but not retired. A retired story is history: G-I1, G-I2's provenance checks
+  and G-T1 do not read it. When a live story replaced a story some criteria cite as their
+  source, G-T1's remedy says to add the new story to those criteria's `from` cells.
 
 PRD sections are not separate files, so a PRD-form repo maps stories onto PRD sections through
 `context.toml` and keeps G-D10 off for them until it adopts story files.
@@ -521,9 +529,10 @@ Each criterion has:
 - **inform and proceed:** agent-drafted criteria are live as soon as they are created. The
   owner is informed through the digest and pushes back if something is wrong;
 - a story the owner tags `sign-off: required` holds its criteria at `planned` until the owner
-  stamps them. This is opt-in.
+  signs them off. This is opt-in.
 
-So the owner's silence never blocks work, and the owner keeps a hard gate where they want one.
+So the owner's silence never blocks work, and the owner can still require approval where they
+want it.
 **"Inform" must actually reach the owner:** see the digest in §5.6.
 
 **The form depends on the kind of project.** The chain's shape does not:
@@ -549,13 +558,13 @@ it may have no threshold, only a direction. So a research repo replaces pass/fai
 | **Direction** | the end goal, as a direction, not a threshold | human (charter) | "separate each talker from everything else"; output serves speech-to-text **and** human listening |
 | **Measures** | proxies for progress, agent-proposed, human-confirmable, each with **its known blind spots** | agent proposes; human may veto | SI-SDR, PESQ, ESTOI, DNSMOS; "DNSMOS cannot see a dropped turn, so never judge on it alone" |
 | **Ground truth** | the human judgement the proxies stand in for, sampled now and then | human | the owner listens to a fixed set of outputs |
-| **Frontier** | best-so-far on each measure, dated, on fixed scene sets | generated from results docs | a rung table: median SI-SDR per method |
+| **Frontier** | best-so-far on each measure, dated, on fixed scene sets | generated from results docs | a table of the best median SI-SDR per method |
 | **Targets** (optional) | a threshold, only where one genuinely exists | human | a DNSMOS target |
 
 **What counts as progress** (the research equivalent of a passing test):
 - a change **moves the frontier** on the primary measure;
-- on **held-out** data. Score any change to a selection rule on a fresh set, because sets that
-  have been looked at are spent;
+- on **held-out** data. Score any change to a selection rule on a fresh set, because a set that
+  has been looked at is no longer held out;
 - **without regressing the guard measures**. A gain on one proxy that the others contradict
   is a suspected proxy failure, not progress;
 - and is periodically **checked against ground truth**, because the proxies can drift from the
@@ -567,25 +576,25 @@ moving (diminishing returns, recorded as a negative result) or when a human says
 enough, which is a decision.
 
 - **All the work is tasks that move the repo toward the direction:** testing new algorithms;
-  literature review and collating references; downloading datasets; building rungs on the
-  ladder. These are not criteria, and need no criterion each. Each task names the goal it
+  literature review and collating references; downloading datasets; building the methods to be
+  compared. These are not criteria, and need no criterion each. Each task names the goal it
   serves, and its outcome is evidence (a results doc, a reference note, a dataset card), or a
   negative result in the decision log.
-- **Progress is the ledger of measurements:** dated results docs, each rung scored the same
-  way on the same scene sets, with held-out sets kept fresh.
+- **Progress is the ledger of measurements:** dated results docs, each method scored the same
+  way on the same evaluation sets, with held-out sets kept fresh.
 - **The harness still gets ordinary tests:** metrics, data loaders, scorers and vendored
   libraries. A wrong metric silently moves you *away* from the goal while looking like
   progress. Vet research code against its paper.
 
 **No prose-requirements layer by default.** Prose criteria that name implementation symbols rot
-silently: they keep describing deleted code, and planned tags keep describing shipped
-behaviour, with every guard green. The cause is prose naming symbols, not the number of layers.
+silently: they keep describing deleted code, and criteria still tagged `planned` keep
+describing behaviour that has shipped, with every guard green. The cause is prose naming symbols, not the number of layers.
 Hence:
 - no separate prose-requirements (FR) layer between stories and criteria;
 - an **existence guard against the code** at every prose layer (G-T3);
 - **behaviour verified against the code** (P13).
 
-NFRs and data-model law go in the charter, or in a law doc with its own invariant → test map.
+NFRs and data-model law go in the charter, or in an NFR doc with its own invariant → test map.
 
 **Unspecified semantics: pin first, then specify.** When existing behaviour nobody specified
 must be preserved, write tests that pin it empirically, then write the criterion from the pins.
@@ -616,8 +625,8 @@ charter goal ─► story (owner) ─► criterion (agent) ─► test (agent) �
 3. **Structural claims get hash pins.** A claim about *structure* (model ↔ code correspondence,
    "implemented as a sparse bitmap") may cite `file::symbol`. The citation is resolved, and
    pinned by a body hash. **Calibrate the pin:** pin only what the claim is about (e.g. the
-   *shell* of a class), because a gate that fires on everything gets regenerated without being
-   read.
+   *shell* of a class), because a pin that trips on every edit gets re-pinned without anyone
+   reading the change.
 
 ### 3.5 Deviation register
 
@@ -641,12 +650,12 @@ Drift ids are `DR`, to avoid colliding with decision ids.
 | DR3 | Prose is semantically false while naming only live symbols | **no guard catches this.** Mitigations: the criteria census on every design change; G-T5 mutation; the trace-check agent's judgement |
 | DR4 | Code changed under a structural claim | G-T4 hash pin |
 | DR5 | A doc cites a deleted file or symbol | G-D3 |
-| DR6 | A typed derivable number goes stale | G-D5 |
+| DR6 | A hand-typed number that could be derived goes stale | G-D5 |
 | DR7 | A test passes without checking the behaviour | G-T5 mutation; sabotage |
 | DR8 | The suite or corpus silently shrinks | G-V2 floors |
 | DR9 | Working docs drift from reality | G-W rows, G-D8 |
-| DR10 | A generated index that is wrong but byte-identical to its regeneration | generate indexes from record frontmatter, not from parsed prose, so the misparse cannot happen; G-D6 content assertions from a cutoff id for indexes that still parse prose |
-| DR11 | A guard bounds one dimension and growth moves to another | target the growth mechanism (layer detector) plus a byte backstop |
+| DR10 | A generated index that is wrong but byte-identical to its regeneration | generate indexes from record frontmatter, not from parsed prose, so the misparse cannot happen; G-D6 content assertions from a cutoff id onward for indexes still built by parsing prose |
+| DR11 | A guard bounds one dimension and growth moves to another | target the growth mechanism (stacking check) plus a byte backstop |
 
 ---
 
@@ -655,7 +664,7 @@ Drift ids are `DR`, to avoid colliding with decision ids.
 ### 5.1 Orientation note (`HANDOFF.md`)
 
 **Contents:**
-- a **banner** with exactly **one session key** (the layer detector, G-D8), stating what is
+- a **banner** with exactly **one session key** (the stacking check, G-D8), stating what is
   true now;
 - a generated pointer to **open batons and pause records** (§5.4);
 - **next session**: the start sequence.
@@ -663,22 +672,22 @@ Drift ids are `DR`, to avoid colliding with decision ids.
 **No session history.** In small repos an inline board is allowed (§5.2).
 
 **Read on demand.** `orient()` prints the banner (§6.1), so a cold session often needs nothing
-else. The `read:` receipt records whether the note was read (§6.3).
+else. The `read:` receipt records whether the orientation note was read (§6.3).
 
 **Replaced on clean close**, safely for several writers (§5.5). Batons and pause records are
 records of their own (§5.4), so the replaced part is only the banner and "next session". The
 banner is written with `banner.set(text, seen_hash)`, which refuses if the banner changed since
 this session last saw it.
 
-**Caps:** the layer detector first; then lines, bytes and line width as backstops. A line cap
-alone does not hold: the bytes regrow through layering.
+**Caps:** the stacking check first; then lines, bytes and line width as backstops. A line cap
+alone does not hold: the bytes grow back as sessions stack updates.
 
 **Subtree notes are allowed** for a large subsystem. A subtree note does not rank anything.
 
 ### 5.2 Board: tasks and owner questions together
 
 **Three sizes:**
-1. **Inline table** in the note: `# | id | what | status / blocker | spec`. Only for a
+1. **Inline table** in the orientation note (`HANDOFF.md`): `# | id | what | status / blocker | spec`. Only for a
    single-session repo with few items.
 2. **One file per item, no CLI.** The cheap step up; it removes most concurrent-edit
    collisions.
@@ -686,7 +695,7 @@ alone does not hold: the bytes regrow through layering.
 
 **When to move up a size:**
 - the first trigger is **more than one session working the board** (P12);
-- then: the note shows append-layering, or sessions still read the note for item detail.
+- then: the orientation note shows stacked updates, or sessions still read it for item detail.
 
 **Adopt the next size by trial:** run it in parallel first, with a pre-registered rubric and
 a single revertible cutover commit.
@@ -696,9 +705,9 @@ a single revertible cutover commit.
   updated, closed, source, labels`; a question also carries `last_asked`, `blocks` and, once
   answered, `answered`;
 - `brief`: ≤120 characters, **a constraint, not a summary**;
-- body: summary, `## Traps`, and `## Read first`, whose pointers are lint-resolved with a
-  floor; and `## Log`, which `comment` and `close` append to and which is never replaced.
-  Sessions keep reading the note for item detail until items carry these sections.
+- body: summary, `## Traps`, and `## Read first`, whose pointers lint resolves, with a floor
+  on how many there are; and `## Log`, which `comment` and `close` append to and which is never replaced.
+  Sessions keep reading the orientation note for item detail until items carry these sections.
 - **`## Design review`** (P17, P18), required before a task above the threshold is promoted to
   NOW. It names the affected persons; lists each foreseeable risk as *eliminated*, *reduced (how,
   at which rung of the P17 ladder)* or *residual*; and answers F.A.M.E. in one line each.
@@ -713,23 +722,23 @@ a single revertible cutover commit.
     `- <class>: <risk> | rung: <rung> | why: <why> | control: <guard or rule>`, class
     `eliminated`, `reduced` or `residual`, rung from the P17 ladder (`eliminate`, `reduce`,
     `collective`, `individual`); `reduced` needs a rung, `residual` a rung, `why` and `control`; a
-    risk held only at `individual` is a `residual`, so it reaches the register (P17);
+    risk controlled only at `individual` is a `residual`, so it reaches the register (P17);
     then `F:`, `A:`, `M:` and `E:` lines. The template is in the runbook (§ task promote); a
     template line left unchanged counts as missing.
   - **The refusal:** `task promote <id> NOW` on an item carrying `review` refuses, naming every
     reason, until the section passes. Lower tiers are not checked. On an item already at NOW,
     `task set review=` and `task section` run the same check on what they would write, and
-    `task set` refuses to remove `review` while the section lists a residual. G-W12 re-checks at
-    rest.
-  - **The move on close:** `task close` appends each `residual` line to the register (§7.4) as
+    `task set` refuses to remove `review` while the section lists a residual. G-W12 re-checks the
+    stored files.
+  - **What close does:** `task close` appends each `residual` line to the register (§7.4) as
     the next `INV-n`, under the close's lock, and logs a `register.append` op. It is idempotent
     on (task id, risk text), so a reopen and re-close adds nothing. A close refuses an unready
-    review, and residuals with no register configured. G-W13 re-checks at rest.
+    review, and residuals with no register configured. G-W13 re-checks the stored files.
 
 **Edit rules (task tree):**
 - frontmatter changes only through operations carrying the session key;
 - `moved`, which drives staleness warnings, is never hand-edited;
-- bodies are rewritten by hand under replace semantics, or one section at a time
+- bodies are rewritten whole by hand, or one section at a time
   (`section.set`).
 
 **Ranking:** NOW (exactly 1), NEXT (≤5), LATER, SOMEDAY. An owner assignment overrides the
@@ -741,7 +750,7 @@ a pointer row.
 **Closing:** a closed item leaves the board, with a `closed:` line in its own `## Log` and its id
 in the session's ledger `rows:`. Nothing is open and done at once. Taking the NOW item off NOW
 (closing it, answering it if it is an owner question, or demoting it) while others stay open
-leaves G-W5 red: the operation still succeeds, and its line says so and asks the owner which item
+leaves G-W5 red: the operation still succeeds, and its reply says so and asks the owner which item
 to promote (the engine picks none).
 
 **Closing does not move the file.** Close sets `state: closed`, and the engine derives OKF
@@ -756,7 +765,7 @@ into the flat directory once the schema carries `state` (§11.4).
   - the question, answerable in one line;
   - why it is owner-only (the "who decides" test, P8);
   - the options, with the agent's **recommendation**: one the agent holds with reasonable
-    confidence, and the why in a line. Reach it only as far as is cheap: reading, a quick
+    confidence, and the why in a line. Spend only cheap effort on reaching it: reading, a quick
     probe, a short subagent. Not a long `fable` session, and not building and testing a
     feature to find out. Where no recommendation is cheap, say so and why;
   - what it blocks: the blocked tasks declare `deps: [ASK-n]`, and closing the question
@@ -766,7 +775,7 @@ into the flat directory once the schema carries `state` (§11.4).
     in that session;
   - an `asked:` receipt in the ledger proves it, and a missing receipt is red;
   - the NEXT cap bounds how many questions are being pressed at once.
-- **The board is the owner's only tracker for questions,** so the agent must ask, and nag:
+- **The board is the owner's only tracker for questions,** so the agent must ask, and keep reminding:
   - every open question carries `last_asked: <session key>`;
   - **at session start**, the session raises, in chat, one line each, every NEXT-tier
     question plus any question that is **overdue**: not asked in the last 5 sessions or 7
@@ -774,7 +783,7 @@ into the flat directory once the schema carries `state` (§11.4).
   - if the owner says "later", that is recorded and `last_asked` is re-stamped. The question
     stays open, and **"later" is never treated as an answer**;
   - **G-W8** refuses a close while an overdue question has not been raised this session;
-  - only humans on the remote-control channel are nagged in chat; questions for anyone else
+  - only humans on the remote-control channel are reminded in chat; questions for anyone else
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
   recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
@@ -795,14 +804,14 @@ into the flat directory once the schema carries `state` (§11.4).
 
 - **Baton:** a skipped step, stamped with its session key. The next session executes it
   **before its own work**. If one survives two sessions, it becomes a board task (G-W3).
-- **Pause record** (§6.4), stamped, containing:
+- **Pause record** (§6.4), session-stamped, containing:
   - what was in flight;
   - the exact resume step;
   - the uncommitted paths and the branch;
   - where the evidence is;
   - which steps were deferred.
 
-**Each baton and each pause record is its own record file** (stamped kind, §8.0.1), not a block
+**Each baton and each pause record is its own record file** (session-stamped kind, §8.0.1), not a block
 inside `HANDOFF.md`. So:
 - **nothing is carried forward at close,** and a concurrent session cannot drop another's;
 - `orient()` hands open batons and pause records to the next session before anything else;
@@ -846,52 +855,54 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    - **a hand-off:** a baton (`baton.add`) or a pause (`pause.open`), which the next session
      must find whatever happens to this one;
    - **the session's end:** `session.close` or `session.pause`, and `banner.set`, which a
-     clean close writes after its ledger entry (§6.3), so nothing of the close is left to ride.
+     clean close writes after its ledger entry (§6.3), so nothing of the close is left uncommitted.
 
    Every other write (a task's new, set, comment, touch, section, dep, promote and reopen; a
    question's new, raised and later; baton done, pause resume; decision set, link, relink and
-   import; record stamp and correct; session start; housekeeping) **rides along**: it stays
-   in the working tree until the next commit, which carries it. That commit is made while the
-   engine lock is held, and carries **every op log line the working tree has and HEAD lacks,
-   every file those lines name, and the op log itself**, so it takes every write that rode
-   along before it, this session's or another's. (`init` writes the kit's files, not records:
+   import; record stamp and correct; session start; housekeeping) **is still uncommitted and
+   goes into the next commit**: it stays in the working tree until then. That commit is made
+   while the engine lock is held, and carries **every op log line the working tree has and HEAD
+   lacks, every file those lines name, and the op log itself**, so it takes every write still
+   uncommitted before it, this session's or another's. (`init` writes the kit's files, not records:
    it logs nothing and commits nothing, and the session commits what it wrote.)
    - **Why milestones, not every write:** a commit per write grew history by a commit per board
      edit and cost every write a git process under the lock (about half a second on Windows,
      2026-10-13), for writes that cost little to lose: the next commit carries them, whoever
      makes it. What a
-     milestone commits is what is dear to lose or must be at HEAD now.
+     milestone commits is what is costly to lose or must be at HEAD now.
    - **The policy is `[engine] commit`:** `"milestones"` (the default), `"every-write"` (each
      write operation commits), or `"off"` (the session commits by path, through `context-engine
-     commit` or by hand, at the latest at close or pause; no line reminds it). A pause record is
+     commit` or by hand, no later than its close or pause; no line reminds it). A pause record is
      committed at once whatever the policy, and a pause that cannot be committed refuses,
      keeping its record: a pause left uncommitted in a shared tree can be lost to another
      session's close. The older spelling still reads: `true` is `"milestones"`, `false` is
      `"off"`.
-   - **The session's own commits sweep too:** `context-engine commit <paths> -m <message>`
-     commits those paths by path (`git commit --only`) with the same sweep under the same lock,
-     whatever the policy, and adds the `Session:` trailer. A plain `git commit -o` naming a
-     record whose op line is still riding along commits the record without its line, which
-     G-W7 reds on a clean checkout of that commit; `commit` never makes one. It runs no gate:
+   - **The session's own commits take the uncommitted op lines too:** `context-engine commit
+     <paths> -m <message>` commits those paths by path (`git commit --only`) together with the
+     uncommitted op lines and the records they name, under the same lock, whatever the policy,
+     and adds the `Session:` trailer. A plain `git commit -o` naming a record whose op line is still
+     uncommitted commits the record without its line, which fails G-W7 on a clean checkout of
+     that commit; `commit` never makes one. It runs no gate:
      the session runs the gate before it, as before every commit of its own (§6.3 item 7).
    - **Why the op log goes with every record:** lint reads the two together. G-W7 checks a
      board item's session keys against the newest line that wrote them, so a record committed
      without its line fails lint on a clean checkout of that commit, even though the shared tree
-     passes. A line committed without its record is a history that lies, and no guard sees it
+     passes. An op line committed without its record claims a write that the commit does not
+     contain, and no guard sees it
      (G-W7 walks the records that exist), so the engine never makes one.
    - **Why every uncommitted line, not only this operation's:** the commit is derived from the
-     op log against HEAD, not from what this process remembers. So a write that rode along, or
-     a line left by a session that died, an older engine or a by-hand write, goes in with the
-     files it names, in the next commit. That is the commit its owner's milestone would have
-     made. The message names
-     whose lines they were, and so does the operation's line (`carrying lines left uncommitted
-     by <key>`). Committing only this operation's lines would need a partial op log, whose order
+     op log against HEAD, not from what this process remembers. So a write that was still
+     uncommitted, or a line left by a session that died, an older engine or a by-hand write, goes
+     in with the files it names, in the next commit. That is the commit its owner's milestone
+     would have made. The message names
+     whose lines they were, and so does the operation's reply (`including op lines that <key>
+     left uncommitted`). Committing only this operation's lines would need a partial op log, whose order
      on disk and at HEAD would then differ.
    - **Why by path and under the lock:** `git commit --only` on those paths leaves what another
      session staged or left untracked exactly as it was: nothing is unstaged, reset or stashed,
      and a `git add` of a new file is taken back if the commit fails. The lock is held from an
      operation's first write to its commit, so no other write lands between them, and the
-     commit never reads a half-made operation. Hooks run; a hook's refusal is reported, never
+     commit never reads a half-finished operation. Hooks run; a hook's refusal is reported, never
      bypassed. A slow hook holds the lock for as long as it runs, so another session's write
      can time out on the lock meanwhile; it refuses before it writes anything.
    - **One operation, one commit:** an operation that writes several files (an answer writes a
@@ -903,21 +914,21 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      refused any write its schema forbids, and the gate still runs before the session's own
      commits (`context-engine commit` among them) and before every push.
    - **It never undoes the write.** Where it cannot commit, the write stands and the
-     operation's line says why (`not committed: <why>`), naming the by-hand commit. That covers:
+     operation's reply says why (`not committed: <why>`), naming the by-hand commit. That covers:
      a merge, rebase, cherry-pick, revert or bisect in progress; a detached HEAD; `GIT_DIR`,
-     `GIT_INDEX_FILE` or a like variable set (inside a git hook, where a commit would go to that
+     `GIT_INDEX_FILE` or a similar variable set (inside a git hook, where a commit would go to that
      repo or index); `context.toml` not tracked by the enclosing repo (a target inside an
      unrelated repo, or a new repo before its kit is committed); the op log gitignored, or
      missing lines HEAD has; a record it would carry whose frontmatter does not parse (a hand
      edit in progress, which it would commit as it stands); a refusing hook; git refusing the
-     repo; git missing beside a `.git`. Only a target in no git work tree at all commits nothing
+     repo; a `.git` directory present but no git executable. Only a target in no git work tree at all commits nothing
      and says nothing (the session's own `commit` refuses there). A named file that git ignores
-     is left out, and the line names it.
+     is left out, and the reply names it.
    - **A milestone that refuses after a write commits that write too,** since the op log at
      HEAD must not lag the files it names, and the refusal says what became of it; a close's
      `Closes:` is added only once its write is made, so a refused close never claims the item
-     closed. A write that is no milestone rides along, refused or not. An operation that fails
-     with an error other than a refusal can leave a half-made change, which the next commit
+     closed. A write that is not a milestone stays uncommitted until the next commit, refused or
+     not. An operation that fails with an error other than a refusal can leave a partial change, which the next commit
      carries as it stands, named nowhere: lint then reports what is wrong with it.
    - **Branches merge the op log line by line:** two branches that both wrote op lines would
      conflict in it at every merge, so a repo keeps the op log on git's union merge driver
@@ -952,23 +963,24 @@ to the chat.
 - at session start, a generated file outside the repos, e.g. `~/.claude/owner-questions.md`
   (T3, generated and disposable), lists every open question across all repos, with
   `last_asked`;
-- any session may add **one line** to its start-of-session nag: "also N overdue questions in
+- any session may add **one line** to its start-of-session reminder: "also N overdue questions in
   other repos: …";
 - the source of truth stays each repo's own board.
 
 **Deferred: an answer-in-place question file** for the owner: the engine generates a file of
 open questions on request, a human answers in place, and the answers are read back and filed
-against the questions (CE-19). The channel stays Claude remote control until it is needed.
+against the questions (CE-19). Until such a file is needed, the channel stays Claude remote
+control.
 
 ---
 
-## 6. Rituals
+## 6. Procedures
 
-Rituals are written for agents, and their effects are checked by guards, so a skipped ritual
-shows up red. This section says what each ritual must achieve, with its guards and reasons.
-**The order of each ritual's steps lives in one place, `docs/runbooks/rituals.md`:** each step
-with its engine command, its by-hand step (a section of `docs/runbooks/manual-mode.md`, P16) and
-its why. A contract points there rather than restating an order.
+Procedures are written for agents, and their effects are checked by guards, so a skipped
+procedure shows up red. This section says what each procedure must achieve, with its guards and
+reasons. **The order of each procedure's steps lives in one place,
+`docs/runbooks/procedures.md`:** each step with its engine command, its by-hand step (a section
+of `docs/runbooks/manual-mode.md`, P16) and why it is done. A contract points there rather than restating an order.
 
 **Item numbers are stable (P3)** and are labels, not an order: records cite them ("§6.3 item
 6a"), and the runbook tags each step with its number here. A new item takes a new number (or a
@@ -979,7 +991,7 @@ letter suffix); none is renumbered.
 **Full orientation:**
 1. The contract loads automatically: global, repo (`AGENTS.md` for workflow, `CLAUDE.md` for
    product, mandates and gate, which imports the framework's own contract, §6.9), and subtree.
-   In an adopted repo a `SessionStart` hook prints `orient` (item 3's read) into the context at
+   In an adopted repo a `SessionStart` hook prints `orient` (the read in item 3) into the context at
    startup, resume, `/clear` and compaction. A failing hook is silent, so the contract keeps
    the by-hand `orient` as the fallback (CE-38).
 2. **Open batons and pause records: execute or resume them first.**
@@ -990,13 +1002,13 @@ letter suffix); none is renumbered.
    The session stops or closes none of them on its own.
 4. `show` the top item, or the one the owner assigned.
 5. Read that item's `## Read first` list.
-6. Read the rest of the note **only if needed**, and record which in the `read:` receipt.
+6. Read the rest of the orientation note (`HANDOFF.md`) **only if needed**, and record which in the `read:` receipt.
 
 **With the engine, items 2–5 are one call.** `session.start` mints the key (§5.5), then
 `orient()` returns, in one size-capped response: the banner; this session's open batons and
 pause records, then other sessions'; the other sessions still open; the NEXT tier; owner
 questions to raise; and the top item's brief, Traps and Read first. Step 1 is unchanged, and
-item 6 is still on demand (the order: `rituals.md` § Session start). A **SessionStart hook** can run start-of-session housekeeping (§6.11)
+item 6 is still on demand (the order: `procedures.md` § Session start). A **SessionStart hook** can run start-of-session housekeeping (§6.11)
 and inject `orient()`'s output, so orientation costs no tool call (hook stdout reaches the
 model's context; verified by a probe in the engine repo).
 
@@ -1051,7 +1063,7 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 2. Link it to the charter goal(s). If none fits, ask: it may be a new goal.
 3. Draft the criteria. They are **live by default** (§3.3). Show the owner **a digest of three
    to seven lines**, never files. If the story is `sign-off: required`, the criteria stay
-   `planned` until the owner stamps them.
+   `planned` until the owner signs them off.
 4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them.
 5. If the new intent contradicts an existing decision or criterion, say so at once, and record
    the outcome as a decision that supersedes or amends the old one. A story the owner withdraws,
@@ -1071,7 +1083,8 @@ milestones, and a task's close or the session's is one, §5.5 rule 4). What a cl
 numbered for citation (the order is below):
 
 0. **Every owner word given this session is recorded** (story, decision, or question answer).
-1. **Run the doc guards first, to see what earlier sessions left red,** before adding to it.
+1. **Run the doc guards first, to see which failures earlier sessions left,** before adding any
+   of this session's own.
 2. Write the ledger entry:
    - the session key minted at start (§5.5); `session.close` writes over its `kind: open` stub;
    - a `rows:` line naming the items touched;
@@ -1082,7 +1095,7 @@ numbered for citation (the order is below):
      - `asked:` naming every open question at NOW or NEXT and every overdue one (the engine
        refuses the close otherwise);
    - `Still owed:`.
-3. **Replace** the banner, safely for several writers (§5.5).
+3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
    `Closes:` and `Sabotage:` lines, §5.5 rule 4), rank, mint (with the session key).
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
@@ -1092,7 +1105,7 @@ numbered for citation (the order is below):
      finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
      Its operation list goes into the digest.
 7. **Run the gate again, to prove this close,** then commit by path whatever the engine did not
-   (`context-engine commit <paths> -m ...`, which carries any write still riding along with its
+   (`context-engine commit <paths> -m ...`, which takes any write still uncommitted, with its
    op line, §5.5 rule 4). Push only with permission, then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
@@ -1100,16 +1113,16 @@ numbered for citation (the order is below):
 which refuses a malformed receipt; `banner.set`; the board operations; `baton.add`). The ledger
 entry (2) comes after the gate because the close receipt carries the gate result, and after the
 board operations (4) because `rows:` names what they touched. The steps in order, each with its
-command and by-hand step: `rituals.md` § Clean close.
+command and by-hand step: `procedures.md` § Clean close.
 
 ### 6.4 Pause (an awkward stopping point; the work continues next session)
 
-Rituals may be shortened. **What is mandatory** (P9) is cheap, and protects everything that
+Procedures may be shortened. **What is mandatory** (P9) is cheap, and protects everything that
 cannot be recovered:
 
 0. **Owner words given this session are recorded.** The most easily lost thing of all: they
    exist only in one session's transcript.
-1. **Evidence is out of scratch**, in a tracked doc. It may be rough, dated and ACTIVE-PLAN.
+1. **Evidence has been moved out of `.scratch/`** into a tracked doc. It may be rough, dated and ACTIVE-PLAN.
 2. **A ledger entry, `kind: pause`.** Three lines are enough: key, rows, `deferred:`. The
    ledger has one entry per session without exception, because staleness tracking depends on
    it.
@@ -1121,8 +1134,8 @@ replacement, runbook filing.
 
 **With the engine:** items 2 and 3 are `session.pause(rows, deferred)` plus `pause.open(...)`,
 which captures the branch and uncommitted paths itself. Both are milestones, so each commits
-its writes by path with what rode along (§5.5 rule 4), the pause whatever the commit policy.
-The steps in order: `rituals.md` § Pause; picking the work up again: § Resume.
+its writes by path, with any earlier writes still uncommitted (§5.5 rule 4); the pause commits
+whatever the commit policy. The steps in order: `procedures.md` § Pause; picking the work up again: § Resume.
 
 **Enforcement:**
 - **G-W2:** at most N consecutive `kind: pause` ledger entries without a `kind: close`; N = 2.
@@ -1142,8 +1155,8 @@ reported a problem and the agent decided the fix).
 
 **Decisions are records: one OKF file per decision**, `docs/decisions/<prefix>-n-<slug>.md`
 (`DEC-n` here), written only through the engine. "Why is X like this?" is answered by one small
-file, not by grepping a large log, and append-only is a refusal, not a rule checked by reading
-diffs.
+file, not by grepping a large log, and append-only is enforced by a refusal, not by someone
+reading diffs.
 
 ```yaml
 ---
@@ -1178,8 +1191,8 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 **Operations:** `record.new` (CLI `record new decision`), `record.amend` (appends an entry under
 `## Amendments`, keyed by session and actor; the only allowed body change), `record.stamp`
 (freezes `body_sha` once and refuses a re-stamp; nothing ever replaces it, not even
-`record.correct`); these three are generic over the append-only
-kinds, and so is `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
+`record.correct`); these three work on every append-only kind,
+and so does `record.correct` (below). Then: `decision.supersede(old, new)` (sets both
 directions under one lock and derives OKF `status`), `decision.set(id, fields, unset)` (a
 decision's own keys: `decision_status`, `reopen_if`, `tags`, `title`, `description`; it refuses
 `SUPERSEDED`, any status change on a superseded decision, `reopen_if` on a decision that is not
@@ -1201,7 +1214,7 @@ removing every bracket it added gives back the original body exactly, so the wor
 always survive. `body_sha` is not re-stamped: it keeps pinning the words as typed, and G-D10
 hashes the body with the logged insertions undone, so a record whose `corrected:` lines do not
 match fails, and so does a bracket whose `corrected:` line was deleted.
-The aim is the intent, not a bug-for-bug copy of what was typed; verbatim quotes keep the
+The aim is what was meant, not an exact copy of every slip in what was typed; verbatim quotes keep the
 flavour and let a later reader check whether they were misread. A change of meaning is an
 `amend`, never a correction. Applies to every append-only kind.
 
@@ -1232,10 +1245,10 @@ built **from frontmatter**, grouped by status (in the kind's enum order) and the
 decision's first tag, one line per decision: id, link, description or title, actor and date, and
 `superseded by` where set. Every engine write to a decision regenerates it under the same lock
 (`[working] decision_index`), and `hk.regen_index` regenerates it on demand. Because nothing
-parses prose, its check (G-D6) is byte equality with a regeneration; the content-from-a-cutoff-id
-check is needed only for indexes that still parse prose.
+parses prose, its check (G-D6) is byte equality with a regeneration; the check of content from a cutoff
+id onward is needed only for indexes still built by parsing prose.
 
-**No period splits.** One file per decision has no single-file cap to hit. The growing thing is
+**No splitting by period.** One file per decision has no single-file cap to hit. The growing thing is
 the index (DR11); one line per decision keeps it small, and superseded decisions can collapse
 into a group.
 
@@ -1258,7 +1271,7 @@ nothing. Until a repo migrates, its log is read as it is; the read adapter is no
 **Ultracode** (the `Workflow` tool, multi-agent orchestration) needs no per-request opt-in when
 it keeps the session's own context and tokens down: bulky reading, auditing or verification
 pushed into agents, only verdicts kept.
-- The test is shape, not permission: a real fan-out with a reconcile step;
+- What decides is the shape of the work, not permission: a real fan-out with a reconcile step;
 - not a cheap lookup, and not coupled work split up to go "faster".
 
 **Several tasks in one session:** when one request asks for more than one task,
@@ -1304,18 +1317,19 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
 | baton or pause record | board task | after two sessions, by housekeeping (§6.11) |
 | closed board item | a `closed:` line in its `## Log` and its id in the ledger `rows:`; the file stays in place with `state: closed` | at close |
 | a component over its cap | archive with a redirect table | when the guard warns |
-| ACTIVE-PLAN doc | FROZEN | when its item closes (freeze when it lands) |
+| ACTIVE-PLAN doc | FROZEN | when its item closes |
 
 ### 6.8 Push and CI
 
-- gate before every push; where CI runs on another platform than the session's machine, also
-  CI's job on that platform, locally, in a container shaped like CI's runner (`gate.md`);
+- gate before every push; where CI runs on a different platform from the session's machine,
+  also run CI's job for that platform locally, in a container set up like CI's runner
+  (`gate.md`);
 - push only with permission;
 - a background CI watcher for every push, keyed on the commit hash; the push is not done until
   the watcher reports;
 - the watcher only watches.
 
-The steps in order: `rituals.md` § Push and CI.
+The steps in order: `procedures.md` § Push and CI.
 
 **A push hold**, when the owner imposes one, is a single line at the top of the contract naming
 the hold and where it is recorded.
@@ -1324,12 +1338,12 @@ the hold and where it is recorded.
 
 The engine ships an **adoption kit**: text only, as package data beside the engine's code
 (`kit/`), readable in the engine repo too. It holds the config template (`context.toml.template`,
-which is the config schema), the bootloader for `CLAUDE.md` and the contract it imports, the
-`SessionStart` hook, skeletons for the orientation note, charter, criteria and ledger, the runbooks (`rituals.md` and `manual-mode.md`, so the
-repo can run every ritual by hand from its own tree, P16; and the method runbooks of §7.5), and a README with the install,
-bootstrap and upgrade steps. The steps in order: `rituals.md` § Bootstrap.
+which is the config schema), the kit block for `CLAUDE.md` and the contract it imports, the
+`SessionStart` hook, skeletons for the orientation note, charter, criteria and ledger, the runbooks (`procedures.md` and `manual-mode.md`, so the
+repo can run every procedure by hand from its own tree, P16; and the method runbooks of §7.5), and a README with the install,
+bootstrap and upgrade steps. The steps in order: `procedures.md` § Bootstrap.
 
-**The bootloader (CE-38):** an adopted framework must not depend on the owner leaving
+**The kit block (CE-38):** an adopted framework must not depend on the owner leaving
 `CLAUDE.md` alone, so `CLAUDE.md` carries only a short block between the kit markers: the
 `framework:` line and an `@`-import of `docs/framework/contract.md`. The framework owns that
 file: an upgrade replaces it whole, G-D0 fails when it differs from the installed engine's copy,
@@ -1341,7 +1355,7 @@ an existing one gains the hook only with the owner's yes (`init --merge-settings
 else in it changes. **Standing permissions stay in owner-loaded files**
 (`CLAUDE.md` and what it imports; harness permissions in the settings files), never in MCP
 instructions or `orient` output: an agent rightly discounts a grant that arrives as tool output.
-Procedure may come from any of the three; a grant may not.
+Working instructions may come from any of these three sources; a grant may not.
 
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
 2. The agent installs the engine into its own environment, pinned to a release tag or commit
@@ -1349,24 +1363,24 @@ Procedure may come from any of the three; a grant may not.
    server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
    operation, and a repo that wants the server registers it here.
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
-   runbooks, the bootloader appended to `CLAUDE.md`, the contract it imports, and the hook. It
+   runbooks, the kit block appended to `CLAUDE.md`, the contract it imports, and the hook. It
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the
    repo already uses, then commits the kit's files by path before the first session starts:
    the engine commits (§5.5 rule 4) only where `context.toml` is tracked.
 4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
-   Then it sets the intent chain's sources in `[guards]` (§8.1): set before the first stories
-   and criteria are recorded, the guards are red on a source that is still empty, and the first
-   session could not open on a green lint.
+   Then it sets the correctness chain's sources in `[guards]` (§8.1): if they were set before
+   the first stories and criteria were recorded, the guards would be red on a source that is
+   still empty, and the first session could not open on a green lint.
 5. First clean close: the guards are green, the ledger entry is `kind: close`, and the first
    `banner set` (with `--seen none`) writes the banner heading.
 
-### 6.10 Humans working outside the rituals
+### 6.10 Humans working outside the procedures
 
-The owner works mainly through Claude remote control, but the repo **must not become
-dysfunctional for someone using plain git or writing code by hand**. Humans are never required
-to perform rituals. The agent sessions absorb the cost:
+The owner works mainly through Claude remote control, but the repo **must keep working for
+someone using plain git or writing code by hand**. Humans are never required to follow the
+procedures. The agent sessions absorb the cost:
 
 1. **Agent commits carry a trailer** `Session: <key>`. Commits without one are **foreign**.
    One task per commit, its id leading the title (`CE-n: what changed`; the prefix is the
@@ -1376,22 +1390,23 @@ to perform rituals. The agent sessions absorb the cost:
    them, then each is committed by path (`context-engine commit`, §5.5 rule 4). The engine's
    own commits carry the trailer too; a task's close leads its title with the id, and every
    other engine commit has no task id: it records working state, not a task's work. An engine
-   commit also carries whatever rode along before it, other tasks' board writes included, and
+   commit also carries whatever was still uncommitted before it, other tasks' board writes included, and
    its `Ops:` line names them: the one exception to one task per commit.
-2. **At session start, reconcile foreign commits** since the newest ledger commit before this
-   session's own (its `session.start` rides along, so that is the newest commit touching the
-   ledger that this session did not make; the steps and the entry's format: `rituals.md`
-   § Foreign reconcile):
+2. **At session start, reconcile foreign commits** since the newest commit that touched the
+   ledger and was not made by this session (its `session.start` stays uncommitted until its
+   first commit; the steps and the entry's format: `procedures.md` § Reconciling foreign
+   commits):
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
-   - run the tier-1 trace-check over them (criteria or prose they may have staled);
-   - inbox-check them for intent: a commit message or doc edit that states a feature or
+   - run the tier-1 trace-check over them, to check what criteria or prose they may have made
+     stale;
+   - check them for stated intent (the inbox-check): a commit message or doc edit that states a feature or
      decision is recorded as a story or decision, `via: commit <sha>`, attributed to its
      author.
 3. **Everything a human needs is readable without an agent:**
    - the banner and board in plain markdown;
    - the per-session `summary:` in the ledger;
-   - guards runnable with one command, with readable reds that name the remedy (§8.0).
-4. **A human's red guard is the agent's job.** A human commit that breaks a doc guard is not
+   - guards runnable with one command, with readable failures that name the remedy (§8.0).
+4. **Fixing a guard that a human's commit turned red is the agent's job.** A human commit that breaks a doc guard is not
    reverted; the next session fixes or reconciles it and records that in the ledger.
 
 ### 6.11 Housekeeping
@@ -1404,7 +1419,7 @@ any edit agent.
 
 | Tier | Who | Does | Example operations |
 |---|---|---|---|
-| 0 | **a no-model script** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton; stamping `last_asked` from `asked:` receipts written by hand |
+| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton; stamping `last_asked` from `asked:` receipts written by hand |
 | 1 | **small agents restricted to the engine's `hk.*` operations (MCP tools `hk_*`)** | reading unstructured text, writing through typed operations | commits since the last session → dated task comments; clearing a pause record whose paths are now committed; reconciling foreign commits (§6.10); spotting owner words not yet recorded (reported, not written) |
 | 2 | **the main session** | every judgement | ranking, criteria, task bodies, answers, closes without evidence |
 
@@ -1412,11 +1427,11 @@ any edit agent.
 new intent** (P11 exception).
 
 **By hand** (no engine, or no housekeeping agents), the main session does every tier's
-mechanical part itself, in the order `rituals.md` § Housekeeping gives, marking each write
+mechanical part itself, in the order `procedures.md` § Housekeeping gives, marking each write
 `mechanical` in the op log.
 
-**Closing is the hard case.** No tool auto-closes on its own judgement: a "mechanical" close
-would only ever be someone quietly declining to record that they closed something.
+**Closing is the hard case.** No tool auto-closes on its own judgement: calling a close
+"mechanical" would only hide that someone decided to close it.
 `hk.close(id, commit)` closes only when that commit **really carries** `Closes: <id>` (the engine
 checks git, not the agent's word) or the session's ledger entry names the item as closed, and it
 cites that evidence in the close message (G-W9). Otherwise housekeeping proposes the close and
@@ -1431,7 +1446,8 @@ the session approves the batch.
 
 **Safety:**
 - every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in a
-  commit by path with a `Session:` trailer (it rides along to the next one, §5.5 rule 4), so
+  commit by path with a `Session:` trailer (it stays uncommitted until the next one, §5.5 rule
+  4), so
   `git revert` undoes it. A
   commit whose message says it also carried another session's leftover lines reverts those
   too: revert such a commit by path instead.
@@ -1458,14 +1474,14 @@ script and MCP prove insufficient.
   `docs/framework/FRAMEWORK-v<version>.md` and opens the copy with `ARCHIVED <date>` (§7.3), so its
   old LIVING line no longer counts (G-D4). Archived copies are frozen once written.
 - If the old text will never be needed, do not archive it.
-- What belongs here is the framework: what it is for, its rules, components, rituals, tools and
+- What belongs here is the framework: what it is for, its rules, components, procedures, tools and
   guards. Origin stories, prior art, owner Q&A and change history go to decisions, stories,
   evidence docs or an archived copy.
 
 **After-action review (AAR): a first note, not a design.**
 - Intent: each session leaves a short record of **what worked well** and **what could be
   improved**, so that the framework can later be assessed and improved from evidence instead of
-  from memory. Using a fallback (P16) and any ritual step that cost more than it was worth belong
+  from memory. Using a fallback (P16) and any procedure step that cost more than it was worth belong
   in it.
 - **Open, to be designed when the owner takes stock:** where it lives (a field of the ledger
   entry, or its own record kind); its shape and cap; whether `session.close` asks for it;
@@ -1481,7 +1497,7 @@ shared-tree rules (§5.5) rule out `git stash`, `git reset` and checking out who
 writer may also have touched; candidates are `git revert` of the session's own commits (found by
 `Session:` trailer; one that carried another session's leftover lines, §5.5 rule 4, is reverted by
 path) plus restoring only the paths the session's op log says it wrote, recorded as
-a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its ritual
+a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its by-hand
 fallback is a runbook section (P16). Not built yet (CE-18).
 
 ---
@@ -1491,7 +1507,7 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 ### 7.1 Session ledger
 
 - **One entry per session, without exception:** `kind: open` (the stub `session.start` writes,
-  §5.5), then `close` or `pause`; `abandoned` for a stub housekeeping found never closed; and
+  §5.5), then `close` or `pause`; `abandoned` for a stub that housekeeping found was never closed; and
   `foreign` for reconciled human commits (§6.10).
 - **Written by the engine:** `session.start`, `session.close`, `session.pause`. The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
@@ -1503,11 +1519,12 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 ### 7.2 Evidence and plan docs
 
 - One per item or investigation, dated, with its liveness declared near the top (G-D4). While
-  ACTIVE-PLAN it names its board item there, and corrections are appended at the top with dates.
-  It freezes when the item lands: a FROZEN line with the date goes above the old declaration.
+  ACTIVE-PLAN it names its board item there, and dated corrections are added at the top.
+  It freezes when the item closes: a FROZEN line with the date goes above the old declaration.
 - The task row is the index and the doc is the body: `show <id>` alone must be enough to
   resume.
-- An author's-voice TODO in a frozen doc is a declared hole, not an instruction.
+- A TODO the author left in a frozen doc marks a known gap; it is not an instruction to whoever
+  reads it now.
 
 ### 7.3 Archive
 
@@ -1517,13 +1534,14 @@ fallback is a runbook section (P16). Not built yet (CE-18).
   current.
 - Archive headings act as the index (`## Pruned from HANDOFF.md on <date>`).
 
-### 7.4 Invariants (the residual-risk register) vs unverified hazards
+### 7.4 Residual-risk register vs unverified hazards
 
-- **Invariants:** durable, load-bearing traps. They change only when the code does. LIVING,
-  part of the rules layer. They carry `stale_after` only if they are about something external.
-- **The invariants are the residual-risk register** (P17). Each entry says what the risk is and
-  whom it affects, why it was not eliminated, which control holds it (the P17 rung, and the
-  guard or rule by name), and where it came from (task, decision or incident). Entries arrive
+- **Residual-risk register:** the risks left after their controls, the traps a session must
+  know; not a second set of rules. Its entries change only when the code does. LIVING, part of
+  the rules layer. An entry carries `stale_after` only if it is about something external.
+- **It is P17's register of residual risks.** Each entry says what the risk is and whom it
+  affects, why it was not eliminated, how it is controlled (the P17 rung, and the guard or rule
+  by name), and where it came from (task, decision or incident). Entries arrive
   from a task's design review when it closes (§5.2), and from any session that notices a risk
   and confirms it (an unverified hazard, once confirmed, below).
 - **Where it lives:** one markdown file named by `[working] register` (a target repo:
@@ -1535,28 +1553,28 @@ fallback is a runbook section (P16). Not built yet (CE-18).
   that every closed reviewed task's residuals are in it and that every entry is whole.
 - **The register is handed over with the work:** the engine's own register is
   `src/context_engine/REGISTER.md`, shipped as package data, so it travels with the engine to
-  every repo it is pointed at (§11), as the regulation hands the register to whoever next takes
-  the structure over. There, `context-engine register show --engine` reads the installed copy,
+  every repo it is pointed at (§11), as the Design for Safety regulations (P17) hand the register
+  to whoever next takes the structure over. There, `context-engine register show --engine` reads the installed copy,
   and `orient` adds one line pointing at it whenever the repo's own register is another file.
-- **Unverified hazards:** volatile suspicions ("do NOT fix blind"). They live in the note or on
-  the board. When resolved, they either become an invariant, a fix plus a ledger line, or are
-  dismissed with a ledger line.
+- **Unverified hazards:** volatile suspicions ("do NOT fix blind"). They live in the orientation note
+  or on the board. When resolved, each becomes a register entry, becomes a fix plus a ledger
+  line, or is dismissed with a ledger line.
 
 ### 7.5 Runbooks
 
 Runbooks hold **method**, which survives when the status around it is archived. Each is one file
-under `docs/runbooks/`, short, and routed (§2). Each method runbook declares how it changes and
-how alive it is in its frontmatter (`mode: replaced`, `liveness: LIVING`, P2; G-D4 checks the
-liveness).
-- `docs/runbooks/rituals.md`: every ritual's steps in order, each with its engine command, its
-  by-hand step and its why; the only place a ritual's order is written (§6). A test in the engine
+under `docs/runbooks/`, short, and routed (§2). Each method runbook declares in its frontmatter
+how it changes (`mode: replaced`) and its liveness, whether it is kept current (`liveness:
+LIVING`; P2), which G-D4 checks.
+- `docs/runbooks/procedures.md`: every procedure's steps in order, each with its engine command,
+  its by-hand step and why it is done; the only place a procedure's order is written (§6). A test in the engine
   repo checks that every §6 subsection has its steps or says why it has none, and that every
   step names an operation that exists;
-- `docs/runbooks/manual-mode.md`: every engine operation done by hand, each step with its why
-  (P16); a test in the engine repo keeps it in step with the CLI;
+- `docs/runbooks/manual-mode.md`: every engine operation done by hand, each step with why it is
+  done (P16); a test in the engine repo keeps it in step with the CLI;
 - `docs/runbooks/gate.md`: running the gate so its result is true (the exit code, a worktree's
   code, a red gate), and the **test baselines**: one dated baseline per suite, and an
-  *unexplained* drop is a blocker. The gate's own suite takes its baseline from the newest
+  *unexplained* regression is a blocker. The gate's own suite takes its baseline from the newest
   ledger entry's `guards:` receipt; a suite outside the gate keeps a dated line where the
   repo's contract names it;
 - `docs/runbooks/sabotage.md`: seeing every new test, guard or refusal fail before believing it
@@ -1608,17 +1626,18 @@ on, and move only on upgrade.
   no `-draft` suffix. `0.5.*` is accepted as a synonym of `0.5`. `context-engine lint` checks
   every `framework:` line of the contract (`contract` in `[engine]`, `CLAUDE.md` by default),
   and the version in its kit block's begin marker. A missing contract, a missing line, or a value
-  that is not `major.minor` fails it too, and each red names the remedy (CE-21). A kit block of
-  the engine's version must be the kit's bootloader text, and the file it imports must exist and
-  equal the installed engine's `kit/contract.md`, line endings aside (CE-38); `orient` opens
-  with these reds, so a session whose contract did not load is told at once.
-- **Upgrade ritual:** bump the engine's pinned ref (reinstall it in its own environment) and
-  the contract's `framework:` line, run the lint, fix the reds, and write a ledger line naming
-  the new ref. The kit's contract replaces `docs/framework/contract.md` whole, and a new kit
-  bootloader replaces the old block between its markers.
+  that is not `major.minor` fails it too, and each failure names the remedy (CE-21). A kit block
+  of the engine's version must be the kit's block text (`kit/bootloader.md`), and the file it
+  imports must exist and equal the installed engine's `kit/contract.md`, line endings aside
+  (CE-38); `orient` opens with these failures, so a session whose contract did not load is told
+  at once.
+- **Upgrade procedure:** bump the engine's pinned ref (reinstall it in its own environment) and
+  the contract's `framework:` line, run the lint, fix the failures, and write a ledger line
+  naming the new ref. The kit's contract replaces `docs/framework/contract.md` whole, and the
+  new kit block replaces the old one between its markers.
 - **Existing repos keep their own check numbers.** The package maps its ids onto them and
   never renumbers them (P3).
-- **Tools that refuse name the remedy.** Every red says what to do.
+- **A tool that refuses something names the remedy.** Every failure says what to do.
 - **Every guard docstring says what it deliberately does not check** (P7).
 
 ### 8.0.1 Record kinds and change modes
@@ -1632,13 +1651,13 @@ modes (P2):
 |---|---|---|
 | **append-only** | decisions, stories, deviations | a `body_sha` over the original body; `amend` appends a dated entry and is the only body change (`correct` is the logged exception for every append-only kind, §6.5, and keeps the stamp); G-D10 recomputes the hash with logged corrections undone |
 | **replaced body, tool-owned frontmatter** | tasks, owner questions (`ASK-n`) | frontmatter changes only through operations carrying the session key; bodies are hand-edited or set one section at a time (`section.set`) |
-| **stamped** | batons, pause records | a session key on creation; expiry after two sessions; housekeeping converts the expired ones |
+| **session-stamped** (`mode = "stamped"`) | batons, pause records | a session key on creation; expiry after two sessions; housekeeping converts the expired ones |
 
 **Not record kinds:** criteria (they live in `.feature` files or a criteria doc, plus test
 annotations such as `@pytest.mark.criterion`, and the trace guards read them in place); ledger
 entries (one file written only through `session.*` under the lock, receipts checked by G-W6;
-append-only by rule, with no `body_sha`); the charter, contract, invariants, runbooks and
-evidence docs (prose, checked by the doc guards); verification state (owned by the gate's run
+append-only by rule, with no `body_sha`); the charter, contract, residual-risk register,
+runbooks and evidence docs (prose, checked by the doc guards); verification state (owned by the gate's run
 ledger, G-V1). The banner is prose, but the engine stamps its key and guards its write (§5.5).
 
 **Every kind round-trips unknown frontmatter keys,** as OKF asks (§9.3), so a key a human adds
@@ -1662,7 +1681,7 @@ session. There are no ports, and each concurrent session gets its own process.
   file. A committed `.mcp.json` may name it through `${VAR}`, which Claude Code expands only from
   the environment it was started in: an `env` block in `.claude/settings.local.json` does not
   reach it (verified by a probe in the engine repo).
-- **Missing tools are a set-up step, not a stop.** Claude Code starts MCP servers only at
+- **Missing tools call for a set-up step, not a stop.** Claude Code starts MCP servers only at
   launch, so a session that finds the tools missing registers the server as above, runs every
   operation through the CLI for the rest of the session (same functions, nothing lost), and asks
   the owner to restart Claude Code. Fallback text: `manual-mode.md` § When the MCP tools are
@@ -1671,13 +1690,13 @@ session. There are no ports, and each concurrent session gets its own process.
   process, and a `/clear` probably leaves it running (UNVERIFIED, CE-13). So a session begins
   with an explicit `session.start`, never with the process start; the server remembers the key
   and actor from it.
-- **Subagents share the parent's server process,** so the actor is recorded per call (a tool
-  may pass its own `session` and `actor`, so a subagent names itself), chiefly through the `hk_`
-  prefix for housekeeping, not per process.
+- **Subagents share the parent's server process,** so the actor is recorded per call, not per
+  process: a tool may pass its own `session` and `actor`, so a subagent names itself, and
+  housekeeping calls are told apart chiefly by the `hk_` prefix.
 - **The server's working directory is the directory Claude Code started in**, so the engine
   takes the repo root from its cwd.
 
-**Design rules for the MCP surface; the goal is context, not convenience:**
+**Design rules for the MCP surface; the goal is to save context, not convenience:**
 1. **Edits are operations, not text replacement:** set a field, append a comment, replace one
    named section. No read-modify-write.
 2. **Every write returns one line:** what changed and the new state.
@@ -1698,7 +1717,7 @@ library operations. The CLI spells them `context-engine <noun> <verb>` (`session
 | Banner | `banner.show`; `banner.set(text, seen_hash)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section.set(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (generic over the append-only kinds); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(scope)`: failures only, each with its remedy (CLI `lint [--working]`) |
 | Commits | `commit(paths, message)`: the session's own commit by path, with the op log lines HEAD lacks and the files they name; runs no gate (§5.5 rule 4) |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
@@ -1712,10 +1731,10 @@ judgement: the session makes it by calling an operation, the tool never makes it
 ### 8.0.3 Trial before adoption
 
 Following §5.2's adopt-by-trial rule, a repo adopts the engine only after a trial against its
-hand-run rituals. **Build first:** the task operations, then the MCP wrapper; `orient`;
+hand-run procedures. **Build first:** the task operations, then the MCP wrapper; `orient`;
 `session.start` / `close` / `pause`; baton and pause records; the tier-0 housekeeping script.
 What is built so far is on the board (`context-engine task list --state all`), not here. **Pre-registered
-rubric:** context spent on session start and clean close against the same rituals done by hand
+rubric:** context spent on session start and clean close against the same procedures done by hand
 (the `read:` receipt is the existing measure), plus collisions or lost records across two
 concurrent sessions. The hand-run baseline is an evidence doc measured before the trial starts.
 Decisions as records follow once the core holds.
@@ -1723,28 +1742,28 @@ Decisions as records follow once the core holds.
 ### 8.1 Intent guards
 - **G-I1:** every charter goal has at least one story; every story names at least one goal,
   and only goals of the charter. Retired stories are history and are not read. Each goal id
-  leads one row, in the one form (P3).
+  leads exactly one row, always written in the standard form (P3).
 - **G-I2:** every story that is not retired has an actor, a date and a status from the
   vocabulary. `unconfirmed` requires `actor: agent (reconstructed from …)`. `record.new` of a
-  story refuses what G-I2 and G-I1 would fail, by the same checks, and a story born with what
+  story refuses what G-I2 and G-I1 would fail, by the same checks, and a story created with what
   only `record.retire` writes (§3.2). Every retired story was retired by `record.retire` (a
-  logged retire, so who and why are recorded), and every story it retired is still `retired`
+  logged `retire`, so who and why are recorded), and every story it retired is still `retired`
   with `status: deprecated`; only a retired story is deprecated; each id in a story's
   `superseded_by` or `supersedes` is a story, and only a retired story has `superseded_by`. Not
-  checked: a hand edit between the standing statuses (no operation owns those moves, and the op
-  log records which keys changed, not their values), a retired story's frontmatter after the
-  retire (history), that the retire's amendment is still there, that `supersedes` mirrors
+  checked: a hand edit from one status other than `retired` to another (no operation owns those
+  moves, and the op log records which keys changed, not their values), a retired story's
+  frontmatter after the retirement (history), that the retirement's amendment is still there, that `supersedes` mirrors
   `superseded_by`, and an op log line written by hand (trusted as written, as G-W7 trusts it).
 
-The intent chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
+The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,
 the criterion id), and the criteria file. A guard is off while a source it needs is unset, but a
 half-set pair is red, as G-D12's is: `charter` without `stories`, or `tests` without a criteria
 file, would otherwise switch a guard off under a clean lint. A set path that does not exist is red, and so is a source that yields nothing (no goal row, no
 criterion row, no claim), so a reworded table or a claim pattern that does not fit the repo's
 test syntax cannot pass by finding nothing. So is a row of a goal or criteria table that is not
-led by an id (`G 3`, `**C-4**`), so one reworded row cannot pass unread either. An id at rest
-is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-escaped `\|`.
+led by an id (`G 3`, `**C-4**`), so one reworded row cannot pass unread either. An id in the
+stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-escaped `\|`.
 
 ### 8.2 Trace and existence guards
 - **G-T1:** every `live` story has a criterion that is not retired, or is `unspecified` and an
@@ -1752,7 +1771,7 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
 - **G-T2:** every `tested` or `manual` criterion is claimed by a test or driver, every
   annotation resolves, and every status is from the vocabulary (§3.3).
 - **G-T3 (existence, against code):** every file, `file::symbol` and route named in the
-  **normative** text of a story, criterion, law doc or invariant exists in the code; history
+  **normative** text of a story, criterion, NFR doc or residual-risk register entry exists in the code; history
   notes (`*HISTORY —*`, blockquotes) are exempt. The lint reads the docs `[guards] existence`
   lists, and the names in backticks there, and the `code:` links of every current decision, by
   the rule `decision.link` applies (a file inside the repo, written with `/`, and each dotted part
@@ -1762,7 +1781,7 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   is an explicit, reviewed act.
 - **G-T5 (mutation per criterion):** runs as a scheduled routine, or as the one slow background
   job, keyed on the hash, with results in a tracked evidence doc; it does not apply to formal
-  theorems, where G-T4 substitutes. It mechanises the hand sabotage of P7. *Not built yet
+  theorems, where G-T4 substitutes. It mechanises the by-hand sabotage of P7. *Not built yet
   (CE-34).*
 - **G-T6:** every criterion's `from` names a story or decision, and each resolves to a record.
   A criterion's actor is its source's (§3.3), so resolving the source is the whole check.
@@ -1774,32 +1793,32 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   `max_lines`, `max_bytes` and `max_width` on a `[[routes]]` entry, applied to the routed file
   or to each `.md` under a routed directory. Table rows are exempt from the width cap.
 - **G-D2:** ids are unique within their series and never reused; a new id is allocated after
-  scanning open and closed items. At rest, no two files carry one id, and the op log never
+  scanning open and closed items. In the stored files, no two files carry one id, and the op log never
   shows an id created twice.
 - **G-D3:** every link and `file::symbol` resolves, case-exact. The lint reads the docs
   `[guards] links` lists, and checks relative links with their `#anchor`s and backticked
   `file::symbol` spans; a bare file name resolves to any file of that name, and a record no
   longer current (`status: deprecated`) is history and is skipped.
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
-  (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is no liveness
+  (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is not a liveness
   word is red), or a line that opens a block (the first, or one after a blank line, a heading or
   the frontmatter) led, after a blockquote's `>` and emphasis, by LIVING, ACTIVE-PLAN or FROZEN,
   or by an archive's `ARCHIVED <date>` (FROZEN, §7.3). The topmost declaration counts; the word
-  in passing (mid-line, on a wrapped line, in fenced code) declares nothing. A doc whose top the
-  repo does not own (frozen provenance, the framework's contract, the engine-written ledger, an
-  owner-stamped charter) is given its liveness in config instead, and a doc that declares one
+  in passing (mid-line, on a wrapped line, in fenced code) declares nothing. A doc whose opening
+  lines this repo may not edit (frozen provenance, the framework's contract, the engine-written
+  ledger, a charter signed off by the owner) is given its liveness in config instead, and a doc that declares one
   must agree. History directories hold provenance: each doc there is FROZEN, or ACTIVE-PLAN
   while its item is open. With a board configured, an ACTIVE-PLAN doc names its board item in
-  the window, and is red once every item it names there is closed (§6.7: it freezes when it
-  lands). Config: `[guards] liveness` and `history` (paths; both empty is off),
+  the window, and is red once every item it names there is closed (§6.7: it freezes when its
+  item closes). Config: `[guards] liveness` and `history` (paths; both empty is off),
   `liveness_given` (a repo-relative glob to a liveness; one that matches no file is red) and
   `liveness_lines`. A listed path that is missing, and a `liveness` list holding no doc, are red.
-- **G-D5:** derivable counts appear only in generated blocks, so a count of the tree typed in
-  prose is red: a number (a numeral, or a spelled one from three to twenty) directly before a
+- **G-D5:** derivable counts appear only in generated blocks, so a count of things in the tree
+  typed in prose is red: a number (a numeral, or a spelled one from three to twenty) directly before a
   counted noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the
   like, plurals only, case-insensitive; an `open`, `closed` or `new` may stand between). A
   number glued on its left to a letter, digit, `.`, `,`, `-`, `§`, `#` or `/` is part of a
-  token (`R6`, `1.5`, `§6`, `G-D5`) and is no count. P5's four forms pass: fenced code and
+  token (`R6`, `1.5`, `§6`, `G-D5`) and is not a count. P5's four forms pass: fenced code and
   frontmatter, a backticked or double-quoted span, a line with a `YYYY-MM-DD` anywhere on it,
   and a doc whose liveness (G-D4's reading) is FROZEN or ACTIVE-PLAN. A bound (`at most 2
   entries`) is a rule's value, not a count, and passes; another rule value or a label (`Step 3
@@ -1811,13 +1830,13 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   prose (`NEXT holds 5`).*
 - **G-D6:** generated indexes match a regeneration **and** are content-complete from a
   configured cutoff id. An index built from record frontmatter needs only the regeneration
-  check; the cutoff check remains for indexes that still parse prose. Built for the decision
+  check; the cutoff check remains for indexes still built by parsing prose. Built for the decision
   index (`[working] decision_index`): a missing index fails while any decision exists.
-- **G-D7:** signal budgets: ⚠ ≤N per file, a bold-caps budget, retired glyphs. Signals rank
-  only if they are bounded. Config: `[guards] signals`, `warn_max`, `bold_caps_max`,
+- **G-D7:** signal budgets: ⚠ ≤N per file, a bold-caps budget, retired glyphs. A signal stands
+  out only if its use is capped. Config: `[guards] signals`, `warn_max`, `bold_caps_max`,
   `retired_glyphs`.
-- **G-D8:** the note's banner carries exactly one session key (the layer detector); there is no
-  session history in the note; an inline board, if present, starts within the first K lines.
+- **G-D8:** the orientation note's banner carries exactly one session key (the stacking check); there is no
+  session history in the orientation note; an inline board, if present, starts within the first K lines.
   The lint fails a second banner heading, any other heading carrying a session key, and a
   banner bullet led by a session key; dated facts citing a key inside a sentence pass. *The
   inline-board clause is not checked: the board is one file per item.*
@@ -1834,17 +1853,19 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   frontmatter with a `type`; every `index.md` has no frontmatter (except an `okf_version` key at
   the bundle root) and the list shape (*the list shape is not checked yet*). That `status`
   agrees with the record's own state key is G-W4.
-- **G-D12:** coverage: every component (§2's table), ritual (§5.6 and the §6 headings) and
+- **G-D12:** coverage: every component (§2's table), procedure (§5.6 and the §6 headings) and
   G-id this document names is owned, by a table row of the newest dated coverage map or by a
   board item, open or closed, that names it. A map row owns only its own table's class, in
-  that table's key column (`Component`; `§` beside `Ritual`; `Guard`). Config: `[guards]
-  coverage_spec` and `coverage_maps` (a repo-relative glob; the newest by the date and session
-  letters in its file name, ordered as session keys). Neither set is off; one set, a missing
-  spec, a glob that is absolute or climbs out with `..`, no matching map or an undated one is
-  red. A class extracted under its floor is red, so a reworded heading or id format cannot
-  pass by finding nothing; the floors and patterns are the engine's and fit this document, so
-  a repo whose spec they do not fit switches G-D12 off. The map is frozen: a red clears with a
-  new dated map or a board item, never an edit (CE-30).
+  that table's key column (`Component`; `§` beside `Procedure`, or beside `Ritual` in older
+  maps; `Guard`). A renamed component still counts under its former name (`Invariants`,
+  `Law / NFRs`), in a map row or a board item alike. Config: `[guards] coverage_spec` and `coverage_maps`
+  (a repo-relative glob; the newest by the date and session letters in its file name, ordered
+  as session keys). With neither set, the guard is off; with only one set, a missing spec, a
+  glob that is absolute or climbs out with `..`, no matching map, or an undated one, it is red.
+  A class whose extraction yields fewer items than its floor is red, so a reworded heading or
+  id format cannot pass by finding nothing; the floors and patterns are the engine's and fit
+  this document, so a repo whose spec they do not fit switches G-D12 off. The map is frozen: a
+  failure clears with a new dated map or a board item, never an edit (CE-30).
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or
   `deprecated` (§9.3.1).
@@ -1861,7 +1882,7 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists. The engine checks `asked:` when the entry is written; the lint re-checks
-  `guards:`, `read:` and `rows:` at rest.
+  `guards:`, `read:` and `rows:` in the stored files.
 - **G-W7:** every record kind's tool-owned frontmatter is changed only by the tool; `moved` is
   consistent with the session-stamped op log. The lint checks each board item's `moved`,
   `updated`, `closed` and `last_asked` against the session of the newest logged operation that
@@ -1869,15 +1890,16 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
   The values of `state`, `pri` and `deps` are refused at write time; the log does not record
   values, so the lint cannot recheck them.
 - **G-W8:** no clean close while an overdue owner question (§5.3) has not been raised this
-  session. This is the nag that gives the owner a tracker.
+  session. This repeated reminder is what makes the board the owner's tracker.
 - **G-W9:** every `--mechanical` close cites its evidence: a commit whose message carries
   `Closes: <id>`, or a ledger entry naming the item. `hk.close` checks it at write time; the
-  lint re-checks it at rest.
+  lint re-checks it in the stored files.
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
   and the count goes into the run's report. **No budget by default:** change sizes vary by
-  session, so a sensible cap may be unreasonably large and would most likely be overridden. A
-  repo may still configure a cap, with provenance (G-D9); hitting it stops the run and asks, and
-  the owner may say write anyway.
+  session, so a cap that suits a large session would be unreasonably large for most, and a
+  smaller one would most likely be overridden. A repo may still configure a cap, with
+  provenance (G-D9); hitting it stops the run and asks, and the owner may tell it to write
+  anyway.
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window's value is to be measured in the trial
   (§8.0.3) and given provenance (G-D9).
@@ -1889,12 +1911,12 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
 
 ### 8.5 Verification-state guards
 - **G-V1 (run ledger):** which gate phases passed on which content tree id. A commit or push
-  can require a green row for the current id. A phase may be split into tiles, each keyed on
+  can require a green row for the current id. A phase may be split into parts, each keyed on
   the hash of its own inputs, so a session with no context can see what is tested without
-  re-running it, and `orient()` reports the untested tiles. Keyed per phase, a docs-only edit
-  costs only the docs phase. *Not built yet (CE-17).*
-- **G-V2 (floors):** raw totals with zero headroom plus an automatic ratchet; instrument floors
-  keep declared headroom (P7); one dated baseline per suite.
+  re-running it, and `orient()` reports the untested parts. Because results are keyed per
+  phase, a docs-only edit re-runs only the docs phase. *Not built yet (CE-17).*
+- **G-V2 (floors):** raw totals with zero headroom, raised by an automatic ratchet; floors on
+  what a guard's extractor finds keep declared headroom (P7); one dated baseline per suite.
 - **G-V3:** a lock on gate runs and background-agent runs for the same tree.
 - **G-V4:** exit-code hygiene: no piping through `tail`/`tee`, one phase per command, logs from
   `mktemp`.
@@ -1914,8 +1936,8 @@ is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may hold a GFM-es
 | Tier | What | Persistence | Format |
 |---|---|---|---|
 | **T0 ephemeral** | context window, `.scratch/`, sync reports, generated maps (coverage → code) | none | anything |
-| **T1 working state** | orientation note, the board *view* and ranking fields, baton and pause records (one file each), unverified hazards | tracked, replaced or stamped; git is the history | our own schemas; baton and pause records are OKF files (`type: Baton`, `type: Pause`) so the engine has one reader |
-| **T2 durable knowledge** | charter, stories (incl. PRDs), criteria, law, decisions, evidence, invariants, deviations, runbooks, archive, **task records** (open and closed: body, comments and updates, op log, links to decisions) | tracked, append-only / LIVING / FROZEN | **OKF-conformant**, with our stricter profile. Task frontmatter stays **tool-owned**: the tool emits `type: Task` and *maps* its own fields onto OKF keys, rather than an OKF overlay duplicating them |
+| **T1 working state** | orientation note, the board *view* and ranking fields, baton and pause records (one file each), unverified hazards | tracked, replaced or session-stamped; git is the history | our own schemas; baton and pause records are OKF files (`type: Baton`, `type: Pause`) so the engine has one reader |
+| **T2 durable knowledge** | charter, stories (incl. PRDs), criteria, NFRs, decisions, evidence, residual-risk register, deviations, runbooks, archive, **task records** (open and closed: body, comments and updates, op log, links to decisions) | tracked, append-only / LIVING / FROZEN | **OKF-conformant**, with our stricter profile. Task frontmatter stays **tool-owned**: the tool emits `type: Task` and *maps* its own fields onto OKF keys, rather than an OKF overlay duplicating them |
 | **T2′ ledger** | session ledger | tracked, append-only | our own format, with OKF-style date headings |
 | **T3 cross-project** | global contract, memory | `~/.claude` | memory files already have OKF's shape: one fact per file, frontmatter with a type, an index file. A redesign is planned (§9.4) |
 
@@ -1932,13 +1954,13 @@ OKF v0.2 (`GoogleCloudPlatform/open-knowledge-format`, `SPEC.md`):
 | who and when | `generated: {by, at}`; actors `human:<id>` / `<producer>/<version>` | `actor:` in our vocabulary (§6.5); the writing agent (`claude-code/<model-id>`) goes into the op log per write. *Not built yet: `generated.by` is not written* |
 | owner sign-off | `verified: [{by: human:owner, at}]` → "human-reviewed" tier | distinct from `criterion_status: tested` |
 | no longer current | `status: deprecated` | **one mapping:** SUPERSEDED decision, `retired` story or criterion, FROZEN archive item, closed task → all carry `status: deprecated`, derived by the engine from the record's own state |
-| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item. Bound to `manual` criteria (re-run the driver by date) and external invariants |
+| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item. Bound to `manual` criteria (re-run the driver by date) and register entries about something external |
 | provenance | `sources:` with ids, cited as footnotes | evidence docs cite their runs |
 | extensions | readers SHOULD preserve unknown keys and MUST NOT reject them | `supersedes`, `relaxes`, `retires`, `criterion_status`, `test`, `liveness`, `sign-off` |
 | attested results (later) | `type: Attested Computation`: a deterministic attester checks a receipt | candidate format for G-V1 run-ledger rows |
 
-**What OKF does not cover:** ranking, owner-question rationing, stamped batons and pause
-records, writes from several sessions, replace-vs-append discipline, rituals, guards. OKF readers
+**What OKF does not cover:** ranking, owner-question rationing, session-stamped batons and
+pause records, writes from several sessions, replace-vs-append discipline, procedures, guards. OKF readers
 are deliberately permissive; our profile is strict on top of conformant files.
 
 #### 9.3.1 Constraints from the OKF v0.2 spec
@@ -1967,12 +1989,12 @@ All derived and disposable; the files stay the source of truth:
 
 ## 10. Layout for a **new** repo
 
-Existing repos map instead of moving (§11.4). `context-engine init` (§6.9) writes the entries
+Existing repos map the components onto their own files instead of moving them (§11.4). `context-engine init` (§6.9) writes the entries
 marked `*` that the repo does not have yet; the rest are added when needed (§11.2).
 
 ```
 AGENTS.md                  # workflow conventions (how agents work), read first
-CLAUDE.md                * # product contract: the kit's bootloader (framework: <version>, imports docs/framework/contract.md), mandates, gate, footguns; push-hold line on top
+CLAUDE.md                * # product contract: the kit block (framework: <version>, imports docs/framework/contract.md), mandates, gate, traps; push-hold line on top
 HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
 context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
@@ -1980,23 +2002,23 @@ docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)
   charter.md             *
   framework/contract.md  * # the framework's rules, imported by CLAUDE.md; replaced whole on upgrade, never edited here (G-D0)
-  law.md                   # optional: NFRs / data-model law with invariant → test map
+  law.md                   # optional: the NFR doc (NFRs, data-model law) with invariant → test map
   stories/S-n-<slug>.md  * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
   criteria.md            * or criteria/ or features/*.feature
   decisions/D-n-<slug>.md * # one record per decision; generated index.md
   deviations/              # append-only records (+ optional generated open-gaps view)
-  invariants.md            # durable traps; the residual-risk register (`[working] register`, §7.4)
-  runbooks/              * # method: rituals.md (every ritual in order), manual-mode.md (every engine operation by hand), gate, sabotage, fan-out and release (§7.5), from the kit
+  invariants.md            # the residual-risk register (`[working] register`, §7.4)
+  runbooks/              * # method: procedures.md (every procedure in order), manual-mode.md (every engine operation by hand), gate, sabotage, fan-out and release (§7.5), from the kit
   evidence/<id>-<topic>-<date>.md *
   ledger/session-log.md  * # session ledger (one file under the engine lock)
   ledger/ops.jsonl         # engine op log, one JSON line per write
   working/               * # baton (BTN-n) and pause (PAU-n) records (§5.4)
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
-.context/                * # engine lock; ignores itself, never tracked
+.context/                * # engine lock; carries its own .gitignore, never tracked
 .claude/settings.local.json * # machine-local, gitignored (.claude/.gitignore): the SessionStart hook that runs orient
 .claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
-.scratch/                * # gitignored crash bag (ignores itself)
+.scratch/                * # throwaway and gitignored: anything only there is lost (carries its own .gitignore)
 ```
 
 ---
@@ -2016,12 +2038,12 @@ tasks/                   * # flat; open and closed side by side, `state:` in fro
 - decision log with negative results;
 - ledger in its own file;
 - the scratch rule;
-- the fallback runbooks (P16): every ritual in order (`rituals.md`) and every engine operation
+- the fallback runbooks (P16): every procedure in order (`procedures.md`) and every engine operation
   by hand (`manual-mode.md`), copied from the kit;
 - the method runbooks (§7.5): `gate.md`, `sabotage.md`, `fan-out.md` and `release.md`, copied
   from the kit.
 
-**Rituals:** intake, start/resume, clean close, pause, bootstrap.
+**Procedures:** intake, start/resume, clean close, pause, bootstrap.
 
 **Tooling:** the record engine's CLI, and the tier-0 housekeeping script (*not built yet (CE-6)*:
 until it is, `baton expire` is the only housekeeping operation). The MCP server is not in the
@@ -2043,19 +2065,19 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 | Trigger | Add |
 |---|---|
 | a second concurrent session works the board | board size 2 (one file per item) |
-| the note layers, or sessions read it for item detail | board size 3 (tree plus CLI), adopted by trial |
+| sessions stack updates in the orientation note, or read it for item detail | board size 3 (tree plus CLI), adopted by trial |
 | a baton survives two sessions | G-W3 |
 | the repo measures things | evidence docs; dated baselines (`gate.md`, §7.5); G-D5 |
-| traps accumulate | invariants doc; G-T3 over it |
+| traps accumulate | residual-risk register; G-T3 over it |
 | the code deliberately departs from the spec | deviation register; G-T7 |
 | "did the gate pass on this tree?" keeps coming up | G-V1 |
 | a component hits its cap | archive plus redirect table |
 | the spec makes structural claims | G-T4 |
 | the suite is large | G-V2 floors; G-T5 mutation |
-| cross-cutting NFRs or data law | law doc with an invariant → test map |
+| cross-cutting NFRs or data law | NFR doc with an invariant → test map |
 | parallel building | build-round protocol (§6.6), tracked workflows |
 | sessions spend context reading files in order to edit them | the engine's MCP server (§8.0.2), after the §8.0.3 trial |
-| housekeeping needs reading, not just rules (commit → task comments, foreign commits) | tier-1 housekeeping agents restricted to `hk_` tools (§6.11); G-W9, G-W10 |
+| housekeeping needs judgement from reading, not just fixed rules (commit → task comments, foreign commits) | tier-1 housekeeping agents restricted to `hk_` tools (§6.11); G-W9, G-W10 |
 | `session.start` stubs are in use | G-W11 |
 | a task is above the design-review threshold (§5.2) | `review_triggers` and `register` in `[working]`; G-W12, G-W13 |
 | a bundle directory is declared OKF | G-D11 |
@@ -2069,7 +2091,7 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   existing files. Existing ids and check numbers are never renumbered; the package maps onto
   them.
 - **`init` on an existing repo** writes only what is missing: it skips every file that exists,
-  appends the bootloader to an existing `CLAUDE.md` only when no kit block (of any version)
+  appends the kit block to an existing `CLAUDE.md` only when no kit block (of any version)
   is there, and keeps an existing `context.toml` once it loads. Then edit `context.toml` in
   place: each kind's `dir` and `prefix` and each route's `path` point at what the repo already
   has (an existing `D-n` series stays `D-n`), and the skeletons `init` wrote for components the
@@ -2085,9 +2107,9 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 - Adopt structural changes (board size, ledger rotation) **by trial**, with a single
   revertible cutover commit.
 - **Closed-task directories may migrate:** `tasks/closed/*` moves into the flat `tasks/` once
-  the schema carries `state` and every moved file has `state: closed`. "Map, don't move" yields
-  here because one place is cleaner, and the cost is bounded when the store can find a task by
-  id when a path is wrong. Deferred while the framework is being built.
+  the schema carries `state` and every moved file has `state: closed`. "Map, don't move" gives way
+  here because one place is cleaner, and the cost is bounded because the store can find a task
+  by id when its path is wrong. Deferred while the framework is being built.
 - **Single-file decision logs migrate to records the same way, by trial:** `decision.import`
   (§6.5) on a copy and a branch first, every id kept, so `D-n §k` citations survive; anchor
   links into the old file break and get a redirect table. Until then the old file is read as it

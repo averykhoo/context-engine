@@ -85,7 +85,7 @@ def _guards(e, guard):
         (GOOD.replace("| rung: collective | why: an actor", "| rung: eliminate | why: an actor"), "is at rung eliminate, so it is not residual"),
         (GOOD.replace(" | control: G-W7", " | control: G-W7 | owner: nobody"), "unknown field 'owner'"),
         (GOOD.replace("- eliminated: two writers lose each other's change | rung: eliminate", "- eliminated:"), "a eliminated line names no risk"),
-        (GOOD.replace("| rung: reduce | control: the re-read", "| rung: individual | control: the re-read"), "held only at rung individual, so it is residual"),
+        (GOOD.replace("| rung: reduce | control: the re-read", "| rung: individual | control: the re-read"), "controlled only at rung individual, so it is residual"),
     ],
     ids=["no-section", "placeholder", "no-M", "residual-without-control", "no-affects", "no-rung", "bad-class",
          "residual-without-why", "no-risk-line", "reduced-without-rung", "residual-at-eliminate", "unknown-field", "empty-risk", "reduced-at-individual"],

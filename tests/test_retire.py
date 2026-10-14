@@ -82,14 +82,14 @@ REFUSALS = {
     "by-vocabulary": ({"by": "claude"}, r"`by: claude` is none of `owner`, `human:<id>` or `agent`"),
     "by-agent-with-a-model": ({"by": "agent (claude-x)", "superseded_by": "US-3"}, r"`by: agent \(claude-x\)` is none of"),
     "no-reason": ({"why": " \n"}, r"no reason"),
-    "agent-without-successor": ({"by": "agent"}, r"an agent retires a story only when it was recorded again.*Remedy: record it again with `record new story`"),
+    "agent-without-successor": ({"by": "agent"}, r"an agent retires a story only in favour of a replacement story.*Remedy: record the replacement story with `record new story`"),
     "agent-other-words": ({"by": "agent", "superseded_by": "US-4"}, r"US-4 does not carry US-1's words as typed.*Remedy: record US-1 again with its body as it is"),
     "self": ({"superseded_by": "US-1"}, r"US-1 cannot supersede itself"),
     "successor-not-a-story": ({"superseded_by": "DEC-1"}, r"DEC-1 is not a story, so it cannot replace US-1"),
     "successor-missing": ({"superseded_by": "US-9"}, r"no record US-9"),
     "successor-retired": ({"superseded_by": "US-5"}, r"US-5 is retired, so it cannot replace US-1"),
     "not-a-story": ({"id": "DEC-1"}, r"DEC-1 is not a story.*decision supersede"),
-    "already-retired": ({"id": "US-5"}, r"US-5 is already retired \(`record retire` in session 2026-10-13a\).*a retire is final"),
+    "already-retired": ({"id": "US-5"}, r"US-5 is already retired \(`record retire` in session 2026-10-13a\).*a retirement is final"),
     "undone-by-hand": ({"id": "US-6"}, r"US-6 was retired by `record retire` in session 2026-10-13a, and a hand edit has since made it `live`.*restore `story_status: retired`"),
 }
 
@@ -160,12 +160,12 @@ def test_the_store_amends_only_append_only_records_and_never_with_nothing(chain)
 
 @pytest.mark.criterion("AC-72")
 @pytest.mark.parametrize("field, value, match", [
-    ("story_status", "retired", r"would be born `retired`, which only `record retire` sets"),
-    ("status", "deprecated", r"would be born with `status: deprecated`, which only `record retire` writes"),
-    ("superseded_by", "[US-1]", r"would be born with `superseded_by`, which only `record retire` writes"),
-    ("supersedes", "[US-1]", r"would be born with `supersedes`, which only `record retire` writes"),
+    ("story_status", "retired", r"would be created as `retired`, which only `record retire` sets"),
+    ("status", "deprecated", r"would be created with `status: deprecated`, which only `record retire` writes"),
+    ("superseded_by", "[US-1]", r"would be created with `superseded_by`, which only `record retire` writes"),
+    ("supersedes", "[US-1]", r"would be created with `supersedes`, which only `record retire` writes"),
 ], ids=["retired", "deprecated", "superseded_by", "supersedes"])
-def test_a_story_is_never_born_retired_deprecated_or_linked(chain, field, value, match):
+def test_a_story_is_never_created_retired_deprecated_or_linked(chain, field, value, match):
     with pytest.raises(Refusal, match=match):
         make(chain).record_new("story", "Born", "words", {**OK, field: value}, **W)
     assert sorted(p.name for p in (chain / STORIES).iterdir()) == ["US-1-words.md", "US-2-words.md"]
@@ -192,12 +192,12 @@ def test_g_i2_reds_a_retire_made_or_undone_by_hand_and_a_story_link_that_resolve
     edit(chain, "docs/stories/US-3-words.md", "story_status: retired", "story_status: retired\nstatus: deprecated\nsuperseded_by: [US-9]")
     edit(chain, "docs/stories/US-2-words.md", "goals: [G2]", "goals: [G2]\nsuperseded_by: [US-1]\nsupersedes: [DEC-1]")
     got = "\n".join(reds(e, "G-I2"))
-    assert "US-3 `superseded_by` names US-9, which is no story" in got and "US-2 `supersedes` names DEC-1, which is no story" in got
+    assert "US-3 `superseded_by` names US-9, which is not a story" in got and "US-2 `supersedes` names DEC-1, which is not a story" in got
     assert "US-2 has `superseded_by` but is `live`, not retired" in got
     assert reds(e, "G-I2") == [
-        "docs/stories/US-2-words.md: US-2 `supersedes` names DEC-1, which is no story",
+        "docs/stories/US-2-words.md: US-2 `supersedes` names DEC-1, which is not a story",
         "docs/stories/US-2-words.md: US-2 has `superseded_by` but is `live`, not retired",
-        "docs/stories/US-3-words.md: US-3 `superseded_by` names US-9, which is no story",
+        "docs/stories/US-3-words.md: US-3 `superseded_by` names US-9, which is not a story",
     ]
     edit(chain, "docs/stories/US-2-words.md", "superseded_by: [US-1]\nsupersedes: [DEC-1]", "status: deprecated")  # deprecated, not retired
     edit(chain, "docs/stories/US-3-words.md", "superseded_by: [US-9]\n", "")

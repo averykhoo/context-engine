@@ -7,7 +7,8 @@ carrying the session key and the actor (AC-6). Before the lock is let go, the wr
 committed by path with its op log lines (``commit.commit``, FRAMEWORK §5.5 rule 4). ``[engine]
 commit`` says when: at a milestone (an operation marks itself one with ``milestone()``), after
 every write, or never but a pause, which is committed regardless (``commit_always``). A write
-not committed rides along with the next commit, which carries every op log line HEAD lacks.
+not committed stays uncommitted and goes into the next commit, which carries every op log line
+HEAD lacks.
 Inside ``batch()`` the commit waits for the batch's end, so one operation that writes several
 times commits once, and the lock is held across all of it.
 
@@ -249,7 +250,7 @@ class Store:
             )
         if stamped != typed:
             return (
-                "body above `## Amendments` changed since it was stamped (logged corrections undone, it is not the words as typed)",
+                "body above `## Amendments` changed since it was stamped (with logged corrections undone, it no longer matches the words as typed)",
                 "restore the original text from git (`git log -p` on the file); record a change with `context-engine record amend`, a fix with `context-engine record correct`",
             )
         return None
@@ -373,7 +374,7 @@ class Store:
             )
 
     def lock(self):
-        """The repo lock, for operations that write a non-record file (the ledger, the note)."""
+        """The repo lock, for operations that write a non-record file (the ledger, the orientation note)."""
         return self._lock()
 
     def write_text(self, path: Path, text: str) -> None:
@@ -698,7 +699,7 @@ class Store:
     def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:
         """Write several new records with ids the caller chose (an import keeps every id), all or
         nothing: each id must be free and each record valid before any file is written. Each
-        item is (id, fields, body); append-only records are stamped at birth."""
+        item is (id, fields, body); append-only records are stamped when they are created."""
         self._check_caller(session, actor)
         kind = self.config.kind(kind_name)
         out: list[Record] = []

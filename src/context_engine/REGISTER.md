@@ -2,12 +2,13 @@
 
 LIVING. Residual risks (FRAMEWORK P17, §7.4): each is a risk that was not reasonably practicable to
 eliminate, with whom it affects, why it stays, the control that holds it and where it came from.
-`task close` appends the residuals of a task's `## Design review`; edit an entry only when the
+`task close` appends the residual risks of a task's `## Design review`; edit an entry only when the
 code changes. Ids are `INV-n`, never reused.
 
 This is the engine's own register. It is package data, so it ships with the engine to every repo
 the engine is pointed at: `context-engine register show --engine` reads it there, and `orient`
-points at it (the handover, P17 regs. 7 and 11). A target repo keeps its own register for its own
+points at it, so it reaches every repo that adopts the engine (P17: regulations 7 and 11 of
+Singapore's Design for Safety Regulations). A target repo keeps its own register for its own
 risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 ## INV-1: a long-lived server keeps running old engine code after the engine changes, and it may outlive `/clear`

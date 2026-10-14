@@ -88,14 +88,14 @@ def test_nothing_in_the_workflow_can_skip_or_mask_the_gate():
     assert found == [], found
 
 
-def test_the_rituals_runbook_gives_ci_s_by_hand_fallback_and_the_contract_names_the_workflow():
+def test_the_procedures_runbook_gives_ci_s_by_hand_fallback_and_the_contract_names_the_workflow():
     """Every programmatic process has its by-hand fallback in a runbook: CI's is the same install
-    and gate in a fresh environment, in rituals.md § Push and CI."""
-    rituals = (REPO / "docs" / "runbooks" / "rituals.md").read_text(encoding="utf-8")
-    push = rituals.split("\n## Push and CI (§6.8)\n", 1)[1].split("\n## ", 1)[0]
+    and gate in a fresh environment, in procedures.md § Push and CI."""
+    procedures = (REPO / "docs" / "runbooks" / "procedures.md").read_text(encoding="utf-8")
+    push = procedures.split("\n## Push and CI (§6.8)\n", 1)[1].split("\n## ", 1)[0]
     (install,) = [s["run"].strip().removeprefix("python -m ") for s in _steps() if "pip install" in s.get("run", "")]
     rows = [ln.split("|") for ln in push.splitlines() if ln.startswith("|") and install in ln]
-    assert len(rows) == 1, "rituals.md § Push and CI needs one step giving CI's install by hand"
+    assert len(rows) == 1, "procedures.md § Push and CI needs one step giving CI's install by hand"
     by_hand = rows[0][4]  # `| § | Do | Engine | By hand | Why |`
     for part in (install, "fresh environment", "requires-python", "<gate>"):
         assert part in by_hand, f"the by-hand fallback lacks {part!r}: {by_hand}"

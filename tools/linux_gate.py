@@ -3,7 +3,7 @@
 behaviour, or on the machine's git config, is green here and red there, and the push finds out
 (39e09ca: three such tests; docs/evidence/ci-divergence-2026-10-13.md).
 
-The container is shaped like CI's runner: `ubuntu-latest`'s release, git from the git-core PPA
+The container is set up like CI's runner: `ubuntu-latest`'s release, git from the git-core PPA
 with `safe.directory = *` in `/etc/gitconfig` as the runner image installs it, the runner's uid,
 Python at the `requires-python` floor. It does what the workflow does: a fresh clone of exactly
 that commit (so `core.autocrlf` and untracked files cannot leak in), `pip install -e ".[dev]"`,

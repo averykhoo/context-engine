@@ -41,7 +41,7 @@ in its `CLAUDE.md`.
 A background watcher (CI after a push, a release run, a long job) only watches: no fix, no
 re-run, no cancel, no push. Its brief names what it watches by commit hash, how to read it, the
 verdict to return per run, and its persist file; the CI watcher's brief is in
-[rituals.md § Push and CI](rituals.md#push-and-ci-68). A cheap model is enough.
+[procedures.md § Push and CI](procedures.md#push-and-ci-68). A cheap model is enough.
 
 ## Build rounds
 

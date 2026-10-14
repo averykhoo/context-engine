@@ -14,13 +14,13 @@ closed:
 ---
 
 In a worktree of adhoc, on a branch: write `context.toml` and `.mcp.json`; import the board,
-"still owed" (as batons), the decisions and the session log into records; rewrite the rituals in
+"still owed" (as batons), the decisions and the session log into records; rewrite the procedures in
 adhoc's `CLAUDE.md` and `HANDOFF.md` to use the engine; run real sessions; score them against
 the CE-4 baseline. The owner decides whether the branch merges.
 
 ## Read first
 
-- `src/context_engine/kit/README.md` (init, § Hook, § 4 Upgrade) and `docs/runbooks/rituals.md` § Bootstrap
+- `src/context_engine/kit/README.md` (init, § Hook, § 4 Upgrade) and `docs/runbooks/procedures.md` § Bootstrap
 - ASK-5, DEC-32, DEC-6 and its amendment; INV-28 to INV-32 in `src/context_engine/REGISTER.md`
 - `docs/framework/FRAMEWORK.md` §8.0.3, §11.4
 
@@ -36,8 +36,8 @@ the CE-4 baseline. The owner decides whether the branch merges.
 
 ## Traps
 
-- The body predates CE-38: there is no .mcp.json step and no rewriting of rituals into adhoc's CLAUDE.md. Run init from the engine's env (kit README); it appends the bootloader block and copies docs/framework/contract.md.
+- The body predates CE-38: there is no .mcp.json step and no rewriting of procedures into adhoc's CLAUDE.md. Run init from the engine's env (kit README); it appends the kit block and copies docs/framework/contract.md.
 - adhoc very likely has .claude/settings.local.json already, so init refuses until the owner says yes (--merge-settings) or no (--skip-settings) (DEC-32).
 - A session is live in adhoc's main checkout (untracked audio, 2026-10-13b): work only in a worktree branch, and re-check adhoc's HANDOFF and decisions for commits made after the import before the merge.
-- The import waits on ASK-5 (rename ids or keep them); leave [guards] charter, stories and tests unset until adhoc's charter holds the owner's goals (rituals § Bootstrap).
+- The import waits on ASK-5 (rename ids or keep them); leave [guards] charter, stories and tests unset until adhoc's charter holds the owner's goals (procedures § Bootstrap).
 - The first session there runs INV-31's live probes: does orient output appear on startup, resume, /clear and compaction; what a missing import or a broken interpreter path looks like.

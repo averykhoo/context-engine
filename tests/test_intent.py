@@ -116,7 +116,7 @@ def test_g_i1_every_goal_has_a_story_and_every_story_names_goals_of_the_charter(
 def test_g_i1_reds_a_charter_goal_id_not_in_the_one_form_twice_or_missing_and_a_charter_with_no_goals(chain):
     edit(chain, "docs/charter.md", "| G-2 | two |", "| G2 | two |\n| G-1 | again |")
     assert reds(make(chain), "G-I1") == [
-        "docs/charter.md: line 8: goal id G2 is not in the one id form",
+        "docs/charter.md: line 8: goal id G2 is not in the standard id form",
         "docs/charter.md: line 9: goal id G-1 leads two rows",
     ]
     write(chain, "docs/charter.md", "# Charter\n\n| # | Goal |\n|---|---|\n| Goal 1 | reworded |\n")
@@ -154,7 +154,7 @@ def test_record_new_story_refuses_bad_provenance_and_goals_before_writing(chain)
     ok = {"actor": "owner", "date": "2026-10-13", "story_status": "live", "goals": "[G-1, G-2]"}
     for bad, match in [
         ({"goals": "[G-3]"}, r"names G-3, which is not a goal of the charter"),
-        ({"goals": "[G1]"}, r"`G1` in `goals` is not in the one id form; write G-1"),
+        ({"goals": "[G1]"}, r"`G1` in `goals` is not in the standard id form; write G-1"),
         ({"goals": "[]"}, r"names no goal"),
         ({"actor": "claude-code/x"}, r"`actor: claude-code/x` is none of"),
         ({"story_status": "unconfirmed"}, r"`unconfirmed` is for a story an agent reconstructed"),
@@ -185,7 +185,7 @@ def test_record_new_story_leaves_the_charters_own_reds_to_lint_unless_no_goal_ca
 
 @pytest.mark.criterion("AC-66")
 def test_record_new_story_without_a_date_is_dated_today_before_the_checks_run(chain):
-    """The intake command passes no date (CLAUDE.md § Rituals): a required date-typed key is
+    """The intake command passes no date (CLAUDE.md § Procedures): a required date-typed key is
     filled with today (AC-25) before G-I2's write-time twin reads it, so it is not refused."""
     cfg = config()
     cfg["kinds"]["story"].update(required=["title", "date"], types={"goals": "list", "date": "date"})
@@ -256,8 +256,8 @@ def test_g_t6_every_criterion_comes_from_a_story_or_decision_that_exists(chain):
     edit(chain, "docs/criteria.md", "| AC-3 | c | DEC-1 | manual |", "| AC-3 | c | the owner | manual |\n| AC-4 | d | CE-1, US-9 | planned |\n| AC-5 | e | DEC-1 | retired |")
     assert reds(make(chain), "G-T6") == [
         "docs/criteria.md: line 7: AC-3 names no source (`the owner`)",
-        "docs/criteria.md: line 8: AC-4 comes from CE-1, which is no story or decision",
-        "docs/criteria.md: line 8: AC-4 comes from US-9, which is no story or decision",
+        "docs/criteria.md: line 8: AC-4 comes from CE-1, which is neither a story nor a decision",
+        "docs/criteria.md: line 8: AC-4 comes from US-9, which is neither a story nor a decision",
     ]
 
 
@@ -283,14 +283,14 @@ def test_a_criteria_file_that_is_missing_unreadable_or_empty_is_red_for_each_gua
 @pytest.mark.criterion("AC-70")
 def test_a_row_of_a_criteria_table_not_led_by_a_plain_id_is_red_and_a_legacy_id_is_read_verbatim(chain):
     """Partial extraction: a row the id pattern drops must not pass every guard unread, while the
-    other rows parse. An id stamped before the one form (`AC-05`, `DEC-0007`) is read as written (P3)."""
+    other rows parse. An id stamped before the standard form (`AC-05`, `DEC-0007`) is read as written (P3)."""
     write(chain, "docs/decisions/DEC-0007-x.md", "---\ntype: Decision\nid: DEC-0007\ntitle: t\n---\n\nwhy\n")
     edit(chain, "docs/criteria.md", "| AC-3 | c | DEC-1 | manual |", "| AC-3 | c | DEC-1 | manual |\n| **AC-4** | d | US-1 | tested |\n| AC-05 | e | US-99 | planned |\n| AC 6 | f | nobody | tested |\n| AC-7 | g | DEC-0007 | planned |")
     stray = [
         "docs/criteria.md: line 8: a row of a table of criteria is led by `**AC-4**`, which is not an id, so the row is not read",
         "docs/criteria.md: line 10: a row of a table of criteria is led by `AC 6`, which is not an id, so the row is not read",
     ]
-    assert all_reds(make(chain)) == {"G-T1": stray, "G-T2": stray, "G-T6": [*stray, "docs/criteria.md: line 9: AC-05 comes from US-99, which is no story or decision"]}
+    assert all_reds(make(chain)) == {"G-T1": stray, "G-T2": stray, "G-T6": [*stray, "docs/criteria.md: line 9: AC-05 comes from US-99, which is neither a story nor a decision"]}
     from context_engine import guards as G, working
     for cell in ("AC-4", "AC-05", "**AC-4**", "AC 6", "`AC-4`", "ac-4", "AC-"):
         assert bool(G.ROW_ID_RE.fullmatch(cell)) == bool(working.CRITERION_ROW_RE.match(f"| {cell} |")), cell
@@ -300,9 +300,9 @@ def test_a_row_of_a_criteria_table_not_led_by_a_plain_id_is_red_and_a_legacy_id_
 def test_a_row_of_the_goal_table_not_led_by_a_goal_id_is_red(chain):
     edit(chain, "docs/charter.md", "| G-2 | two |", "| G-2 | two |\n| G 3 | three |\n| G-04 | four |\n| Goal-5 | five |")
     assert reds(make(chain), "G-I1") == [
-        "docs/charter.md: line 9: a row of the goal table is led by `G 3`, which is not a goal id, so it is no goal",
-        "docs/charter.md: line 10: a row of the goal table is led by `G-04`, which is not a goal id, so it is no goal",
-        "docs/charter.md: line 11: a row of the goal table is led by `Goal-5`, which is not a goal id, so it is no goal",
+        "docs/charter.md: line 9: a row of the goal table is led by `G 3`, which is not a goal id, so the row is not read as a goal",
+        "docs/charter.md: line 10: a row of the goal table is led by `G-04`, which is not a goal id, so the row is not read as a goal",
+        "docs/charter.md: line 11: a row of the goal table is led by `Goal-5`, which is not a goal id, so the row is not read as a goal",
     ]
 
 
@@ -314,7 +314,7 @@ def test_bootstrap_sets_the_intent_sources_only_after_the_first_stories_and_crit
 
     import context_engine
 
-    text = (Path(context_engine.__file__).parent / "kit/docs/runbooks/rituals.md").read_text(encoding="utf-8")
+    text = (Path(context_engine.__file__).parent / "kit/docs/runbooks/procedures.md").read_text(encoding="utf-8")
     rows = [ln for ln in text.split("## Bootstrap", 1)[1].split("\n## ", 1)[0].splitlines() if ln.startswith("| ")]
 
     def at(needle: str) -> int:

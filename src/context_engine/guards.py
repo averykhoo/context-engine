@@ -8,10 +8,10 @@ What a doc guard reads is configured, never guessed: G-D1's caps sit on ``[[rout
 G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty checks nothing.
 G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while neither is set.
 G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records. G-D4
-reads ``[guards] liveness`` and ``history`` (with ``liveness_given`` for docs whose top the repo
-does not own), and G-D5 reads ``[guards] numbers``; each is off while its lists are empty.
+reads ``[guards] liveness`` and ``history`` (with ``liveness_given`` for docs whose opening lines
+the repo may not edit), and G-D5 reads ``[guards] numbers``; each is off while its lists are empty.
 
-The intent chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] charter``, ``stories``,
+The correctness chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] charter``, ``stories``,
 ``tests`` and ``claim`` with ``[working] criteria``: a guard is off while a source it needs is unset,
 and red when a set path is missing or a source yields nothing (no goal row, no criterion row, no
 claim), so a reworded table or a pattern that does not fit cannot pass by finding nothing.
@@ -256,7 +256,7 @@ def caps(e: Engine) -> list[Failure]:
 
 
 def ids(e: Engine) -> list[Failure]:
-    """G-D2 at rest: no two files of a series carry the same id (by file name or by `id:`), and
+    """G-D2 on the stored files: no two files of a series carry the same id (by file name or by `id:`), and
     the op log never shows an id created twice (a reuse).
 
     Not checked: an id reused before the op log began, or after a record was deleted outside the
@@ -361,7 +361,7 @@ def links(e: Engine) -> list[Failure]:
 
 
 def existence(e: Engine) -> list[Failure]:
-    """G-T3: in each doc `[guards] existence` lists (criteria, a law doc, the invariants
+    """G-T3: in each doc `[guards] existence` lists (criteria, an NFR doc, the residual-risk
     register), every file named in a backticked span, and every `file::symbol`, exists. History
     notes are exempt: blockquotes, and lines carrying `*HISTORY —*`.
 
@@ -473,7 +473,7 @@ def declared(text: str, window: int) -> Liveness:
 
 def given(e: Engine) -> tuple[dict[str, tuple[str, str]], list[Failure]]:
     """Each doc `[guards] liveness_given` names, as repo-relative path -> (liveness, glob); and a
-    red for a glob that matches no file (a declaration of nothing has gone stale)."""
+    failure for a glob that matches no file (a declaration of nothing has gone stale)."""
     out: dict[str, tuple[str, str]] = {}
     reds: list[Failure] = []
     for glob, word in e.store.config.guards.liveness_given.items():
@@ -515,16 +515,16 @@ def _under(rel: str, dirs: tuple[str, ...]) -> bool:
 
 
 def liveness(e: Engine) -> list[Failure]:
-    """G-D4: every doc under `[guards] liveness` and `history` declares how alive it is (P2) in
+    """G-D4: every doc under `[guards] liveness` and `history` declares its liveness (P2) in
     its first `liveness_lines` lines (the window): a frontmatter `liveness:` key (YAML quotes
-    and a trailing comment allowed; a value that is no liveness word is red), or a line that
+    and a trailing comment allowed; a value that is not a liveness word is red), or a line that
     opens a block (`declared`) led, after a blockquote's `>` and emphasis, by LIVING,
-    ACTIVE-PLAN or FROZEN, or by `ARCHIVED <date>` (FROZEN). A doc whose top the repo does not
-    own (frozen provenance, a framework-owned or engine-written file, an owner-stamped one) is
-    given its liveness by `liveness_given` instead, and a doc that declares one must agree with
+    ACTIVE-PLAN or FROZEN, or by `ARCHIVED <date>` (FROZEN). A doc whose opening lines the repo may
+    not edit (frozen provenance, a framework-owned or engine-written file, one signed off by the
+    owner) is given its liveness by `liveness_given` instead, and a doc that declares one must agree with
     it. A doc under a `history` directory is FROZEN, or ACTIVE-PLAN while its item is open: with
     `[working] board` set, an ACTIVE-PLAN doc anywhere names a board item in the window, and is
-    red only once every board item it names there is closed (freeze it when it lands, §6.7).
+    red only once every board item it names there is closed (freeze it when its item closes, §6.7).
     Red too: a listed path that is missing, a `liveness_given` glob that matches no file, and a
     `liveness` list that yields no doc at all (it would check nothing).
 
@@ -564,7 +564,7 @@ def liveness(e: Engine) -> list[Failure]:
                 continue
             word = own.word or (give[0] if give else None)
             if word is None:
-                out.append(Failure("G-D4", rel, f"declares no liveness in its first {g.liveness_lines} lines", f"open it with a line led by {', '.join(LIVENESS)}, or a frontmatter `liveness:` key (FRAMEWORK P2); a doc whose top the repo does not own (frozen provenance, a framework-owned file) goes in [guards] liveness_given"))
+                out.append(Failure("G-D4", rel, f"declares no liveness in its first {g.liveness_lines} lines", f"open it with a line led by {', '.join(LIVENESS)}, or a frontmatter `liveness:` key (FRAMEWORK P2); a doc whose opening lines this repo may not edit (frozen provenance, a framework-owned file) goes in [guards] liveness_given"))
                 continue
             if word == "LIVING" and _under(rel, g.history):
                 out.append(Failure("G-D4", rel, "is LIVING, but it sits in a history directory ([guards] history), which holds provenance", "freeze it (a FROZEN line at the top), or mark it ACTIVE-PLAN while its item is open; a doc kept current belongs outside the history directory"))
@@ -572,7 +572,7 @@ def liveness(e: Engine) -> list[Failure]:
                 top = "\n".join(text.lstrip("\ufeff").split("\n")[: g.liveness_lines])
                 named = [i for i in dict.fromkeys(ID_RE.findall(top)) if i in board]
                 if not named:
-                    out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN but names no board item in its first {g.liveness_lines} lines, so nobody can tell when it lands", "name the item it serves near the top (FRAMEWORK §7.2), or freeze it"))
+                    out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN but names no board item in its first {g.liveness_lines} lines, so nobody can tell when its item closes", "name the item it serves near the top (FRAMEWORK §7.2), or freeze it"))
                 elif not any(board[i] for i in named):
                     out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN, but every item it names ({', '.join(named)}) is closed", "freeze it: a FROZEN line with the date at the top, above the ACTIVE-PLAN one (FRAMEWORK §6.7)"))
     if g.liveness and read == 0:
@@ -589,7 +589,7 @@ COUNT_NUMBER = rf"(?<![\w.,\-§#/])(?:\d+(?:,\d{{3}})*|{SPELLED})"
 COUNT_ADJ = r"(?:(?:open|closed|new)\s+)?"  # `12 open tasks`
 DATED_RE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")  # a date or session key anywhere on the line, a file name's too (P5)
 QUOTED_RE = re.compile("`[^`\n]*`|\"[^\"\n]*\"|“[^”\n]*”")  # a backticked or quoted span (P5)
-# a bound is a rule's value, not a count of the tree: `at most 2 entries`, `more than 3 tasks`
+# a bound is a rule's value, not a count of things in the tree: `at most 2 entries`, `more than 3 tasks`
 BOUND_RE = re.compile(r"(?:at most|at least|more than|fewer than|less than|up to)\s*$", re.IGNORECASE)
 
 
@@ -598,7 +598,7 @@ def count_re(nouns: tuple[str, ...]) -> re.Pattern[str]:
 
 
 def typed_counts(text: str, nouns: tuple[str, ...]) -> list[tuple[int, str]]:
-    """(line number, the count) for each count of the tree typed in prose: a number directly
+    """(line number, the count) for each hand-typed count of things in the tree: a number directly
     before a counted noun (an `open`, `closed` or `new` between them allowed), outside P5's
     other forms: fenced code (and frontmatter), a backticked or quoted span, a line carrying a
     `YYYY-MM-DD` key; and not a bound (`at most N`), which is a rule's value."""
@@ -615,7 +615,7 @@ def typed_counts(text: str, nouns: tuple[str, ...]) -> list[tuple[int, str]]:
 
 
 def numbers(e: Engine) -> list[Failure]:
-    """G-D5: in each doc `[guards] numbers` lists, no count of the tree is typed in prose (P5):
+    """G-D5: in each doc `[guards] numbers` lists, no count of things in the tree is typed in prose (P5):
     a number (a numeral, or a spelled one from three to twenty) directly before a noun of
     `[guards] count_nouns` (`23 components`, `12 open tasks`), case-insensitive. A number glued
     on its left to a letter, digit, `.`, `,`, `-`, `§`, `#` or `/` is part of a token (`R6`,
@@ -650,7 +650,7 @@ def numbers(e: Engine) -> list[Failure]:
             continue
         scanned += 1
         for n, count in typed_counts(text, g.count_nouns):
-            out.append(Failure("G-D5", rel, f"line {n}: `{count}` is a count of the tree typed in prose", "delete the number and point at its home (the command, table or file that counts it; P5); a measurement keeps its YYYY-MM-DD on the line; a quoted figure, a rule's value or a label (`Step 3 checks`) goes in backticks"))
+            out.append(Failure("G-D5", rel, f"line {n}: `{count}` is a hand-typed count of things in the tree", "delete the number and point at its home (the command, table or file that counts it; P5); a measurement keeps its YYYY-MM-DD on the line; a quoted figure, a rule's value or a label (`Step 3 checks`) goes in backticks"))
     if scanned == 0 and not out:
         out.append(Failure("G-D5", CONFIG_NAME, f"[guards] numbers ({', '.join(g.numbers)}) holds no doc that is not FROZEN or ACTIVE-PLAN, so G-D5 checks nothing", "list the LIVING docs, or empty the list to switch G-D5 off"))
     return out
@@ -662,7 +662,7 @@ def numbers(e: Engine) -> list[Failure]:
 def signals(e: Engine) -> list[Failure]:
     """G-D7: in each doc `[guards] signals` lists, at most `warn_max` ⚠ and `bold_caps_max` bold
     all-caps spans (`**NEVER**`: a bold span with a run of four capitals and no lower case), and
-    no glyph from `retired_glyphs`. A signal ranks only while it is rare.
+    no glyph from `retired_glyphs`. A signal stands out only while it is rare.
 
     Not checked: fenced code, other emphasis (italics, `!`), and whether a signal is deserved."""
     g = e.store.config.guards
@@ -684,16 +684,16 @@ def signals(e: Engine) -> list[Failure]:
     return out
 
 
-# -- G-D8 the note's layer detector ------------------------------------------------------
+# -- G-D8 the orientation note's stacking check -------------------------------------------
 
 
 def note_layers(e: Engine) -> list[Failure]:
     """G-D8: the orientation note has at most one `## Banner (<key>)` heading (G-W1 asks for
     one), no other heading carries a session key (a session's section, or a ledger entry heading
-    pasted in), and no bullet or bold lead in the banner is a session key (a session's layer).
+    pasted in), and no bullet or bold lead in the banner is a session key (a session's stacked update).
 
     Not checked: session keys inside a sentence (dated facts cite them as provenance), the
-    banner's size (G-D1 on the note's route), and an inline board's position: the board is one
+    banner's size (G-D1 on the orientation note's route), and an inline board's position: the board is one
     file per item, read with `task list`."""
     rel = e.w.handoff
     path = e.root / rel if rel else None
@@ -705,15 +705,15 @@ def note_layers(e: Engine) -> list[Failure]:
     if len(banners) > 1:
         out.append(Failure("G-D8", rel, f"{len(banners)} banner headings ({', '.join(banners)})", "keep the newest; `banner set` replaces the banner, it never adds one"))
     key_head = re.compile(rf"^#+ .*\b{KEY_RE}\b")
-    layered = [line for _, line in prose(text) if key_head.match(line) and not L.BANNER_RE.match(line)]
-    if layered:
-        out.append(Failure("G-D8", rel, f"{len(layered)} headings carry a session key (the first: {layered[0].strip()!r}): session history in the note", "move it to the ledger, or into the one banner; the note is replaced, not layered"))
+    stacked = [line for _, line in prose(text) if key_head.match(line) and not L.BANNER_RE.match(line)]
+    if stacked:
+        out.append(Failure("G-D8", rel, f"{len(stacked)} headings carry a session key (the first: {stacked[0].strip()!r}): session history in the orientation note", "move it to the ledger, or into the one banner; the orientation note is replaced, not stacked"))
     b = L.find_banner(text)
     if b is not None:
         lead = re.compile(rf"^\s*(?:(?:[-*+]|\d+\.)\s+\**|\*\*)\s*{KEY_RE}\b")  # a bullet or bold lead, not a wrapped line
-        layers = [ln for ln in b.text.split("\n") if lead.match(ln)]
-        if layers:
-            out.append(Failure("G-D8", rel, f"{len(layers)} banner lines start with a session key (the first: {layers[0].strip()[:60]!r}): a layered banner", "rewrite the banner as what is true now, under its one key; history goes in the ledger"))
+        stacked = [ln for ln in b.text.split("\n") if lead.match(ln)]
+        if stacked:
+            out.append(Failure("G-D8", rel, f"{len(stacked)} banner lines start with a session key (the first: {stacked[0].strip()[:60]!r}): a stacked banner", "rewrite the banner as what is true now, under its one key; history goes in the ledger"))
     return out
 
 
@@ -768,7 +768,7 @@ SESSION_OWNED = ("moved", "updated", "closed", "last_asked")
 
 
 def tool_owned(e: Engine) -> list[Failure]:
-    """G-W7 at rest: every session-keyed tool-owned key of a board item (`moved`, `updated`,
+    """G-W7 on the stored files: every session-keyed tool-owned key of a board item (`moved`, `updated`,
     `closed`, `last_asked`) names the session of the newest logged operation that wrote it; a
     value no operation wrote must be older than the op log's first entry (written before the
     engine ran the board). Every op log line parses.
@@ -810,17 +810,26 @@ def tool_owned(e: Engine) -> list[Failure]:
 
 # What G-D12 extracts from the spec, each class with its floor: fewer than the floor means the
 # spec's format changed under the pattern, so the class is red rather than silently unchecked.
-# Floors: provenance: JUDGEMENT, CE-30; FRAMEWORK.md held 23 components, 14 rituals and 41 G-ids
-# on 2026-10-13a (counted by these patterns); wrong if the spec is trimmed below them on purpose.
+# Floors: provenance: JUDGEMENT, CE-30; FRAMEWORK.md held 23 components, 14 procedures (then called
+# rituals) and 41 G-ids on 2026-10-13a (counted by these patterns); wrong if the spec is trimmed
+# below them on purpose.
 COMPONENT_SECTION_RE = re.compile(r"^##\s+2\.\s")  # §2 "The components at a glance": its table
 COMPONENT_RE = re.compile(r"^\|\s*\d+\s*\|[^|]*\|\s*\*\*(?P<name>[^*|]+?)\*\*")  # `| 1 | Intent | **Charter** |`
-RITUAL_RE = re.compile(r"^###\s+(?P<num>5\.6|6\.\d+)\s+(?P<name>.+?)\s*$")  # `### 6.1 Session start`
+PROCEDURE_RE = re.compile(r"^###\s+(?P<num>5\.6|6\.\d+)\s+(?P<name>.+?)\s*$")  # `### 6.1 Session start`
 GID_RE = re.compile(r"(?<![\w-])G-[A-Z]\d+(?!\w)")  # `G-D3`
-COVERAGE_FLOORS = {"component": 20, "ritual": 10, "G-id": 30}
+COVERAGE_FLOORS = {"component": 20, "procedure": 10, "G-id": 30}
 MAP_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})([a-z]*)")
-# Where a coverage map's table owns each class: (a header that marks the table, the header of the
-# column holding the key). A component row's `§` cell is not a ritual, nor is a guard row's.
-MAP_COLUMNS = {"component": ("Component", "Component"), "ritual": ("Ritual", "§"), "G-id": ("Guard", "Guard")}
+# Where a coverage map's table owns each class: (the headers, any one of which marks the table; the
+# header of the column holding the key). A component row's `§` cell is not a procedure, nor is a
+# guard row's. `Ritual` is the procedures' old name (DEC-39): frozen maps keep it, new maps say
+# `Procedure`, and both count.
+MAP_COLUMNS = {"component": (("Component",), "Component"), "procedure": (("Procedure", "Ritual"), "§"), "G-id": (("Guard",), "Guard")}
+# A §2 component's earlier names (DEC-39), so a frozen map's row under the old name still owns it.
+COMPONENT_ALIASES = {
+    "Residual-risk register": ("Invariants",),
+    "Non-functional requirements (NFRs)": ("Law / NFRs",),
+    "Non-functional requirements": ("Law / NFRs",),
+}
 
 
 @dataclass(frozen=True)
@@ -831,17 +840,23 @@ class Owned:
     key: str  # a component's name, `§6.4`, or `G-D3`
     label: str
 
+    def names(self) -> tuple[str, ...]:
+        """The key, then a component's earlier names (`COMPONENT_ALIASES`)."""
+        return (self.key, *COMPONENT_ALIASES.get(self.key, ())) if self.cls == "component" else (self.key,)
+
     def in_cell(self, cell: str) -> bool:
-        """A map row names it: the cell is the key (a component's cell may add a parenthesis)."""
-        return cell == self.key or (self.cls == "component" and cell.startswith(self.key + " ("))
+        """A map row names it: the cell is the key or an earlier name (a component's cell may add a
+        parenthesis)."""
+        return any(cell == n or (self.cls == "component" and cell.startswith(n + " (")) for n in self.names())
 
     def in_text(self, text: str) -> bool:
-        """A board item names it: the key as a word (`§6.1` is not `§6.13`; `G-D1` is not `G-D10`)."""
-        return re.search(rf"(?<![\w-]){re.escape(self.key)}(?!\w|\.\d)", text) is not None
+        """A board item names it: the key or an earlier name as a word (`§6.1` is not `§6.13`;
+        `G-D1` is not `G-D10`)."""
+        return any(re.search(rf"(?<![\w-]){re.escape(n)}(?!\w|\.\d)", text) is not None for n in self.names())
 
 
 def spec_items(text: str) -> dict[str, list[Owned]]:
-    """Every component (§2's table), ritual (§5.6 and §6.n headings) and G-id the spec names, by
+    """Every component (§2's table), procedure (§5.6 and §6.n headings) and G-id the spec names, by
     class, outside fenced code; each key once, in order of first appearance."""
     out: dict[str, list[Owned]] = {c: [] for c in COVERAGE_FLOORS}
     seen: set[tuple[str, str]] = set()
@@ -860,9 +875,9 @@ def spec_items(text: str) -> dict[str, list[Owned]]:
         if section and m:
             name = m["name"].strip()
             add(Owned("component", name, f"component {name!r} (§2)"))
-        m = RITUAL_RE.match(line)
+        m = PROCEDURE_RE.match(line)
         if m:
-            add(Owned("ritual", f"§{m['num']}", f"ritual §{m['num']} {m['name']!r}"))
+            add(Owned("procedure", f"§{m['num']}", f"procedure §{m['num']} {m['name']!r}"))
         for gid in GID_RE.findall(line):
             add(Owned("G-id", gid, f"guard {gid}"))
     return out
@@ -882,7 +897,7 @@ def coverage_maps(root: Path, pattern: str) -> tuple[list[Path], list[Path]]:
 
 def map_cells(text: str) -> dict[str, set[str]]:
     """By class, the stripped cells of a coverage map's tables that can own it: in each table
-    whose header row has the class's marking header, the cells under its key column
+    whose header row has one of the class's marking headers, the cells under its key column
     (`MAP_COLUMNS`)."""
     out: dict[str, set[str]] = {c: set() for c in MAP_COLUMNS}
     header: list[str] | None = None
@@ -900,18 +915,19 @@ def map_cells(text: str) -> dict[str, set[str]]:
             continue
         if all(set(c) <= set("-: ") for c in cells):  # the |---| separator
             continue
-        for cls, (mark, column) in MAP_COLUMNS.items():
-            if mark in header and column in header and header.index(column) < len(cells):
+        for cls, (marks, column) in MAP_COLUMNS.items():
+            if any(m in header for m in marks) and column in header and header.index(column) < len(cells):
                 out[cls].add(cells[header.index(column)])
     return out
 
 
 def coverage(e: Engine) -> list[Failure]:
-    """G-D12: every component (§2's table), ritual (§5.6, §6.n headings) and G-id the spec
+    """G-D12: every component (§2's table), procedure (§5.6, §6.n headings) and G-id the spec
     (`[guards] coverage_spec`) names is owned: a table row of the newest coverage map
     (`[guards] coverage_maps`, a repo-relative glob; newest by the date and session letters in
     the file name) names it in its class's key column (`MAP_COLUMNS`: `Component`; `§` in a
-    table with a `Ritual` column; `Guard`), or a board item, open or closed, names it. Red when
+    table with a `Procedure` or `Ritual` column; `Guard`), or a board item, open or closed,
+    names it; a component's earlier name (`COMPONENT_ALIASES`) counts as its name. Red when
     a class extracts fewer than its floor (`COVERAGE_FLOORS`), so a reworded format cannot pass
     by finding nothing; when only one of the two keys is set; when the spec is missing; when the
     glob is not repo-relative or matches nothing; and when a matching map has no date in its name.
@@ -936,7 +952,7 @@ def coverage(e: Engine) -> list[Failure]:
         return out
     maps, undated = coverage_maps(e.root, g.coverage_maps)
     for p in undated:
-        out.append(Failure("G-D12", p.relative_to(e.root).as_posix(), "matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the newest map cannot be told", "rename it with its date, or narrow the coverage_maps glob"))
+        out.append(Failure("G-D12", p.relative_to(e.root).as_posix(), "matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the engine cannot tell which map is newest", "rename it with its date, or narrow the coverage_maps glob"))
     if not maps and not undated:
         out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_maps matches no file ({g.coverage_maps})", f"fix the glob, {off}"))
     if out:
@@ -944,7 +960,7 @@ def coverage(e: Engine) -> list[Failure]:
     items = spec_items(_text(spec))
     for cls, floor in COVERAGE_FLOORS.items():
         if len(items[cls]) < floor:
-            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, RITUAL_RE, GID_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
+            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, PROCEDURE_RE, GID_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
     if out:
         return out
     map_rel = maps[0].relative_to(e.root).as_posix()
@@ -957,16 +973,16 @@ def coverage(e: Engine) -> list[Failure]:
     return out
 
 
-# -- the intent chain: G-I1, G-I2, G-T1, G-T2, G-T6 (CE-25) -------------------------------
+# -- the correctness chain: G-I1, G-I2, G-T1, G-T2, G-T6 (CE-25) --------------------------
 
 ID_FORM = r"[A-Z]+-[1-9][0-9]*"  # every id the framework mints: a capital prefix, a dash, a number (FRAMEWORK P3)
-# An id at rest is read verbatim, so one stamped before a repo took up the form (`ADR-0007`)
+# An id in the stored files is read verbatim, so one stamped before a repo took up the form (`ADR-0007`)
 # still resolves (P3); the store's ids are `prefix-digits` too (config.py::Kind.id_re).
 READ_FORM = r"[A-Z]+-[0-9]+"
 ID_RE = re.compile(rf"(?<![\w-]){READ_FORM}(?![\w-])")
 ROW_ID_RE = re.compile(READ_FORM)  # a criterion row's whole first cell: the rows working.py::CRITERION_ROW_RE reads
 PIPE_RE = re.compile(r"(?<!\\)\|")  # a cell boundary; a GFM-escaped `\|` stays inside its cell
-GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the one id form
+GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the standard id form
 STORY_STATUSES = ("live", "unspecified", "unconfirmed", "retired")  # FRAMEWORK §3.2
 CRITERION_STATUSES = ("planned", "tested", "manual", "deviates", "retired")  # FRAMEWORK §3.3
 CLAIMED = ("tested", "manual")  # the statuses G-T2 requires a claim for
@@ -979,7 +995,7 @@ INTENT_OFF = "unset it in [guards] to switch the guard off"
 
 
 def goal_id(text: str) -> str | None:
-    """A goal id in the one id form (`G-3`), from `G-3` or the legacy `G3`; None if it is not one."""
+    """A goal id in the standard id form (`G-3`), from `G-3` or the legacy `G3`; None if it is not one."""
     m = GOAL_RE.fullmatch(text.strip().strip("*`").strip())
     return f"G-{m.group(1)}" if m else None
 
@@ -1011,7 +1027,7 @@ def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]
 
 def charter_goals(text: str) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
     """(line number, goal id, the cell as written) for each table row the charter leads with a
-    goal id, in the one form or the legacy one (`goal_id`); and (line number, first cell) of each
+    goal id, in the standard form or the legacy one (`goal_id`); and (line number, first cell) of each
     other row of a table that has goal rows: no goal, and it must not pass unread."""
     found: list[tuple[int, str, str]] = []
     strays: list[tuple[int, str]] = []
@@ -1064,7 +1080,8 @@ def story_problems(doc) -> list[str]:
     """G-I2 on one story's frontmatter: an actor of the vocabulary, a date, a status of the
     vocabulary, and `unconfirmed` only from an agent's reconstruction. `record new` calls it too.
     A retired story is history: its provenance is not read (`record retire` replaced a story
-    with bad provenance by one recorded again), and its retire is `retire_problems`' to check."""
+    with bad provenance by its replacement story, a new record with the same words), and its
+    retirement is `retire_problems`' to check."""
     if str(doc.get("story_status") or "") == "retired":
         return []
     out = []
@@ -1083,7 +1100,7 @@ def story_problems(doc) -> list[str]:
 
 def goal_problems(goals, known: set[str], legacy: bool = True) -> list[str]:
     """G-I1 on one story's `goals`: at least one, each a goal of the charter (`known`). A legacy
-    `G3` reads as `G-3` at rest (``legacy``); a new write must use the one form. `record new`
+    `G3` reads as `G-3` in the stored files (``legacy``); a new write must use the standard form. `record new`
     calls it too."""
     values = D.as_list(goals)
     if not values:
@@ -1094,7 +1111,7 @@ def goal_problems(goals, known: set[str], legacy: bool = True) -> list[str]:
         if gid is None:
             out.append(f"`{v}` in `goals` is not a goal id (G-n)")
         elif not legacy and v != gid:
-            out.append(f"`{v}` in `goals` is not in the one id form; write {gid}")
+            out.append(f"`{v}` in `goals` is not in the standard id form; write {gid}")
         elif gid not in known:
             out.append(f"`goals` names {gid}, which is not a goal of the charter")
     return out
@@ -1117,7 +1134,7 @@ def _stories(e: Engine) -> list[tuple[str, str, object]]:
 
 
 def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
-    """The charter's goal ids (None when `[guards] charter` is unset), and G-I1's reds on the
+    """The charter's goal ids (None when `[guards] charter` is unset), and G-I1's failures on the
     charter itself: missing, no goal rows (the table changed under the pattern), a legacy id, a
     goal id leading two rows."""
     rel = e.store.config.guards.charter
@@ -1129,13 +1146,13 @@ def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
     out: list[Failure] = []
     found, strays = charter_goals(_text(path))
     for n, raw in strays:
-        out.append(Failure("G-I1", rel, f"line {n}: a row of the goal table is led by `{raw}`, which is not a goal id, so it is no goal", "lead each goal's row with its id in the one form, G-n (FRAMEWORK P3), or move the row out of the goal table"))
+        out.append(Failure("G-I1", rel, f"line {n}: a row of the goal table is led by `{raw}`, which is not a goal id, so the row is not read as a goal", "lead each goal's row with its id in the standard form, G-n (FRAMEWORK P3), or move the row out of the goal table"))
     if not found:
         out.append(Failure("G-I1", rel, "no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked", f"give each goal a row led by its id, G-n (FRAMEWORK §3.1), or {INTENT_OFF}"))
     seen: set[str] = set()
     for n, gid, raw in found:
         if raw.strip("*`").strip() != gid:
-            out.append(Failure("G-I1", rel, f"line {n}: goal id {raw} is not in the one id form", f"write it {gid} (FRAMEWORK P3); a story's `goals` may keep the legacy {raw}, which reads as {gid}"))
+            out.append(Failure("G-I1", rel, f"line {n}: goal id {raw} is not in the standard id form", f"write it {gid} (FRAMEWORK P3); a story's `goals` may keep the legacy {raw}, which reads as {gid}"))
         if gid in seen:
             out.append(Failure("G-I1", rel, f"line {n}: goal id {gid} leads two rows", "give the newer goal the next free id (ids are never reused, P3)"))
         seen.add(gid)
@@ -1147,7 +1164,7 @@ def goals(e: Engine) -> list[Failure]:
     retired, and every such story names at least one goal, each a goal of the charter (a legacy
     `G3` reads as `G-3`). Off while `charter` is unset; red when `charter` is set without
     `stories` (half set, as G-D12's pair), when the charter is missing or yields no goal rows,
-    and on a charter goal id not in the one form.
+    and on a charter goal id not in the standard form.
 
     Not checked: whether a story really serves the goal it names (judgement, at intake), the
     charter's own prose (its `Stories` column included), and retired stories (history)."""
@@ -1172,7 +1189,8 @@ def goals(e: Engine) -> list[Failure]:
 
 
 def retire_hint(rid: str) -> str:
-    """The command that retires a story recorded again (G-I1's and G-I2's remedies)."""
+    """The command that retires a story in favour of its replacement story, a new record with the same
+    words (G-I1's and G-I2's remedies)."""
     return f"`record retire {rid} --by agent --superseded-by <new id> --why \"<what was wrong>\"`"
 
 
@@ -1188,8 +1206,8 @@ def logged_retires(e: Engine) -> dict[str, dict]:
 
 def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[tuple[str, str, str, str]]:
     """G-I2 on retires, as (id, path, message, remedy): a retired story was retired by `record
-    retire` (a logged `retire` line), so who retired it and why are recorded; a story a logged
-    retire retired is still `retired` and `status: deprecated` (a retire is never undone); only
+    retire` (a logged `retire` line), so who retired it and why are recorded; a story that a logged
+    `retire` retired is still `retired` and `status: deprecated` (a retirement is never undone); only
     a retired story is `status: deprecated` (FRAMEWORK §9.3's one mapping); and each id in a
     story's `superseded_by` or `supersedes` is a story, `superseded_by` only on a retired one."""
     done = logged_retires(e)
@@ -1200,18 +1218,18 @@ def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[t
         op = done.get(rid)
         if status == "retired" and op is None:
             out.append((rid, rel, "is `retired`, but no `record retire` of it is logged, so nothing records who retired it or why",
-                        f"if it was retired, record who and why: `record retire {rid} --by owner --why \"<their words>\"` (or `--by agent --superseded-by <id>` for a story recorded again); if it was not, restore `story_status` from git (`git log -p` on the file)"))
+                        f"if it was retired, record who and why: `record retire {rid} --by owner --why \"<their words>\"` (or `--by agent --superseded-by <id>` when a replacement story replaces it); if it was not, restore `story_status` from git (`git log -p` on the file)"))
         elif op is not None and (status != "retired" or doc.get("status") != "deprecated"):
             now = f"`story_status: {status}`" if status != "retired" else f"`status: {doc.get('status') or ''}`, not `deprecated`"
             out.append((rid, rel, f"was retired by `record retire` in session {op.get('session')}, but its frontmatter now says {now}",
-                        "a retire is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record it as a new story (`record new story`)"))
+                        "a retirement is never undone: restore `story_status: retired` and `status: deprecated` from git (`git log -p` on the file); to bring the intent back, record it as a new story (`record new story`)"))
         elif op is None and status != "retired" and doc.get("status") == "deprecated":
             out.append((rid, rel, f"is `status: deprecated` but `{status}`: only a retired story is deprecated, so readers would skip it as history",
                         f"restore `status` from git; to retire {rid}, `record retire {rid}` (it writes both)"))
         for key in RETIRE_KEYS:
             for ref in D.as_list(doc.get(key)):
                 if str(ref) not in known:
-                    out.append((rid, rel, f"`{key}` names {ref}, which is no story", "restore the link from git; story links are written only by `record retire`"))
+                    out.append((rid, rel, f"`{key}` names {ref}, which is not a story", "restore the link from git; story links are written only by `record retire`"))
         if D.as_list(doc.get("superseded_by")) and status != "retired":
             out.append((rid, rel, f"has `superseded_by` but is `{status}`, not retired", "restore the story from git; `record retire --superseded-by` writes the link and the retire together"))
     return out
@@ -1225,9 +1243,9 @@ def story_fields(e: Engine) -> list[Failure]:
     (`retire_problems`). Off while `stories` is unset.
 
     Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), `via`, a hand
-    edit between the standing statuses (live, unspecified, unconfirmed: no operation owns those
+    edit from one status other than `retired` to another (live, unspecified, unconfirmed: no operation owns those
     moves yet, and the op log records which keys a write changed, not their values), a retired
-    story's frontmatter after the retire (history), that the amendment a retire wrote is still
+    story's frontmatter after the retirement (history), that the amendment a retirement wrote is still
     there, that `supersedes` mirrors `superseded_by`, and an op log line written by hand (it is
     trusted as written, as G-W7 trusts it)."""
     if not e.store.config.guards.stories:
@@ -1242,7 +1260,7 @@ def story_fields(e: Engine) -> list[Failure]:
 
 
 def _criteria(e: Engine, guard: str) -> tuple[list[Criterion], list[Failure]]:
-    """The criterion rows of `[working] criteria`, and ``guard``'s reds when the file is missing,
+    """The criterion rows of `[working] criteria`, and ``guard``'s failures when the file is missing,
     a table of criteria cannot be read, or it yields no rows (the table changed under the pattern)."""
     rel = e.w.criteria
     path = e.root / rel
@@ -1355,7 +1373,7 @@ def sources(e: Engine) -> list[Failure]:
             out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} names no source (`{r.source}`)", f"name the story or decision it comes from ({names}) in its `from` cell"))
         for ref in refs:
             if ref not in known:
-                out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} comes from {ref}, which is no story or decision", f"name a {names} that exists"))
+                out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} comes from {ref}, which is neither a story nor a decision", f"name a {names} that exists"))
     return out
 
 

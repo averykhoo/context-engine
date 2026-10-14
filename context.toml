@@ -3,7 +3,7 @@
 
 [engine]
 oplog = "docs/ledger/ops.jsonl"     # one JSON line per engine write (AC-6)
-lockfile = ".context/engine.lock"   # .context/ ignores itself; never tracked
+lockfile = ".context/engine.lock"   # .context/ carries its own `.gitignore`; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]
 contract = "CLAUDE.md"              # its `framework:` line must equal the engine's major.minor (lint G-D0, DEC-23)
 
@@ -43,7 +43,7 @@ required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
 types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
 
-# Batons and pause blocks: one stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
+# Batons and pause records: one session-stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
 [kinds.baton]
 type = "Baton"
 prefix = "BTN"
@@ -103,7 +103,7 @@ mode = "never edited"
 [[routes]]
 component = "Charter"
 path = "docs/charter.md"
-mode = "replaced, owner-stamped"
+mode = "replaced, signed off by the owner"
 note = "confirmed 2026-10-08, DEC-10"
 
 [[routes]]
@@ -158,8 +158,8 @@ mode = "append-only, written by the engine"
 [[routes]]
 component = "Runbooks"
 path = "docs/runbooks"
-mode = "replaced only through the kit copy: every file equals src/context_engine/kit/docs/runbooks/ byte for byte (AC-37); AC-21 and AC-36 keep rituals.md and manual-mode.md in step with the CLI and FRAMEWORK §6"
-note = "rituals.md: every ritual in order (US-15); manual-mode.md: every engine operation by hand, with its Why (US-11); the method runbooks are routed one by one below (CE-26)"
+mode = "replaced only through the kit copy: every file equals src/context_engine/kit/docs/runbooks/ byte for byte (AC-37); AC-21 and AC-36 keep procedures.md and manual-mode.md in step with the CLI and FRAMEWORK §6"
+note = "procedures.md: every procedure's steps in order (US-15); manual-mode.md: every engine operation by hand, with its Why (US-11); the method runbooks are routed one by one below (CE-26)"
 
 # The method runbooks (FRAMEWORK §7.5, CE-26): one route each, so G-R1 is red when one goes and
 # G-D1 keeps each short. Framework-generic kit copies (AC-71); this repo's values are in CLAUDE.md.
@@ -226,7 +226,7 @@ mode = "kept as evidence until G-T5 replaces them (CE-34)"
 [[routes]]
 component = "Scratch"
 path = ".scratch"
-mode = "throwaway, the gitignored crash bag"
+mode = "throwaway and gitignored; anything only there is lost"
 optional = true  # absent on a fresh clone
 
 # The doc guards (FRAMEWORK §8.2, §8.3; G-D1's caps are on [[routes]] above). Each list names
@@ -239,7 +239,7 @@ signals = ["CLAUDE.md", "HANDOFF.md", "docs/framework/FRAMEWORK.md", "docs/runbo
 warn_max = 3       # G-D7; provenance: JUDGEMENT, engine default (the global contract keeps about this many per section); wrong if a real trap goes unmarked to stay under it
 bold_caps_max = 5  # G-D7; provenance: JUDGEMENT, engine default; FRAMEWORK holds 3 on 2026-10-12d (its liveness words); wrong as above
 retired_glyphs = []
-coverage_spec = "docs/framework/FRAMEWORK.md"           # G-D12 (CE-30): every component, ritual and G-id it names is owned by the newest map or a board item
+coverage_spec = "docs/framework/FRAMEWORK.md"           # G-D12 (CE-30): every component, procedure and G-id it names is owned by the newest map or a board item
 coverage_maps = "docs/evidence/framework-coverage-*.md"  # G-D12: the frozen, dated coverage maps (CE-16); the newest by file-name date is read
 charter = "docs/charter.md"   # G-I1 (CE-25): its goal table's `G-n` rows are the goals a story's `goals` may name
 stories = "story"             # G-I1, G-I2, G-T1, G-T6: the kind holding the stories
@@ -249,12 +249,12 @@ history = ["docs/evidence", "spike"]  # G-D4: provenance directories, FROZEN (or
 liveness_lines = 10  # G-D4: the window; provenance: MEASURED 2026-10-13c, every declaration in this repo sits on line 3 or line 7 (docs/evidence/ce33-false-reds-2026-10-13.md), and the window the prior art measured is 10; wrong if the title block of a doc legitimately pushes its declaration further down
 numbers = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D5 (CE-33, §11.2 "the repo measures things"): the LIVING docs
 
-# G-D4: the liveness of docs whose top this repo does not own, so they cannot carry the line
+# G-D4: the liveness of docs whose opening lines this repo may not edit, so they cannot carry the line
 [guards.liveness_given]
 "CLAUDE.md" = "LIVING"                                      # the contract: its top is the kit block in a fresh repo
 "docs/framework/contract.md" = "LIVING"                     # the framework's, byte-equal to the kit's (G-D0)
 "docs/framework/FRAMEWORK-v*.md" = "FROZEN"                 # frozen provenance: never edited; an archive opens with ARCHIVED <date> (§6.12)
-"docs/charter.md" = "LIVING"                                # owner-stamped: replaced only with the owner
+"docs/charter.md" = "LIVING"                                # signed off by the owner: replaced only with the owner
 "docs/ledger/session-log.md" = "LIVING"                     # written by the engine; append-only entries
 "src/context_engine/kit/contract.md" = "LIVING"             # the framework contract itself (G-D0 compares against it)
 "src/context_engine/kit/bootloader.md" = "LIVING"           # the CLAUDE.md block, compared by G-D0

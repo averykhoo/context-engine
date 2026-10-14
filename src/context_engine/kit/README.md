@@ -8,12 +8,12 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 |---|---|---|
 | `context.toml.template` | `context.toml` | the config, and its schema: every key the engine reads |
 | `bootloader.md` | appended to `CLAUDE.md` | the kit block: the `framework:` line and an `@`-import of the contract; then a `## Gate` stub for the repo's own test command |
-| `contract.md` | `docs/framework/contract.md` | the framework's rules (environment, gate, rituals, rules), imported by `CLAUDE.md`; the framework's file, replaced whole on upgrade |
+| `contract.md` | `docs/framework/contract.md` | the framework's rules (its Environment, Gate, Procedures and Rules sections), imported by `CLAUDE.md`; the framework's file, replaced whole on upgrade |
 | `HANDOFF.md` | `HANDOFF.md` | the orientation note, with no banner yet |
 | `docs/charter.md` | `docs/charter.md` | the charter, goals with `G-n` ids |
 | `docs/criteria.md` | `docs/criteria.md` | the criteria table and how a test claims one |
 | `docs/ledger/session-log.md` | `docs/ledger/session-log.md` | the empty session ledger |
-| `docs/runbooks/rituals.md` | `docs/runbooks/rituals.md` | every ritual's steps in order, the engine command and the by-hand step side by side |
+| `docs/runbooks/procedures.md` | `docs/runbooks/procedures.md` | every procedure's steps in order, the engine command and the by-hand step side by side |
 | `docs/runbooks/manual-mode.md` | `docs/runbooks/manual-mode.md` | every engine operation by hand, each step with its why |
 | `docs/runbooks/gate.md` | `docs/runbooks/gate.md` | running the gate so its result is true, and the test baselines |
 | `docs/runbooks/sabotage.md` | `docs/runbooks/sabotage.md` | seeing every new test, guard or refusal fail before believing it |
@@ -22,7 +22,7 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 
 `init` also writes the `SessionStart` hook (§ Hook) and creates `docs/decisions/`, `docs/stories/`, `docs/working/`, `docs/evidence/` and
 `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
-(each with a `.gitignore` holding `*`, so they ignore themselves).
+(each carrying its own `.gitignore`, holding `*`).
 
 ## 1. Install and pin the engine
 
@@ -36,8 +36,8 @@ into the target repo's environment, and the target repo never imports it.
 
 **The pin** is two things: the ref in that install line (a release tag once there are releases;
 a full commit SHA until then), and the `framework: <major.minor>` line in `CLAUDE.md`, which
-must match the engine's major.minor (`context-engine lint` checks it, the kit block's marker
-version, the block's text and the imported contract, as G-D0). Write the ref into the first ledger entry's summary, so the
+must match the engine's major.minor (`context-engine lint` checks, as G-D0, this line, the kit
+block's marker version, the block's text and the imported contract). Write the ref into the first ledger entry's summary, so the
 repo records which engine it was bootstrapped with.
 
 The MCP server is optional (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
@@ -62,10 +62,10 @@ From the repo root:
 ```
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
-it skipped. It never overwrites a file. It appends the bootloader to an existing `CLAUDE.md`
-only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a block from an
-older kit, or the inline block of a kit from before the bootloader, is left for the upgrade to
-replace (§4), never doubled. An existing `context.toml` is
+it skipped. It never overwrites a file. It appends the kit block (`bootloader.md`) to an existing
+`CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
+block from an older kit, or the inline block of a kit from before `bootloader.md` (a block that
+holds the rules themselves), is left for the upgrade to replace (§4), never doubled. An existing `context.toml` is
 kept if it loads (init refuses one that does not, or one whose prefixes disagree with
 `--prefix`), and init then writes only the files and directories that config points at, so it
 can be re-run after the config is edited. `--prefix` changes a kind's id series
@@ -84,7 +84,7 @@ Then:
    `no banner yet`, hash `none`) and `banner set --seen none --file <banner.md>`, which writes the
    `## Banner (<key>)` heading. Both are milestones, so the engine has committed them with
    every write before them; commit anything else the close changed with `context-engine commit
-   <paths> -m "<message>"`, which takes any write still riding along with it.
+   <paths> -m "<message>"`, which takes any write still uncommitted with it.
 
 ## 2b. Bootstrap by hand
 
@@ -93,7 +93,7 @@ Copy each kit file to where the table above says, with `bootloader.md` appended 
 (§ Hook). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
 and `.scratch/.gitignore` each holding the single line `*`. To change an id prefix, edit `prefix`
 in that kind's `[kinds.<name>]` table; no two kinds may share one. Then follow steps 1 to 4
-above, in the order `docs/runbooks/rituals.md` gives, doing each operation by hand from
+above, in the order `docs/runbooks/procedures.md` gives, doing each operation by hand from
 `docs/runbooks/manual-mode.md` (both copied with the kit).
 
 ## Hook
@@ -143,7 +143,7 @@ place:
   and run `init` again;
 - each doc the repo already had under `[guards] liveness` or `history` (G-D4: `HANDOFF.md`,
   `docs/runbooks`, `docs/evidence`) gets its liveness line near its top (LIVING, ACTIVE-PLAN or
-  FROZEN), or a `liveness_given` entry when the repo does not own its top; list the repo's other
+  FROZEN), or a `liveness_given` entry when the repo may not edit its opening lines; list the repo's other
   docs under `liveness` too.
 
 `context-engine lint` then shows what still disagrees (dead routes, records that break the
@@ -155,7 +155,7 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
 2. Copy the new kit's `contract.md` over `docs/framework/contract.md` (the framework's file: it is
    replaced whole, never merged). If the engine's major.minor moved, replace the text between the
    kit markers in `CLAUDE.md`, markers included, with the new kit's `bootloader.md` block. **From
-   an inline block** (a kit from before the bootloader, whose block holds the rules themselves):
+   an inline block** (a kit from before `bootloader.md`, whose block holds the rules themselves):
    move its gate command to a `## Gate` section below the end marker first, then replace the
    block, then run `init`, which writes `docs/framework/contract.md` and the hook. Replace every
    runbook in `docs/runbooks/` with the new kit's copy, unless the repo edited its own (then merge
@@ -166,7 +166,7 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
    `true` reads as `"milestones"`, so the engine stops committing every write and commits at
    milestones: write `"every-write"` to keep the old behaviour. `false` reads as `"off"`. Keep
    `true` or `false` until every machine runs this engine: an older one refuses the words.
-3. `context-engine lint`; fix every red (the config refuses keys it does not know, so a renamed
+3. `context-engine lint`; fix every failure (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).
 4. Write a ledger line naming the new ref (in the session's close summary).
@@ -175,7 +175,7 @@ schema, docs that declare no liveness). Back-filled stories are reconstructions,
 
 `<this repo's own test command> && context-engine lint`, from the repo root, before every
 commit that touches code, tests or records (the engine's own commits of its writes excepted;
-your own `context-engine commit` runs none, so run the gate before it),
+your own `context-engine commit` does not run the gate, so run the gate before it),
 and before every push. Guards the engine does not
 run yet are checked by hand (FRAMEWORK §11.1).
 
@@ -183,8 +183,8 @@ run yet are checked by hand (FRAMEWORK §11.1).
 
 The kit ships the runbooks, and `init` copies them into the repo's `docs/runbooks/`, so a repo can
 run the framework from its own tree with no engine (FRAMEWORK P16). The by-hand fallback:
-- `rituals.md`: the order of every ritual (session start, intake, clean close, pause, resume,
-  push and CI, bootstrap, foreign reconcile, housekeeping), each step with its engine command, its
+- `procedures.md`: the order of every procedure (session start, intake, clean close, pause,
+  resume, push and CI, bootstrap, reconciling foreign commits, housekeeping), each step with its engine command, its
   by-hand step and its why. It is the only place the order is written.
 - `manual-mode.md`: every engine operation by hand, with its why; the reference for what the
   engine should have done when it errs.

@@ -1,7 +1,7 @@
 # context.toml: the framework config for this repo (FRAMEWORK §8.0). This file IS the schema:
 # every key the engine reads appears below with its default, and the engine refuses any table or
 # key it does not know, a [working.caps] tier no board kind's `pri` names, and a value of the wrong
-# type (so a typo is a red, not a silent default).
+# type (so a typo fails rather than becoming a silent default).
 #
 # Written by `context-engine init` from the adoption kit; edit it in place afterwards. For an
 # existing repo (FRAMEWORK §11.4), point `dir`, `prefix` and the routes at the files and id
@@ -11,24 +11,24 @@
 # and what would make it wrong. The values below are the engine's defaults, so their provenance
 # starts as JUDGEMENT; re-state it when this repo measures or decides otherwise.
 #
-# Read by nothing yet, so not keys here (FRAMEWORK §8.0 lists them): cutoff ids, model choices
+# Nothing reads these yet, so they are not keys here (FRAMEWORK §8.0 lists them): cutoff ids, model choices
 # for background agents, the housekeeping write cap and the stale-stub window.
 
 [engine]
 oplog = "docs/ledger/ops.jsonl"      # one JSON line per engine write; append-only, written by the engine
-lockfile = ".context/engine.lock"    # .context/ ignores itself; never tracked
+lockfile = ".context/engine.lock"    # .context/ carries its own `.gitignore`; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]   # directories declared OKF bundles (lint G-D11)
 contract = "CLAUDE.md"               # the contract; its `framework: <major.minor>` must equal the engine's (lint G-D0)
 lock_timeout = 30.0                  # seconds to wait for the repo lock; provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
 commit = "milestones"                # when the engine commits its writes by path with its op log lines (FRAMEWORK §5.5 rule 4): "milestones" (a task close, owner words,
-                                     # a baton or pause, session close or pause, the banner; every other write rides along), "every-write", or "off" (every commit but a pause's is the session's)
+                                     # a baton or pause, session close or pause, the banner; every other write stays uncommitted and goes into the next commit), "every-write", or "off" (the engine commits only a pause; the session commits everything else)
 
 # -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
 # Keys of a [kinds.<name>] table:
 #   type        the OKF `type:` value written into every record of the kind
 #   prefix      the id series: prefix "D" gives D-1, D-2, ... Ids are never reused or renumbered.
 #   dir         repo-relative directory holding the records (one file each: <id>-<slug>.md)
-#   mode        append-only | replaced | stamped (FRAMEWORK §8.0.1)
+#   mode        append-only | replaced | stamped (the session-stamped mode; FRAMEWORK §8.0.1)
 #   required    frontmatter fields every record must carry
 #   enums       field -> its allowed values
 #   extra_dirs  further directories scanned for ids, e.g. a legacy tasks/closed/
@@ -72,7 +72,7 @@ required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
 types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
 
-# Batons and pause blocks: one stamped record each (FRAMEWORK §5.4).
+# Batons and pause records: one session-stamped record each (FRAMEWORK §5.4).
 [kinds.baton]
 type = "Baton"
 prefix = "BTN"
@@ -106,36 +106,36 @@ read_max_bytes = 6000        # every other MCP read; provenance: JUDGEMENT, the 
 ask_overdue_sessions = 5     # an owner question not raised in this many sessions is overdue (FRAMEWORK §5.3); provenance: JUDGEMENT, engine default; wrong if the owner is asked too often or too rarely
 ask_overdue_days = 7         # ...or in this many days, whichever comes first; provenance: JUDGEMENT, engine default; wrong as above
 baton_max_age = 2            # sessions closed after the owning one before a baton expires (G-W3); provenance: JUDGEMENT, engine default; wrong if batons expire while still being worked
-register = "docs/invariants.md"   # the residual-risk register (FRAMEWORK §7.4); the first `task close` that files a residual creates it
+register = "docs/invariants.md"   # the residual-risk register (FRAMEWORK §7.4); the first `task close` that files a residual risk creates it
 decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it (FRAMEWORK §6.5)
 criteria = "docs/criteria.md"               # one `| AC-n | ... |` row per criterion; `decision link` refuses an AC-n id that is not a row
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # the values a board item's `review:` may take: FRAMEWORK §5.2's design-review threshold, one per clause
 max_pauses = 2               # consecutive pause entries before lint asks for a clean close (G-W2); provenance: JUDGEMENT, engine default; wrong if real work routinely needs more
 
 [working.caps]               # board tier caps: NOW holds exactly this many, others at most
-NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if never
+NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if the work never fits one item at a time
 NEXT = 5                     # provenance: JUDGEMENT, engine default; wrong if NEXT routinely overflows with work that is really next
 
 # -- guards (FRAMEWORK §8): which guards lint reports, and what the doc guards read ----------
-# A doc guard whose list is empty checks nothing; a listed path that does not exist is a red.
+# A doc guard whose list is empty checks nothing; a listed path that does not exist fails.
 [guards]
 off = []                     # guard ids lint does not report (`context-engine lint` names them); say why in a comment
 links = ["CLAUDE.md", "HANDOFF.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "tasks"]   # G-D3: relative links, their #anchors and `file::symbol` spans resolve, case-exact
-existence = ["docs/criteria.md"]   # G-T3: files and `file::symbol` named in normative text exist; add the invariants register and any law doc once they exist
+existence = ["docs/criteria.md"]   # G-T3: files and `file::symbol` named in normative text exist; add the residual-risk register and any NFR doc once they exist
 signals = ["CLAUDE.md", "HANDOFF.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md"]   # G-D7: the signal budgets below
 warn_max = 3                 # ⚠ per file (G-D7); provenance: JUDGEMENT, engine default; wrong if a real trap goes unmarked to stay under it
 bold_caps_max = 5            # bold all-caps spans per file (G-D7); provenance: JUDGEMENT, engine default; wrong as above
 retired_glyphs = []          # glyphs no file may use any more (G-D7)
-liveness = ["CLAUDE.md", "HANDOFF.md", "docs/charter.md", "docs/criteria.md", "docs/framework/contract.md", "docs/ledger/session-log.md", "docs/runbooks"]   # G-D4: each doc declares how alive it is (FRAMEWORK P2) near its top: a line led by LIVING, ACTIVE-PLAN or FROZEN, or a frontmatter `liveness:` key; add every doc the repo keeps
+liveness = ["CLAUDE.md", "HANDOFF.md", "docs/charter.md", "docs/criteria.md", "docs/framework/contract.md", "docs/ledger/session-log.md", "docs/runbooks"]   # G-D4: each doc declares near its top whether it is kept current (its liveness, FRAMEWORK P2): a line led by LIVING, ACTIVE-PLAN or FROZEN, or a frontmatter `liveness:` key; add every doc the repo keeps
 history = ["docs/evidence"]  # G-D4: directories of provenance; each doc there is FROZEN, or ACTIVE-PLAN while the board item it names is open
-liveness_given = { "CLAUDE.md" = "LIVING", "docs/framework/contract.md" = "LIVING", "docs/ledger/session-log.md" = "LIVING" }   # G-D4: repo-relative glob -> liveness, for docs whose top the repo does not own (the kit block, the framework contract, the engine-written ledger; frozen provenance)
+liveness_given = { "CLAUDE.md" = "LIVING", "docs/framework/contract.md" = "LIVING", "docs/ledger/session-log.md" = "LIVING" }   # G-D4: repo-relative glob -> liveness, for docs whose opening lines the repo may not edit (the kit block, the framework contract, the engine-written ledger; frozen provenance)
 liveness_lines = 10          # G-D4: how many lines from the top the declaration may sit; provenance: JUDGEMENT, engine default (a title, a blank line and a status line fit, and so does a runbook frontmatter); wrong if a doc needs its declaration further down
-numbers = []                 # G-D5: off until the repo measures things (FRAMEWORK §11.2); then list its LIVING docs, and no count of the tree (`23 components`) may be typed there outside P5's forms
-count_nouns = ["tests", "checks", "guards", "criteria", "stories", "decisions", "tasks", "items", "rows", "questions", "records", "components", "rituals", "goals", "runbooks", "kinds", "principles", "steps", "files", "entries", "ids", "scenarios"]   # G-D5: the plural nouns a number directly before one counts (the engine default); add the ones the repo measures (`runs`, `seeds`)
-coverage_spec = ""           # G-D12: the framework spec (e.g. docs/framework/FRAMEWORK.md) whose components, rituals and G-ids must be owned; empty with coverage_maps is off. The engine's patterns and floors (20 components, 10 rituals, 30 G-ids) fit FRAMEWORK.md's format: a spec they do not fit stays red, so leave both empty
+numbers = []                 # G-D5: off until the repo measures things (FRAMEWORK §11.2); then list its LIVING docs, and no count of things in the tree (`23 components`) may be typed there except in one of P5's forms
+count_nouns = ["tests", "checks", "guards", "criteria", "stories", "decisions", "tasks", "items", "rows", "questions", "records", "components", "rituals", "procedures", "goals", "runbooks", "kinds", "principles", "steps", "files", "entries", "ids", "scenarios"]   # G-D5: the plural nouns that make a number placed directly before them a count (the engine default); add the ones the repo measures (`runs`, `seeds`)
+coverage_spec = ""           # G-D12: the framework spec (e.g. docs/framework/FRAMEWORK.md) whose components, procedures and G-ids must be owned; empty with coverage_maps is off. The engine's patterns and floors (20 components, 10 procedures, 30 G-ids) fit FRAMEWORK.md's format: a spec they do not fit stays red, so leave both empty
 coverage_maps = ""           # G-D12: a repo-relative glob of frozen, dated coverage maps (e.g. docs/evidence/framework-coverage-*.md); the newest by file-name date and session letters is read
-# The intent chain (FRAMEWORK §3.4): unset here, because a fresh repo has no goals, stories or tests
-# yet, and a set source that yields nothing is red. Set them at bootstrap step 4 (rituals.md),
+# The correctness chain (FRAMEWORK §3.4): unset here, because a fresh repo has no goals, stories or tests
+# yet, and a set source that yields nothing is red. Set them at bootstrap step 4 (procedures.md),
 # once the goals, the first stories and their criteria are recorded. A guard is off while a
 # source it needs is unset, but `charter` without `stories`, or `tests` without [working]
 # criteria, is red (half set).
@@ -165,7 +165,7 @@ mode = "the framework's: imported by CLAUDE.md, replaced whole on upgrade, never
 [[routes]]
 component = "Charter"
 path = "docs/charter.md"
-mode = "replaced, owner-stamped"
+mode = "replaced, signed off by the owner"
 note = "goals carry G-n ids; a story's `goals` names them"
 
 [[routes]]
@@ -193,16 +193,16 @@ pattern = "<id>-<slug>.md"
 mode = "frontmatter through `context-engine task`/`context-engine ask`, bodies by hand"
 
 [[routes]]
-component = "Batons and pauses"
+component = "Batons and pause records"
 path = "docs/working"
 pattern = "<id>-<slug>.md"
-mode = "stamped, through `context-engine baton`/`context-engine pause`"
+mode = "session-stamped, through `context-engine baton`/`context-engine pause`"
 
 [[routes]]
 component = "Orientation note"
 path = "HANDOFF.md"
 mode = "replaced at clean close; banner through `context-engine banner set`"
-max_lines = 150    # G-D1, the backstop to G-D8's layer detector (FRAMEWORK P6); provenance: JUDGEMENT, engine default; wrong if a cold session needs more to orient than fits
+max_lines = 150    # G-D1, the backstop to G-D8's stacking check (FRAMEWORK P6); provenance: JUDGEMENT, engine default; wrong if a cold session needs more to orient than fits
 max_bytes = 12000  # provenance: JUDGEMENT, engine default; wrong as above
 max_width = 120    # provenance: JUDGEMENT, engine default; wrong if wrapping splits commands mid-line
 
@@ -222,7 +222,7 @@ note = "created by the first engine write"
 component = "Runbooks"
 path = "docs/runbooks"
 mode = "replaced"
-note = "rituals: every ritual's steps in order; manual-mode: every engine operation by hand (FRAMEWORK §7.5); the method runbooks are routed one by one below"
+note = "procedures: every procedure's steps in order; manual-mode: every engine operation by hand (FRAMEWORK §7.5); the method runbooks are routed one by one below"
 
 # The method runbooks (FRAMEWORK §7.5): one route each, so G-R1 is red when one is lost and G-D1
 # keeps each short. They carry no repo values: the repo's own (its test command, suites, models,
@@ -272,5 +272,5 @@ mode = "ACTIVE-PLAN, then FROZEN"
 [[routes]]
 component = "Scratch"
 path = ".scratch"
-mode = "throwaway, the gitignored crash bag"
+mode = "throwaway and gitignored; anything only there is lost"
 optional = true

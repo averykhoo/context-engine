@@ -10,10 +10,10 @@ liveness: LIVING
 # Release
 
 How a version reaches its users and is shown to work for a stranger. A tag push is a push: its
-order (ask, gate, push, watch) is [rituals.md § Push and CI](rituals.md#push-and-ci-68), and this
-file adds only what a release needs on top. The repo's values (its version file, build and
-publish steps, package index, distribution name and declared floor) are in its `CLAUDE.md`. A
-repo that publishes nothing keeps this file unused.
+order (ask, gate, push, watch) is [procedures.md § Push and CI](procedures.md#push-and-ci-68),
+and this file adds only what a release needs on top. The repo's values (its version file, build
+and publish steps, package index, distribution name and declared floor) are in its `CLAUDE.md`.
+A repo that publishes nothing keeps this file unused.
 
 ## Tag, publish, confirm
 
@@ -21,7 +21,7 @@ repo that publishes nothing keeps this file unused.
 |---|---|
 | Before tagging: CI is green on exactly the commit to be tagged | a tag on an unverified commit releases it |
 | The version is new. A version already on the index is never reused, and a pushed tag is never moved | users and caches already hold what that version meant |
-| Push the tag as rituals.md § Push and CI says; key the watcher on the tagged commit and the tag name, and have it follow the release run through its upload step | a release run that fails at upload can look like success from the tag |
+| Push the tag as procedures.md § Push and CI says; key the watcher on the tagged commit and the tag name, and have it follow the release run through its upload step | a release run that fails at upload can look like success from the tag |
 | Confirm the version is live on the index (PyPI: `https://pypi.org/pypi/<dist>/<version>/json` returns 200) | a green run is not yet a published release |
 
 ## The fresh-user install trial
@@ -46,5 +46,5 @@ artifact the way a stranger would. Its brief says:
 | Do | Why |
 |---|---|
 | Re-run every `BROKEN` repro first-hand against the source | an agent's report is evidence, not a finding |
-| Put the trial in a tracked evidence doc the same hour, and file a board item for each `BROKEN` or `CONFUSING` finding | scratch is a crash bag (P10) |
+| Put the trial in a tracked evidence doc the same hour, and file a board item for each `BROKEN` or `CONFUSING` finding | scratch is throwaway space: anything kept only there is lost (P10) |
 | Fix everything `BROKEN` and release it as the next patch version | a published version cannot be repaired in place |
