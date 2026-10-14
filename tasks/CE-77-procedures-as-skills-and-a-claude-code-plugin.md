@@ -5,11 +5,11 @@ title: Procedures as skills, and a Claude Code plugin bundling the skills, the S
 brief: Contract stays always-on (CLAUDE.md import + hook), not a skill; every skill keeps its runbook as by-hand fallback
 pri: NEXT
 state: open
-deps: [CE-7]
+deps: []
 source: session 2026-10-14c
 created: 2026-10-14
 moved: 2026-10-14c
-updated: 2026-10-14c
+updated: 2026-10-14g
 ---
 
 Package the on-demand parts of the framework as Claude Code skills, and ship them with the
@@ -60,3 +60,4 @@ with one install instead of `claude mcp add` per machine and project plus init w
 ## Log
 
 - 2026-10-14c (claude-code/claude-opus-5-5): Owner, 2026-10-14c, verbatim: "okay yes file a task to make skills and bundle the plugin" (answering the session's proposal: procedures and adoption as skills, a plugin for the hook and MCP setup, after the adhoc trial).
+- 2026-10-14g (claude-code/claude-opus-5-5): DEC-43 (owner, 2026-10-14g): start now; the CE-7 dep and the 2026-10-14c freeze are lifted for this task. adhoc keeps its pinned kit (DEC-41).

@@ -3,13 +3,13 @@ type: Task
 id: CE-7
 title: Adhoc trial on adhoc main, scored against the CE-4 rubric
 brief: Trial STARTED 2026-10-14 on adhoc main (DEC-42); check back about 2026-10-21 (CE-79), score against CE-4
-pri: NOW
+pri: NEXT
 state: open
 deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5, CE-74, CE-75]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-13b
-updated: 2026-10-14f
+moved: 2026-10-14g
+updated: 2026-10-14g
 closed:
 ---
 
@@ -39,6 +39,7 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - 2026-10-14d (claude-code/claude-opus-5-5): 2026-10-14d: cutover done on adhoc branch context-engine-trial (worktree adhoc-microphone-array-ce): 7100077 kit (engine pin 38ed38e, env at .context-engine/env/, DEC-41); 140d1eb/3316747 decisions DEC-1..DEC-67 imported, statuses reviewed, owner's calls as adhoc DEC-68; 0d6d9df board AD-1..AD-14 + ASK-9, HANDOFF 605->78 lines; e3f5c40 decisions.md frozen; fc7bdff/eef0ecc adhoc session 2026-10-14a closed with banner. adhoc gate green (pytest 366 passed, 425 s). Hook command runs rc 0 under bash and cmd.exe. Owed: real Claude Code sessions in the worktree (INV-31 probes: startup, resume, /clear, compaction), scoring against CE-4 (CE-79, about 2026-10-21), the owner's merge decision (DEC-32 settings question comes up then). Findings filed: CE-80 (import SUPERSEDED note irreversible), CE-81 (DEC-41 into kit and FRAMEWORK). Friction: engine milestone commits sweep every uncommitted op line, including other tasks' (CE-45 by design), so one-task-per-commit breaks.
 - 2026-10-14e (claude-code/claude-opus-5-5): 2026-10-14e: owner, verbatim: "oh wait no it needs to be in the actual folder, not a separate worktree", "delete the worktree" (DEC-42). Done: adhoc main fast-forwarded to eef0ecc, worktree and branch deleted (junctions unlinked first; main's data/ and references/originals/ intact), engine env rebuilt in adhoc's folder at 38ed38e, MCP registered there, hook merged (owner: yes), adhoc session 2026-10-14b closed (fbe3090, 8d244e5).
 - 2026-10-14f (claude-code/claude-opus-5-5): Owner, 2026-10-14f, verbatim: "okay its running now, just update the item to say the trial has started and we'll check back in a week or so then push". The trial has started: the owner's first real Claude Code session is running in adhoc's folder (2026-10-14f). Check back in about a week (CE-79, about 2026-10-21): score the sessions against CE-4, then the owner decides what follows.
+- 2026-10-14g (claude-code/claude-opus-5-5): DEC-43 (owner, 2026-10-14g): moved off NOW until next week (about 2026-10-21, with CE-79); nothing to do on it until then.
 
 ## Traps
 
