@@ -7,6 +7,7 @@ decision_status: BUILT
 decided: 2026-10-14
 session: 2026-10-14e
 body_sha: sha256:162c925adacc760a4516312acecac2c0855e544527da7142808335244f53ba35
+tasks: [CE-7]
 ---
 
 Owner, 2026-10-14e, verbatim, on learning the trial was set up in a worktree (C:/Users/user/PycharmProjects/adhoc-microphone-array-ce) rather than adhoc's own checkout: "oh wait no it needs to be in the actual folder, not a separate worktree", then "delete the worktree".
