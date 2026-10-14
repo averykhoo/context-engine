@@ -493,3 +493,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the baseline predates CE-55, which widens it
 - **control:** individual: procedures § Reconciling foreign commits only; follow-up filed
 - **from:** CE-55, session 2026-10-13c
+
+## INV-70: a setext `Gate` heading is not detected, so such a repo still gets a second Gate
+
+- **affects:** every repo adopting the engine whose CLAUDE.md already has a gate; the owner reading CLAUDE.md after init; the first session there, which runs the gate CLAUDE.md names
+- **why not eliminated:** setext headings in CLAUDE.md are rare and parsing them needs a markdown parser
+- **control:** individual: init's output names the CLAUDE.md change, and the kit README and manual-mode say which headings count
+- **from:** CE-51, session 2026-10-14a
+
+## INV-71: a repo whose real gate is a `### Gate` gets the stub appended beside it
+
+- **affects:** every repo adopting the engine whose CLAUDE.md already has a gate; the owner reading CLAUDE.md after init; the first session there, which runs the gate CLAUDE.md names
+- **why not eliminated:** a level-3 Gate is usually a subsection, not the repo's gate
+- **control:** individual: init's label quotes the heading it took; the kit README and manual-mode say which headings count
+- **from:** CE-51, session 2026-10-14a
