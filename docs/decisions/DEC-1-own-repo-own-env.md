@@ -32,3 +32,5 @@ needs to be reachable from that CI (private repo: a token).
 ## Amendments
 
 - **2026-10-10a (claude-code/claude-opus-5-5):** 2026-10-10 (DEC-22): the repo is now public on GitHub, so target-repo CI needs no token to reach it.
+
+- **2026-10-14d (claude-code/claude-opus-5-5):** 2026-10-14d (owner, DEC-41): a target repo's engine env is a pinned, non-editable install kept inside that repo's folder and gitignored. It is still never the target repo's own environment.
