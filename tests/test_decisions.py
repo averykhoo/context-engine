@@ -885,3 +885,21 @@ def test_an_import_names_another_kinds_record_carrying_an_old_id(deng):
     deng.set("CE-1", {"aliases": "[D-4]"}, **W)
     with pytest.raises(Refusal, match="D-4 is already an alias of CE-1"):
         deng.import_log(write_log(deng), **W)
+
+
+# -- CE-76: `decision find <text>` (adhoc dry run F24) ---------------------------------------------
+
+
+@pytest.mark.criterion("AC-40")
+def test_decision_find_takes_its_text_as_a_positional_argument(eng, capsys):
+    dec(eng, "Meet on Monday")
+    dec(eng, "Something else", body="Unrelated words.\n")
+    root = ["--root", str(eng.root)]
+    assert main([*root, "decision", "find", "monday"]) == 0
+    positional = capsys.readouterr().out
+    assert main([*root, "decision", "find", "--text", "monday"]) == 0
+    assert positional == capsys.readouterr().out and positional.split()[0] == "D-1" and "D-2" not in positional
+    assert main([*root, "decision", "find", "monday", "--text", "monday"]) == 0  # the same text twice is one text
+    capsys.readouterr()
+    assert main([*root, "decision", "find", "monday", "--text", "tuesday"]) == 2
+    assert "two search texts" in capsys.readouterr().err

@@ -201,6 +201,7 @@ def build() -> argparse.ArgumentParser:
     drl.add_argument("old", help="the code: link to replace")
     drl.add_argument("new", help="the file::symbol it moved to")
     df = dc.add_parser("find")
+    df.add_argument("query", nargs="?", default="", help="the text to search titles and bodies for, as --text")
     df.add_argument("--text", default="")
     df.add_argument("--tag", default="")
     df.add_argument("--status", default="")
@@ -277,6 +278,10 @@ CLI_OPS = {
 def _params(args: argparse.Namespace) -> dict:
     """Turn the parsed arguments into the operation's parameters (lists, dicts, file bodies)."""
     a = vars(args)
+    if a.get("query"):  # `decision find <text>`: the positional is --text (CE-76)
+        if a.get("text") and a["text"] != a["query"]:
+            raise Refusal(f"two search texts, {a['query']!r} and --text {a['text']!r}", "give the text once, as the argument or as --text")
+        a["text"] = a["query"]
     if "set" in a:
         a["fields"] = _fields(a["set"])
     if isinstance(a.get("prefix"), list):
