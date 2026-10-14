@@ -88,6 +88,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-37](DEC-37-imported-ids-are-renamed-at-adoption-keeping.md): Imported ids are renamed at adoption, keeping the number, and each old id stays a resolvable alias (ASK-5 option c) *(owner, 2026-10-13)*
 - [DEC-38](DEC-38-standard-id-prefixes-one-readable-prefix-per.md): Standard id prefixes: one readable prefix per record kind in every repo, 2 to 5 capitals; tasks take a per-repo prefix *(owner, 2026-10-13)*
 - [DEC-39](DEC-39-rituals-are-renamed-procedures-the-framework-s.md): Rituals are renamed procedures; the framework's strange turns of phrase are corrected in one sweep *(owner, 2026-10-13)*
+- [DEC-40](DEC-40-ac-42-decision-import-renames-an-id-in-another.md): AC-42: decision import renames an id in another prefix (DEC-37) instead of refusing it; the rest of AC-42 unchanged *(owner, 2026-10-14)*
 
 ## REJECTED
 
