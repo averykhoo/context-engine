@@ -3,14 +3,14 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-14a)
+## Banner (2026-10-14b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **Ready for the adhoc trial (CE-7, NOW), 2026-10-14a:** a sync audit (`docs/evidence/sync-audit-2026-10-14.md`) and a
   cutover dry run in a clone of adhoc (`docs/evidence/adhoc-dryrun-2026-10-14.md`) found the drift and the blockers; fixed in
   CE-69 (sync), CE-51/70 (init), CE-73 (`--file`), CE-74 (DEC-37: import renames ids, old ids stay aliases), CE-75 (orient
-  never cuts batons, sessions or questions). CE-7's Traps carry the trial's lessons and the exact commands.
+  never cuts batons, sessions or questions); AC-42 reworded for it (DEC-40). CE-7 carries the trial's traps and commands.
 - **FRAMEWORK.md holds the framework only (DEC-26):** no history, no repo ids; unbuilt parts say *Not built yet*.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`).
