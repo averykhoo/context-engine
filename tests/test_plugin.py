@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 
 import pytest
@@ -202,8 +203,11 @@ def test_the_pinned_env_inside_the_repo_is_found_without_a_pointer(tmp_path):
     `Scripts/python.exe` on Windows) runs, not the interpreter that started the test."""
     root = _framework_repo(tmp_path / "repo", python=None)
     env = root / ".context-engine" / "env"
-    subprocess.run([sys.executable, "-m", "venv", "--without-pip", "--system-site-packages", str(env)], check=True, timeout=300)
-    p = _run(_argv(_hook(), root), cwd=tmp_path)
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(env)], check=True, timeout=300)
+    # the engine's dependencies from the interpreter running the test (on CI a venv itself, whose
+    # packages a child venv's --system-site-packages would not see)
+    deps = dict.fromkeys(sysconfig.get_paths()[k] for k in ("purelib", "platlib"))
+    p = _run(_argv(_hook(), root), cwd=tmp_path, PYTHONPATH=os.pathsep.join([SRC, *deps]))
     assert p.returncode == 0 and _out(p).startswith("# orient"), (p.stdout, p.stderr)
     shim = tmp_path / "shim" / "context_engine"
     shim.mkdir(parents=True)
