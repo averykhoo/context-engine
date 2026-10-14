@@ -1914,8 +1914,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   provenance (G-D9); hitting it stops the run and asks, and the owner may tell it to write
   anyway. *Not built yet: it comes with real housekeeping runs (CE-6).*
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
-  `close`, `pause` or `abandoned` entry. The window's value is to be measured in the trial
-  (§8.0.3) and given provenance (G-D9). *Not built yet (CE-6): until then a stale stub is marked
+  `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
+  from the stub's last activity (an owner judgement); the trial measures it (§8.0.3) and gives it
+  provenance (G-D9). *Not built yet (CE-6): until then a stale stub is marked
   `abandoned` by hand (the runbook's housekeeping step).*
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
