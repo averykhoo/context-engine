@@ -692,8 +692,8 @@ or demoted to LATER.
 
 ### context-engine ask answer
 
-1. The question must be open and carry no `answered:`, and you need the owner's words verbatim.
-   Open with `answered:` means someone reopened it by hand (G-W4): restore `state: closed` and
+1. The question must be open and carry no `answered:`, and you need the owner's words verbatim
+   (the engine takes them as an argument, or written to a file and passed with `--file`). Open with `answered:` means someone reopened it by hand (G-W4): restore `state: closed` and
    `status: deprecated` from git and change the answer through its decision, as in `task reopen`.
 2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
    `decision_status: PROVISIONAL`, `answers: ASK-n`. Body:
@@ -846,7 +846,8 @@ every later fix then has to be an amendment.
 
 ### context-engine record amend
 
-The only body change an append-only record takes. If the record is stamped, its hash must match
+The only body change an append-only record takes (the engine takes the text as an argument, or
+written to a file and passed with `--file`). If the record is stamped, its hash must match
 first. If there is no `## Amendments` heading, add one at the end. Then append a blank line and
 `- **<key> (<actor>):** <first line>`, with further lines indented two spaces (blank lines stay
 blank).
@@ -1145,7 +1146,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    exist.
 4. `CLAUDE.md`: if it holds no `<!-- context-engine kit <version> begin -->` marker, append the
    kit's `bootloader.md` after a blank line (create the file with a `# <repo>: contract` title if
-   it is absent), keeping the file's line endings. If it holds an older version's block, or a
+   it is absent), keeping the file's line endings. If it already has its own Gate (a level 1 or 2
+   heading reading `Gate`, alone or followed by a parenthesis, a colon or a dash, outside code
+   fences and HTML comments), append the kit block only, up to its end marker, so that gate stays
+   the one gate (it should end with `&& context-engine lint`). If it holds an older version's block, or a
    block with no `@` import line (the inline block of a kit from before `bootloader.md`), leave it for the
    upgrade to replace (kit README § Upgrade); never add a second block. Copy the kit's
    `contract.md` to `docs/framework/contract.md` if absent. If `.claude/settings.local.json` is
@@ -1153,12 +1157,21 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too.
    If it exists and has no such hook, it holds the owner's grants: show the owner the entry and
    ask; with a yes, add it to `hooks.SessionStart`, keeping every other key and its order (the
-   engine's `--merge-settings`); with a no, leave it (`--skip-settings`).
+   engine's `--merge-settings`); with a no, leave it (`--skip-settings`). Git must ignore the file,
+   since the hook holds this machine's paths: when you write the hook and neither
+   `.claude/.gitignore` nor the repo's `.gitignore` ignores it, write `.claude/.gitignore` holding
+   `settings.local.json` if that is absent; on every later run that finds the hook and nothing
+   ignoring it, say so.
 5. For each of `docs/decisions`, `docs/stories`, `docs/working`, `docs/evidence` and `tasks`
    that does not exist, create it with an empty `.gitkeep`. Create
    `.context/.gitignore` and `.scratch/.gitignore`, each holding the line `*`, if absent.
-6. Report in one line what you created and what you skipped. Never overwrite an existing file,
-   and never install anything into the repo's environment.
+6. Report in one line what you created, what you skipped, and a warning for each thing the
+   owner must act on (the settings file's ignore line; on a dry run, the settings question), and,
+   when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
+   placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
+   Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, then
+   `session start`; registering the MCP server is optional. Never overwrite an existing file, and
+   never install anything into the repo's environment.
 
 **Why:** a new repo should get every file the procedures expect in one step, the runbooks
 included, so it can follow every procedure by hand from its own tree, and an existing repo

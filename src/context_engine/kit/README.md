@@ -65,7 +65,9 @@ It writes every kit file the repo is missing and prints one line naming what it 
 it skipped. It never overwrites a file. It appends the kit block (`bootloader.md`) to an existing
 `CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
 block from an older kit, or the inline block of a kit from before `bootloader.md` (a block that
-holds the rules themselves), is left for the upgrade to replace (§4), never doubled. An existing `context.toml` is
+holds the rules themselves), is left for the upgrade to replace (§4), never doubled. A `CLAUDE.md`
+that already has its own Gate (a level 1 or 2 heading reading `Gate`) keeps it as the one gate:
+init appends the kit block without the bootloader's Gate stub, and says so. An existing `context.toml` is
 kept if it loads (init refuses one that does not, or one whose prefixes disagree with
 `--prefix`), and init then writes only the files and directories that config points at, so it
 can be re-run after the config is edited. `--prefix` changes a kind's id series
@@ -74,7 +76,8 @@ can be re-run after the config is edited. `--prefix` changes a kind's id series
 Then:
 1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
-   real one, and read every `provenance:` note in `context.toml`.
+   real one (a `CLAUDE.md` with its own Gate got no stub: check that gate ends with
+   `&& context-engine lint`), and read every `provenance:` note in `context.toml`.
 3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its
    writes at milestones (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. The
    template's `commit = "milestones"` needs this engine or later on every machine: an older one
@@ -101,12 +104,15 @@ above, in the order `docs/runbooks/procedures.md` gives, doing each operation by
 A `SessionStart` hook runs `context-engine orient` and Claude Code puts its output in the
 session's context at startup, resume, `/clear` and compaction, so the session-start read does not
 rest on the agent remembering a rule. `init` writes it to `.claude/settings.local.json`, and
-`.claude/.gitignore` (holding `settings.local.json`) beside it, only when that file is absent.
+`.claude/.gitignore` (holding `settings.local.json`) beside it when that is absent, unless the
+repo's own `.gitignore` already ignores the file; a merge into an existing file does the same, and
+every later run that finds the hook with nothing ignoring it says so.
 The command names this machine's engine interpreter and repo root, so the file is
 machine-local, like the MCP registration: each clone runs `init` (or adds it by hand) once.
 When the file already exists it holds the owner's permission grants (Claude Code writes them
 there), so `init` changes it only with the owner's yes: without a flag it refuses, naming the one
-entry it would append to `hooks.SessionStart`; show the owner, then run `init --merge-settings`
+entry it would append to `hooks.SessionStart` (`--dry-run` names it as a warning instead, beside
+the rest of the plan); show the owner, then run `init --merge-settings`
 (yes) or `init --skip-settings` (no). The merge parses the file strictly (it refuses, untouched,
 a file that is not JSON, repeats a key, holds `NaN`, `Infinity` or a lone surrogate, sets
 `disableAllHooks`, is hard-linked or read-only, or already runs orient with another command, such

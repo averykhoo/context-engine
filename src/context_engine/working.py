@@ -1503,7 +1503,11 @@ class Engine:
                 else:
                     short = f"{pri} holds {len(holders)} ({_one(holders)}); the cap is at most {cap}" if len(holders) > cap else None
                 if short:
-                    out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, "re-rank with `promote`"))
+                    # CE-70: a fresh board's first `task new` lands at LATER, so name the step, not just the verb
+                    fill = pri == "NOW" and len(holders) < cap
+                    one = "which open item is worked on now" if cap == 1 else f"which open items are worked on now (NOW holds exactly {cap})"
+                    remedy = f"ask the owner {one}, then `task promote <id> NOW`" if fill else "re-rank with `promote`"
+                    out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, remedy))
             out += self.lint_review()
         return out
 
