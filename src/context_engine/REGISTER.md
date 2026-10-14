@@ -549,3 +549,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a precise per-section count needs another read op
 - **control:** individual: task list shows each question's state
 - **from:** CE-75, session 2026-10-14a
+
+## INV-78: answered questions from the old log (adhoc Q1..Q8) have no alias that resolves
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** a decision's aliases are fixed and ask answer cannot close on an existing decision
+- **control:** individual: kit README § 3 says answered questions stay history
+- **from:** CE-74, session 2026-10-14a
+
+## INV-79: ids cited in imported bodies and titles stay plain text, so why misses them until linked by hand
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** parsing prose citations into links is not cheap or reliable
+- **control:** individual: decision link by hand; manual-mode § decision import
+- **from:** CE-74, session 2026-10-14a
+
+## INV-80: a rejected row's new number (DEC-45..) can be read by a human as the old D-45 written later
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** rejected rows have no old number to keep
+- **control:** collective: procedures § Bootstrap and kit README § 3 say to freeze the old log until the merge; the CE-7 trap re-checks it
+- **from:** CE-74, session 2026-10-14a
+
+## INV-81: task aliases can be moved or unset, so an old id can come to name a different record
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** boards are rewritten as work moves
+- **control:** individual: task set names every alias it drops
+- **from:** CE-74, session 2026-10-14a
+
+## INV-82: a kind added later whose prefix matches existing aliases turns G-D2 red with no runbook fix
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** aliases on append-only decisions are fixed
+- **control:** individual: G-D2 names the clash
+- **from:** CE-74, session 2026-10-14a
+
+## INV-83: dep, close, promote and comment take only live ids
+
+- **affects:** every repo adopting the engine with an existing id series (adhoc first); the owner, whose old ids are cited in commits, code and prose; every session that resolves an id; a person reading plain files
+- **why not eliminated:** writes resolve aliases only where a lookup is read
+- **control:** individual: the refusal points at task show
+- **from:** CE-74, session 2026-10-14a
