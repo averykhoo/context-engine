@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-14d
-updated: 2026-10-14d
+updated: 2026-10-14f
 ---
 
 Owner, 2026-10-14d, verbatim: "make a new task to follow up in about a week to see how the trial is going."
@@ -24,3 +24,7 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 - INV-31's live probes: did orient appear on startup, resume, /clear and compaction.
 - Whether adhoc's pinned engine env (DEC-41) needs an upgrade, and whether the worktree branch is ready for the owner's merge decision.
 - Report to the owner in a few lines: keep going, fix first, or stop.
+
+## Log
+
+- 2026-10-14f (claude-code/claude-opus-5-5): 2026-10-14f: the trial has started (owner: "okay its running now"); the first real session in adhoc is running. Check back about 2026-10-21.
