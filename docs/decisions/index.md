@@ -91,6 +91,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-39](DEC-39-rituals-are-renamed-procedures-the-framework-s.md): Rituals are renamed procedures; the framework's strange turns of phrase are corrected in one sweep *(owner, 2026-10-13)*
 - [DEC-40](DEC-40-ac-42-decision-import-renames-an-id-in-another.md): AC-42: decision import renames an id in another prefix (DEC-37) instead of refusing it; the rest of AC-42 unchanged *(owner, 2026-10-14)*
 - [DEC-41](DEC-41-a-target-repo-s-engine-env-is-a-pinned-install.md): A target repo's engine env is a pinned install kept inside that repo's folder *(owner, 2026-10-14)*
+- [DEC-43](DEC-43-start-ce-64-ce-77-ce-78-and-ce-81-now-ce-7.md): Start CE-64, CE-77, CE-78 and CE-81 now; CE-7 waits until next week *(owner, 2026-10-14)*
 
 ## REJECTED
 
