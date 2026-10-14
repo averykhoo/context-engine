@@ -133,7 +133,8 @@ def build() -> argparse.ArgumentParser:
     al.add_argument("id")
     aa = a.add_parser("answer")
     aa.add_argument("id")
-    aa.add_argument("words", help="the owner's words, verbatim")
+    aa.add_argument("words", nargs="?", help="the owner's words, verbatim (or --file)")
+    aa.add_argument("--file", type=Path, help="read the owner's words from a file (they keep their line breaks)")
     aa.add_argument("--title", required=True, help="the decision's title")
 
     b = groups.add_parser("baton").add_subparsers(dest="op", required=True)
@@ -166,7 +167,8 @@ def build() -> argparse.ArgumentParser:
     rs.add_argument("ids", nargs="+")
     ra = r.add_parser("amend")
     ra.add_argument("id")
-    ra.add_argument("text")
+    ra.add_argument("text", nargs="?", help="the amendment; owner words verbatim (or --file)")
+    ra.add_argument("--file", type=Path, help="read the amendment from a file (owner words keep their line breaks)")
     rc = r.add_parser("correct", help="insert [text] after one unique anchor in a stamped record (DEC-13)")
     rc.add_argument("id")
     rc.add_argument("--after", required=True, help="the words the insertion goes right after; must occur once")
@@ -284,14 +286,36 @@ def _params(args: argparse.Namespace) -> dict:
         a["message"] = _read(a["message_file"]) if a.get("message_file") else "\n\n".join(a["message"])
     if a.get("body_file") is not None:
         a["body"] = _read(a["body_file"])
+    words = WORDS.get((args.group, a.get("op")))
+    if words and (a[words] is None) == (a.get("file") is None):  # CE-73: the words come one way, exactly
+        raise Refusal(f"`{args.group} {a['op']}` got its {words} {'both as an argument and with --file' if a[words] is not None else 'neither as an argument nor with --file'}", f"give the {words} one way: as the argument, or written to a file and passed with --file")
     if a.get("file") is not None:
-        into = ("why" if a.get("op") == "retire" else "body") if args.group == "record" else "text"
+        into = {("record", "retire"): "why", ("record", "new"): "body", ("ask", "answer"): "words"}.get((args.group, a.get("op")), "text")
         a[into] = _read(a["file"])
     return a
 
 
+# (group, verb) -> the optional positional that --file stands in for (CE-73)
+WORDS = {("record", "amend"): "text", ("ask", "answer"): "words"}
+
+
+def _parse(argv: list[str] | None) -> argparse.Namespace:
+    """``parse_args``, except that the owner's words after an option (`ask answer ASK-1 --title T
+    "<words>"`) still land: argparse before 3.12.7 or so fills an optional positional too early,
+    with nothing, and then calls the words unrecognized. Anything else unrecognized is the usual
+    usage error."""
+    ap = build()
+    args, extra = ap.parse_known_args(argv)
+    words = WORDS.get((args.group, getattr(args, "op", None)))
+    if extra and words and getattr(args, words) is None and len(extra) == 1 and not extra[0].startswith("-"):
+        setattr(args, words, extra[0])
+    elif extra:
+        ap.error(f"unrecognized arguments: {' '.join(extra)}")
+    return args
+
+
 def run(argv: list[str] | None = None) -> tuple[int, str]:
-    args = build().parse_args(argv)
+    args = _parse(argv)
     o = ops.OPS[CLI_OPS[(args.group, getattr(args, "op", None))]]
     a = _params(args)
     return o.call(o.target(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})

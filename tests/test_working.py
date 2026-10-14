@@ -774,6 +774,65 @@ def test_record_new_writes_a_stamped_decision_and_fills_only_now_keys(eng, capsy
     assert "task new" in capsys.readouterr().err
 
 
+def test_record_amend_and_ask_answer_take_the_owners_words_from_a_file(eng, capsys, tmp_path):
+    """CE-73: intake writes owner words to a file, never a heredoc, so every intake command reads
+    one: `record amend` and `ask answer` take --file as `record new` does, or the argument, never both."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    words = tmp_path / "words.md"
+    words.write_bytes('\ufeffkeep "it" C:\\one\\file\n\nsecond paragraph\n'.encode("utf-8"))  # PowerShell 5.1's BOM, quotes, backslashes
+    assert main([*base, "record", "new", "decision", "One file", "--body", "x", "--set", "actor=owner", "--set", "decision_status=BUILT"]) == 0
+    assert main([*base, "record", "amend", "DEC-1", "--file", str(words)]) == 0
+    body = eng.store.get("DEC-1").doc.body
+    assert f'- **{key} ({ACTOR}):** keep "it" C:\\one\\file\n\n  second paragraph\n' in body and "\ufeff" not in body, body
+    assert main([*base, "record", "amend", "DEC-1", "by argument"]) == 0
+    assert eng.store.get("DEC-1").doc.body.endswith(f"- **{key} ({ACTOR}):** by argument\n")
+    q = eng.ask_new("Which way?", **kw(key))
+    assert main([*base, "ask", "answer", q.id, "--file", str(words), "--title", "This way"]) == 0
+    assert f"{q.id}: answered as DEC-2" in capsys.readouterr().out
+    assert 'keep "it" C:\\one\\file\n\nsecond paragraph' in eng.store.get("DEC-2").doc.body
+    q2 = eng.ask_new("Again?", **kw(key))
+    before = eng.store.get("DEC-1").doc.body
+    for argv, says in ((["record", "amend", "DEC-1", "x", "--file", str(words)], "both as an argument and with --file"),
+                       (["ask", "answer", q2.id, "x", "--file", str(words), "--title", "T"], "both as an argument and with --file"),
+                       (["record", "amend", "DEC-1"], "neither as an argument nor with --file"),
+                       (["ask", "answer", q2.id, "--title", "T"], "neither as an argument nor with --file")):
+        assert main([*base, *argv]) == 2, argv
+        assert says in capsys.readouterr().err, argv
+    assert eng.store.get(q2.id).doc.get("state") == "open" and eng.store.get("DEC-1").doc.body == before
+    assert main([*base, "record", "amend", "DEC-1", "--file", str(tmp_path / "gone.md")]) == 2
+    assert "there is no file" in capsys.readouterr().err
+    for extra in (["x", "y"], ["--bogus"]):  # anything else unrecognized is still a usage error, never the words
+        with pytest.raises(SystemExit):
+            main([*base, "record", "amend", "DEC-1", *extra])
+    assert eng.store.get("DEC-1").doc.body == before
+
+
+def test_owner_words_after_an_option_land_even_where_argparse_fills_the_positional_too_early(eng, capsys, monkeypatch):
+    """CE-73: argparse before about 3.12.7 fills an optional positional with nothing when an option
+    comes first, and calls the words unrecognized (`ask answer ASK-1 --title T "<words>"`). The
+    words still land. Simulated here, since the gate's Python has the fix."""
+    import argparse
+
+    real = argparse.ArgumentParser.parse_known_args
+
+    def old_argparse(self, args=None, namespace=None):
+        ns, extra = real(self, args, namespace)
+        for name in ("words", "text"):
+            if getattr(ns, name, None) is not None and getattr(ns, "op", None) in ("answer", "amend"):
+                extra, ns = [*extra, getattr(ns, name)], argparse.Namespace(**{**vars(ns), name: None})
+        return ns, extra
+
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_known_args", old_argparse)
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    q = eng.ask_new("Which way?", **kw(key))
+    assert main([*base, "ask", "answer", q.id, "--title", "This way", "this way, said after the title"]) == 0
+    assert "this way, said after the title" in eng.store.get("DEC-1").doc.body
+    assert main([*base, "record", "amend", "DEC-1", "amended"]) == 0
+    assert eng.store.get("DEC-1").doc.body.endswith(f"- **{key} ({ACTOR}):** amended\n")
+
+
 # -- routing (G-R1) -----------------------------------------------------------------------
 
 
@@ -1014,6 +1073,30 @@ def test_tier_caps_fail_lint(eng):
     eng.store.set(a.id, {"pri": "LATER"}, **kw(key))
     eng.store.set(b.id, {"pri": "LATER"}, **kw(key))
     assert "NOW holds 0" in guards(eng, "G-W5")[0].message  # NOW is exactly one
+
+
+def test_an_empty_now_names_the_promote_step_and_an_overfull_one_the_re_rank(eng):
+    """CE-70: a fresh board's first `task new` lands at LATER and turns G-W5 red; its remedy says
+    one item goes to NOW, where `re-rank with promote` left a new user guessing."""
+    key = started(eng)
+    a = task(eng, key)
+    [f] = guards(eng, "G-W5")
+    assert f.message == "NOW holds 0 (none); the cap is exactly 1"
+    assert f.remedy == "ask the owner which open item is worked on now, then `task promote <id> NOW`", f.remedy
+    eng.store.set(a.id, {"pri": "NOW"}, **kw(key))
+    b = task(eng, key)
+    eng.store.set(b.id, {"pri": "NOW"}, **kw(key))  # a hand edit past the cap: demoting is the fix, not promoting
+    assert guards(eng, "G-W5")[0].remedy == "re-rank with `promote`"
+
+
+def test_an_empty_now_with_a_cap_of_two_asks_for_items(tmp_path):
+    """CE-70: the G-W5 remedy names the cap when it is not one."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["caps"] = {"NOW": 2}
+    e = _engine(tmp_path, cfg)
+    key = started(e)
+    task(e, key)
+    assert guards(e, "G-W5")[0].remedy == "ask the owner which open items are worked on now (NOW holds exactly 2), then `task promote <id> NOW`"
 
 
 def test_a_value_of_the_wrong_declared_type_is_refused(eng):
