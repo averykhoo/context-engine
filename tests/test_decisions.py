@@ -8,7 +8,9 @@ import re
 
 import pytest
 
+from context_engine import guards as G
 from context_engine import okf
+from context_engine import ops as engine_ops
 from context_engine.cli import main
 from context_engine.errors import Refusal
 from context_engine.working import Engine
@@ -627,7 +629,7 @@ def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(en
 @pytest.mark.parametrize(
     "edit, match",
     [
-        (("### D-1 – the first", "### X-1 – the first"), "prefix 'X'"),
+        (("### D-1 – the first", "### X-2 – the first"), "entries D-2, X-2 would all become D-2"),
         (("### D-1 – the first", "### D-2 – the first"), "two entries D-2"),
         (("*(owner, 2026-09-01; amended by evidence)*", "(owner, 2026-09-01)"), "has no `\\*\\(actor, date\\)\\*`"),
         (("*(agent, 2026-10-05)*", "*(agent, yesterday)*"), "no YYYY-MM-DD date"),
@@ -667,3 +669,219 @@ def test_import_dry_run_writes_nothing_and_the_cli_runs_it(eng):
     assert not (eng.root / "decisions").exists()
     assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "import", path]) == 0
     assert len(list((eng.root / "decisions").glob("D-*.md"))) == 6
+
+
+# -- DEC-37: an import renames to the framework's form, and each old id stays an alias --------------
+
+DEC_CONFIG = {**CONFIG, "kinds": {**CONFIG["kinds"], "decision": {**CONFIG["kinds"]["decision"], "prefix": "DEC"}}}
+
+
+@pytest.fixture
+def deng(tmp_path):
+    """A repo whose decision kind is DEC-n, adopting a log written as D-n (adhoc's case)."""
+    (tmp_path / "context.toml").write_text(_toml(DEC_CONFIG), encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| id | criterion |\n| --- | --- |\n| AC-7 | a criterion |\n", encoding="utf-8")
+    return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+
+
+@pytest.mark.criterion("AC-42")
+def test_import_renames_a_foreign_prefix_keeping_each_number_and_the_old_id_as_an_alias(deng):
+    path = write_log(deng)
+    dry = deng.import_log(path, dry_run=True, **W)
+    assert not (deng.root / "decisions").exists()
+    assert "| D-3 | DEC-3 | SUPERSEDED | the gate is X |" in dry and "| D-1 | DEC-1 | BUILT | the first |" in dry
+    assert "| (rejected table row 1) | DEC-5 | REJECTED |" in dry  # no id in the log: a new number, no alias
+    doc = dry.split("Save everything below this line as the id map's evidence doc, then import:\n\n")[1]
+    assert doc.startswith("# Decision id map: decisions-copy.md into decisions\n\nFROZEN. ")  # a doc ready to save: a title and its liveness
+    assert dry.splitlines()[0].endswith("review each and `decision set <id> --set decision_status=<status>` any that was parked, deferred or not built")
+    out = deng.import_log(path, **W)
+    assert "\n" not in out and "4 entries (D-1..D-4 as DEC-1..DEC-4, numbers kept, 4 old ids kept as aliases); 2 rejected rows as DEC-5..DEC-6" in out
+    assert "3 set BUILT by default, as the log gives no status: review each" in out  # F22: the defaulted statuses are named, not silent
+    get = lambda i: deng.store.get(i).doc  # noqa: E731
+    assert [get(f"DEC-{n}").get("aliases") for n in range(1, 7)] == [["D-1"], ["D-2"], ["D-3"], ["D-4"], None, None]
+    assert (get("DEC-3").get("superseded_by"), get("DEC-4").get("supersedes"), get("DEC-4").get("relaxes"), get("DEC-2").get("narrowed_by")) == (["DEC-4"], ["DEC-3"], ["DEC-2"], ["DEC-4"])
+    assert get("DEC-5").get("refs") == ["DEC-3"] and get("DEC-5").get("attribution").endswith("the reasoning is under DEC-3")
+    assert "imported heading note: **SUPERSEDED by D-4 (for X); the rest stands**" in okf.get_section(get("DEC-3").body, "Amendments")  # history keeps the old id
+    assert not list((deng.root / "decisions").glob("D-*.md"))
+    assert deng.store.lint() == [] and G.ids(deng) == []
+
+
+@pytest.mark.criterion("AC-42")
+def test_a_reimport_refuses_an_old_id_already_imported_or_a_number_already_taken(deng):
+    deng.import_log(write_log(deng), **W)
+    before = sorted(p.name for p in (deng.root / "decisions").iterdir())
+    with pytest.raises(Refusal, match="D-4 was imported already: it is an alias of DEC-4") as r:
+        deng.import_log(write_log(deng), **W)
+    assert "import a copy holding only them" in r.value.remedy
+    # F21: the log gained D-5 by hand after the import, but DEC-5 is already a rejected row's record
+    later = "### D-5 -- written by hand after the import *(owner, 2026-10-13)*\n\nNew words.\n"
+    with pytest.raises(Refusal, match="D-5 would become DEC-5, which is already a record") as r:
+        deng.import_log(write_log(deng, later), **W)
+    assert "record new decision ... --set aliases=[<old id>]" in r.value.remedy
+    assert sorted(p.name for p in (deng.root / "decisions").iterdir()) == before
+    rid = deng.record_new("decision", "written by hand after the import", "New words.", {"actor": "owner", "decision_status": "BUILT", "aliases": "[D-5]"}, **W).id
+    assert rid == "DEC-7" and deng.decision_show("D-5").startswith("D-5 is an alias of DEC-7\nDEC-7 · BUILT")
+
+
+@pytest.mark.criterion("AC-40")
+def test_show_why_link_and_supersede_resolve_an_alias_and_say_which_record_it_named(deng):
+    deng.import_log(write_log(deng), **W)
+    task = deng.new("task", "Estimate the activity", **W).id
+    assert deng.set(task, {"aliases": "[1h, est-activity]"}, **W) == f"{task}: set aliases"
+    assert deng.show("1h").startswith(f"1h is an alias of {task}\n{task} · LATER · open · Estimate the activity\naliases: 1h, est-activity\n")
+    assert deng.decision_show("D-3").startswith("D-3 is an alias of DEC-3\nDEC-3 · SUPERSEDED · the gate is X\n")
+    assert "aliases: D-3\n" in deng.decision_show("DEC-3")
+    assert deng.link("D-1", "est-activity", **W) == f"DEC-1: tasks + {task} (D-1 is an alias of DEC-1) (est-activity is an alias of {task})"
+    assert deng.store.get("DEC-1").doc.get("tasks") == [task]  # the live id is written, never the alias
+    assert deng.why("1h") == [f"1h is an alias of {task}", f"{deng._row(deng.store.get('DEC-1'))}  via tasks"]
+    assert deng.why("D-2")[0] == "D-2 is an alias of DEC-2" and "DEC-4" in deng.why("D-2")[1]
+    assert deng.why("AC-7") == []  # a criterion is taken as given
+    assert deng.supersede("D-1", "D-4", **W).endswith("(D-1 is an alias of DEC-1) (D-4 is an alias of DEC-4)")
+    assert "DEC-2" in [ln.split()[0] for ln in deng.find("D-2")]  # its title and text never say D-2: find's text searches aliases too
+    with pytest.raises(Refusal, match="no record Q9: it is not an id of a configured series"):
+        deng.show("Q9")
+    assert main(["--root", str(deng.root), "task", "show", "est-activity"]) == 0
+
+
+@pytest.mark.criterion("AC-40")
+def test_the_mcp_operations_resolve_an_alias(deng):
+    deng.import_log(write_log(deng), **W)
+    c = engine_ops.Caller(S, ACTOR)
+    assert engine_ops.OPS["decision_show"].call(deng, c, id="D-4")[1].startswith("D-4 is an alias of DEC-4\n")
+    assert engine_ops.OPS["why"].call(deng, c, target="D-3")[1].startswith("D-3 is an alias of DEC-3\n")
+
+
+def _hand_alias(e, rid, aliases):
+    """Write `aliases:` into a record's frontmatter by hand, as an editor would, past the engine's checks."""
+    path = e.store.find(rid)
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace(f"id: {rid}\n", f"id: {rid}\naliases: {aliases}\n", 1), encoding="utf-8", newline="\n")
+
+
+@pytest.mark.parametrize(
+    "aliases, match",
+    [
+        ("[CE-1]", "lists its own id CE-1 as an alias"),
+        ("[ce-1]", "lists its own id ce-1 as an alias"),
+        ("[DEC-9]", "has alias DEC-9, which reads as an id of the decision series"),
+        ("[CE-7]", "has alias CE-7, which reads as an id of the task series"),
+        ("[dec-3]", "has alias dec-3, which reads as an id of the decision series"),  # case aside
+        ("[CE-014]", "has alias CE-014, which reads as an id of the task series"),  # leading zeros aside
+        ("[AC-7]", "has alias AC-7, which reads as a criterion id"),  # a criterion row
+        ("[AC-99]", "has alias AC-99, which reads as a criterion id"),  # the criteria's series, before the row exists
+        ("[2h, 2h]", "lists alias 2h twice"),
+        ("[2h, 2H]", "lists alias 2H twice"),
+        ("[two words]", "has alias 'two words', which is not one word"),
+        ("[a/b]", "has alias 'a/b', which is not one word"),
+        ("[D‐27]", "which is not one word of printable ASCII"),  # a look-alike hyphen
+        ("[1h]", "has alias 1h, which CE-2 also carries"),
+        ("[1H]", "has alias 1H, which CE-2 also carries"),
+    ],
+)
+def test_every_write_and_lint_g_d2_refuse_an_alias_that_does_not_name_one_record(deng, aliases, match):
+    deng.new("task", "First", **W)
+    deng.new("task", "Second", **W)
+    deng.set("CE-2", {"aliases": "[1h]"}, **W)
+    before = deng.store.find("CE-1").read_bytes()
+    with pytest.raises(Refusal, match=match):
+        deng.set("CE-1", {"aliases": aliases}, **W)
+    assert deng.store.find("CE-1").read_bytes() == before and G.ids(deng) == []
+    _hand_alias(deng, "CE-1", aliases)
+    assert any(f.guard == "G-D2" and re.search(match, f.message) and f.path.startswith("tasks/CE-1") for f in G.ids(deng)), G.ids(deng)
+
+
+def test_an_alias_two_records_carry_is_refused_on_lookup_and_a_decision_keeps_its_aliases(deng):
+    deng.import_log(write_log(deng), **W)
+    deng.new("task", "First", **W)
+    _hand_alias(deng, "CE-1", "[D-2]")  # by hand: every write refuses it (above)
+    with pytest.raises(Refusal, match=r"D-2 is an alias of 2 records \((DEC-2, CE-1|CE-1, DEC-2)\)"):
+        deng.decision_show("D-2")
+    with pytest.raises(Refusal, match="`decision set` does not change a decision's `aliases`"):
+        deng.decision_set("DEC-1", {"aliases": "[D-01]"}, **W)
+    with pytest.raises(Refusal, match="has alias D-3, which DEC-3 also carries"):
+        deng.record_new("decision", "A copy", "Words.", {"actor": "owner", "decision_status": "BUILT", "aliases": "[D-3]"}, **W)
+
+
+def test_task_new_and_ask_new_keep_an_imported_number(deng):
+    assert deng.ask_new("Which way?", rid="ASK-8", **W).id == "ASK-8"  # Q8 keeps its number
+    assert deng.ask_new("And then?", **W).id == "ASK-9"
+    with pytest.raises(Refusal, match="ASK-8 is already in use"):
+        deng.ask_new("Again", rid="ASK-8", **W)
+    with pytest.raises(Refusal, match="CE-3 is not an id of the question series"):
+        deng.ask_new("Wrong series", rid="CE-3", **W)
+    assert main(["--root", str(deng.root), "--session", S, "--actor", ACTOR, "task", "new", "Kept", "--id", "CE-14"]) == 0
+    assert deng.store.find("CE-14").name.startswith("CE-14-kept")
+    for bad, want in (("CE-014", "give CE-14: no leading zeros"), ("CE-0", "give CE-n, n from 1")):
+        with pytest.raises(Refusal, match=want):
+            deng.new("task", "Padded", rid=bad, **W)
+    deng.store.find("CE-14").unlink()  # the file is gone, but the op log shows CE-14 was created
+    with pytest.raises(Refusal, match=r"CE-14 is already in use \(the op log shows it was created before\)"):
+        deng.new("task", "Again", rid="CE-14", **W)
+
+
+# -- the design review's findings (CE-74) ----------------------------------------------------------
+
+
+def test_a_write_that_leaves_aliases_alone_is_not_refused_for_a_clash_made_elsewhere(deng):
+    deng.new("task", "First", **W)
+    deng.new("task", "Second", **W)
+    deng.set("CE-1", {"aliases": "[1h]"}, **W)
+    _hand_alias(deng, "CE-2", "[1h]")  # by hand, on the other record: lint is red, and says so
+    assert deng.set("CE-1", {"brief": "still writable"}, **W) == "CE-1: set brief"
+    assert any(f.guard == "G-D2" and "1h" in f.message for f in G.ids(deng))
+    with pytest.raises(Refusal, match="which CE-2 also carries"):
+        deng.set("CE-1", {"aliases": "[1h, 1i]"}, **W)  # a write that sets aliases is checked
+
+
+def test_setting_aliases_names_the_ones_it_drops(deng):
+    deng.new("task", "First", **W)
+    deng.set("CE-1", {"aliases": "[1h, est-activity]"}, **W)
+    assert deng.set("CE-1", {"aliases": "1h"}, **W) == "CE-1: set aliases; dropped alias est-activity, which no longer resolves"
+    assert deng.set("CE-1", {}, unset=("aliases",), **W) == "CE-1: set aliases; dropped alias 1h, which no longer resolves"
+
+
+@pytest.mark.criterion("AC-40")
+def test_find_links_to_resolves_an_alias_and_a_refusal_names_the_alias_it_followed(deng):
+    deng.import_log(write_log(deng), **W)
+    via_alias = deng.find(links_to="D-3")
+    assert via_alias[0] == "D-3 is an alias of DEC-3" and via_alias[1:] == deng.find(links_to="DEC-3") != []
+    assert deng.find(links_to="D-1")[0] == "D-1 is an alias of DEC-1"
+    deng.new("task", "First", **W)
+    deng.set("CE-1", {"aliases": "[1h]"}, **W)
+    with pytest.raises(Refusal, match="1h is an alias of CE-1, which is not a decision") as r:
+        deng.decision_show("1h")
+    assert "`task show 1h` shows it" in r.value.remedy
+
+
+@pytest.mark.criterion("AC-42")
+def test_a_reimport_refuses_a_rejected_row_already_imported(deng):
+    deng.import_log(write_log(deng), **W)
+    later = LOG.split("## Entries")[0] + "## Entries\n\n### D-9 -- added later *(owner, 2026-10-13)*\n\nNew words.\n"
+    before = sorted(p.name for p in (deng.root / "decisions").iterdir())
+    with pytest.raises(Refusal, match=r"the rejected row '`tool -x` for three papers' was imported already, as DEC-5") as r:
+        deng.import_log(write_log(deng, later), **W)
+    assert "drop the `## Built and rejected, or decided against evidence` table from the copy" in r.value.remedy
+    assert sorted(p.name for p in (deng.root / "decisions").iterdir()) == before
+
+
+@pytest.mark.criterion("AC-42")
+@pytest.mark.parametrize(
+    "edit, match",
+    [
+        (("D-", "US-"), "the log's entry US-4 would become DEC-4, whose old id US-4, which reads as an id of the story series"),  # a kind's prefix here
+        (("### D-1 ", "### DEC-01 "), "the log's entry DEC-01 is in the kind's own prefix but not written as the engine writes it"),
+    ],
+)
+def test_the_dry_run_refuses_what_the_import_would(deng, edit, match):
+    path = write_log(deng, LOG.replace(*edit))
+    for dry in (True, False):
+        with pytest.raises(Refusal, match=match):
+            deng.import_log(path, dry_run=dry, **W)
+    assert not (deng.root / "decisions").exists()
+
+
+def test_an_import_names_another_kinds_record_carrying_an_old_id(deng):
+    deng.new("task", "First", **W)
+    deng.set("CE-1", {"aliases": "[D-4]"}, **W)
+    with pytest.raises(Refusal, match="D-4 is already an alias of CE-1"):
+        deng.import_log(write_log(deng), **W)

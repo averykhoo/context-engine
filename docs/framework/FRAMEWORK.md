@@ -1260,8 +1260,8 @@ the index (DR11); one line per decision keeps it small, and superseded decisions
 into a group.
 
 **Existing single-file logs** (heading form `### D-n — title *(actor, date)*`, or `--` for the
-dash) migrate with `decision.import` (§11.4): every entry keeps its id and its text verbatim,
-stamped; a heading's trailing note (`SUPERSEDED by D-n`, `relaxes D-n`, ...) becomes links in
+dash) migrate with `decision.import` (§11.4): every entry keeps its number and its text verbatim,
+stamped, and an id in another prefix takes the kind's with its old id as an alias; a heading's trailing note (`SUPERSEDED by D-n`, `relaxes D-n`, ...) becomes links in
 both directions plus an amendment; and a "built and rejected" table becomes one REJECTED record
 per row, with new ids and `refs` to the entries that hold the reasoning. It writes all or
 nothing. Until a repo migrates, its log is read as it is; the read adapter is not built.
@@ -1672,6 +1672,10 @@ ledger, G-V1). The banner is prose, but the engine stamps its key and guards its
 
 **Every kind round-trips unknown frontmatter keys,** as OKF asks (§9.3), so a key a human adds
 by hand survives the next tool write.
+
+**`aliases`** (every kind) lists a record's earlier ids from before an import (§11.4); `show`, `why`,
+`find`, `link` and `supersede` resolve one to its record and say so, and G-D2 refuses one that
+reads as a series' or a criterion's id, or is another record's alias.
 
 ### 8.0.2 Three entry points, one library
 
@@ -2106,13 +2110,18 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   exists (a project brief, mandates in the contract, goal-shaped decisions). Tagged
   `unconfirmed` until reviewed.
 - **Map, don't move.** The routing map in `context.toml` maps each component onto the repo's
-  existing files. Existing ids and check numbers are never renumbered; the package maps onto
-  them.
+  existing files. Existing ids are not renumbered: they take the framework's form at import,
+  keeping each number where there is one (`D-27` becomes number 27 of the decision series, `Q8`
+  becomes `ASK-8`; an
+  unnumbered board row such as `1h` gets a new task id), and each old id stays in the record's
+  `aliases`, which the engine resolves (`why`, `task show`, `decision show`, link targets) and
+  G-D2 keeps unique. The id map is saved as an evidence doc; history, commit messages and code
+  comments keep the old ids.
 - **`init` on an existing repo** writes only what is missing: it skips every file that exists,
   appends the kit block to an existing `CLAUDE.md` only when no kit block (of any version)
   is there, and keeps an existing `context.toml` once it loads. Then edit `context.toml` in
-  place: each kind's `dir` and `prefix` and each route's `path` point at what the repo already
-  has (an existing `D-n` series stays `D-n`), and the skeletons `init` wrote for components the
+  place: each kind's `dir` and each route's `path` point at what the repo already has, each
+  kind's `prefix` is the framework's form, and the skeletons `init` wrote for components the
   repo keeps elsewhere are deleted rather than routed. A re-run of `init` writes only what that
   edited config points at. Lint (G-R1 and the schemas) shows what still disagrees.
 - **Enable guards incrementally.** Each one starts as a warning, with a dated deadline for
@@ -2129,6 +2138,8 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   here because one place is cleaner, and the cost is bounded because the store can find a task
   by id when its path is wrong. Deferred while the framework is being built.
 - **Single-file decision logs migrate to records the same way, by trial:** `decision.import`
-  (§6.5) on a copy and a branch first, every id kept, so `D-n §k` citations survive; anchor
-  links into the old file break and get a redirect table. Until then the old file is read as it
+  (§6.5) on a copy and a branch first, every number kept and every old id an alias, so `D-n §k`
+  citations still resolve; the old file is retired with a line pointing at the records in the
+  import's commit, so nobody appends to it by hand; anchor links into it break and get a
+  redirect table. Until then the old file is read as it
   is (a read adapter is not built).

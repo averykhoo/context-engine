@@ -144,8 +144,10 @@ by-hand fallback: no orient output in the context means run `orient` and tell th
 
 `init` writes only what is missing, so run it (or copy by hand), then edit `context.toml` in
 place:
-- each kind's `dir` and `prefix` point at the records and id series the repo already has. Ids are
-  never renumbered: an existing `D-n` series stays `D-n`;
+- each kind's `dir` points at the records the repo already has, and its `prefix` is the
+  framework's form, not the repo's old one: `DEC` for decisions and `ASK` for questions, and a
+  task prefix of the repo's own (`init --prefix decision=DEC --prefix task=<yours>`). The old ids
+  move over in the first session (below);
 - each `[[routes]]` `path` points at the existing file for that component;
 - a skeleton `init` wrote for a component the repo keeps elsewhere is deleted, not routed;
 - a runbook `init` skipped because the repo already had a file of that name (`skipped` in its
@@ -159,6 +161,25 @@ place:
 
 `context-engine lint` then shows what still disagrees (dead routes, records that break the
 schema, docs that declare no liveness). Back-filled stories are reconstructions, never the owner's words (§11.4).
+
+**The repo's existing ids** take the framework's form in the first session (every step needs
+the session key), each keeping its number where it has one, and each old id stays in the
+record's `aliases`, which `task show`, `decision show`, `why`, `decision find --links-to` and the
+ids `decision link` and `decision supersede` take resolve, saying which record answered. History,
+commit messages and code comments keep the old ids.
+1. `decision import <log> --dry-run`: save everything under its "Save everything below" line as
+   a FROZEN evidence doc (the id map). Under the prefix `DEC`, `D-27` becomes number 27 of that
+   series with `aliases: [D-27]`; the rejected table's rows take new numbers and no alias.
+2. Freeze the old log from now until the import is merged, then import without `--dry-run`, and
+   review every entry it reports as set BUILT by default (`decision set <id> --set
+   decision_status=<status>`).
+3. Retire the old log (a line pointing at the records) and rewrite the repo's own instructions
+   that say to append to it, then commit the import by path (`context-engine commit <paths> -m
+   ...`): an import is not a milestone, so the engine does not commit it.
+4. Board items and open questions: `task new` or `ask new`, with `--id` to keep a number (`Q8`
+   as `--id ASK-8`), then `task set <id> --set aliases=[<old id>, ...]` (for a question too; a
+   list may hold several, e.g. a rank and a slug, and the next `aliases=` replaces the whole list).
+   An answered question stays history: its decision holds the answer.
 
 ## 4. Upgrade (FRAMEWORK §8.0)
 

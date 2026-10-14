@@ -143,7 +143,7 @@ class Config:
                 return k
         raise Refusal(
             f"no record kind has ids like {record_id!r}",
-            f"use an id from a configured series ({', '.join(k.prefix + '-n' for k in self.kinds.values())})",
+            f"use an id from a configured series ({', '.join(k.prefix + '-n' for k in self.kinds.values())}); an old id (an alias) is looked up by `task show`, `decision show` and `why`",
         )
 
     def kind(self, name: str) -> Kind:

@@ -14,7 +14,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
-types = { decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
+types = { aliases = "list", decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
 
 [kinds.story]
 type = "Story"
@@ -23,7 +23,7 @@ dir = "docs/stories"
 mode = "append-only"
 required = ["title", "actor", "date", "story_status", "goals"]
 enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
-types = { date = "date", goals = "list", supersedes = "list", superseded_by = "list" }  # the links only `record retire` writes
+types = { aliases = "list", date = "date", goals = "list", supersedes = "list", superseded_by = "list" }  # the links only `record retire` writes
 
 [kinds.task]
 type = "Task"
@@ -32,7 +32,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
 
 [kinds.question]
 type = "Question"
@@ -41,7 +41,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
 
 # Batons and pause records: one session-stamped record each (FRAMEWORK §5.4, §8.0.1; DEC-14).
 [kinds.baton]

@@ -9,12 +9,14 @@ engine do the reading, the locking and the writing.
 - The importer (``plan_import``) reads a single-file log whose entries are headed
   ``### D-n -- title *(actor, date)*`` (``—`` and ``–`` also work), with an optional trailing
   ``-- **note**`` that may say ``SUPERSEDED by D-n``, ``relaxes D-n``, ``relaxed by D-n`` or
-  ``narrowed by D-n``. Each entry keeps its id and its text verbatim. A table under a ``## ``
-  heading that mentions "rejected" becomes one REJECTED record per row, with new ids.
+  ``narrowed by D-n``. Each entry keeps its text verbatim and its number; an id in another prefix
+  is renamed to the kind's (``D-27`` becomes ``DEC-27``) and keeps its old id in ``aliases``
+  (FRAMEWORK §11.4). A table under a ``## `` heading that mentions "rejected" becomes one REJECTED
+  record per row, with new ids above the highest imported one and no alias.
 
 Deliberately not here: guessing a decision's status from its prose (an imported entry is BUILT
-unless its heading note supersedes it), and reading a log in place without importing it (the
-§11.4 read adapter).
+unless its heading note supersedes it, and the import says how many it defaulted so), and
+reading a log in place without importing it (the §11.4 read adapter).
 """
 
 from __future__ import annotations
@@ -114,6 +116,11 @@ class Entry:
     body: str
     note: str = ""  # the heading's trailing note, kept as an amendment
     links: dict[str, list[str]] = field(default_factory=dict)
+    old: str = ""  # the id in the log; for a rejected row, which row of which table
+
+
+def _num(rid: str) -> int:
+    return int(rid.rsplit("-", 1)[1])
 
 
 def _date(text: str, where: str) -> dt.date:
@@ -189,45 +196,80 @@ def parse_rejected(text: str) -> tuple[str, list[tuple[str, str, list[str]]]]:
     return "", []
 
 
-def plan_import(text: str, prefix: str, used: set[int], source: str) -> tuple[list[Entry], list[str]]:
+IMPORT_LATER = (
+    "for entries added to the log since it was imported, import a copy holding only them (and no rejected "
+    "table); record one whose number is taken with `record new decision ... --set aliases=[<old id>]` (it "
+    "gets the next free number, and the old id still resolves)"
+)
+REJECTED_LABEL = "(rejected table row {n})"
+
+
+def plan_import(
+    text: str, prefix: str, used: set[int], source: str, aliases: dict[str, list[str]] | None = None, rejected: dict[str, str] | None = None
+) -> tuple[list[Entry], list[str]]:
     """Every record an import of ``text`` writes, ids decided, links in both directions; and
-    what it noted. Refuses before anything is written: a foreign prefix, a duplicate id, an id
-    already in use, a heading that does not parse, a link to an id not in the log."""
+    what it noted. An id in another prefix is renamed to ``prefix`` with its number kept, and
+    the old id goes into `aliases` (FRAMEWORK §11.4); ``aliases`` is the store's alias map, and
+    ``rejected`` maps the title of each REJECTED decision already imported to its id.
+    Refuses before anything is written: two entries with one id (before or after the rename), an
+    id in the kind's own prefix not written as the engine writes it (`DEC-01`), a number already
+    in use, an old id that is already a record's alias, a rejected row already imported, a
+    heading that does not parse, a link to an id not in the log."""
     entries = parse_entries(text)
     if not entries:
         raise Refusal("the log has no `### <id> -- title *(actor, date)*` entries", "point the import at a single-file decision log")
-    ids = [e.id for e in entries]
-    foreign = sorted({i.rsplit("-", 1)[0] for i in ids} - {prefix})
-    if foreign:
-        raise Refusal(f"the log's ids use the prefix {foreign[0]!r}, but the decision kind's is {prefix!r}", f"set `prefix = \"{foreign[0]}\"` in [kinds.decision] of context.toml: an existing series keeps its ids (FRAMEWORK §11.4)")
-    dup = sorted({i for i in ids if ids.count(i) > 1})
+    aliases = aliases or {}
+    for e in entries:
+        e.old, e.id = e.id, f"{prefix}-{_num(e.id)}"
+        if e.old != e.id and e.old.rsplit("-", 1)[0] == prefix:
+            raise Refusal(f"the log's entry {e.old} is in the kind's own prefix but not written as the engine writes it", f"write it {e.id} in the copy (no leading zeros), then import again")
+    olds = [e.old for e in entries]
+    dup = sorted({i for i in olds if olds.count(i) > 1})
     if dup:
         raise Refusal(f"the log has two entries {dup[0]}", "give one of them its own id in the copy, then import again")
-    nums = {int(i.rsplit("-", 1)[1]) for i in ids}
-    taken = sorted(nums & used)
-    if taken:
-        raise Refusal(f"{prefix}-{taken[0]} is already a record in the decisions directory", "the import writes into an empty series: run it once, before any decision is recorded there")
-    by_id = {e.id: e for e in entries}
+    ids = [e.id for e in entries]
+    clash = next((e.id for e in entries if ids.count(e.id) > 1), None)
+    if clash:
+        group = [e.old for e in entries if e.id == clash]
+        raise Refusal(f"the log's entries {', '.join(group)} would all become {clash}", "the import keeps each number: give one of them its own number in the copy, then import again")
+    for e in entries:
+        owners = aliases.get(e.old, [])
+        if owners and all(re.fullmatch(rf"{re.escape(prefix)}-\d+", o) for o in owners):
+            raise Refusal(f"{e.old} was imported already: it is an alias of {', '.join(owners)}", IMPORT_LATER)
+        if owners:
+            raise Refusal(f"{e.old} is already an alias of {', '.join(owners)}", "an alias names one record: drop it from that record (`task set <id> --set aliases=[...]`), or rename the entry in the copy")
+        if _num(e.id) in used:
+            what = f"{e.old} would become {e.id}, which" if e.old != e.id else e.id
+            raise Refusal(f"{what} is already a record in the decisions directory", f"the import writes into a free series: run it once, before any decision is recorded there; {IMPORT_LATER}")
+    by_old = {e.old: e for e in entries}
     for e in entries:
         e.fields["imported_from"] = source
+        if e.old != e.id:
+            e.fields["aliases"] = [e.old]
         for key, targets in e.links.items():
             for t in targets:
-                if t not in by_id:
-                    raise Refusal(f"the heading note of {e.id} links {t}, which is not in the log", "fix the note in the copy of the log, then import again")
-                back = by_id[t].links.setdefault(BACKLINK[key], [])
-                if e.id not in back:
-                    back.append(e.id)
+                if t not in by_old:
+                    raise Refusal(f"the heading note of {e.old} links {t}, which is not in the log", "fix the note in the copy of the log, then import again")
+                back = by_old[t].links.setdefault(BACKLINK[key], [])
+                if e.old not in back:
+                    back.append(e.old)
     for e in entries:
         for key in list(e.links):
-            e.links[key] = sorted(dict.fromkeys(e.links[key]), key=lambda i: int(i.rsplit("-", 1)[1]))
+            e.links[key] = sorted(dict.fromkeys(by_old[t].id for t in e.links[key]), key=_num)
         e.fields["decision_status"] = "SUPERSEDED" if e.links.get("superseded_by") else "BUILT"
     heading, rows = parse_rejected(text)
-    nxt = max(nums | used) + 1
+    nxt = max({_num(i) for i in ids} | used) + 1
+    by_new = {e.id: e for e in entries}
+    before = rejected or {}
     rejected = []
-    for block, what, rest in rows:
-        refs = [i for i in re.findall(rf"\b{re.escape(prefix)}-\d+\b", rest[-1] if rest else "") if i in by_id]
+    for n, (block, what, rest) in enumerate(rows, 1):
+        if what in before:
+            raise Refusal(f"the rejected row {what[:60]!r} was imported already, as {before[what]}", f"drop the `## {heading}` table from the copy; {IMPORT_LATER}")
+        cited = dict.fromkeys(re.findall(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", rest[-1] if rest else ""))
+        refs = list(dict.fromkeys((by_old.get(i) or by_new[i]).id for i in cited if i in by_old or i in by_new))
         when = DATE_RE.findall(" ".join(rest[:-1]))
-        decided = dt.date.fromisoformat(when[-1]) if when else (by_id[refs[0]].fields["decided"] if refs else None)
+        first = next((e for e in entries if refs and e.id == refs[0]), None)
+        decided = dt.date.fromisoformat(when[-1]) if when else (first.fields["decided"] if first else None)
         if decided is None:
             raise Refusal(f"the rejected row {what[:60]!r} has no date and names no entry", "add `(YYYY-MM-DD)` to its verdict in the copy, then import again")
         fields: dict[str, Any] = {
@@ -240,12 +282,32 @@ def plan_import(text: str, prefix: str, used: set[int], source: str) -> tuple[li
         }
         rid = f"{prefix}-{nxt}"
         nxt += 1
-        rejected.append(Entry(rid, fields, f"Imported from the table under `## {heading}`:\n\n{block}", "", {"refs": refs} if refs else {}))
-    span = sorted(entries, key=lambda e: int(e.id.rsplit("-", 1)[1]))
-    notes = [f"{len(entries)} entries ({span[0].id}..{span[-1].id}, ids kept)"]
+        rejected.append(Entry(rid, fields, f"Imported from the table under `## {heading}`:\n\n{block}", "", {"refs": refs} if refs else {}, REJECTED_LABEL.format(n=n)))
+    span = sorted(entries, key=lambda e: _num(e.id))
+    renamed = [e for e in entries if e.old != e.id]
+    if renamed:
+        notes = [f"{len(entries)} entries ({span[0].old}..{span[-1].old} as {span[0].id}..{span[-1].id}, numbers kept, {len(renamed)} old ids kept as aliases)"]
+    else:
+        notes = [f"{len(entries)} entries ({span[0].id}..{span[-1].id}, ids kept)"]
     if rejected:
         notes.append(f"{len(rejected)} rejected rows as {rejected[0].id}..{rejected[-1].id}")
     noted = [e.id for e in entries if e.note]
     if noted:
         notes.append(f"{len(noted)} heading notes kept as amendments")
+    built = [e for e in entries if e.fields["decision_status"] == "BUILT"]
+    if built:
+        notes.append(f"{len(built)} set BUILT by default, as the log gives no status: review each and `decision set <id> --set decision_status=<status>` any that was parked, deferred or not built")
     return entries + rejected, notes
+
+
+def id_map(planned: list[Entry]) -> str:
+    """The import's id map as a markdown table, one row per record: the id in the log (or which
+    table row), the new id, the status and the title. Save it as an evidence doc (FRAMEWORK §11.4)."""
+    def cell(t: Any) -> str:
+        return str(t).replace("|", "\\|")
+
+    out = ["| id in the log | record | status | title |", "|---|---|---|---|"]
+    out += [f"| {cell(e.old)} | {e.id} | {e.fields['decision_status']} | {cell(e.fields['title'])} |" for e in planned]
+    return "\n".join(out) + "\n"
+
+

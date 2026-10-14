@@ -149,15 +149,15 @@ def lint(e: Engine, c: Caller, working: bool = False) -> tuple[int, str]:
 
 
 @op(write=True)
-def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "") -> tuple[int, str]:
-    """File a board item. `brief` is a constraint, not a summary (at most 120 characters)."""
-    rec = e.new(kind, title, pri=pri, brief=brief, deps=deps or [], body=body, **c.kw)
+def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", id: str = "") -> tuple[int, str]:
+    """File a board item. `brief` is a constraint, not a summary (at most 120 characters). `id` keeps an imported number (a never-used id of the kind's series); none takes the next."""
+    rec = e.new(kind, title, pri=pri, brief=brief, deps=deps or [], body=body, rid=id, **c.kw)
     return 0, f"{rec.id}: created at {pri} ({_rel(e, rec.path)})"
 
 
 @op(write=True)
 def task_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None, unset: list[str] | None = None, mechanical: bool = False) -> tuple[int, str]:
-    """Set or unset frontmatter fields the operations do not own (e.g. brief, labels)."""
+    """Set or unset frontmatter fields the operations do not own (e.g. brief, labels, `aliases`: the item's earlier ids, e.g. aliases=[1h])."""
     return 0, e.set(id, fields or {}, unset=tuple(unset or ()), mechanical=mechanical, **c.kw)
 
 
@@ -212,7 +212,7 @@ def task_list(e: Engine, c: Caller, state: str = "open", pri: str | None = None,
 
 @op(write=False, rest="ask for one `section`, or a smaller `head`")
 def task_show(e: Engine, c: Caller, id: str, section: str | None = None, head: int = 5) -> tuple[int, str]:
-    """One item: its head line, then its body or one `section`; ## Log shows the newest `head` entries (0 for all)."""
+    """One item: its head line, then its body or one `section`; ## Log shows the newest `head` entries (0 for all). `id` may be an alias (an earlier id); the reply says which record it named."""
     return 0, e.show(id, section=section, head=head).rstrip("\n")
 
 
@@ -220,9 +220,9 @@ def task_show(e: Engine, c: Caller, id: str, section: str | None = None, head: i
 
 
 @op(write=True)
-def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "") -> tuple[int, str]:
-    """File an owner question (ASK-n); raise it in chat this session."""
-    rec = e.ask_new(title, pri=pri, brief=brief, body=body, blocks=blocks or [], **c.kw)
+def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "") -> tuple[int, str]:
+    """File an owner question (ASK-n); raise it in chat this session. `id` keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8])."""
+    rec = e.ask_new(title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, **c.kw)
     return 0, f"{rec.id}: question created at {pri}; raise it in chat this session"
 
 
@@ -322,7 +322,7 @@ def record_retire(e: Engine, c: Caller, id: str, why: str, by: str, superseded_b
 
 @op(write=True)
 def decision_supersede(e: Engine, c: Caller, old: str, new: str) -> tuple[int, str]:
-    """`new` replaces `old`: writes supersedes/superseded_by both ways and marks `old` SUPERSEDED."""
+    """`new` replaces `old`: writes supersedes/superseded_by both ways and marks `old` SUPERSEDED. Either may be an alias (an earlier id)."""
     return 0, e.supersede(old, new, **c.kw)
 
 
@@ -334,7 +334,7 @@ def decision_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = 
 
 @op(write=True)
 def decision_link(e: Engine, c: Caller, id: str, target: str, rel: str = "") -> tuple[int, str]:
-    """Link a decision to a task, story, criterion or `file::symbol`; `rel` is tasks, creates, amends, retires, relaxes, code or refs (inferred for tasks and code)."""
+    """Link a decision to a task, story, criterion or `file::symbol`; `rel` is tasks, creates, amends, retires, relaxes, code or refs (inferred for tasks and code). An alias (an earlier id) is linked as the record it names."""
     return 0, e.link(id, target, rel, **c.kw)
 
 
@@ -352,13 +352,13 @@ def decision_find(e: Engine, c: Caller, text: str = "", tag: str = "", status: s
 
 @op(write=False, rest="ask for one `section`")
 def decision_show(e: Engine, c: Caller, id: str, section: str | None = None) -> tuple[int, str]:
-    """One decision: its status, links and text, or one `section` (e.g. Amendments)."""
+    """One decision: its status, links and text, or one `section` (e.g. Amendments). `id` may be an alias (an earlier id, e.g. D-27); the reply says which record it named."""
     return 0, e.decision_show(id, section).rstrip("\n")
 
 
 @op(write=False, rest="`context-engine decision find --links-to <target>` in a shell")
 def why(e: Engine, c: Caller, target: str) -> tuple[int, str]:
-    """The decisions that link a task, story, criterion, decision or `file::symbol`, each with the field that links it."""
+    """The decisions that link a task, story, criterion, decision or `file::symbol`, each with the field that links it. An alias (an earlier id) is looked up as the record it names."""
     return 0, "\n".join(e.why(target)) or f"no decision links {target}"
 
 
@@ -370,7 +370,7 @@ def hk_regen_index(e: Engine, c: Caller) -> tuple[int, str]:
 
 @op(write=True)
 def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> tuple[int, str]:
-    """Import a single-file decision log (`### D-n -- title *(actor, date)*`): every id and text kept, stamped; all or nothing."""
+    """Import a single-file decision log (`### D-n -- title *(actor, date)*`): every text and number kept, stamped; an id in another prefix is renamed to the kind's and keeps its old id in `aliases`; all or nothing. `dry_run` also prints the id map to save as an evidence doc."""
     return 0, e.import_log(path, dry_run=dry_run, **c.kw)
 
 

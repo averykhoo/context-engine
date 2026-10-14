@@ -327,7 +327,12 @@ Check every record, then the working state. `--working` does only the second hal
   with no cap bloats (FRAMEWORK P6); once the cap is reached, the way out (archive, ledger, a
   decision) is due.*
 - **G-D2**: in each kind's directories no two files carry the same id, by file name or by `id:`;
-  and no id appears in two `new` or `import` lines of the op log. *Why: an id is never reused (P3).*
+  and no id appears in two `new` or `import` lines of the op log. Every alias (`aliases:`, a
+  record's earlier ids) is one word of printable ASCII with no quote, comma, bracket, brace, `/`
+  or `::`; and, with case and leading zeros ignored, it is not the record's own id, not in the
+  form of any kind's series (`<prefix>-n`) or of the criteria file's ids, not listed twice, and on
+  no other record. *Why: an id is never reused (P3), and an old id must still name exactly one
+  record.*
 - **G-D3**: in each file `[guards] links` lists (each `.md` under a listed directory; skip a
   record with `status: deprecated`), outside fenced code: every relative link `[x](path#anchor)`
   and `[x]: path` names a file that exists with exactly that case, relative to the doc, and its
@@ -443,7 +448,9 @@ records that were valid when written but stale now. A non-empty result is a fail
 2. The brief is at most 120 characters. Every named dep must exist. The tier's cap must have room
    (NOW 1, NEXT 5, counting open items of both kinds). Otherwise, demote something first.
 3. Id: the highest number in the series + 1. Count file names *and* `id:` keys, open and closed.
-   Never reuse a number.
+   Never reuse a number. An item imported from a repo's own board keeps its number when it has one
+   (`--id ASK-8` for an imported `Q8`), if no file and no `new` or `import` line of the op log
+   ever had that id; it is written as the engine writes ids (no leading zeros).
 4. File: `tasks/<id>-<slug>.md`. Slug: lowercase the title; replace each run of characters other
    than ASCII `a-z` and `0-9` (accented letters included) with `-`; strip `-` from both ends. If
    it is over 48 characters, take the first 48 and drop everything from the last `-` on, even a
@@ -482,7 +489,10 @@ comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must loo
 `shipped`): set it on an item above the design-review threshold (FRAMEWORK §5.2). Setting it on
 an item already at NOW first checks its `## Design review` as in `task promote`. Do not remove it
 from an item whose design review lists a `- residual:` line: close the item to file them, or take
-the residual lines out first.
+the residual lines out first. `aliases` lists the item's earlier ids when it was imported from a
+repo's own board (`aliases=[1h, est-activity]`), under G-D2's alias rule (§ lint). A new list
+replaces the old one: name every alias that is dropped in the reply, since it no longer resolves.
+Only a write that sets `aliases` checks them; a clash made elsewhere shows in lint G-D2.
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule.
@@ -640,11 +650,17 @@ frontmatter only keeps it cheap.
 
 ### context-engine task show
 
-Print `id · pri · state · title`, then the brief and deps, then the body with `## Log` cut to its
-5 newest entries, newest first (`--head 0` for all), or just one `--section`.
+Print `id · pri · state · title`, then the aliases, the brief and deps, then the body with
+`## Log` cut to its 5 newest entries, newest first (`--head 0` for all), or just one `--section`.
+An id that is no configured series' (`1h`, `Q9`) is looked up as an alias: find the one record
+whose `aliases` lists it, and first print `<alias> is an alias of <id>`. `decision show`, `why`,
+`decision find --links-to` and the ids `decision link` and `decision supersede` take resolve an
+alias the same way (a criterion id, a path or a `file::symbol` is taken as given). Other writes
+take only the record's own id.
 
 **Why:** read-only and bounded. The Log grows without limit, and the newest entries are the ones
-that matter.
+that matter. An old id in a commit message or a docstring still finds its record, and the reply
+names the record, so nobody mistakes which one answered.
 
 ## Owner questions
 
@@ -843,7 +859,9 @@ another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a lo
    `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
    vocabulary but not `retired`, there is no `status: deprecated`, `supersedes` or
    `superseded_by` (§ context-engine record retire writes those), and `goals` names at least one
-   goal of the charter, each written `G-n`.
+   goal of the charter, each written `G-n`. A record carried over from a repo's own log (an entry
+   added after its import) gets `aliases: [<old id>]` here, under G-D2's alias rule; a decision's
+   aliases are fixed from then on (`decision set` refuses them).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
@@ -968,8 +986,9 @@ operation owns. Values take the kind's declared types, as in § context-engine t
 - the key is `narrowed_by`: it is the backlink `relaxes` writes, so run `decision link <other>
   <id> --rel relaxes` on the decision that narrows this one;
 - the key is `answers` (written once by `ask answer`), or provenance: `actor`, `decided`,
-  `session`, `attribution`, `imported_from` or `generated` (who decided, when, in which session
-  and from what source are fixed when the record is created; note a correction with `record amend`);
+  `session`, `attribution`, `imported_from`, `generated` or `aliases` (who decided, when, in which
+  session, from what source and under which earlier ids are fixed when the record is created; note
+  a correction with `record amend`);
 - the key is `verified` (the owner endorsed it): an endorsement is the owner's words, so record
   them with `record amend <id> "<the owner's words>"`;
 - the key is `reopen_if` and the decision would not be REJECTED after the change, or the change
@@ -1072,8 +1091,14 @@ quietly; one line per decision keeps it small as the series grows (FRAMEWORK §6
 
 Turn a single-file decision log (FRAMEWORK §11.4) into one record per entry. Do it on a copy and
 on a branch; nothing is written if any check fails.
-1. The kind's `prefix` must be the log's (`D` for `D-n`), and no id in the log may already be a
-   record.
+1. Each entry's id becomes the kind's `prefix` and the entry's number (`D-27` becomes `<prefix>-27`);
+   an entry whose id changed keeps its old id in `aliases: [D-27]`, under G-D2's alias rule (§
+   lint). No two entries may end with one id, an entry in the kind's own prefix is written as the
+   engine writes it (`<prefix>-1`, not `<prefix>-01`), no new id's number may already be in the series, no
+   old id may already be a record's alias, and no rejected row may already be a REJECTED record
+   with an `imported_from` and the same title (each was imported before): import only the
+   entries added since, without the rejected table, and record one whose number is taken as
+   `context-engine record new` does, with `aliases: [<old id>]` and the next free number.
 2. Each entry starts at a heading `### <id> -- <title> *(<attribution>)*`, optionally followed
    by ` -- <note>` (`—` and `–` work as the dash), and runs to the next entry heading or the next
    `#` or `## ` heading. Its text is copied verbatim; an entry with no text stops the import.
@@ -1082,21 +1107,29 @@ on a branch; nothing is written if any check fails.
    unless the note says `SUPERSEDED by <id>`; `attribution`, the whole parenthetical, when it
    says more than `<actor>, <date>`; `imported_from`, the log's path.
 4. The note: `SUPERSEDED by <id>`, `supersedes <id>`, `relaxes <id>`, `relaxed by <id>` and
-   `narrowed by <id>` become links, written on both records (a link to an id not in the log
-   stops the import); a SUPERSEDED record also gets `status: deprecated`. The note itself is
-   kept as an amendment: `imported heading note: <note>`.
+   `narrowed by <id>` become links to the new ids, written on both records (a link to an id not
+   in the log stops the import); a SUPERSEDED record also gets `status: deprecated`. The note
+   itself is kept, old ids and all, as an amendment: `imported heading note: <note>`.
 5. A `## ` section whose heading says "rejected" and holds a table: each row becomes a
-   `decision_status: REJECTED` record with the next free id, in row order. Title: the first
+   `decision_status: REJECTED` record with the next free id above the highest imported one, in
+   row order, and no alias. Title: the first
    cell; body: the line *Imported from the table under*, the heading as `` `## <heading>` `` and
    a colon, then a blank line, the header line, the separator line and the row, verbatim;
    `actor: agent`; `decided`: the last date in the row's middle cells, else the date of the
-   first entry its last cell names; `refs`: the entry ids in its last cell; `attribution`:
-   which table, and where the reasoning is.
+   first entry its last cell names; `refs`: the new ids of the entries its last cell names;
+   `attribution`: which table, and where the reasoning is.
 6. Stamp every record, log one `import` line each, and regenerate the index.
+7. The id map, one table row per record (`| id in the log | record | status | title |`, a
+   rejected row's first cell `(rejected table row <n>)`), under a title and a FROZEN line, saved
+   as an evidence doc; `--dry-run` prints it, ready to save, after its summary. Every entry the import set BUILT because the log gave no status is
+   reviewed, and `decision set <id> --set decision_status=<status>` corrects any that was parked,
+   deferred or not built.
 
-**Why:** "the import keeps every id", so `D-n` citations elsewhere still resolve; verbatim text
-and a stamp make the move checkable line by line; all or nothing means a half-import never
-lands. A rejected row becomes a record so "what was rejected that touches X" is a query.
+**Why:** the import gives a homogeneous series and keeps each number, and each old id stays a
+resolvable alias, so a commit message or a docstring that cites `D-27` still finds its record;
+verbatim text and a stamp make the move checkable line by line; all or nothing means a
+half-import never lands. A rejected row becomes a record so "what was rejected that touches X" is
+a query.
 
 ### context-engine why
 

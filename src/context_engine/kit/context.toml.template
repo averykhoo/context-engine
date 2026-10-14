@@ -4,8 +4,9 @@
 # type (so a typo fails rather than becoming a silent default).
 #
 # Written by `context-engine init` from the adoption kit; edit it in place afterwards. For an
-# existing repo (FRAMEWORK §11.4), point `dir`, `prefix` and the routes at the files and id
-# series the repo already has: map, don't move, and never renumber an id.
+# existing repo (FRAMEWORK §11.4), point `dir` and the routes at the files the repo already has:
+# map, don't move. Its existing ids take the framework's form at import, each keeping its number
+# where it has one, and the old id stays a resolvable alias; an id is never reused.
 #
 # Every tuned value carries a provenance note (FRAMEWORK §8.0): MEASURED or JUDGEMENT, the method,
 # and what would make it wrong. The values below are the engine's defaults, so their provenance
@@ -26,7 +27,9 @@ commit = "milestones"                # when the engine commits its writes by pat
 # -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
 # Keys of a [kinds.<name>] table:
 #   type        the OKF `type:` value written into every record of the kind
-#   prefix      the id series: prefix "D" gives D-1, D-2, ... Ids are never reused or renumbered.
+#   prefix      the id series: prefix "D" gives D-1, D-2, ... Ids are never reused. A repo's earlier
+#               ids are renamed to it at import, keeping the number, and each old id goes in the
+#               record's `aliases` list, which lookups resolve (FRAMEWORK §11.4)
 #   dir         repo-relative directory holding the records (one file each: <id>-<slug>.md)
 #   mode        append-only | replaced | stamped (the session-stamped mode; FRAMEWORK §8.0.1)
 #   required    frontmatter fields every record must carry
@@ -42,7 +45,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
-types = { decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
+types = { aliases = "list", decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
 extra_dirs = []
 
 [kinds.story]
@@ -52,7 +55,7 @@ dir = "docs/stories"
 mode = "append-only"
 required = ["title", "actor", "date", "story_status", "goals"]
 enums = { story_status = ["live", "unspecified", "unconfirmed", "retired"] }  # FRAMEWORK §3.2
-types = { date = "date", goals = "list", supersedes = "list", superseded_by = "list" }   # goals: the charter's G-n ids; the links only `record retire` writes
+types = { aliases = "list", date = "date", goals = "list", supersedes = "list", superseded_by = "list" }   # goals: the charter's G-n ids; the links only `record retire` writes
 
 [kinds.task]
 type = "Task"
@@ -61,7 +64,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
 
 [kinds.question]
 type = "Question"
@@ -70,7 +73,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", blocks = "list", last_asked = "key", review = "list" }
 
 # Batons and pause records: one session-stamped record each (FRAMEWORK §5.4).
 [kinds.baton]

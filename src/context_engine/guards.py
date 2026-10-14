@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Iterator
 from . import decisions as D
 from . import ledger as L
 from .config import CONFIG_NAME, LIVENESS
-from .store import Failure, key_order
+from .store import ALIASES, Failure, key_order
 
 if TYPE_CHECKING:
     from .working import Engine
@@ -256,21 +256,31 @@ def caps(e: Engine) -> list[Failure]:
 
 
 def ids(e: Engine) -> list[Failure]:
-    """G-D2 on the stored files: no two files of a series carry the same id (by file name or by `id:`), and
-    the op log never shows an id created twice (a reuse).
+    """G-D2 on the stored files: no two files of a series carry the same id (by file name or by `id:`),
+    the op log never shows an id created twice (a reuse), and every alias (a record's earlier id,
+    `aliases:`) resolves to one record: it is one word, not the record's own id, not in the form of
+    a configured series, and carried by no other record (``Store.alias_problems``, which every
+    write applies too).
 
     Not checked: an id reused before the op log began, or after a record was deleted outside the
-    engine with no op logged (allocation already scans closed records and never reuses, AC-4)."""
+    engine with no op logged (allocation already scans closed records and never reuses, AC-4); and
+    whether an alias was ever really the record's id (it is provenance, set when the record is)."""
     out: list[Failure] = []
     st = e.store
+    amap = st.alias_map()
     for kind in st.config.kinds.values():
         seen: dict[str, list[str]] = {}
         for path in st._files(kind):
             names = {st._id_of(kind, path)}
             try:
-                fid = st.read(path).get("id")
+                head = st.read(path)
+                fid = head.get("id")
             except Exception:
-                fid = None  # the schema check reports an unreadable record
+                head, fid = None, None  # the schema check reports an unreadable record
+            if head is not None and head.get(ALIASES) and names != {None}:
+                rid = st._id_of(kind, path)
+                for msg, remedy in st.alias_problems(rid, head.get(ALIASES), amap):
+                    out.append(Failure("G-D2", st._rel(path), msg, remedy))
             if fid and kind.id_re.match(str(fid)):
                 names.add(str(fid))
             for rid in names - {None}:

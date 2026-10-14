@@ -34,7 +34,7 @@ from . import commit as C
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import Config
 from .errors import Refusal
-from .store import ACTOR_RE, Failure, Record, Store, _now, amended, coerce, key_order
+from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the rows guards.py::ROW_ID_RE reads
@@ -66,7 +66,13 @@ DECISION_OWNED = {
     "narrowed_by": "it is the backlink `relaxes` writes: run `decision link <other> <id> --rel relaxes` on the decision that narrows this one",
     **{k: "use `decision link <id> <target> --rel <field>`; no operation removes an id link (ids are never reused, so it never goes stale)" for k in D.LINK_FIELDS if k not in ("supersedes", "superseded_by", "narrowed_by", "code")},
     "code": "add one with `decision link <id> <file::symbol>`; move one when the code moves with `decision relink <id> <old> <new>`",
+    ALIASES: "a decision's earlier ids are provenance, fixed when it is created (`decision import`, or `record new decision ... --set aliases=[<old id>]`)",
 }
+
+
+def _resolved(alias: str | None, rid: str) -> str:
+    """The line that says an alias was looked up, so a reader knows which record answered."""
+    return f"{alias} is an alias of {rid}\n" if alias else ""
 TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\n\n## Log\n"
 SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
@@ -290,7 +296,9 @@ class Engine:
         if len(holders) >= cap:
             raise Refusal(f"{pri} already holds {len(holders)} of {cap} ({_one(holders)})", f"demote one with `promote <id> LATER` first")
 
-    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None) -> Record:
+    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None, rid: str = "") -> Record:
+        """File a board item with the next free id, or with ``rid`` when an import keeps a number
+        (`Q8` becomes ASK-8, FRAMEWORK §11.4): an id of the kind's series that was never used."""
         self._check(session, actor)
         if kind not in self._board():
             raise Refusal(f"{kind!r} is not a board kind", f"use one of {', '.join(self._board())}")
@@ -305,6 +313,11 @@ class Engine:
         fields.update(pri=pri, state="open", deps=list(deps or []), source=f"session {session}", created=self.today(), moved=session, updated=session)
         fields.update(extra or {})
         text = body if body.strip() else TASK_BODY.format(summary=title + ".")
+        if rid:
+            k = self.store.config.kind(kind)
+            if not k.id_re.match(rid.strip()):
+                raise Refusal(f"{rid} is not an id of the {k.name} series", f"give an id of the form {k.prefix}-n, or none for the next free one")
+            return self.store.create_many(kind, [(rid.strip(), fields, text)], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, text, session=session, actor=actor)
 
     def _board_set(self, rid: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), body: Callable[[str], str] | None = None, check: Callable[[Record], None] | None = None, mechanical: bool = False, op: str = "set") -> Record:
@@ -331,18 +344,21 @@ class Engine:
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
         if changes.get("review") is not None:
             self._review_triggers(changes["review"])
-        check = None
-        if "review" in changes or "review" in unset:
-            review = None if "review" in unset else changes["review"]
+        review = None if "review" in unset else changes.get("review")
+        dropped: list[str] = []
 
-            def check(rec: Record) -> None:
+        def check(rec: Record) -> None:
+            if "review" in changes or "review" in unset:
                 if not review:
                     self._review_kept(rec)
                 else:
                     self._review_ready_at_now(rec, rec.doc.body, review)
+            if ALIASES in changes or ALIASES in unset:  # `aliases=` replaces the list: say which old ids stop resolving
+                keep = set(D.as_list(None if ALIASES in unset else changes.get(ALIASES)))
+                dropped.extend(a for a in D.as_list(rec.doc.get(ALIASES)) if a not in keep)
 
         self._board_set(rid, changes, session=session, actor=actor, unset=unset, check=check, mechanical=mechanical)
-        return f"{rid}: set {_one([*raw, *unset])}"
+        return f"{rid}: set {_one([*raw, *unset])}" + (f"; dropped alias {', '.join(dropped)}, which no longer resolves" if dropped else "")
 
     def promote(self, rid: str, pri: str, *, session: str, actor: str) -> str:
         self._check(session, actor)
@@ -632,9 +648,12 @@ class Engine:
         return out
 
     def show(self, rid: str, section: str | None = None, head: int = SHOW_LOG_HEAD) -> str:
+        rid, alias = self.store.resolve(rid)
         rec = self.store.get(rid)
         d = rec.doc
-        top = f"{rid} · {d.get('pri')} · {d.get('state')} · {d.get('title')}\n"
+        top = _resolved(alias, rid) + f"{rid} · {d.get('pri')} · {d.get('state')} · {d.get('title')}\n"
+        if d.get(ALIASES):
+            top += f"aliases: {', '.join(D.as_list(d.get(ALIASES)))}\n"
         if d.get("brief"):
             top += f"brief: {d.get('brief')}\n"
         if d.get("deps"):
@@ -655,12 +674,12 @@ class Engine:
 
     # -- owner questions (FRAMEWORK §5.3) -----------------------------------------------
 
-    def ask_new(self, title: str, *, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None) -> Record:
+    def ask_new(self, title: str, *, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None, rid: str = "") -> Record:
         extra: dict[str, Any] = {"last_asked": None}
         if blocks:
             extra["blocks"] = list(blocks)
         text = body if body.strip() else f"**Question:** {title}\n\n**Why owner-only:**\n\n**Options:**\n\n**Recommendation:** <the option, and why in a line; or \"none cheap: <why>\" (FRAMEWORK §5.3)>\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
-        return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra)
+        return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid)
 
     def _is_question(self, rid: str) -> None:
         if self.store.config.kind_for_id(rid).name != self._role("question"):
@@ -1013,8 +1032,7 @@ class Engine:
         """``new`` replaces ``old``: both directions are written under one lock, and ``old``
         becomes SUPERSEDED with the derived OKF ``status: deprecated``."""
         self._check(session, actor)
-        self._is_decision(old)
-        self._is_decision(new)
+        (old, was_old), (new, was_new) = self._decision(old), self._decision(new)
         if old == new:
             raise Refusal(f"{old} cannot supersede itself", "name the decision that replaces it")
 
@@ -1031,7 +1049,8 @@ class Engine:
             return {old: [D.STATUS_KEY, "status", "superseded_by"], new: ["supersedes"]}
 
         self.store.update([old, new], mutate, session=session, actor=actor, op="supersede")
-        return f"{old}: SUPERSEDED by {new} (status: deprecated); {new} supersedes {old}"
+        via = "".join(f" ({a} is an alias of {i})" for a, i in ((was_old, old), (was_new, new)) if a)
+        return f"{old}: SUPERSEDED by {new} (status: deprecated); {new} supersedes {old}{via}"
 
     def decision_set(self, rid: str, raw: dict[str, str], *, session: str, actor: str, unset: tuple[str, ...] = ()) -> str:
         """Set or unset a decision's own frontmatter (`decision.set`, CE-32): `decision_status`
@@ -1096,8 +1115,8 @@ class Engine:
         """Link a decision to a task, story, criterion, `file::symbol` or another record
         (`decision.link`). `relaxes` also writes the backlink `narrowed_by` on the other decision."""
         self._check(session, actor)
-        self._is_decision(rid)
-        target = target.strip()
+        rid, was = self._decision(rid)
+        target, was_t = self._resolve_target(target)
         rel = rel or self._link_rel(target)
         if rel not in LINK_RELS:
             raise Refusal(f"--rel {rel!r} is not a link this operation writes", f"use one of {', '.join(LINK_RELS)}; `supersedes` is `decision supersede`")
@@ -1136,7 +1155,16 @@ class Engine:
             return changed
 
         self.store.update(ids, mutate, session=session, actor=actor, op="link")
-        return f"{rid}: {rel} + {target}" + (f"; {target}: narrowed_by + {rid}" if rel == "relaxes" else "")
+        via = "".join(f" ({a} is an alias of {i})" for a, i in ((was, rid), (was_t, target)) if a)
+        return f"{rid}: {rel} + {target}" + (f"; {target}: narrowed_by + {rid}" if rel == "relaxes" else "") + via
+
+    def _resolve_target(self, target: str) -> tuple[str, str | None]:
+        """A link or `why` target with an alias resolved to its record. A `file::symbol`, a path
+        and a criterion id are taken as given; so is anything no record carries as an alias."""
+        target = target.strip()
+        if "::" in target or "/" in target or target in self._criteria():
+            return target, None
+        return self.store.resolve(target, strict=False)
 
     def relink(self, rid: str, old: str, new: str, *, session: str, actor: str) -> str:
         """Replace one `code:` link of a current decision with another when the code moves
@@ -1190,6 +1218,9 @@ class Engine:
         """Decisions matching every filter given, one line each, by id (`decision.find`)."""
         kind = self._decision_kind()
         out = []
+        alias = None
+        if links_to:
+            links_to, alias = self._resolve_target(links_to)
         recs = self.store.records(kind) if text else self.store.heads(kind)
         for r in sorted(recs, key=lambda r: int(r.id.rsplit("-", 1)[1])):
             d = r.doc
@@ -1199,19 +1230,32 @@ class Engine:
                 continue
             if links_to and not self._links_to(d, links_to):
                 continue
-            if text and text.lower() not in " ".join(str(x) for x in (r.id, d.get("title"), d.get("description") or "", d.body)).lower():
+            if text and text.lower() not in " ".join(str(x) for x in (r.id, *D.as_list(d.get(ALIASES)), d.get("title"), d.get("description") or "", d.body)).lower():
                 continue
             out.append(self._row(r))
+        if alias:
+            return [_resolved(alias, links_to).rstrip("\n"), *(out or ["no matching decisions"])]
         return out
+
+    def _decision(self, ref: str) -> tuple[str, str | None]:
+        """A decision named by its id or an alias; a refusal names the alias it followed."""
+        rid, alias = self.store.resolve(ref)
+        try:
+            self._is_decision(rid)
+        except Refusal as r:
+            if alias:
+                raise Refusal(f"{alias} is an alias of {rid}, which is not a decision", f"{r.remedy}; `task show {alias}` shows it") from None
+            raise
+        return rid, alias
 
     def decision_show(self, rid: str, section: str | None = None) -> str:
         """One decision: a head line, its links, then its body or one `## section` (`decision.show`)."""
-        self._is_decision(rid)
+        rid, alias = self._decision(rid)
         rec = self.store.get(rid)
         d = rec.doc
-        top = f"{rid} · {d.get(D.STATUS_KEY)} · {d.get('title')}\n"
+        top = _resolved(alias, rid) + f"{rid} · {d.get(D.STATUS_KEY)} · {d.get('title')}\n"
         top += "".join(f"{k}: {d.get(k)}\n" for k in ("actor", "decided", "session") if d.get(k))
-        top += "".join(f"{k}: {', '.join(D.as_list(d.get(k)))}\n" for k in (*D.LINK_FIELDS, "tags", "answers") if D.as_list(d.get(k)))
+        top += "".join(f"{k}: {', '.join(D.as_list(d.get(k)))}\n" for k in (ALIASES, *D.LINK_FIELDS, "tags", "answers") if D.as_list(d.get(k)))
         body = d.body.replace("\r\n", "\n")
         if section:
             got = okf.get_section(body, section)
@@ -1226,11 +1270,14 @@ class Engine:
         target = target.strip()
         if not target:
             raise Refusal("no target given", "name a task, criterion, decision or `file::symbol`")
+        target, alias = self._resolve_target(target)
         out = []
         for r in sorted(self.store.heads(self._decision_kind()), key=lambda r: int(r.id.rsplit("-", 1)[1])):
             via = self._links_to(r.doc, target)
             if via:
                 out.append(f"{self._row(r)}  via {', '.join(via)}")
+        if alias:
+            return [_resolved(alias, target).rstrip("\n"), *(out or [f"no decision links {target}"])]
         return out
 
     def reindex(self, *, session: str, actor: str) -> str:
@@ -1238,8 +1285,10 @@ class Engine:
         return f"{self.w.decision_index}: {'regenerated' if changed else 'already current'}"
 
     def import_log(self, path: str, *, session: str, actor: str, dry_run: bool = False) -> str:
-        """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its id and its
-        text, stamped; the rejected table's rows become REJECTED records. All or nothing."""
+        """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its number and
+        its text, stamped, an id in another prefix taking the kind's with its old id as an alias;
+        the rejected table's rows become REJECTED records. All or nothing; the dry run checks the
+        aliases as the import does and prints the id map as a doc to save."""
         self._check(session, actor)
         kind = self.store.config.kind(self._decision_kind())
         src = Path(path) if Path(path).is_absolute() else self.root / path
@@ -1249,7 +1298,12 @@ class Engine:
             source = src.resolve().relative_to(self.root).as_posix()
         except ValueError:
             source = src.name
-        planned, notes = D.plan_import(src.read_bytes().decode("utf-8-sig"), kind.prefix, self.store.ids_in_use(kind), source)
+        amap = self.store.alias_map()
+        before = {str(r.doc.get("title")): r.id for r in self.store.heads(kind.name) if r.doc.get("imported_from") and str(r.doc.get(D.STATUS_KEY)) == "REJECTED"}
+        planned, notes = D.plan_import(src.read_bytes().decode("utf-8-sig"), kind.prefix, self.store.ids_in_use(kind), source, amap, before)
+        for e in planned:  # the rule every write applies (G-D2), checked here so the dry run says what the import would
+            for msg, _ in self.store.alias_problems(e.id, e.fields.get(ALIASES) or [], amap):
+                raise Refusal(f"the log's entry {e.old} would become {e.id}, whose old id {msg.removeprefix('has alias ')}", "the old id cannot stay an alias: rename the entry in the copy (or, if the prefix is a kind's here, change that kind's prefix), then import again")
         items = []
         for e in planned:
             f = e.fields
@@ -1257,14 +1311,21 @@ class Engine:
             if f["decision_status"] == "SUPERSEDED":
                 fields["status"] = "deprecated"
             fields.update({k: e.links[k] for k in D.LINK_FIELDS if e.links.get(k)})
-            fields.update({k: f[k] for k in ("attribution", "imported_from") if f.get(k)})
+            fields.update({k: f[k] for k in ("attribution", "imported_from", ALIASES) if f.get(k)})
             body = amended(e.body, f"imported heading note: {e.note}", session, actor) if e.note else e.body
             items.append((e.id, fields, body))
-        summary = "; ".join(notes)
+        review = [n for n in notes if "BUILT by default" in n]
+        summary = "; ".join(n for n in notes if n not in review)
+        after = "".join(f". {n}" for n in review)
         if dry_run:
-            return f"dry run, nothing written: would import {summary} into {kind.dir}"
+            doc = (
+                f"# Decision id map: {source} into {kind.dir}\n\nFROZEN. Printed by `context-engine decision import --dry-run` on "
+                f"{self.today().isoformat()}, session {session}; the import gives each record below its id, and the old id, where "
+                f"there was one, stays in its `{ALIASES}` (FRAMEWORK §11.4).\n\n{D.id_map(planned)}"
+            )
+            return f"dry run, nothing written: would import {summary} into {kind.dir}{after}\n\nSave everything below this line as the id map's evidence doc, then import:\n\n{doc}"
         self.store.create_many(kind.name, items, session=session, actor=actor, op="import")
-        return f"imported {summary} into {kind.dir}, each stamped" + (f"; index {self.w.decision_index} regenerated" if self.w.decision_index else "")
+        return f"imported {summary} into {kind.dir}, each stamped" + (f"; index {self.w.decision_index} regenerated" if self.w.decision_index else "") + after
 
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 

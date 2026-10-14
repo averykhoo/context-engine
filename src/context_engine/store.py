@@ -41,6 +41,12 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[a-z]+$")
 ACTOR_RE = re.compile(r"^(human:\S+|process:\S+|[A-Za-z0-9._-]+/[A-Za-z0-9._:+-]+)$")  # OKF §7
 OKF_STATUS = ("draft", "stable", "deprecated")  # OKF §5.4
 TOOL_OWNED = ("type", "id", "body_sha")
+# A record's earlier ids, kept when an import renames it to the framework's form (FRAMEWORK §8.0.1,
+# §11.4): `D-27` on DEC-27, `1h` on a board item. Lookups resolve them (`Store.resolve`); every
+# write and G-D2 refuse one that is not one word, is the record's own id, has the form of a
+# configured series (so it is, or may become, a live id) or is another record's alias.
+ALIASES = "aliases"
+ALIAS_RE = re.compile(r"(?!.*::)[A-Za-z0-9!#$%&()*+\-.:;<=>?@\\^_|~]+")  # fullmatch: printable ASCII, no quote, comma, bracket, brace, `/`, `::` or space
 RESERVED_MD = ("index.md", "log.md")  # OKF §3.1
 
 
@@ -78,7 +84,7 @@ def key_order(key: str) -> tuple[str, int, str]:
 
 def coerce(kind: Kind, key: str, text: str) -> Any:
     """Turn a CLI string into the value the kind's schema declares (CE-2 trap: no quoted dates)."""
-    want = kind.types.get(key, "str")
+    want = kind.types.get(key, "list" if key == ALIASES else "str")
     if text.strip().lower() in ("", "null", "~"):
         return None
     try:
@@ -183,6 +189,112 @@ class Store:
         path = self.find(record_id)
         return Record(record_id, self.config.kind_for_id(record_id), path, self.read(path))
 
+    # -- aliases: a record's earlier ids (FRAMEWORK §8.0.1) ------------------------------
+
+    def alias_map(self) -> dict[str, list[str]]:
+        """Every alias, with the ids of the records carrying it, over every kind (frontmatter only)."""
+        out: dict[str, list[str]] = {}
+        for kind in self.config.kinds.values():
+            for path in self._files(kind):
+                rid = self._id_of(kind, path)
+                if not rid:
+                    continue
+                try:
+                    value = okf.read_head(path).get(ALIASES)
+                except Exception:
+                    continue  # the schema check reports an unreadable record
+                for a in decisions.as_list(value):
+                    out.setdefault(a, []).append(rid)
+        return out
+
+    def series_of(self, ref: str) -> Kind | None:
+        return next((k for k in self.config.kinds.values() if k.id_re.fullmatch(ref)), None)
+
+    def _like_a_series(self, ref: str) -> str | None:
+        """What ``ref`` would be mistaken for: a configured series' id in any case or padding
+        (`dec-3`, `CE-007`), or an id of the criteria file's series (`AC-7`, also before the row
+        exists). None when it is none of these."""
+        m = re.fullmatch(r"([A-Za-z]+)-0*(\d+)", ref)
+        if not m:
+            return None
+        head = m.group(1).upper()
+        kind = next((k for k in self.config.kinds.values() if k.prefix.upper() == head), None)
+        if kind is not None:
+            return f"an id of the {kind.name} series ({kind.prefix}-n)"
+        if head in self._criterion_prefixes():
+            return f"a criterion id ({head}-n, `[working] criteria`)"
+        return None
+
+    def _criterion_prefixes(self) -> set[str]:
+        rel = self.config.working.criteria
+        path = self.root / rel if rel else None
+        if path is None or not path.is_file():
+            return set()
+        text = path.read_bytes().decode("utf-8", errors="replace")
+        return {p.upper() for p in re.findall(r"^\|\s*([A-Za-z]+)-\d+\s*\|", text, re.MULTILINE)}
+
+    def resolve(self, ref: str, strict: bool = True) -> tuple[str, str | None]:
+        """``ref`` as given when it has a configured series' form, else the id of the one record
+        that carries it as an alias: (id, the alias it was given as, or None). Not strict: a
+        ref that is neither comes back as given (a criterion id, a `file::symbol`)."""
+        ref = ref.strip()
+        if self.series_of(ref) is not None:
+            return ref, None
+        owners = self.alias_map().get(ref, [])
+        if len(owners) == 1:
+            return owners[0], ref
+        if len(owners) > 1:
+            raise Refusal(f"{ref} is an alias of {len(owners)} records ({', '.join(owners)})", "an alias names one record: drop it from all but one (lint G-D2 lists them)")
+        if strict:
+            series = ", ".join(k.prefix + "-n" for k in self.config.kinds.values())
+            raise Refusal(f"no record {ref}: it is not an id of a configured series ({series}) and no record carries it in `{ALIASES}`", "use the record's id, or record the old id in that record's `aliases`")
+        return ref, None
+
+    def alias_problems(self, rid: str, value: Any, amap: dict[str, list[str]]) -> list[tuple[str, str]]:
+        """What is wrong with record ``rid`` carrying ``value`` as its aliases, as (message,
+        remedy) pairs; ``amap`` is ``alias_map()``. A value that is not a list is the schema
+        check's (``problems``)."""
+        if not isinstance(value, list):
+            return []
+        out = []
+        drop = f"drop it from `{ALIASES}`"
+        folded: dict[str, set[str]] = {}
+        for alias, owners in amap.items():
+            folded.setdefault(alias.casefold(), set()).update(owners)
+        seen: set[str] = set()
+        for a in value:
+            like = self._like_a_series(a) if isinstance(a, str) else None
+            if not isinstance(a, str) or not ALIAS_RE.fullmatch(a):
+                out.append((f"has alias {a!r}, which is not one word of printable ASCII (no quotes, commas, brackets, `/` or `::`)", f"an alias is an earlier id, e.g. D-27 or 1h; {drop}"))
+            elif a.casefold() == rid.casefold():
+                out.append((f"lists its own id {a} as an alias", drop))
+            elif like:
+                out.append((f"has alias {a}, which reads as {like}, so it is or may become a live id", f"{drop}; an id of a configured series or of the criteria is never an alias"))
+            elif a.casefold() in seen:
+                out.append((f"lists alias {a} twice (case aside)", "list it once"))
+            elif folded.get(a.casefold(), set()) - {rid}:
+                others = sorted(folded[a.casefold()] - {rid})
+                out.append((f"has alias {a}, which {', '.join(others)} also carries (case aside)", "an alias names one record: drop it from all but one"))
+            if isinstance(a, str):
+                seen.add(a.casefold())
+        return out
+
+    def created_ids(self) -> set[str]:
+        """Every id the op log shows created (`new` or `import`), the set G-D2's reuse check reads:
+        a chosen id (an import's, `task new --id`) must not be one, even if its file is gone."""
+        path = self.root / self.config.oplog
+        if not path.is_file():
+            return set()
+        out = set()
+        for line in path.read_bytes().decode("utf-8", errors="replace").splitlines():
+            try:
+                op = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(op, dict) and op.get("op") in ("new", "import") and op.get("id"):
+                out.add(str(op["id"]))
+        return out
+
     def ids_in_use(self, kind: Kind) -> set[int]:
         """Every number in the series, open and closed, from file names and from `id:` keys (G-D2)."""
         used = set()
@@ -227,6 +339,9 @@ class Store:
             if _wrong_type(want, doc.get(key)):
                 hint = " (unquoted YYYY-MM-DD)" if want == "date" else ""
                 out.append((f"has {key} {doc.get(key)!r}, not a {want}", f"set `{key}` to a {want}{hint}"))
+        aliases = doc.get(ALIASES)
+        if aliases is not None and (not isinstance(aliases, list) or not all(isinstance(a, str) for a in aliases)):
+            out.append((f"has {ALIASES} {aliases!r}, not a list of ids", f"set `{ALIASES}` to a list, e.g. [D-27]"))
         status = doc.get("status")
         if status is not None and status not in OKF_STATUS:
             out.append((f"has OKF status {status!r}", f"use one of {', '.join(OKF_STATUS)}; record states go in their own key"))
@@ -496,8 +611,13 @@ class Store:
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 
-    def _validate(self, kind: Kind, doc: okf.Document, path: Path) -> None:
+    def _validate(self, kind: Kind, doc: okf.Document, path: Path, amap: dict[str, list[str]] | None = None, aliases: bool = False) -> None:
+        """Refuse a record that breaks its kind's schema; with ``aliases`` (a write that sets
+        them), also one whose aliases break G-D2's rule. A write that leaves the aliases alone is
+        not refused for a clash someone else made: lint G-D2 reports that one."""
         probs = self.problems(kind, doc, path)
+        if not probs and aliases and doc.get(ALIASES):
+            probs = self.alias_problems(str(doc.get("id")), doc.get(ALIASES), self.alias_map() if amap is None else amap)
         if probs:
             msg, remedy = probs[0]
             more = f" (and {len(probs) - 1} more)" if len(probs) > 1 else ""
@@ -549,7 +669,7 @@ class Store:
             doc = okf.new_document({"type": kind.type, "id": rid, **fields}, body)
             if kind.mode == "append-only":
                 doc.set("body_sha", okf.body_sha(doc.body))
-            self._validate(kind, doc, path)
+            self._validate(kind, doc, path, aliases=True)
             path.parent.mkdir(parents=True, exist_ok=True)
             self._write(path, doc)
             self._log("new", rid, path, session, actor, list(doc.data.keys()), mechanical)
@@ -590,7 +710,7 @@ class Store:
                 rec.doc.set(key, value)
             for key in unset:
                 rec.doc.delete(key)
-            self._validate(rec.kind, rec.doc, rec.path)
+            self._validate(rec.kind, rec.doc, rec.path, aliases=ALIASES in changes)
             self._write(rec.path, rec.doc)
             self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical)
             self._reindex(rec.kind, session, actor)
@@ -715,12 +835,15 @@ class Store:
         out: list[Record] = []
         with self._lock():
             used = self.ids_in_use(kind)
+            amap = self.alias_map() if any(f.get(ALIASES) for _, f, _ in items) else {}
+            created = self.created_ids()
             for rid, fields, body in items:
-                m = kind.id_re.match(rid)
-                if not m:
-                    raise Refusal(f"{rid} is not a {kind.prefix}-n id", f"the {kind.name} kind's ids are {kind.prefix}-n")
-                if int(m.group(1)) in used:
-                    raise Refusal(f"{rid} is already in use", "an id is never reused (G-D2)")
+                m = kind.id_re.fullmatch(rid)
+                if not m or int(m.group(1)) < 1 or rid != f"{kind.prefix}-{int(m.group(1))}":
+                    want = f"{kind.prefix}-{int(m.group(1))}" if m and int(m.group(1)) >= 1 else f"{kind.prefix}-n, n from 1"
+                    raise Refusal(f"{rid} is not an id of the {kind.name} series as the engine writes it", f"give {want}: no leading zeros")
+                if int(m.group(1)) in used or rid in created:
+                    raise Refusal(f"{rid} is already in use" + (" (the op log shows it was created before)" if int(m.group(1)) not in used else ""), "an id is never reused (G-D2)")
                 clash = [k for k in TOOL_OWNED if k in fields]
                 if clash:
                     raise Refusal(f"`{clash[0]}` is set by the engine", f"drop `{clash[0]}` from the fields")
@@ -729,9 +852,11 @@ class Store:
                 doc = okf.new_document({"type": kind.type, "id": rid, **fields}, body)
                 if kind.mode == "append-only":
                     doc.set("body_sha", okf.body_sha(doc.body))
-                self._validate(kind, doc, path)
+                self._validate(kind, doc, path, amap, aliases=True)
                 if path.exists():
                     raise Refusal(f"{self._rel(path)} already exists", "move it aside, then retry")
+                for a in decisions.as_list(doc.get(ALIASES)):
+                    amap.setdefault(a, []).append(rid)  # so two records of one import cannot share an alias
                 out.append(Record(rid, kind, path, doc))
             if len({r.path for r in out}) != len(out) or len({r.id for r in out}) != len(out):
                 raise Refusal("two of the records share an id or a file name", "give each its own id and title")
