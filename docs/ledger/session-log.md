@@ -7,9 +7,22 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14f · kind: open
+## 2026-10-14f · kind: close
 
-- **opened:** 2026-10-14T16:47:38+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-7 (trial started), CE-79 (check-back logged), CE-82 new and closed, DEC-31 amended
+- **receipts:**
+  - guards: gate green: 718 passed in 208.12s (2026-10-14); lint clean
+  - read: kit contract.md, procedures § Clean close, FRAMEWORK §6.3, DEC-31, procedures § Push and
+    CI
+- **summary** (the owner digest):
+  - Owner: the adhoc trial is running; CE-7 and CE-79 say it started 2026-10-14 and we check back
+    about 2026-10-21; CE-7's title no longer says worktree.
+  - Owner: close eagerly as soon as all tasks are done (DEC-31 amended); CE-82 put the rule in the
+    always-loaded kit contract, procedures § Clean close, FRAMEWORK §6.3 and CLAUDE.md.
+  - Push of context-engine main (owner: now, this repo only; adhoc stays local), after the gate and
+    tools/linux_gate.py on the pushed commit; CI watcher started.
+- **Still owed:**
+  - CI verdict for the push (watcher); CE-7 check-back about 2026-10-21 (CE-79)
 
 ---
 
