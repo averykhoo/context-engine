@@ -57,6 +57,12 @@ work starts; then do the batons and pause records it lists, before any other wor
 question it lists in chat, one line each, then `context-engine ask raised <ids>`; and read the
 top item with `context-engine task show <id>`.
 
+**Close eagerly.** As soon as every task the owner asked for is done, run the clean close
+(procedures § Clean close) in that same turn, before the final reply. Never ask whether to close,
+and never leave the session open waiting for instructions: what is left for the owner (an answer,
+a check, a push) goes in the close's digest. Stay open only when the owner says so. More work
+asked for after the close starts a new session.
+
 Every other procedure (intake, clean close, pause, resume, push and CI, reconciling foreign
 commits, housekeeping), in order, each step with its engine command and its by-hand step, is
 `docs/runbooks/procedures.md` in this repo; every operation by hand is `docs/runbooks/manual-mode.md`.

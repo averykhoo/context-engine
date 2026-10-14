@@ -101,8 +101,10 @@ agent's own call.
 
 ## Clean close (§6.3)
 
-A natural stopping point. **Close by default when the work you were asked for is done**, without
-waiting to be told; stay open only when the owner says so, and pause (§ Pause) at an awkward stop.
+A natural stopping point. **Close eagerly: as soon as every task you were asked for is done, in
+that same turn, before the final reply.** Never ask whether to close, and never wait for more
+instructions; what is left for the owner goes in the digest (item 8). Stay open only when the
+owner says so, and pause (§ Pause) at an awkward stop.
 More work asked for after the close starts a new session (§ Session start). The records come
 first, then the gate, then the ledger entry that carries the gate's result, then the commit of
 what the engine did not commit (it commits at milestones, each task's close and the session's

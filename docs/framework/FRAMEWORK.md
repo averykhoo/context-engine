@@ -1081,9 +1081,12 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 
 ### 6.3 Clean close (a natural stopping point)
 
-**A session closes by default when the work it was asked for is done**, without waiting to be
-told. It stays open only when the owner says so; an awkward stopping point is a pause (§6.4), not
-an open stub. More work asked for after a close starts a new session.
+**A session closes eagerly: as soon as every task it was asked for is done, in that same turn,
+before its final reply.** It never asks whether to close and never sits open waiting for
+instructions; what is left for the owner goes in the close's digest. It stays open only when the
+owner says so; an awkward stopping point is a pause (§6.4), not an open stub. More work asked for
+after a close starts a new session. The rule is in the contract, which every session loads, not
+only in the procedures runbook, which a session reads on demand.
 
 Write the records first, then run the gate, then commit what the engine has not (it commits at
 milestones, and a task's close or the session's is one, §5.5 rule 4). What a clean close does,

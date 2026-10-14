@@ -110,7 +110,7 @@ This repo's values for those steps:
 
 ## Rules
 
-- **Never run `context-engine init` here** (it holds the kit's sources). A session closes when its work is done (DEC-31).
+- **Never run `context-engine init` here** (it holds the kit's sources). Close eagerly, without asking (DEC-31).
 - **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
   the work to its own subagents or a workflow; the top level only reports progress, blockers
   and delays. Owner words and first-hand verification stay with the top-level session.
