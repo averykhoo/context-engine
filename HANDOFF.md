@@ -14,15 +14,12 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **A target repo's engine env is a pinned, non-editable install inside its folder, gitignored (DEC-41, amends DEC-1);**
   adhoc's is `.context-engine/env/`. The kit and FRAMEWORK still say only "its own env" (CE-81).
 - **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c; CE-7 trap F18): CE-77, CE-78 and CE-81 wait for it.
-- **FRAMEWORK.md holds the framework only (DEC-26):** no history, no repo ids; unbuilt parts say *Not built yet*.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
-- **Procedures' order lives in `docs/runbooks/procedures.md`**; by hand in `manual-mode.md`; method in `gate.md`,
-  `sabotage.md`, `fan-out.md`, `release.md`. Kit copies are byte-equal (CE-26). When the engine errors, do it by hand (US-11).
+- **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** a cherry-pick or fresh checkout here writes kit files with CRLF and the kit byte tests go red; merge
   with `git -c core.autocrlf=false` and re-check out the touched files with LF.
 - **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push.
-- **Several tasks in one request:** a task agent per item in its own worktree, merged and verified at the top (DEC-16).
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close a session when its work is done, without asking (DEC-31).
 - **Next after CE-7:** CE-78 (scoped gate: code tests only when code changed), CE-77 (procedures as skills, plugin),
