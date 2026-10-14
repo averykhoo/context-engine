@@ -521,3 +521,31 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a blockquote would render well but the stored text would no longer be byte-verbatim
 - **control:** individual: the words are stored verbatim; the rendering is cosmetic
 - **from:** CE-73, session 2026-10-14a
+
+## INV-74: this repo's routine orient cuts its own banner, against orient_max_bytes's provenance
+
+- **affects:** every session in every repo, which starts from orient; the owner, who must see batons, pauses, other sessions and questions; a cold session in a repo with a large banner
+- **why not eliminated:** the banner is the session's to write
+- **control:** individual: banner set says when orient will cut the new banner (CE-76); the cut note points at banner show
+- **from:** CE-75, session 2026-10-14a
+
+## INV-75: orient displays batons before other open sessions, while the contract and procedures order other sessions first
+
+- **affects:** every session in every repo, which starts from orient; the owner, who must see batons, pauses, other sessions and questions; a cold session in a repo with a large banner
+- **why not eliminated:** display order is cosmetic and swapping it renumbers shared runbook items
+- **control:** individual: the procedure's order governs what the session does
+- **from:** CE-75, session 2026-10-14a
+
+## INV-76: an orient_max_bytes below about 250 bytes cannot hold the headings
+
+- **affects:** every session in every repo, which starts from orient; the owner, who must see batons, pauses, other sessions and questions; a cold session in a repo with a large banner
+- **why not eliminated:** no repo sets it that low
+- **control:** individual: manual-mode § orient documents the floor
+- **from:** CE-75, session 2026-10-14a
+
+## INV-77: the questions cut note lists every open question, not which are pending, and no note says N of M shown
+
+- **affects:** every session in every repo, which starts from orient; the owner, who must see batons, pauses, other sessions and questions; a cold session in a repo with a large banner
+- **why not eliminated:** a precise per-section count needs another read op
+- **control:** individual: task list shows each question's state
+- **from:** CE-75, session 2026-10-14a
