@@ -4,12 +4,14 @@ id: CE-68
 title: 'Phrasing sweep: rituals become procedures, and every strange turn of phrase in the framework is corrected at once'
 brief: DEC-39; living text only; one change; terms that ripple into code or decisions go to the owner
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-13e
 created: 2026-10-13
 moved: 2026-10-13e
 updated: 2026-10-13e
+status: deprecated
+closed: 2026-10-13e
 ---
 
 ## What
@@ -39,3 +41,7 @@ Traps:
   docs/framework/contract.md and src/context_engine/kit/contract.md (G-D0)
 - G-D5 counts in prose; G-D4 liveness lines in the first 10 lines
 - a heading rename changes its anchor: grep every `#anchor` link
+
+## Log
+
+- 2026-10-13e (claude-code/claude-opus-5-5): closed: done in 0f1d071: rituals are procedures; the phrasing sweep applied in one change
