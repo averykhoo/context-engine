@@ -541,3 +541,4 @@
 {"at": "2026-10-14T16:47:46+08:00", "session": "2026-10-14f", "actor": "claude-code/claude-opus-5-5", "op": "set", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["brief", "updated"], "mechanical": false}
 {"at": "2026-10-14T16:47:47+08:00", "session": "2026-10-14f", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-79", "path": "tasks/CE-79-follow-up-on-the-adhoc-trial-a-week-in-about.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-14T16:47:53+08:00", "session": "2026-10-14f", "actor": "claude-code/claude-opus-5-5", "op": "set", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["title", "updated"], "mechanical": false}
+{"at": "2026-10-14T17:03:08+08:00", "session": "2026-10-14f", "actor": "claude-code/claude-opus-5-5", "op": "amend", "id": "DEC-31", "path": "docs/decisions/DEC-31-a-session-closes-by-default-when-its-requested.md", "fields": [], "mechanical": false}
