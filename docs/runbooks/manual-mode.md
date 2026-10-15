@@ -1146,7 +1146,10 @@ instead of grepping a log.
 ### context-engine commit
 
 `context-engine commit [<paths> ...] -m "<title>" [-m "<paragraph>" ...]` (or `-F <file>`; over
-MCP `commit(paths, message)`). **Run the gate first:** it runs none. By hand:
+MCP `commit(paths, message)`). **Run the gate first:** it runs none. When `[gate] require` names
+a scope, it refuses a path in that scope (a directory: any file under it) unless a green gate run
+covers the scope's id (§ context-engine gate status); the paths the op log's lines name are not
+counted. By hand: check that first, then:
 
 1. Re-read `git status` and `git log -3`: another session may have committed since.
 2. Take the op log's uncommitted lines and the paths they name, as § What every write does,
@@ -1200,6 +1203,62 @@ clean checkout. Committing through the engine takes the lines and the files they
 under the lock, so a session's own commit never splits them (FRAMEWORK §5.5 rule 4). It runs no
 gate, as `git commit` runs none: the gate is the session's step before it, so a gate is never
 skipped silently by a tool that was thought to run it.
+
+## The scoped gate
+
+The gate's result is recorded against a content id of each scope's files (`[gate]` in
+`context.toml`; FRAMEWORK §8.5 G-V1), so a scope whose files have not changed since a green run
+needs no re-run. Each id is computed the same way:
+
+1. List the files: `git ls-files -z --cached --others --exclude-standard` from the root, each
+   once, sorted by its UTF-8 bytes. Keep those a scope glob in `include` matches and none in
+   `exclude` matches, as whole `/`-separated paths: `**` spans directories (`docs/**`,
+   `**/*.md`), `*` and `?` stay inside one part. Skip a listed file the work tree lacks, the
+   engine's lock file (`[engine] lockfile`) and everything in the run ledger's directory.
+2. Hash, with SHA-256: the header `context-engine-gate/g1/<scope>/` plus the scope as
+   JSON with sorted keys and sorted lists (`{"exclude": [...], "include": [...], "readers":
+   [...]}`, `", "` and `": "` separators) and a NUL byte; then per file its path, NUL,
+   `<size>:<sha256 hex of its bytes>`, NUL.
+3. The id is `g1/<scope>:` and the first 16 hex characters.
+
+A scope with `readers` (the tests that read files it leaves out) has a second id,
+`<scope>+readers`: the same steps over every file (`include = ["**"]`, `exclude = []`, its
+`readers`), named `<scope>+readers`.
+
+*Why: content, never a commit id, so `git add` and `git commit` leave a green run green; a file
+gone from the tree is skipped as it is once its deletion is committed, so that commit leaves it
+green too; the scope's own definition is in the hash, so a changed glob matches no old run.*
+
+### context-engine gate run
+
+`context-engine gate run [--readers]` (CLI only). By hand: compute every id; run `[gate]
+command` from the root (`{python}` is the engine's interpreter; with `--readers`, every scope's
+readers appended to it, and only the `+readers` ids), its output to a log file; compute the ids
+again. Append one JSON line to `[gate] ledger` (default `.context/gate/runs.jsonl`): `started`,
+`seconds`, `status` (`PASSED` on exit 0, else `FAILED`; `INCONSISTENT`, with empty `scopes`, when
+every id moved during the run), `exit`, `part` (`all` or `readers`), `command`, `args` (the
+readers appended), `scopes` (id name -> id, only the ids that did not move), `moved` (the names
+of those that did, when any did), `log`, `head`, `session`, `actor`. The ledger must be
+gitignored and untracked (a fresh directory gets a `.gitignore` of `*`).
+
+**Why:** a recorded result is what lets the next commit skip a re-run, and a run whose files
+moved under it tested nothing nameable for those ids; the ids that did not move were tested
+whole, so another session's write during a long run costs only the ids it touched. An unignored ledger would sit inside the ids it records,
+so every row would be born stale. `--readers`: a change outside a scope cannot change what its
+other tests read, so only the tests that read it need to run again. A gate run is out of the
+MCP's scope (FRAMEWORK §8.0.2).
+
+### context-engine gate status
+
+`context-engine gate status [--require <scope>[+readers]]` (over MCP `gate_status`). By hand:
+compute each id; it is covered when the newest ledger line whose `scopes` holds that id has
+`status` `PASSED` and the `command` configured now. With `--require <scope>`, exit 1 unless that
+scope's id is covered: what `context-engine commit` checks for a path in it. With `--require
+<scope>+readers`, its `+readers` id too: what a hand edit to a file the scope leaves out needs.
+
+**Why:** "did the gate pass on these files?" is answered from the ledger, not from memory. The
+newest line decides, so a green run then a red one on the same files is red; and a run of
+another command proves nothing about this one.
 
 ## Bootstrap
 

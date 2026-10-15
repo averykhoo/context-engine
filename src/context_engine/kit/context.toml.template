@@ -147,6 +147,31 @@ stories = ""                 # G-I1, G-I2, G-T1, G-T6: the kind holding the stor
 tests = []                   # G-T2: files and directories where tests and drivers claim criteria (e.g. ["tests"])
 claim = '''criterion(?:\(\s*["']|:\s*)([A-Z]+-[1-9][0-9]*)'''   # G-T2: one group, the claimed id; this default reads `@pytest.mark.criterion("AC-n")` and a `criterion: AC-n` comment
 
+# -- the scoped gate (FRAMEWORK §8.5 G-V1): each gate run recorded against its scopes' content ids --
+# Off while `command` is empty. `context-engine gate run` runs `command` and appends its result to
+# `ledger` with each scope's id; `gate status` says which scopes a green run covers. Set `require`
+# to a scope and `context-engine commit` refuses a path in it until a green run covers it.
+# `{python}` in `command` is the engine's interpreter, which is not this repo's test environment
+# (the engine runs from its own environment, never this one): name your own test interpreter, e.g.
+# [".venv/bin/python", "-m", "pytest", "-q"]. The scope guard (context_engine.scope_guard) runs
+# inside your tests, so it needs `context_engine` importable there without an install: put the
+# engine's `src` on PYTHONPATH for the gate run, or leave `exclude` empty.
+[gate]
+command = []                 # the gate, as a list of words, e.g. [".venv/bin/python", "-m", "pytest", "-q"]
+ledger = ".context/gate/runs.jsonl"   # the run ledger; must be gitignored (a fresh directory gets a `.gitignore` of `*`)
+require = ""                 # the scope a session's own commit of a path in it needs green (`context-engine commit`); empty is no check
+
+# A scope: repo-relative globs over whole `/` paths (`**` spans directories, `*` does not). An
+# exclusion fails open, since an excluded file can no longer make a green run stale: exclude only
+# what no test reads, and verify it with a guard such as context_engine.scope_guard, which fails
+# any test that reads an excluded path unless `readers` names it. The readers are keyed on every
+# file, so a hand edit outside the scope leaves them uncovered until `gate run --readers` re-runs
+# them; `gate status --require <scope>+readers` says when.
+[gate.scopes.all]
+include = ["**"]
+exclude = []
+readers = []
+
 # -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
 # Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,
 # free text), pattern (how files under `path` are named), note, optional (may be absent), and the G-D1

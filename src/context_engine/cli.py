@@ -220,6 +220,12 @@ def build() -> argparse.ArgumentParser:
     msg.add_argument("-m", "--message", action="append", help="a paragraph of the message, as `git commit -m`; repeat for each")
     msg.add_argument("-F", "--message-file", type=Path, help="read the message from a file")
 
+    ga = groups.add_parser("gate", help="the scoped gate: run the repo's gate command and record its result per scope (FRAMEWORK §8.5 G-V1)").add_subparsers(dest="op", required=True)
+    gr = ga.add_parser("run", help="run [gate] `command` and append its result to the run ledger")
+    gr.add_argument("--readers", action="store_true", help="run only the scopes' readers: the tests that read files outside a scope")
+    gs = ga.add_parser("status", help="each scope's id here and whether a green run covers it")
+    gs.add_argument("--require", default="", metavar="SCOPE", help="exit 1 unless this scope is covered; <scope>+readers: its readers too")
+
     wy = groups.add_parser("why", help="the decisions that link a task, criterion or file::symbol")
     wy.add_argument("target")
 
@@ -268,6 +274,8 @@ CLI_OPS = {
     ("decision", "index"): "hk_regen_index",
     ("decision", "import"): "decision_import",
     ("commit", None): "commit",
+    ("gate", "run"): "gate_run",
+    ("gate", "status"): "gate_status",
     ("why", None): "why",
     ("register", "show"): "register_show",
     ("banner", "show"): "banner_show",

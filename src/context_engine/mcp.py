@@ -97,6 +97,8 @@ def server(root: Path | str = ".") -> MCPServer:
     state = ops.Caller(os.environ.get("CE_SESSION"), os.environ.get("CE_ACTOR"))
     s = MCPServer(name=NAME, instructions=INSTRUCTIONS)
     for o in ops.OPS.values():
+        if not o.mcp:
+            continue  # CLI only (gate runs, FRAMEWORK §8.0.2)
         s.add_tool(make_tool(o, root, state), name=o.name)
     return s
 

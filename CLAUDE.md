@@ -57,17 +57,17 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 
 ## Gate
 
-`<interpreter> -m pytest -q` from the repo root. Run it before every commit that touches
-`src/`, `tests/` or any record, and before every push. It includes `context-engine lint` on this repo's own
-records (AC-23), so a hand edit to a stamped story, a broken record or a dead route turns it red.
-CI runs the same gate on every push (`.github/workflows/gate.yml`, CE-10): a clean checkout,
-Python 3.12 (the `requires-python` floor), `pip install -e ".[dev]"`, then the gate;
-`tests/test_ci.py` keeps the workflow in step with this section and `pyproject.toml`. A red CI
-run is a red gate. Without CI, the by-hand fallback is those two commands in a fresh 3.12 env.
-**Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py`
-(CE-67; Docker in WSL, about a minute once the image is cached). This machine is Windows and CI is
-Linux, so a green local gate can be a red CI run (`39e09ca`, 2026-10-13;
-`docs/evidence/ci-divergence-2026-10-13.md` names the traps). Push only when both are green.
+`<interpreter> -m pytest -q` from the repo root; it runs `context-engine lint` on this repo's records too (AC-23). Run it
+as `context-engine gate run` (CE-78: `[gate]` in `context.toml`), which records the result against the `code` scope's
+content id. Before a commit touching `src/`, `tests/` or a record, `context-engine gate status --require code` says if
+the whole gate is left; after a hand edit to a file the scope excludes, `--require code+readers` (`gate run --readers`).
+`context-engine commit` refuses a code path until `code` is green; `tests/conftest.py` fails other tests that read them.
+Every push runs the whole gate, and so does CI (`.github/workflows/gate.yml`, CE-10): a clean checkout, Python 3.12 (the
+`requires-python` floor), `pip install -e ".[dev]"`, then the gate; `tests/test_ci.py` keeps the workflow in step with
+this section and `pyproject.toml`. A red CI run is a red gate; without CI, run those two commands in a fresh 3.12 env.
+**Before every push, also run CI's job on Linux here:** `<interpreter> tools/linux_gate.py` (CE-67; Docker in WSL, about
+a minute once the image is cached). This machine is Windows and CI is Linux, so a green local gate can be a red CI run
+(`39e09ca`, 2026-10-13; `docs/evidence/ci-divergence-2026-10-13.md` names the traps). Push only when both are green.
 
 ## Sabotage rule (owner mandate, DEC-11)
 
@@ -114,8 +114,8 @@ This repo's values for those steps:
 - **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
   the work to its own subagents or a workflow; the top level only reports progress, blockers
   and delays. Owner words and first-hand verification stay with the top-level session.
-- Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths
-  no uncommitted op line names); never `git add -A`, never `git stash`.
+- Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths no uncommitted op
+  line names, and for a `code` path only on a green `gate status --require code`); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
   change cannot be split. One task per commit, its id leading the title (`CE-n: what changed`);
   a commit serving no task has a plain title. Small tasks may be done together: gate green over

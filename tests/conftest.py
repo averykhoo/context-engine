@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from context_engine.store import Store
+from context_engine.scope_guard import pytest_runtest_makereport, pytest_runtest_protocol  # noqa: F401  (CE-78: a test that reads what the code scope excludes fails)
 
 REPO = Path(__file__).resolve().parents[1]
 SESSION = "2026-10-08c"

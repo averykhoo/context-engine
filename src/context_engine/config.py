@@ -9,9 +9,10 @@ from __future__ import annotations
 import json
 import re
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PureWindowsPath
 
+from . import gate as G
 from .errors import Refusal
 
 CHANGE_MODES = ("append-only", "replaced", "stamped")
@@ -136,6 +137,7 @@ class Config:
     working: Working = field(default_factory=Working)
     routes: tuple[Route, ...] = ()
     guards: Guards = field(default_factory=Guards)
+    gate: G.Gate = field(default_factory=G.Gate)  # [gate]: the gate command, its run ledger and scopes (FRAMEWORK §8.5 G-V1, CE-78)
 
     def kind_for_id(self, record_id: str) -> Kind:
         for k in self.kinds.values():
@@ -177,7 +179,7 @@ def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> N
             raise Refusal(f"{table} `{key}` is {type(v).__name__} {v!r}, not {names}", "fix its type (the kit's context.toml.template shows each)")
 
 
-TOP_KEYS = ("engine", "kinds", "working", "routes", "guards")
+TOP_KEYS = ("engine", "kinds", "working", "routes", "guards", "gate")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract", "commit")
 ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": (str, bool)}
 # FRAMEWORK §5.5 rule 4 (DEC-36): commit at milestones (task close, owner words, batons and pauses,
@@ -301,6 +303,7 @@ def from_dict(raw: dict) -> Config:
         working=working,
         routes=tuple(routes),
         guards=guards,
+        gate=replace(G.from_dict(raw.get("gate", {})), skip=(engine.get("lockfile", Config.lockfile),)),
     )
 
 

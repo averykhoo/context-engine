@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import bootstrap
+from . import gate as G
 from . import ledger as L
 from .commit import Outcome
 from .errors import Refusal
@@ -44,6 +45,7 @@ class Op:
     write: bool
     rest: str = ""  # reads: where to get what the MCP cap cut
     engine: bool = True  # False: the function takes the repo root (a Path) instead of an Engine, as `init` does
+    mcp: bool = True  # False: no MCP tool, only the CLI (gate runs are out of the MCP's scope, FRAMEWORK §8.0.2)
 
     def target(self, root) -> "Engine | Path":
         """What the function's first parameter gets: an Engine on ``root``, or the root itself."""
@@ -79,9 +81,9 @@ class Op:
 OPS: dict[str, Op] = {}
 
 
-def op(*, write: bool, rest: str = "", engine: bool = True):
+def op(*, write: bool, rest: str = "", engine: bool = True, mcp: bool = True):
     def register(fn):
-        OPS[fn.__name__] = Op(fn.__name__, fn, write, rest, engine)
+        OPS[fn.__name__] = Op(fn.__name__, fn, write, rest, engine, mcp)
         return fn
 
     return register
@@ -381,6 +383,21 @@ def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> t
 def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None) -> tuple[int, str]:
     """Commit `paths` by path (`git commit -o`) with every op log line HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` trailer. It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
     return 0, e.commit(paths or [], message, **c.kw)
+
+
+# -- the scoped gate (FRAMEWORK §8.5 G-V1, CE-78) ---------------------------------------------
+
+
+@op(write=False, mcp=False)
+def gate_run(e: Engine, c: Caller, readers: bool = False) -> tuple[int, str]:
+    """Run the repo's gate command ([gate] `command`) and record its result in the run ledger against the id of every gate scope, taken before and after the run (an id whose files moved while it ran is left out of the row; the run counts for nothing only when every id moved). `readers` runs only the scopes' readers, the tests that read files outside a scope. Exits as the gate did. CLI only: a gate run is out of the MCP's scope."""
+    return G.run(e.root, e.store.config.gate, readers=readers, session=c.session, actor=c.actor)
+
+
+@op(write=False, rest="`context-engine gate status` in a shell")
+def gate_status(e: Engine, c: Caller, require: str = "") -> tuple[int, str]:
+    """Each gate scope's id in the work tree and whether a green run covers it; `require` names a scope that must be covered (`code`: what `commit` checks), or a scope with its readers (`code+readers`: after a hand edit to a file the scope leaves out), or the exit code is 1."""
+    return G.status(e.root, e.store.config.gate, require=require)
 
 
 # -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------

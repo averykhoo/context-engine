@@ -889,7 +889,9 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      and adds the `Session:` trailer. A plain `git commit -o` naming a record whose op line is still
      uncommitted commits the record without its line, which fails G-W7 on a clean checkout of
      that commit; `commit` never makes one. It runs no gate:
-     the session runs the gate before it, as before every commit of its own (§6.3 item 7).
+     the session runs the gate before it, as before every commit of its own (§6.3 item 7). Where
+     `[gate] require` names a scope, it refuses a path in that scope that no green gate run
+     covers (§8.5 G-V1).
    - **Why the op log goes with every record:** lint reads the two together. G-W7 checks a
      board item's session keys against the newest line that wrote them, so a record committed
      without its line fails lint on a clean checkout of that commit, even though the shared tree
@@ -1749,6 +1751,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message)`: the session's own commit by path, with the op log lines HEAD lacks and the files they name; runs no gate (§5.5 rule 4) |
+| Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
@@ -1942,11 +1945,26 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   in `from:`; every register entry has its four lines; no two entries share an `INV-n` (§7.4).
 
 ### 8.5 Verification-state guards
-- **G-V1 (run ledger):** which gate phases passed on which content tree id. A commit or push
-  can require a green row for the current id. A phase may be split into parts, each keyed on
-  the hash of its own inputs, so a session with no context can see what is tested without
-  re-running it, and `orient()` reports the untested parts. Because results are keyed per
-  phase, a docs-only edit re-runs only the docs phase. *Not built yet (CE-17).*
+- **G-V1 (run ledger):** every gate run is recorded, in a gitignored run ledger, against the
+  content id of each **gate scope**: a set of globs over the repo's files, hashed over the
+  tracked and untracked-non-ignored files it matches. No commit id goes into it, so `git add`,
+  `git commit` and a committed deletion or rename leave it where it is, and a green run earned
+  before a commit still counts after it. A scope whose id has a green run needs no re-run: the
+  code gate runs only when the code changed, and a change outside the code scope needs lint and
+  its readers. A session's own commit of a path in the required scope is refused until a green
+  run covers the scope's id (P7). **An exclusion fails open** (an excluded file can no longer
+  make a green run stale), so it is verified by a guard, never a survey alone: a test that reads
+  an excluded path fails unless the scope names it as a **reader**. The readers are a part of
+  their own, keyed on every file: after a hand edit outside the scope they alone re-run. The
+  commit refusal checks the scope, not its readers: their id moves on every engine write, any
+  session's, and a commit of a code path does not commit what they re-check. A run records each
+  id that did not move while it ran, and counts for nothing only when every id moved, so a
+  concurrent write voids only the ids it touched. The ledger is gitignored, or it would sit
+  inside the id it records.
+  A green run means "passed against these sources", not the environment, so every push runs the
+  whole gate. *Built (CE-78): `[gate]` in `context.toml`, `context-engine gate run` and `gate
+  status`, the commit refusal. Not built yet (CE-17): a long suite split into parts, each keyed
+  on its own inputs, and `orient()` reporting the untested parts.*
 - **G-V2 (floors):** raw totals with zero headroom, raised by an automatic ratchet; floors on
   what a guard's extractor finds keep declared headroom (P7); one dated baseline per suite.
   *Built so far: G-D12's floors on what its extractor finds. Not built yet: the raw-total
@@ -2089,7 +2107,11 @@ minimum set until the §8.0.3 trial reports.
 **The gate** of an adopting repo is its own test command followed by `context-engine lint`, run
 from the repo root before every commit that touches code, tests or records, and before every
 push; the engine's own commits of its writes are the one exception (§5.5 rule 4). The kit's contract
-(§6.9) states it; the test command itself is in `CLAUDE.md` § Gate.
+(§6.9) states it; the test command itself is in `CLAUDE.md` § Gate. **The code gate runs only
+when its code changed** (G-V1): where `[gate]` names the test command and a code scope,
+`context-engine gate run` records each run against the scope's content id, a commit whose code
+scope already has a green run needs only lint (and the scope's readers, after a hand edit to a
+file the scope leaves out), and the push runs the whole gate. A repo without `[gate]` runs the whole gate before every such commit.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
 `context-engine lint` runs every one (plus the record schemas, G-D11, G-R1 and the other built
