@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-15b · kind: open
+## 2026-10-15b · kind: close
 
-- **opened:** 2026-10-15T13:56:52+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-41,CE-87,CE-27,CE-88,CE-89,CE-7
+- **receipts:**
+  - guards: gate PASSED in 291.0s (827 passed in 289.90s) on g1/all:e5b57b0436445ddf,
+    g1/code:107d5f6ac8cef3de; lint: clean
+  - read: orient (hook), task list, procedures.md session start and clean close
+- **summary** (the owner digest):
+  - CE-41 done (ea14d74): G-D3 resolves bare names only among files git does not ignore; the
+    ambiguous-name half not built (AC-71)
+  - CE-87 done (34ea268): lock timeout restarts on each hand-over; root cause an unfair lock summing
+    holds under load
+  - CE-27 promoted to NOW at the owner's word; CE-88 (ids_in_use under the lock) and CE-89 (frozen
+    wording) filed
+  - Owner: the adhoc trial keeps its pinned kit; feedback integrated later (CE-7 log)
+  - MCP server ran stale code (refused [gate]); the CLI was used; restart Claude Code
+  - Owner: session 2026-10-14g still open, functionally dead (2026-10-15a carried its work); abandon
+    on your word
+  - Not pushed: 4 commits wait on a push request (linux_gate first)
+- **Still owed:**
+  - push of ea14d74..HEAD (ask first; linux_gate before); abandoning 2026-10-14g needs the owner's
+    word
 
 ---
 
