@@ -581,3 +581,5 @@
 {"at": "2026-10-15T12:15:30+08:00", "session": "2026-10-15a", "actor": "claude-code/claude-opus-5-5", "op": "promote", "id": "CE-87", "path": "tasks/CE-87-test-concurrent-allocations-never-return-the.md", "fields": ["pri", "moved", "updated"], "mechanical": false}
 {"at": "2026-10-15T12:27:50+08:00", "session": "2026-10-15a", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-15a", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
 {"at": "2026-10-15T12:27:53+08:00", "session": "2026-10-15a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-15a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-15T13:56:52+08:00", "session": "2026-10-15b", "actor": "claude-code/claude-opus-5-5", "op": "session.start", "id": "2026-10-15b", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-15T13:57:13+08:00", "session": "2026-10-15b", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["updated", "body"], "mechanical": false}

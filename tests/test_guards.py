@@ -157,6 +157,25 @@ def test_g_d3_links_anchors_and_file_symbol_resolve_case_exact(tmp_path):
     assert len(reds(e, "G-D3")) == 6
 
 
+@pytest.mark.criterion("AC-46")
+def test_g_d3_a_bare_name_never_resolves_to_a_stale_copy_under_build(tmp_path):
+    """CE-41: a gitignored `build/lib/` copy of a module is not the module. Whichever copy a walk
+    meets first, `NEW_RE` (only in the real file) resolves and `OLD_RE` (only in the stale one) is red."""
+    import subprocess
+
+    for kind in ("git", "plain"):  # git ignores build/ by .gitignore; outside git, the walk skips it
+        root = tmp_path / kind
+        root.mkdir()
+        if kind == "git":
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+            write(root, ".gitignore", "build/\n")
+        e = make(root, links=["docs/guide.md"])
+        write(root, "src/pkg/working.py", "NEW_RE = 1\n")
+        write(root, "build/lib/pkg/working.py", "OLD_RE = 1\n")
+        write(root, "docs/guide.md", "`working.py::NEW_RE` and `working.py::OLD_RE`\n")
+        assert reds(e, "G-D3") == ["docs/guide.md: line 1: `working.py` has no `OLD_RE` (from `working.py::OLD_RE`)"], kind
+
+
 # -- G-T3 ----------------------------------------------------------------------------------
 
 CRITERIA = """# Criteria

@@ -30,9 +30,11 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Iterator
 
 from . import decisions as D
+from . import gate as GATE
 from . import ledger as L
 from .bootstrap import ENGINE_DIR
 from .config import CONFIG_NAME, LIVENESS
+from .errors import Refusal
 from .store import ALIASES, Failure, key_order
 
 if TYPE_CHECKING:
@@ -135,12 +137,19 @@ class Files:
         return here
 
     def named(self, name: str) -> list[str]:
+        """Every repo path whose file name is ``name``, less what git ignores (CE-41: a stale copy
+        under `build/` is no answer). Outside a git work tree, a walk that skips `build/` and `dist/`."""
         if self._by_name is None:
             self._by_name = {}
-            for d, dirs, files in os.walk(self.root):
-                dirs[:] = [x for x in dirs if x not in SKIP_DIRS and not x.endswith(".egg-info")]
-                for f in files:
-                    self._by_name.setdefault(f, []).append((Path(d) / f).relative_to(self.root).as_posix())
+            try:
+                paths = [r for r in GATE.files(self.root) if not SKIP_DIRS.intersection(r.split("/"))]
+            except Refusal:
+                paths = []
+                for d, dirs, files in os.walk(self.root):
+                    dirs[:] = [x for x in dirs if x not in SKIP_DIRS | {"build", "dist"} and not x.endswith(".egg-info")]
+                    paths += [(Path(d) / f).relative_to(self.root).as_posix() for f in files]
+            for r in paths:
+                self._by_name.setdefault(r.rsplit("/", 1)[-1], []).append(r)
         return self._by_name.get(name, [])
 
     def find(self, rel: str) -> Path | None:
@@ -319,7 +328,8 @@ def _ops(e: Engine) -> list[tuple[int, object]]:
 def links(e: Engine) -> list[Failure]:
     """G-D3: in each doc `[guards] links` lists, every relative markdown link (and its `#anchor`)
     and every backticked `file::symbol` resolves, case-exact. A bare file name in a
-    `file::symbol` resolves to any file of that name in the repo; a symbol resolves when each of
+    `file::symbol` resolves to any file of that name in the repo that git does not ignore (never a
+    stale `build/` copy, CE-41); a symbol resolves when each of
     its dotted parts is a word in the file.
 
     Not checked: URLs (anything with a scheme), fenced code, an anchor into a file that is not
