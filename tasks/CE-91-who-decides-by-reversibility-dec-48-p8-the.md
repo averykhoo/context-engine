@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-15c
-updated: 2026-10-15c
+updated: 2026-10-15e
 ---
 
 DEC-48 (owner): a call that can easily be undone, without wasting much time or tokens, is the agent's (opus, or fable where DEC-18 allows it).
@@ -29,3 +29,7 @@ Do it with CE-83, which edits the same rule text (P8 and P11, §6.6).
 ## Read first
 - docs/decisions/DEC-48-who-decides-is-set-by-reversibility-a-call-that.md
 - docs/framework/FRAMEWORK.md P8, §5.3
+
+## Log
+
+- 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): not released on its own; it is decided together with CE-83 when the owner rules on that kit edit.

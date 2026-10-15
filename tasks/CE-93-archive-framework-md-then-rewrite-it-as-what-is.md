@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-15c
-updated: 2026-10-15c
+updated: 2026-10-15e
 ---
 
 DEC-49 (owner): FRAMEWORK.md should be "what's needed to understand and use the framework, not what's needed to be a historian". It also approves dedupe-2.
@@ -36,3 +36,4 @@ This likely absorbs CE-89 (frozen wording owed after CE-41 and CE-87).
 ## Log
 
 - 2026-10-15c (claude-code/claude-opus-5-5): "the DEC-47 task" in the body is CE-94 (incident citations).
+- 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): stays held until the trial's feedback is in (CE-79, about 2026-10-21), so the text is not rewritten twice.

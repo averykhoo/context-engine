@@ -7,9 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-15e · kind: open
+## 2026-10-15e · kind: close
 
-- **opened:** 2026-10-15T20:08:13+08:00 by claude-code/claude-opus-5-5
+- **rows:** DEC-50, CE-29, CE-91, CE-92, CE-93
+- **receipts:**
+  - guards: lint: clean; gate status --require code: green (code covered on g1/code:107d5f6ac8cef3de
+    by the all run of 2026-10-15T14:17:37+08:00); no code changed this session
+  - read: CE-29, CE-91, CE-92, CE-93, DEC-43, procedures.md § Intake and § Clean close
+  - asked: none
+- **summary** (the owner digest):
+  - Walked the owner through 2026-10-15d's open items; DEC-50 records all three answers verbatim.
+  - CE-29: trap homes by lifetime accepted (task ## Traps, hazard board row, register INV-n; never
+    the banner). Spec text stays under the CE-7 hold.
+  - CE-92 released from the CE-7 hold; CE-93 stays held until CE-79's feedback; CE-91 goes with
+    CE-83.
+  - close-without-asking auto-memory deleted (DEC-31 is in CLAUDE.md); multi-task-delegation stays
+    until CE-83.
+  - 2026-10-14g was already abandoned by 2026-10-15d: nothing to do.
+  - Records only; no code changed. Still unpushed: CE-41, CE-87 and the 2026-10-15b to e records.
+- **Still owed:**
+  - nothing
 
 ---
 
