@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-10-15
 session: 2026-10-15c
 body_sha: sha256:97da6fe64a5eed1d27004a49c4df850b6a4e7c6f50443e6747b346fd6c4f7dd7
+tasks: [CE-92, CE-93]
 ---
 
 Owner, 2026-10-15c, verbatim:

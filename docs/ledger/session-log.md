@@ -7,9 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-15c · kind: open
+## 2026-10-15c · kind: close
 
-- **opened:** 2026-10-15T16:22:43+08:00 by claude-code/claude-opus-5-5
+- **rows:** US-12, DEC-47, DEC-48, DEC-49, CE-90, CE-91, CE-92, CE-93, CE-94, CE-29, CE-40, CE-47
+- **receipts:**
+  - guards: lint clean; gate status: code covered (all run 2026-10-15T14:17); gate readers PASSED
+    173 in 10.8s on g1/code+readers:417dcd128bd86e2e
+  - read: orient (hook) + FRAMEWORK.md (most sections) + procedures.md; HANDOFF not opened
+- **summary** (the owner digest):
+  - Management-theory review of the framework (read-only analysis in chat): strong on document
+    control and error-proofing, weak on Check/Act (AAR, review, metrics).
+  - Owner words recorded: US-12 amended (AAR + periodic review, apply to the framework itself);
+    DEC-47 incidents cited by rules; DEC-48 who decides by reversibility; DEC-49 FRAMEWORK.md is for
+    using the framework, not history.
+  - Filed LATER: CE-90 AAR/periodic review, CE-91 reversibility into P8, CE-92 close step 7 drops
+    the second full gate, CE-93 archive + rewrite FRAMEWORK.md, CE-94 incident citations.
+  - dedupe-3/4/5/7 findings logged on CE-47 and CE-40; dedupe-6 trap-home recommendation logged on
+    CE-29 (owner's word pending).
+  - Kit/FRAMEWORK edits in CE-91/92/93 wait on the CE-7 hold unless the owner lifts it.
+  - AAR: the redundancy subagent could not write its report file (harness refused Write); the report
+    was taken back on receipt and verified first-hand, two of its claims overturned.
+- **Still owed:**
+  - Owner: confirm or redirect the CE-29 trap-home recommendation
+  - Owner: whether CE-91/CE-92/CE-93 may proceed before the CE-7 trial lifts the kit hold
+  - Memory: prune close-without-asking (DEC-31 is in CLAUDE.md); keep multi-task-delegation until
+    CE-83 lands
 
 ---
 
