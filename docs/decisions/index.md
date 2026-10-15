@@ -93,6 +93,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-41](DEC-41-a-target-repo-s-engine-env-is-a-pinned-install.md): A target repo's engine env is a pinned install kept inside that repo's folder *(owner, 2026-10-14)*
 - [DEC-43](DEC-43-start-ce-64-ce-77-ce-78-and-ce-81-now-ce-7.md): Start CE-64, CE-77, CE-78 and CE-81 now; CE-7 waits until next week *(owner, 2026-10-14)*
 - [DEC-44](DEC-44-the-top-level-session-coordinates-told-to-do.md): The top-level session coordinates: told to do, check or verify something, it sends an agent *(owner, 2026-10-14)*
+- [DEC-45](DEC-45-resume-2026-10-14g-s-fan-out-as-proposed.md): Resume 2026-10-14g's fan-out as proposed; watcher details into CE-83; file a follow-up-session link task; coordinator picks the order *(owner, 2026-10-15)*
 
 ## REJECTED
 
