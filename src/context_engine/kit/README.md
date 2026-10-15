@@ -43,8 +43,12 @@ only when its pin moves (§ 4). From the repo root:
 **`<engine-python>`**, the interpreter every step below names, is that environment's:
 `.context-engine/env/bin/python` on Linux and macOS (venv or conda),
 `.context-engine/env/Scripts/python.exe` for a venv on Windows, and
-`.context-engine/env/python.exe` for a conda env on Windows. Tools that launch the engine look in
-`.context-engine/env/` for it, in that order. Make it with a Python of the engine's
+`.context-engine/env/python.exe` for a conda env on Windows. Tools that launch the engine (the
+Claude Code plugin's `scripts/ce-engine`, § Claude Code plugin) first read
+`.context-engine/engine-python`, a one-line file naming the interpreter of an engine env kept
+elsewhere; it is machine-specific and sits under the gitignored `.context-engine/`, so it is never
+committed. Without it they look in `.context-engine/env/` at `bin/python`, `python.exe`, then
+`Scripts/python.exe`, in that order. Make it with a Python of the engine's
 `requires-python` (3.12 or later), and never with `pip install -e`: an editable install follows
 the engine repo's working tree, which is no pin.
 
