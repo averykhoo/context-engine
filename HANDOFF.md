@@ -3,27 +3,27 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-14f)
+## Banner (2026-10-15a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **The adhoc trial is live (CE-7, NOW), on adhoc main in its own folder since 2026-10-14e (DEC-42):** kit at engine
-  `38ed38e`, decisions DEC-1..DEC-68, board AD-1..AD-14 + ASK-9, HANDOFF 605 -> 78 lines; hook and MCP set up there.
-  Owed: real Claude Code sessions in adhoc (INV-31 probes) and scoring against CE-4 (CE-79, about 2026-10-21); trial started 2026-10-14f.
-- **A target repo's engine env is a pinned, non-editable install inside its folder, gitignored (DEC-41, amends DEC-1);**
-  adhoc's is `.context-engine/env/`. The kit and FRAMEWORK still say only "its own env" (CE-81).
-- **No framework or kit edits while CE-7's trial runs** (owner, 2026-10-14c), except as the owner asks (CE-82, 2026-10-14f):
-  CE-77, CE-78 and CE-81 wait for it. adhoc keeps its pinned kit (DEC-41).
+- **The adhoc trial (CE-7) waits until about 2026-10-21 (DEC-43), with CE-79:** adhoc main, kit at engine `38ed38e`, hook
+  and MCP set up there. Owed: real Claude Code sessions in adhoc (INV-31 probes) and scoring against CE-4.
+- **DEC-43's fan-out is done and pushed (2026-10-15a, `5587731`, CI green):** CE-64 (one final trailer paragraph), CE-77
+  (procedures as skills + Claude Code plugin under `plugin/`), CE-78 (scoped gate: a commit is checked on its scope alone),
+  CE-81 (a target's engine env is `.context-engine/env/`, gitignored by init; DEC-41). adhoc keeps its pinned kit until re-pinned.
+- **The top-level session coordinates (DEC-44):** checks and verification go to agents; the rule text still says otherwise
+  until CE-83 lands (a kit edit: ask first). CE-83 also names the CI watcher's model and the cheapest-viable-model line (DEC-45).
+- **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c; DEC-43 lifted it for
+  CE-77, CE-78, CE-81 only). CE-84 (session `--follows` link), CE-85 (MCP_TIMEOUT doc) wait on it.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
-- **CRLF (CE-46):** a cherry-pick or fresh checkout here writes kit files with CRLF and the kit byte tests go red; merge
-  with `git -c core.autocrlf=false` and re-check out the touched files with LF.
-- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push.
+- **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
+- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push, from the main checkout
+  (it exits 128 from a worktree, CE-86). Parallel gates load the machine: CE-87's lock test can fail under load (NOW).
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
-- **Next after CE-7:** CE-78 (scoped gate: code tests only when code changed), CE-77 (procedures as skills, plugin),
-  CE-81 (DEC-41 into the kit), CE-43 (audio-workspace), CE-64 (`Session:` trailer placement), CE-56 (DEC-38's prefixes).
 
 ## Open batons and pause records
 
