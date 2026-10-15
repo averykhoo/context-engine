@@ -32,7 +32,8 @@ When the engine errors, or refuses what it should allow, do that step by hand an
 A refusal with a sensible remedy is not an error: follow the remedy. `<gate>` below is the repo's
 gate: its own test command, then `context-engine lint`, as its contract states. With the engine's
 Claude Code plugin, each procedure below except session start is also a skill that names its section
-here and holds none of its steps (kit README § Claude Code plugin).
+here and holds no steps of its own: the few lines it adds are quoted from that section word for
+word, and the engine's gate fails when a quote stops matching (kit README § Claude Code plugin).
 
 ## Where each part of FRAMEWORK §6 is done
 

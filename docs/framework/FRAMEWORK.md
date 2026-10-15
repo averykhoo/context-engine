@@ -1608,8 +1608,10 @@ on, and move only on upgrade.
 
 **Skills point, runbooks hold.** The engine's Claude Code plugin (§11.2) has a skill per
 procedure. A skill is what makes the procedure come to mind when it starts; it names its section
-of `procedures.md` and holds none of its steps, so there is no second copy to drift, and the
-runbook stays the source and the by-hand fallback (P16). The contract is never a skill: a skill
+of `procedures.md` and holds no steps of its own. The few lines it adds, the traps sessions miss,
+are quoted from the sections it names word for word, and the engine's gate fails when a quote no
+longer matches them, so a changed runbook cannot leave a stale copy behind; the runbook stays the
+source and the by-hand fallback (P16). The contract is never a skill: a skill
 that does not trigger fails silently (P7), and the contract must hold in every session.
 
 ---

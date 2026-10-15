@@ -8,29 +8,30 @@ description: Use when the owner wants an EXISTING repo - one with its own decisi
 Runbook: `kit/README.md` § 3. An existing repo: map, don't move
 Runbook: `kit/README.md` § 2a. Bootstrap with the engine
 Runbook: `docs/runbooks/procedures.md` § Bootstrap
+Runbook: `kit/README.md` § Hook
 
 These live in the installed engine's kit until `init` copies the runbooks: its path is printed by
 `<engine-python> -c "import context_engine, pathlib; print(pathlib.Path(context_engine.__file__).parent / 'kit')"`.
 Do the bootstrap rows in order, with § 3 of the kit README for every step that meets something
-the repo already has. Show the owner the plan before `init`, and ask before each step that
-rewrites the repo's own files.
+the repo already has.
 
 The traps the first adoption hit (CE-7's dry run, `docs/evidence/adhoc-dryrun-2026-10-14.md` in
-the engine repo), as a checklist:
-- **Pin the engine in the repo's folder** (`.context-engine/env/`, gitignored, DEC-41): an engine
-  shared with another repo turns this repo's lint red whenever the kit changes there.
-- **The repo's own gate must be green where you work**: data it needs may be gitignored, so a
-  fresh clone or worktree can be red before you start.
-- **`init --dry-run` first**; an existing `.claude/settings.local.json` holds the owner's grants,
-  so merging the hook into it is the owner's call (`--merge-settings` or `--skip-settings`).
-- **One gate**: if `CLAUDE.md` already has a Gate section, keep that one and end it with
-  `context-engine lint`; delete the kit's stub.
-- **Map, don't move**: point routes at the files the repo has; raise a cap only with a provenance
-  note that says `MEASURED` or `JUDGEMENT` and `wrong if ...`.
-- **Decisions**: `decision import <log> --dry-run`, save the id map as a FROZEN evidence doc, import,
-  then review every entry it set BUILT by default; freeze the old log with a redirect line and
-  rewrite every instruction that says to append to it.
-- **Board and questions**: `task new` per row, the old id kept in `aliases`; questions keep their
-  number with `ask new --id ASK-n`.
-- **The handoff note**: move durable facts out of the old banner before the first `banner set`
-  replaces it, and keep the banner short so orient still shows batons and the board.
+the engine repo), word for word from the runbook (the engine's gate checks each line):
+- Before `init`, show the owner the plan (`init --dry-run`), and ask before each step that rewrites
+  the repo's own files.
+- Install the engine into its own environment, pinned to a release tag or commit
+- The repo's own gate must be green where you work: data it needs may be gitignored, so a fresh
+  clone or worktree can be red before you start.
+- When the file already exists it holds the owner's permission grants ... show the owner, then run
+  `init --merge-settings` (yes) or `init --skip-settings` (no).
+- A `CLAUDE.md` that already has its own Gate (a level 1 or 2 heading reading `Gate`) keeps it as
+  the one gate ... check that gate ends with `&& context-engine lint`
+- each `[[routes]]` `path` points at the existing file for that component
+- Every number you add there (a cap, a budget, a window) needs one
+- `decision import <log> --dry-run`: save everything under its "Save everything below" line as a
+  FROZEN evidence doc (the id map). ... review every entry it reports as set BUILT by default ...
+  Retire the old log (a line pointing at the records) and rewrite the repo's own instructions that
+  say to append to it
+- Board items and open questions: `task new` or `ask new`, with `--id` to keep a number
+- Move the durable facts out of the repo's old handoff note before the first `banner set` replaces
+  it, and keep the banner short, so `orient` still shows the batons and the board.

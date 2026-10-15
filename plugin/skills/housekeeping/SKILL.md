@@ -8,15 +8,17 @@ description: Use in a repo run by context-engine (context.toml at its root) at s
 Runbook: `docs/runbooks/procedures.md` § Housekeeping
 
 Open that section of this repo's own copy now and do its rows in order: it is the source, and its
-"By hand" column is the fallback when the engine errs. This skill only points there, so it never
+"By hand" column is the fallback when the engine errs. This skill only points there and quotes it, so it never
 disagrees with the runbook the repo is pinned to. `context-engine` means the engine command the
 repo's contract names (`<engine-python> -m context_engine`, with `CE_ACTOR` and `CE_SESSION` set).
 
-What sessions miss here:
-- it has two passes, one at session start and one before close; do the one you are at;
-- every write is mechanical and committed by path with the session trailer, so `git revert`
-  undoes it; the list of operations goes into the owner digest;
-- a judgement call is not housekeeping: file it as a task or a question instead.
+What sessions miss here, word for word from the runbook (the engine's gate checks each line):
+- It **carries out intent already recorded somewhere and never forms new intent**.
+- **At session start** (reconcile what happened since the last session)
+- **Before close** (§6.3 item 6a: carry out what this session recorded but did not finish)
+- committed by path with a `Session: <key>` trailer, so `git revert` undoes it ... The operation
+  list goes into the owner digest.
+- anything else housekeeping would close is proposed to the session, never closed by it
 
 If that section is missing, the repo's runbooks predate this plugin: read the runbook's headings
 and use the one for FRAMEWORK §6.11.

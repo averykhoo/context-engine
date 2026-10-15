@@ -8,15 +8,16 @@ description: Use in a repo run by context-engine (context.toml at its root) befo
 Runbook: `docs/runbooks/procedures.md` § Push and CI
 
 Open that section of this repo's own copy now and do its rows in order: it is the source, and its
-"By hand" column is the fallback when the engine errs. This skill only points there, so it never
+"By hand" column is the fallback when the engine errs. This skill only points there and quotes it, so it never
 disagrees with the runbook the repo is pinned to. `context-engine` means the engine command the
 repo's contract names (`<engine-python> -m context_engine`, with `CE_ACTOR` and `CE_SESSION` set).
 
-What sessions miss here:
-- no push without the owner's yes in this conversation; the repo's `CLAUDE.md` may add steps
-  (a second gate, a push hold);
-- the watcher finds runs by the pushed hash, not "the latest run", and only watches;
-- the push is not done until the watcher reports, and a red run is never called done.
+What sessions miss here, word for word from the runbook (the engine's gate checks each line):
+- Ask the owner; push only with permission. A push hold, if any, is a line at the top of the
+  contract
+- the watcher finds runs by hash, not "the latest run", which may be another session's
+- It only watches: no fix, no re-run, no cancel, no push
+- The push is not done until the watcher reports, and a red run is never described as done
 
 If that section is missing, the repo's runbooks predate this plugin: read the runbook's headings
 and use the one for FRAMEWORK §6.8.

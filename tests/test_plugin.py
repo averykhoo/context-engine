@@ -309,6 +309,64 @@ def test_the_skills_copy_no_runbook_rows():
         assert not re.search(r"^\|.*\|\s*$", text, re.MULTILINE), f"{name} holds a table"
 
 
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _section_text(path: Path, section: str) -> str:
+    """The text under a heading `_headings` matches, up to the next heading of its level or above."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        m = re.match(r"^(#{2,3}) (.+?)\s*$", line)
+        if m and section in (m[2], re.sub(r"\s*\([^()]*\)$", "", m[2])):
+            level = len(m[1])
+            end = next((j for j in range(i + 1, len(lines)) if re.match(rf"^#{{1,{level}}} ", lines[j])), len(lines))
+            return "\n".join(lines[i + 1:end])
+    raise AssertionError(f"{path} has no section {section!r}")
+
+
+def _bullets(text: str) -> list[str]:
+    """Every list item of a skill, its indented continuation lines joined on."""
+    out = []
+    for line in text.splitlines():
+        if line.startswith("- "):
+            out.append(line[2:])
+        elif out and line.startswith("  ") and line.strip():
+            out[-1] += " " + line.strip()
+        elif line.strip():
+            out.append(None)  # a paragraph ends the item before it
+    return [b for b in out if b is not None]
+
+
+def test_every_line_a_skill_adds_is_quoted_word_for_word_from_its_sections():
+    """Pointers, not copies (CE-26): a skill's list of what sessions miss is quotes, not a
+    restatement, so a changed runbook row cannot leave a stale skill line under a green gate.
+    Each item, whitespace aside, is one excerpt of a section the skill points at, or several
+    joined by ` ... ` that occur in that order in one section."""
+    for name, text in _skills().items():
+        _, _, body = text[4:].partition("\n---\n")
+        assert not re.search(r"^\s*[*+] |^\s+- ", body, re.MULTILINE), f"{name}: a list item this test does not read"
+        items = _bullets(body)
+        assert items, f"{name} has no list: if that is meant, this test needs no quote check for it"
+        sections = []
+        for _, path, section in (p for p in _pointers() if p[0] == name):
+            base = next(POINTER_ROOTS[p] / path[len(p):] for p in POINTER_ROOTS if path.startswith(p))
+            sections.append(_flat(_section_text(base, section)))
+        for item in items:
+            fragments = [_flat(f) for f in item.split(" ... ")]
+
+            def in_order(sec: str) -> bool:
+                at = 0
+                for f in fragments:
+                    at = sec.find(f, at)
+                    if at < 0:
+                        return False
+                    at += len(f)
+                return True
+
+            assert any(in_order(s) for s in sections), f"{name}: not word for word in its sections: {item!r}"
+
+
 # -- init beside the plugin -------------------------------------------------------------------
 
 

@@ -8,15 +8,14 @@ description: Use in a repo run by context-engine (context.toml at its root) at s
 Runbook: `docs/runbooks/procedures.md` § Reconciling foreign commits
 
 Open that section of this repo's own copy now and do its rows in order: it is the source, and its
-"By hand" column is the fallback when the engine errs. This skill only points there, so it never
+"By hand" column is the fallback when the engine errs. This skill only points there and quotes it, so it never
 disagrees with the runbook the repo is pinned to. `context-engine` means the engine command the
 repo's contract names (`<engine-python> -m context_engine`, with `CE_ACTOR` and `CE_SESSION` set).
 
-What sessions miss here:
-- humans are never required to follow the procedures; the agent session absorbs the cost;
-- intent stated in a commit message is recorded with its author as the actor (`human:<id>`), not
-  the session's;
-- a human commit that turned a guard red is fixed or reconciled, never reverted.
+What sessions miss here, word for word from the runbook (the engine's gate checks each line):
+- Humans are never required to follow the procedures: the next agent session absorbs the cost.
+- with the author as its actor (`human:<id>`)
+- A human commit that turned a guard red is not reverted: fix or reconcile it
 
 If that section is missing, the repo's runbooks predate this plugin: read the runbook's headings
 and use the one for FRAMEWORK §6.10.

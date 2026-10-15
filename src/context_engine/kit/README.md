@@ -153,7 +153,9 @@ plugin, `context-engine` (`plugin/` in the engine repo, its design in the engine
 - **skills** for the procedures: `intake`, `clean-close`, `pause`, `resume`, `push-and-ci`,
   `reconcile-foreign-commits`, `housekeeping`, `bootstrap` and `adopt`. Each triggers when its
   procedure starts and points at its section of `docs/runbooks/procedures.md` (`adopt` and
-  `bootstrap` at this README too), which stays the source and the by-hand fallback. The contract is
+  `bootstrap` at this README too), which stays the source and the by-hand fallback: each line a
+  skill adds is quoted from those sections word for word, and the engine's gate fails when a
+  quote stops matching. The contract is
   not a skill: it must hold in every session, so it stays in the `CLAUDE.md` import and the hook;
 - **the `SessionStart` hook**, running `orient`;
 - **the MCP server**, as `plugin:context-engine:engine`: its tools are
@@ -188,6 +190,12 @@ keep `git` on the PATH.
 `/intake` and so on instead of `/context-engine:intake`; nothing else changes.
 
 ## 3. An existing repo: map, don't move (FRAMEWORK §11.4)
+
+Before `init`, show the owner the plan (`init --dry-run`), and ask before each step that rewrites
+the repo's own files. The repo's own gate must be green where you work: data it needs may be
+gitignored, so a fresh clone or worktree can be red before you start. Move the durable facts out
+of the repo's old handoff note before the first `banner set` replaces it, and keep the banner
+short, so `orient` still shows the batons and the board.
 
 `init` writes only what is missing, so run it (or copy by hand), then edit `context.toml` in
 place:

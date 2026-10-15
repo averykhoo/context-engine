@@ -14,9 +14,9 @@ print(pathlib.Path(context_engine.__file__).parent / 'kit')"`, and the procedure
 `docs/runbooks/procedures.md` under it. After `init` the repo's own copy is the source. Do the
 rows in order; the "By hand" column is the fallback when the engine errs.
 
-What sessions miss here:
-- the engine is installed pinned into the repo's own folder (`.context-engine/env/`, gitignored),
-  never into the repo's own environment (DEC-1, DEC-41);
-- the real test command goes into `CLAUDE.md` § Gate, and the kit is committed by path, before the
-  first session;
-- every cap added to `context.toml` carries a provenance note with its `wrong if` clause.
+What sessions miss here, word for word from the runbook (the engine's gate checks each line):
+- Install the engine into its own environment, pinned to a release tag or commit
+- put the real test command into `CLAUDE.md` § Gate
+- Lint is green, then commit the kit's files by path, before the first session
+- Every number you add there (a cap, a budget, a window) needs one ... then the literal words
+  `; wrong if <what would show it is wrong>`

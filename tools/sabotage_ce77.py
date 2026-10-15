@@ -3,7 +3,7 @@ must go red.
 
 Run from the repo root, with PYTHONPATH naming this tree's src in a worktree:
 `<interpreter> tools/sabotage_ce77.py [row ...]` (every row, or the named ones). It restores
-every file it touches, byte for byte. The patterns are exact source text from 2026-10-14g; when
+every file it touches, byte for byte. The patterns are exact source text from 2026-10-14g (the quote rows from 2026-10-15a); when
 the text moves, a pattern stops matching and the script stops with an AssertionError naming it, rather than passing quietly. Each run gets a
 fresh bytecode cache (PYTHONPYCACHEPREFIX), so a same-length sabotage never runs a stale .pyc.
 """
@@ -42,7 +42,13 @@ S = [
     ("skill-pointer", SK + "housekeeping/SKILL.md", "§ Housekeeping\n", "§ House keeping\n", T + " -k points_at_runbook"),
     ("heading-renamed", "src/context_engine/kit/docs/runbooks/procedures.md", "## Pause (§6.4)\n", "## Pausing (§6.4)\n", T + " -k points_at_runbook"),
     ("skill-missing", SK + "push-and-ci/SKILL.md", "Runbook: `docs/runbooks/procedures.md` § Push and CI\n", "Runbook: `kit/README.md` § Hook\n", T + " -k but_session_start"),
-    ("skill-copies", SK + "clean-close/SKILL.md", "What sessions miss here:\n", "| 1 | Lint | x |\n\nWhat sessions miss here:\n", T + " -k copy_no_runbook_rows"),
+    ("skill-copies", SK + "clean-close/SKILL.md", "What sessions miss here, word for word", "| 1 | Lint | x |\n\nWhat sessions miss here, word for word", T + " -k copy_no_runbook_rows"),
+    # the quotes (2026-10-15a): a skill line drifts from its section, or the section from the skill
+    ("quote-skill-drift", SK + "pause/SKILL.md", "every uncommitted path and the deferred steps;", "every uncommitted path and its deferred steps;", T + " -k word_for_word"),
+    ("quote-row-drift", "src/context_engine/kit/docs/runbooks/procedures.md", "It only watches: no fix, no re-run, no cancel, no push", "It only watches: no fix, no re-run, no push", T + " -k word_for_word"),
+    ("quote-order", SK + "intake/SKILL.md", "- Record the words **verbatim, now** ... Write the words", "- Write the words ... Record the words **verbatim, now** ... Write the words", T + " -k word_for_word"),
+    ("quote-other-list", SK + "resume/SKILL.md", "- the record, not memory,", "* the record, not memory,", T + " -k word_for_word"),
+    ("quote-no-list", SK + "reconcile-foreign-commits/SKILL.md", "\n- Humans are never required to follow the procedures: the next agent session absorbs the cost.\n- with the author as its actor (`human:<id>`)\n- A human", "\nHumans are never required to follow the procedures: the next agent session absorbs the cost.\nwith the author as its actor (`human:<id>`)\nA human", T + " -k word_for_word"),
     # init beside the plugin
     ("init-skip", "src/context_engine/bootstrap.py", '    elif settings == "skip":  # no hook from init', '    elif False:  # no hook from init', T + " -k skip_settings_writes_no_hook"),
 ]

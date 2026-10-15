@@ -8,14 +8,15 @@ description: Use in a repo run by context-engine (context.toml at its root) when
 Runbook: `docs/runbooks/procedures.md` § Resume
 
 Open that section of this repo's own copy now and do its rows in order: it is the source, and its
-"By hand" column is the fallback when the engine errs. This skill only points there, so it never
+"By hand" column is the fallback when the engine errs. This skill only points there and quotes it, so it never
 disagrees with the runbook the repo is pinned to. `context-engine` means the engine command the
 repo's contract names (`<engine-python> -m context_engine`, with `CE_ACTOR` and `CE_SESSION` set).
 
-What sessions miss here:
-- the record, not memory, is the state: compare the branch and every uncommitted path it names
-  with the tree, and explain each difference before going on;
-- the deferred steps (gate, commit, re-ranking, banner) are done now, not skipped.
+What sessions miss here, word for word from the runbook (the engine's gate checks each line):
+- the record, not memory, is the state to resume from
+- explain every difference before going on
+- Do the resume step, then the deferred steps (gate, commit of the work, re-ranking, banner,
+  runbook filing) ... a pause defers these; it never drops them
 
 If that section is missing, the repo's runbooks predate this plugin: read the runbook's headings
 and use the one for resuming a pause.
