@@ -3,7 +3,7 @@ type: Task
 id: CE-87
 title: 'test_concurrent_allocations_never_return_the_same_id fails under load: a worker waits past the 30 s engine-lock timeout'
 brief: 'Not a flake to re-run past: root-cause the timeout, the worker count or the lock'
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-15a
