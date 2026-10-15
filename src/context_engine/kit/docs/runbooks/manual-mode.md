@@ -1212,22 +1212,25 @@ command` from the root (`{python}` is the engine's interpreter; with `--readers`
 readers appended to it, and only the `+readers` ids), its output to a log file; compute the ids
 again. Append one JSON line to `[gate] ledger` (default `.context/gate/runs.jsonl`): `started`,
 `seconds`, `status` (`PASSED` on exit 0, else `FAILED`; `INCONSISTENT`, with empty `scopes`, when
-an id moved during the run), `exit`, `part` (`all` or `readers`), `command`, `args` (the readers
-appended), `scopes` (id name -> id), `log`, `head`, `session`, `actor`. The ledger must be
+every id moved during the run), `exit`, `part` (`all` or `readers`), `command`, `args` (the
+readers appended), `scopes` (id name -> id, only the ids that did not move), `moved` (the names
+of those that did, when any did), `log`, `head`, `session`, `actor`. The ledger must be
 gitignored and untracked (a fresh directory gets a `.gitignore` of `*`).
 
 **Why:** a recorded result is what lets the next commit skip a re-run, and a run whose files
-moved under it tested nothing nameable. An unignored ledger would sit inside the ids it records,
+moved under it tested nothing nameable for those ids; the ids that did not move were tested
+whole, so another session's write during a long run costs only the ids it touched. An unignored ledger would sit inside the ids it records,
 so every row would be born stale. `--readers`: a change outside a scope cannot change what its
 other tests read, so only the tests that read it need to run again. A gate run is out of the
 MCP's scope (FRAMEWORK §8.0.2).
 
 ### context-engine gate status
 
-`context-engine gate status [--require <scope>]` (over MCP `gate_status`). By hand: compute each
-id; it is covered when the newest ledger line whose `scopes` holds that id has `status` `PASSED`
-and the `command` configured now. With `--require`, exit 1 unless that scope is covered, and
-its `+readers` id too where it has readers.
+`context-engine gate status [--require <scope>[+readers]]` (over MCP `gate_status`). By hand:
+compute each id; it is covered when the newest ledger line whose `scopes` holds that id has
+`status` `PASSED` and the `command` configured now. With `--require <scope>`, exit 1 unless that
+scope's id is covered: what `context-engine commit` checks for a path in it. With `--require
+<scope>+readers`, its `+readers` id too: what a hand edit to a file the scope leaves out needs.
 
 **Why:** "did the gate pass on these files?" is answered from the ledger, not from memory. The
 newest line decides, so a green run then a red one on the same files is red; and a run of

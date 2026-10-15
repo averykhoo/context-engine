@@ -1942,11 +1942,15 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   before a commit still counts after it. A scope whose id has a green run needs no re-run: the
   code gate runs only when the code changed, and a change outside the code scope needs lint and
   its readers. A session's own commit of a path in the required scope is refused until a green
-  run covers it (P7). **An exclusion fails open** (an excluded file can no longer make a green
-  run stale), so it is verified by a guard, never a survey alone: a test that reads an excluded
-  path fails unless the scope names it as a **reader**. The readers are a part of their own,
-  keyed on every file: after a change outside the scope they alone re-run, and the scope counts
-  as covered only with them. The ledger is gitignored, or it would sit inside the id it records.
+  run covers the scope's id (P7). **An exclusion fails open** (an excluded file can no longer
+  make a green run stale), so it is verified by a guard, never a survey alone: a test that reads
+  an excluded path fails unless the scope names it as a **reader**. The readers are a part of
+  their own, keyed on every file: after a hand edit outside the scope they alone re-run. The
+  commit refusal checks the scope, not its readers: their id moves on every engine write, any
+  session's, and a commit of a code path does not commit what they re-check. A run records each
+  id that did not move while it ran, and counts for nothing only when every id moved, so a
+  concurrent write voids only the ids it touched. The ledger is gitignored, or it would sit
+  inside the id it records.
   A green run means "passed against these sources", not the environment, so every push runs the
   whole gate. *Built (CE-78): `[gate]` in `context.toml`, `context-engine gate run` and `gate
   status`, the commit refusal. Not built yet (CE-17): a long suite split into parts, each keyed
@@ -2094,8 +2098,8 @@ push; the engine's own commits of its writes are the one exception (§5.5 rule 4
 (§6.9) states it; the test command itself is in `CLAUDE.md` § Gate. **The code gate runs only
 when its code changed** (G-V1): where `[gate]` names the test command and a code scope,
 `context-engine gate run` records each run against the scope's content id, a commit whose code
-scope already has a green run needs only lint and the scope's readers, and the push runs the
-whole gate. A repo without `[gate]` runs the whole gate before every such commit.
+scope already has a green run needs only lint (and the scope's readers, after a hand edit to a
+file the scope leaves out), and the push runs the whole gate. A repo without `[gate]` runs the whole gate before every such commit.
 
 **Guards:** G-D0, G-D1, G-D2, G-D3, G-D8, G-D10, G-I2, G-T1, G-T2, G-W1, G-W2, G-W4, G-W6.
 `context-engine lint` runs every one (plus the record schemas, G-D11, G-R1 and the other built

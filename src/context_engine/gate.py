@@ -35,9 +35,13 @@ it creates, and refuses to record into a ledger git does not ignore.
 exclusion must be verified, not assumed: ``scope_guard`` is the check for a pytest suite (a test
 that opens an excluded path fails unless the scope names it in ``readers``). The readers are a
 part of their own: they read files outside the scope, so they are keyed on every file
-(``<scope>+readers``), and a scope counts as covered only when its readers are covered too.
-After a change outside the scope, ``gate run --readers`` re-runs just them (their names are
-appended to the command, as pytest takes node ids).
+(``<scope>+readers``). After a hand edit outside the scope, ``gate status --require
+<scope>+readers`` says whether they are covered and ``gate run --readers`` re-runs just them
+(their names are appended to the command, as pytest takes node ids). The commit refusal checks
+the scope alone (``check_commit`` says why).
+
+**A run whose files move while it runs** records only the ids that did not move, and names the
+rest in ``moved``; it is ``INCONSISTENT``, and counts for nothing, only when every id moved.
 """
 
 from __future__ import annotations
@@ -331,7 +335,9 @@ def _head(root: Path) -> str:
 def run(root: Path, gate: Gate, *, readers: bool = False, session: str | None = None, actor: str | None = None) -> tuple[int, str]:
     """Run the gate command at ``root`` and append its row; the reply is one line. ``readers``
     runs only the scopes' readers (their names appended to the command) and records only their
-    ids: what a change outside a covered scope needs."""
+    ids: what a change outside a covered scope needs. An id that moved while the command ran is
+    left out of the row (named in ``moved``): the run tested no set of those files anyone can
+    name; the ids that did not move are recorded."""
     if not gate.command:
         raise Refusal("[gate] has no `command`", 'set it in context.toml, e.g. command = ["{python}", "-m", "pytest", "-q"]; or run the gate by hand')
     names = list(dict.fromkeys(r for s in gate.scopes.values() for r in s.readers))
@@ -354,20 +360,26 @@ def run(root: Path, gate: Gate, *, readers: bool = False, session: str | None = 
         after = {k: v for k, v in scope_ids(root, gate).items() if keep(k)}
     except Refusal:
         after = {}
-    status = INCONSISTENT if after != before else PASSED if code == 0 else FAILED
+    # Each id is judged on its own: a scope whose files did not move is recorded, so a change
+    # elsewhere during a long run (another session's op-log line, a HANDOFF edit) costs only the
+    # ids it moved, never the code scope's. INCONSISTENT only when every id moved.
+    moved = sorted(k for k in before if before[k] != after.get(k))
+    kept = {k: v for k, v in before.items() if k not in moved}
+    status = INCONSISTENT if not kept else PASSED if code == 0 else FAILED
     row = {
         "started": _stamp(started), "seconds": seconds, "status": status, "exit": code, "part": "readers" if readers else "all",
-        "command": list(gate.command), "args": names if readers else [], "scopes": before if status != INCONSISTENT else {},
+        "command": list(gate.command), "args": names if readers else [], "scopes": kept,
         "log": log.relative_to(root).as_posix(), "head": _head(root), "session": session or "", "actor": actor or "",
     }
-    if status == INCONSISTENT:
-        row["moved"] = sorted(n for n in before if before.get(n) != after.get(n))
+    if moved:
+        row["moved"] = moved
     with open(ledger, "a", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(row) + "\n")
     what = "gate readers" if readers else "gate"
     if status == INCONSISTENT:
-        return 1, f"{what} {status}: the files of {', '.join(row['moved'])} changed while it ran ({seconds}s), so the run counts for nothing; run it again; log {row['log']}"
-    return (0 if status == PASSED else 1), f"{what} {status} in {seconds}s ({_last_line(log)}) on {', '.join(before.values())}; log {row['log']}"
+        return 1, f"{what} {status}: the files of {', '.join(moved)} changed while it ran ({seconds}s), so the run counts for nothing; run it again; log {row['log']}"
+    unrecorded = f"; not recorded on {', '.join(moved)}: their files changed while it ran" if moved else ""
+    return (0 if status == PASSED else 1), f"{what} {status} in {seconds}s ({_last_line(log)}) on {', '.join(kept.values())}{unrecorded}; log {row['log']}"
 
 
 def _last_line(log: Path) -> str:
@@ -386,12 +398,16 @@ def _verdict(rows: list[dict], gate: Gate, key: str, here: str) -> tuple[bool, s
 
 def status(root: Path, gate: Gate, require: str = "") -> tuple[int, str]:
     """One line per scope, and per scope's readers: its id here and whether a green run covers
-    it. ``require`` names a scope that must be covered, readers and all, or the exit code is 1;
-    the last line then says what to run."""
+    it. ``require`` names what must be covered, or the exit code is 1 and the last line says what
+    to run: a scope (``code``: what ``context-engine commit`` checks for a path in it), or a
+    scope with its readers (``code+readers``: what a hand-edited file the scope leaves out
+    needs)."""
     if not gate.scopes:
         raise Refusal("[gate] declares no scopes", "declare one, e.g. [gate.scopes.all] (include defaults to every file)")
-    if require and require not in gate.scopes:
-        raise Refusal(f"no gate scope named {require!r}", f"name one of: {', '.join(sorted(gate.scopes))}")
+    name, plus, _ = require.partition("+")
+    keys = sorted(gate.scopes) + sorted(f"{n}+readers" for n, s in gate.scopes.items() if s.readers)
+    if require and require not in keys:
+        raise Refusal(f"no gate scope named {require!r}", f"name one of: {', '.join(keys)}")
     rows = read_rows(root / gate.ledger)
     out, ok = [], {}
     for key, here in scope_ids(root, gate).items():
@@ -399,11 +415,11 @@ def status(root: Path, gate: Gate, require: str = "") -> tuple[int, str]:
         out.append(line)
     if not require:
         return 0, "\n".join(out)
-    code, part = ok[require], ok.get(f"{require}+readers", True)
+    code, part = ok[name], ok[require] if plus else True
     if code and part:
         out.append(f"require {require}: green")
     elif code:
-        out.append(f"require {require}: red: the scope is covered, its readers are not: run `context-engine gate run --readers`")
+        out.append(f"require {require}: red: the scope is covered, its readers are not (a file it leaves out changed): run `context-engine gate run --readers`")
     else:
         out.append(f"require {require}: red: run `context-engine gate run` ({' '.join(gate.command)})")
     return (0 if code and part else 1), "\n".join(out)
@@ -420,9 +436,17 @@ def _under(root: Path, path: str, listed: list[str]) -> list[str]:
 
 def check_commit(root: Path, gate: Gate, paths: list[str]) -> None:
     """Refuse a session's own commit that names a path in the ``require`` scope unless a green run
-    covers that scope's current id, and its readers' (FRAMEWORK §8.5 G-V1). Paths the op log's
-    lines name are not counted: the engine's own commits of its writes are the gate's one
-    exception (FRAMEWORK §5.5 rule 4)."""
+    covers that scope's current id (FRAMEWORK §8.5 G-V1). Paths the op log's lines name are not
+    counted: the engine's own commits of its writes are the gate's one exception (FRAMEWORK §5.5
+    rule 4).
+
+    The scope's readers are not checked here. A green row on the scope is a whole-gate run,
+    readers included, on exactly these files; what the readers would re-check is the files the
+    scope leaves out, which a commit of a path in it does not commit. Their id is keyed on every
+    file, the op log included (lint reads it), so every engine write moves it, this session's or
+    a concurrent one's: requiring it here refused code commits on activity unrelated to them
+    (review of 2026-10-14g). A hand-edited file outside the scope needs ``gate status --require
+    <scope>+readers``, as a records-only commit, which is not refused, always has."""
     if not gate.require or not paths:
         return
     scope = gate.scopes[gate.require]
@@ -435,8 +459,3 @@ def check_commit(root: Path, gate: Gate, paths: list[str]) -> None:
     if not covering(rows, gate, scope.name, here):
         raise Refusal(f"{hit} is in gate scope {scope.name!r}, which no green gate run covers ({here})",
                       "run `context-engine gate run` (the whole gate, recorded), then commit; `context-engine gate status` says what is covered")
-    if scope.readers:
-        part = scope_id(root, readers_scope(scope), listed)
-        if not covering(rows, gate, f"{scope.name}+readers", part):
-            raise Refusal(f"{hit} is in gate scope {scope.name!r}: the scope is covered, but not its readers (the tests that read files outside it) on these files ({part})",
-                          "run `context-engine gate run --readers`, then commit")

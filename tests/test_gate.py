@@ -219,6 +219,20 @@ def test_a_run_whose_files_change_while_it_runs_counts_for_nothing(repo):
     assert G.status(repo, g, require="code")[0] == 1
 
 
+def test_a_run_records_each_scope_whose_files_did_not_move_while_it_ran(repo):
+    """A change outside a scope during a run (another session's op-log line) moves only the ids
+    that cover it: the run is recorded on the rest, and names the moved ones, so a concurrent
+    engine write never voids the code scope's result (review of 2026-10-14g, F2)."""
+    oplog = ["{python}", "-c", "open('ops.jsonl', 'a').write(chr(123) + chr(125) + chr(10)); print('1 passed')"]
+    g = gate_of(repo, command=oplog)
+    code, line = G.run(repo, g)
+    assert code == 0 and line.startswith("gate PASSED") and "not recorded on all: their files changed while it ran" in line, line
+    (row,) = G.read_rows(repo / g.ledger)
+    assert row["status"] == "PASSED" and set(row["scopes"]) == {"code"} and row["moved"] == ["all"], row
+    code, text = G.status(repo, g, require="code")
+    assert code == 0 and "code: covered" in text and "all: NOT covered" in text, text
+
+
 def test_the_run_ledger_is_gitignored_and_a_tracked_one_is_refused(repo):
     g = gate_of(repo)
     G.run(repo, g)
@@ -364,28 +378,45 @@ def test_the_scope_guard_fails_a_test_that_reads_an_excluded_path_unless_it_is_a
 
 def test_readers_are_a_part_keyed_on_every_file_so_a_change_outside_the_scope_re_runs_only_them(repo):
     """A reader reads what its scope excludes, so a change there leaves the scope covered and its
-    readers not: the scope is green only with both, and `gate run --readers` re-runs just them
-    (their names appended to the command)."""
+    readers not: `gate status --require code+readers` says so, and `gate run --readers` re-runs
+    just them (their names appended to the command)."""
     echo = ["{python}", "-c", "import sys; print(' '.join(sys.argv[1:]) or 'all')"]
     scopes = {"code": {"exclude": EXCLUDE, "readers": ["tests/test_r.py::test_reads"]}}
     g = gate_of(repo, command=echo, scopes=scopes)
     assert G.run(repo, g)[0] == 0
-    assert G.status(repo, g, require="code")[0] == 0
+    assert G.status(repo, g, require="code+readers")[0] == 0
     (repo / "HANDOFF.md").write_text("# HANDOFF\n\nedited\n", encoding="utf-8")
     code, text = G.status(repo, g, require="code")
+    assert code == 0 and "code: covered" in text and "require code: green" in text, text
+    code, text = G.status(repo, g, require="code+readers")
     assert code == 1 and "code: covered" in text and "code+readers: NOT covered" in text and "gate run --readers" in text, text
-    e, key = _engine(repo)
-    (repo / "src" / "a.py").write_text("a = 1\n", encoding="utf-8")  # unchanged bytes: the scope stays covered
-    with pytest.raises(Refusal, match="but not its readers") as r:
-        e.commit(["src/a.py", "HANDOFF.md"], "CE-1: both", session=key, actor=ACTOR)
-    assert "gate run --readers" in r.value.remedy
     code, line = G.run(repo, g, readers=True)
     assert code == 0 and line.startswith("gate readers PASSED") and "(tests/test_r.py::test_reads)" in line, line
     rows = G.read_rows(repo / g.ledger)
     assert rows[-1]["part"] == "readers" and set(rows[-1]["scopes"]) == {"code+readers"} and rows[-1]["args"] == ["tests/test_r.py::test_reads"]
-    assert G.status(repo, g, require="code")[0] == 0
+    assert G.status(repo, g, require="code+readers")[0] == 0
     (repo / "src" / "a.py").write_text("a = 3\n", encoding="utf-8")
-    code, text = G.status(repo, g, require="code")
-    assert code == 1 and "require code: red: run `context-engine gate run`" in text, "a readers run never covers the scope itself"
+    code, text = G.status(repo, g, require="code+readers")
+    assert code == 1 and "require code+readers: red: run `context-engine gate run`" in text, "a readers run never covers the scope itself"
+    with pytest.raises(Refusal, match="no gate scope named 'all\\+readers'"):
+        G.status(repo, g, require="all+readers")
     with pytest.raises(Refusal, match="no gate scope names `readers`"):
         G.run(repo, gate_of(repo, scopes=SCOPES), readers=True)
+
+
+def test_commit_checks_only_the_scope_so_an_engine_write_after_the_gate_run_does_not_refuse_it(repo):
+    """The readers' id covers every file, the op log included, so every engine write moves it (this
+    session's or a concurrent one's). The commit of a code path is checked on the scope alone: a
+    green whole-gate run on exactly these code files still counts after an op-log line lands
+    (review of 2026-10-14g, F1); a change to the code itself is still refused."""
+    scopes = {"code": {"exclude": EXCLUDE, "readers": ["tests/test_r.py::test_reads"]}}
+    g = gate_of(repo, scopes=scopes)
+    (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")
+    assert G.run(repo, g)[0] == 0
+    e, key = _engine(repo)  # an engine write: an op-log line moves the readers' id, not the scope's
+    code, text = G.status(repo, g, require="code+readers")
+    assert code == 1 and "code: covered" in text and "code+readers: NOT covered" in text, text
+    assert e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR).startswith("committed ")
+    (repo / "src" / "a.py").write_text("a = 3\n", encoding="utf-8")
+    with pytest.raises(Refusal, match="src/a.py is in gate scope 'code', which no green gate run covers"):
+        e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR)

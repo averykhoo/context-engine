@@ -81,7 +81,7 @@ review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived",
 
 # The scoped gate (FRAMEWORK §8.5 G-V1, CE-78): `context-engine gate run` runs the gate and records
 # its result against each scope's content id; `context-engine commit` refuses a path in `require`'s
-# scope until a green run covers the scope and its readers. `gate status` says what is covered.
+# scope until a green run covers the scope's id. `gate status` says what is covered.
 [gate]
 command = ["{python}", "-m", "pytest", "-q"]   # CLAUDE.md § Gate; tests/test_ci.py keeps CI on the same command
 require = "code"

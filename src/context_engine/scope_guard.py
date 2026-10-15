@@ -25,7 +25,16 @@ from ``conftest.py``::
 The scope is ``[gate] require`` in the repo's ``context.toml``, the root is the directory
 holding it, found upward from the working directory; ``CE_SCOPE_GUARD=off`` turns it off for a
 run (the sabotage that proves it). Deliberately not seen: reads by a process the test starts
-outside the repo, and C extensions that open files without Python's audit events.
+outside the repo, and C extensions that open files without Python's audit events. Not seen
+either, so reviewed by hand: a check that an excluded path exists (``os.stat``,
+``Path.exists``, ``is_file``: no audit event), and a read at collection time (module level, a
+``parametrize`` argument), since the guard watches only while a test runs.
+
+**In a repo that adopts the engine,** the tests run in that repo's own environment, where the
+engine is never installed (DEC-1): put the engine's ``src`` on ``PYTHONPATH`` for the gate run so
+this module imports (it needs only pytest and the standard library of Python 3.11 or later, for
+``tomllib``), and give ``[gate] command`` that environment's interpreter, not
+``{python}`` (the engine's).
 """
 
 from __future__ import annotations

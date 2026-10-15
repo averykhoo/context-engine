@@ -36,10 +36,11 @@ every push; the engine's own commits of its writes are the one exception, and `c
 commit` does not run the gate, so run the gate first. **The code gate runs only when the code
 changed** (FRAMEWORK §8.5 G-V1): where `[gate]` in `context.toml` names the test command and a
 code scope, run it as `context-engine gate run`, which records its result against the scope's
-content id. Before a commit, `context-engine gate status --require <scope>` says what is left
-to run: nothing but `context-engine lint`, the scope's readers (the tests that read files it
-leaves out: `context-engine gate run --readers`), or the whole gate; `context-engine commit`
-refuses a code path until it is green. Every push runs the whole gate. Lint covers the record schemas, append-only bodies, bundles, the working state, the
+content id. Before a commit, `context-engine gate status --require <scope>` says whether
+anything but `context-engine lint` is left to run; after a hand edit to a file the scope leaves
+out, `--require <scope>+readers` also checks the tests that read such files (`context-engine
+gate run --readers` re-runs just them). `context-engine commit` refuses a code path until the
+scope is green. Every push runs the whole gate. Lint covers the record schemas, append-only bodies, bundles, the working state, the
 routes and this contract; it fails on a hand edit to a stamped record or to this file, a broken
 record or a dead route. How to run it so its result is true, and the test baselines:
 `docs/runbooks/gate.md`. No guard is believed until it has been seen to fail (FRAMEWORK P7):
