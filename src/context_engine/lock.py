@@ -5,6 +5,12 @@ the engine's lock has to be held by the operating system, not by a Python object
 an OS byte-range lock on a lock file: it is released when the holder closes it or dies, so a
 crashed process never leaves a stale lock behind.
 
+The timeout is how long the lock may stay with one holder, not how long a caller may wait
+(CE-87). The lock is not fair: a process that lets it go takes it back before a waiter's next
+try, so under many back-to-back writes one waiter's wait is the sum of every other hold. Each
+holder writes a fresh token after the locked byte, and a waiter that sees the token change
+starts its deadline again: the lock is changing hands, so nobody is stuck.
+
 Deliberately not handled: re-entrancy. The store takes the lock once per operation.
 """
 
@@ -46,6 +52,19 @@ else:
         fcntl.flock(fd, fcntl.LOCK_UN)
 
 
+TOKEN_AT, TOKEN_LEN = 1, 8  # after the locked byte 0: unlocked, so a waiter can read it
+
+
+def _token(fd: int) -> bytes:
+    os.lseek(fd, TOKEN_AT, os.SEEK_SET)
+    return os.read(fd, TOKEN_LEN)
+
+
+def _new_token(fd: int) -> None:
+    os.lseek(fd, TOKEN_AT, os.SEEK_SET)
+    os.write(fd, os.urandom(TOKEN_LEN // 2).hex().encode("ascii"))  # ASCII: a text-mode fd keeps it as is
+
+
 class FileLock:
     def __init__(self, path: Path, timeout: float = 30.0, poll: float = 0.01):
         self.path = Path(path)
@@ -57,8 +76,12 @@ class FileLock:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(self.path, os.O_RDWR | os.O_CREAT, 0o644)
         deadline = time.monotonic() + self.timeout
+        seen = _token(fd)
         while not _try_lock(fd):
-            if time.monotonic() > deadline:
+            token = _token(fd)
+            if token != seen:  # the lock changed hands since the last try: its holders are not stuck
+                seen, deadline = token, time.monotonic() + self.timeout
+            elif time.monotonic() > deadline:
                 os.close(fd)
                 raise Refusal(
                     f"the engine lock {self.path} was held for over {self.timeout:.0f}s",
@@ -66,6 +89,7 @@ class FileLock:
                     "process holding the lock file",
                 )
             time.sleep(self.poll)
+        _new_token(fd)
         self._fd = fd
         return self
 

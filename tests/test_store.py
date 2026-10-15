@@ -1,11 +1,15 @@
 """The record store: ids under a lock, write-time refusal, the op log, append-only bodies."""
 
 import json
+import threading
+import time
 
 import pytest
 
+from context_engine import lock as lock_mod
 from context_engine import okf
 from context_engine.errors import Refusal
+from context_engine.lock import FileLock
 
 from conftest import ACTOR, SESSION
 
@@ -69,6 +73,49 @@ def test_concurrent_allocations_never_return_the_same_id(repo, workers):
     ids = sorted(int(r.id.split("-")[1]) for r in repo.records("task"))
     assert ids == list(range(1, 41))
     assert len(oplog(repo)) == 40
+
+
+def test_a_waiter_is_refused_only_when_the_lock_stops_changing_hands(tmp_path):
+    """CE-87: the lock is not fair, so under back-to-back writes a waiter can lose every race for
+    longer than the timeout while no holder keeps the lock that long. Each holder writes a fresh
+    token on taking it; a holder that keeps writing them stands in for a lock changing hands
+    with no gap a waiter could win, and the waiter waits on. One that stops is stuck: refused."""
+    path = tmp_path / "engine.lock"
+    for _ in range(2):  # every taking of the lock leaves a new token
+        before = path.read_bytes() if path.exists() else b""
+        with FileLock(path):
+            pass
+        assert path.read_bytes() != before
+    held, done = threading.Event(), threading.Event()
+
+    def hold(hand_overs: int):
+        with FileLock(path) as lk:
+            held.set()
+            for _ in range(hand_overs):
+                time.sleep(0.1)
+                lock_mod._new_token(lk._fd)
+            time.sleep(0.1 if hand_overs else 1.6)
+        done.set()
+
+    t = threading.Thread(target=hold, args=(15,))
+    t.start()
+    held.wait()
+    start = time.monotonic()
+    with FileLock(path, timeout=1.0):
+        waited = time.monotonic() - start
+    t.join()
+    assert waited > 1.0  # past the timeout, and not refused
+
+    held.clear()
+    done.clear()
+    t = threading.Thread(target=hold, args=(0,))
+    t.start()
+    held.wait()
+    with pytest.raises(Refusal, match="was held for over"):
+        with FileLock(path, timeout=0.5):
+            pass
+    assert not done.is_set()  # refused while the holder still held it
+    t.join()
 
 
 # -- AC-5: write-time refusal -----------------------------------------------------------
