@@ -95,6 +95,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-44](DEC-44-the-top-level-session-coordinates-told-to-do.md): The top-level session coordinates: told to do, check or verify something, it sends an agent *(owner, 2026-10-14)*
 - [DEC-45](DEC-45-resume-2026-10-14g-s-fan-out-as-proposed.md): Resume 2026-10-14g's fan-out as proposed; watcher details into CE-83; file a follow-up-session link task; coordinator picks the order *(owner, 2026-10-15)*
 - [DEC-46](DEC-46-push-main-once-the-ce-78-and-ce-77-merges-are.md): Push main once the CE-78 and CE-77 merges are committed and both gates are green *(owner, 2026-10-15)*
+- [DEC-47](DEC-47-rules-principles-and-decisions-cite-the.md): Rules, principles and decisions cite the incident that justified them *(owner, 2026-10-15)*
 
 ## REJECTED
 
