@@ -613,3 +613,4 @@
 {"at": "2026-10-15T16:25:24+08:00", "session": "2026-10-15c", "actor": "claude-code/claude-opus-5-5", "op": "link", "id": "DEC-49", "path": "docs/decisions/DEC-49-framework-md-holds-what-is-needed-to-understand.md", "fields": ["tasks"], "mechanical": false}
 {"at": "2026-10-15T16:25:26+08:00", "session": "2026-10-15c", "actor": "claude-code/claude-opus-5-5", "op": "link", "id": "DEC-49", "path": "docs/decisions/DEC-49-framework-md-holds-what-is-needed-to-understand.md", "fields": ["tasks"], "mechanical": false}
 {"at": "2026-10-15T16:26:07+08:00", "session": "2026-10-15c", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-15c", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-15T16:26:22+08:00", "session": "2026-10-15c", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-15c", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
