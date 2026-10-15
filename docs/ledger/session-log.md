@@ -7,9 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-15a · kind: open
+## 2026-10-15a · kind: close
 
-- **opened:** 2026-10-15T10:02:01+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-64,CE-77,CE-78,CE-81,CE-83,CE-84,CE-85,CE-86,CE-87
+- **receipts:**
+  - guards: Windows: 825 passed in 491.68s, rc=0; Linux (tools/linux_gate.py 5587731): 825 passed in
+    186.13s, green; lint clean (2026-10-15)
+  - read: CLAUDE.md, contract, procedures.md, CE-83, DEC-43, agent reports in
+    .scratch/wf-2026-10-15a
+- **summary** (the owner digest):
+  - Resumed 2026-10-14g's fan-out after a Windows restart (DEC-45): CE-64, CE-77, CE-78, CE-81
+    fixed, reviewed, merged, closed
+  - Pushed main 0a6eaa3..5587731 on DEC-46; CI gate run 38681332642 green; haiku watcher
+  - Cheapest-model rule exists (FRAMEWORK §6.6) but CLAUDE.md names no model, so sessions fall
+    through to the global opus default: on CE-83
+  - CE-83 widened: CI watcher's model and full-log step; CE-84 session --follows link; CE-85
+    MCP_TIMEOUT doc; CE-86 linux_gate from worktree
+  - CE-87 to NOW: the concurrent-allocation lock test fails under parallel-gate load (30 s timeout)
+  - CE-78 F1 weakens one refusal (code+readers is advisory); kit contract's git commit -o sentence
+    not narrowed: owner's call, raise with CE-83
+  - Process note: an engine write mid-merge by another agent is safe (commits by path) but worth
+    telling the agent
+- **Still owed:**
+  - Session 2026-10-14g still shows open (cut off by the restart; its work is carried and done here)
+  - .scratch/wf-2026-10-14g and wf-2026-10-15a not swept
 
 ---
 
