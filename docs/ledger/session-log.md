@@ -7,6 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-15d · kind: close
+
+- **rows:** none (ledger only: 2026-10-14g abandoned)
+- **receipts:**
+  - guards: lint clean; gate readers PASSED 173 in 13.7s on g1/code+readers:1d4c5be1bd14ddb3; code
+    scope unchanged since the 2026-10-15 all run
+  - read: orient (open-sessions section), procedures.md § Housekeeping, session-log.md
+- **summary** (the owner digest):
+  - Owner: close all sessions, no other agent running. 2026-10-14g marked kind: abandoned by hand
+    (procedures § Housekeeping; G-W11 not built); its work was carried by 2026-10-15a, so no baton.
+  - No sessions are open now.
+- **Still owed:**
+  - .scratch/wf-2026-10-14g and wf-2026-10-15a not swept (from 2026-10-15a)
+  - Push of the unpushed commits since 5587731: ask first; linux_gate before
+
+---
+
 ## 2026-10-15c · kind: close
 
 - **rows:** US-12, DEC-47, DEC-48, DEC-49, CE-90, CE-91, CE-92, CE-93, CE-94, CE-29, CE-40, CE-47
@@ -87,9 +104,10 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-14g · kind: open
+## 2026-10-14g · kind: abandoned
 
 - **opened:** 2026-10-14T19:49:23+08:00 by claude-code/claude-opus-5-5
+- **abandoned:** 2026-10-15d: never closed or paused (cut off by a Windows restart; 2026-10-15a carried its work; the owner confirmed no other agent is running)
 
 ---
 
