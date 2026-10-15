@@ -97,6 +97,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-46](DEC-46-push-main-once-the-ce-78-and-ce-77-merges-are.md): Push main once the CE-78 and CE-77 merges are committed and both gates are green *(owner, 2026-10-15)*
 - [DEC-47](DEC-47-rules-principles-and-decisions-cite-the.md): Rules, principles and decisions cite the incident that justified them *(owner, 2026-10-15)*
 - [DEC-48](DEC-48-who-decides-is-set-by-reversibility-a-call-that.md): Who decides is set by reversibility: a call that is cheap to undo is the agent's *(owner, 2026-10-15)*
+- [DEC-49](DEC-49-framework-md-holds-what-is-needed-to-understand.md): FRAMEWORK.md holds what is needed to understand and use the framework, not its history *(owner, 2026-10-15)*
 
 ## REJECTED
 
