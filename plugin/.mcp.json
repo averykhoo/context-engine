@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "engine": {
+      "command": "git",
+      "args": ["-c", "alias.ce-run=!sh", "ce-run", "${CLAUDE_PLUGIN_ROOT}/scripts/ce-engine", "${CLAUDE_PROJECT_DIR}", "mcp"]
+    }
+  }
+}

@@ -15,6 +15,8 @@ replaces whole and lint G-D0 compares with the installed kit. The ``SessionStart
 interpreter and repo root, so it is machine-local, like the MCP registration. init creates that
 file when absent; one that exists holds the owner's permission grants, so the hook goes into it
 only with the owner's yes (``--merge-settings``, DEC-32), and nothing else in it changes.
+``--skip-settings`` writes no hook at all, so a repo whose hook comes from the Claude Code plugin
+(``plugin/`` in the engine repo, CE-77) gets no second one.
 
 Deliberately not here: installing anything (the engine runs from its own pinned environment in
 ``.context-engine/env/``, made before init can run, and is never installed into the target repo's
@@ -54,6 +56,8 @@ ENGINE_ENV = f"{ENGINE_DIR}/env"
 REPO_IGNORE = ".gitignore"
 ENGINE_IGNORE = f"# context-engine: the engine's pinned env (kit README § 1)\n{ENGINE_DIR}/\n"
 APPENDED = (CONTRACT_TARGET, REPO_IGNORE)  # files init appends to in place, never replaces
+# what --skip-settings says when there is no settings file: init writes no hook (CE-77)
+SKIP_ABSENT = "--skip-settings: no hook written; the Claude Code plugin's hook runs orient, or add it by hand, kit README § Hook"
 IMPORT_RE = re.compile(r"^@(\S+)[ \t]*$", re.MULTILINE)  # a CLAUDE.md import: `@path` on a line of its own
 # the repo's own Gate heading (CE-51): level 1 or 2, the word Gate, then nothing or `(...`, `: ...`, ` - ...`
 GATE_RE = re.compile(r"^ {0,3}#{1,2}[ \t]+Gate(?:[ \t]*[(:\u2013\u2014].*|[ \t]+-.*)?[ \t]*$", re.MULTILINE | re.IGNORECASE)
@@ -335,6 +339,8 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
                 seen[SETTINGS] = old
                 labels[SETTINGS] = f"{SETTINGS} (the orient hook merged in)"
                 _ensure_ignore(root, writes, skipped, warnings, write=True)
+    elif settings == "skip":  # no hook from init: the plugin's runs orient, or the owner adds one by hand (CE-77)
+        skipped.append(f"{SETTINGS} ({SKIP_ABSENT})")
     else:
         writes[SETTINGS] = hook_settings(root)
         _ensure_ignore(root, writes, skipped, warnings, write=True)

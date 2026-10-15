@@ -1,0 +1,7 @@
+{
+  "name": "context-engine",
+  "displayName": "context-engine",
+  "description": "The context-engineering framework's procedures as skills, the SessionStart hook that runs orient, and the engine's MCP server, each run with the repo's own pinned engine",
+  "author": {"name": "Avery Khoo"},
+  "repository": "https://github.com/averykhoo/context-engine"
+}

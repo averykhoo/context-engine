@@ -164,7 +164,62 @@ PowerShell a quoted program needs `& ` in front. A failing `SessionStart` hook i
 Code shows its error to the user only, and the session goes on), so the contract keeps the
 by-hand fallback: no orient output in the context means run `orient` and tell the owner.
 
+The Claude Code plugin (next section) carries the same hook with no machine paths in the repo:
+with it, run `init --skip-settings`, which then writes no hook. A hook init wrote earlier stays in
+charge: the plugin's stays quiet in a repo whose settings already run orient, so orient never runs
+twice.
+
+## Claude Code plugin
+
+The engine repo is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`) holding one
+plugin, `context-engine` (`plugin/` in the engine repo, its design in the engine repo's
+`docs/evidence/plugin-design-2026-10-14.md`). It carries:
+- **skills** for the procedures: `intake`, `clean-close`, `pause`, `resume`, `push-and-ci`,
+  `reconcile-foreign-commits`, `housekeeping`, `bootstrap` and `adopt`. Each triggers when its
+  procedure starts and points at its section of `docs/runbooks/procedures.md` (`adopt` and
+  `bootstrap` at this README too), which stays the source and the by-hand fallback: each line a
+  skill adds is quoted from those sections word for word, and the engine's gate fails when a
+  quote stops matching. The contract is
+  not a skill: it must hold in every session, so it stays in the `CLAUDE.md` import and the hook;
+- **the `SessionStart` hook**, running `orient`;
+- **the MCP server**, as `plugin:context-engine:engine`: its tools are
+  `mcp__plugin_context-engine_engine__<group>_<verb>`.
+
+The hook and the server run **this repo's pinned engine**, never one shared across repos (a kit
+change made for another repo would turn this one's lint red): the plugin's `scripts/ce-engine`,
+started through `git` (which runs it with the `sh` git ships, so one entry works on every OS),
+takes the interpreter named on the one line of
+`.context-engine/engine-python` if that file exists (an engine env kept elsewhere), else the one in
+`.context-engine/env/` (`bin/python`, `python.exe` or `Scripts/python.exe`). When neither is there,
+the hook says so in the session's context and the server does not start. In a repo with no
+`context.toml` the hook does nothing.
+
+Install it per repo, committed so every clone gets it, in `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {"context-engine": {"source": {"source": "github", "repo": "averykhoo/context-engine"}}},
+  "enabledPlugins": {"context-engine@context-engine": true}
+}
+```
+
+or with `claude plugin marketplace add averykhoo/context-engine`, then `claude plugin install
+context-engine@context-engine` at project scope. Then run `init --skip-settings` (no second hook),
+remove a local-scope registration of the server (`claude mcp remove --scope local
+context-engine`: a plugin's server with another command is a second server, not a duplicate), and
+keep `git` on the PATH.
+
+**Without the plugin, by hand** (FRAMEWORK P16): copy the plugin's `skills/*` folders into the repo's
+`.claude/skills/`, add the hook (§ Hook) and register the server (§ 1). The skills then answer to
+`/intake` and so on instead of `/context-engine:intake`; nothing else changes.
+
 ## 3. An existing repo: map, don't move (FRAMEWORK §11.4)
+
+Before `init`, show the owner the plan (`init --dry-run`), and ask before each step that rewrites
+the repo's own files. The repo's own gate must be green where you work: data it needs may be
+gitignored, so a fresh clone or worktree can be red before you start. Move the durable facts out
+of the repo's old handoff note before the first `banner set` replaces it, and keep the banner
+short, so `orient` still shows the batons and the board.
 
 `init` writes only what is missing, so run it (or copy by hand), then edit `context.toml` in
 place:
@@ -264,5 +319,6 @@ They are the repo's own copies from then on (see § 4 for upgrades).
 
 ## Skills, workflows and agents
 
-The kit ships no `.claude/skills/`, `.claude/workflows/` or `.claude/agents/`; a repo adds them
-when it needs them (FRAMEWORK §10, §11.2), and commits them.
+The kit ships no `.claude/skills/`, `.claude/workflows/` or `.claude/agents/`, and `init` writes
+none: the procedures' skills come with the Claude Code plugin (§ Claude Code plugin), or are copied
+from it by hand. A repo adds its own when it needs them (FRAMEWORK §10, §11.2), and commits them.

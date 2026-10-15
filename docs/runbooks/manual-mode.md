@@ -1287,7 +1287,9 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    upgrade to replace (kit README § Upgrade); never add a second block. Copy the kit's
    `contract.md` to `docs/framework/contract.md` if absent. If `.claude/settings.local.json` is
    absent, write it with the `SessionStart` hook from the kit README § Hook (this machine's
-   absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too.
+   absolute paths) and `.claude/.gitignore` holding `settings.local.json` if that is absent too,
+   unless the repo's hook comes from the Claude Code plugin (kit README § Claude Code plugin): then
+   write no hook (the engine's `--skip-settings`), so orient does not run twice.
    If it exists and has no such hook, it holds the owner's grants: show the owner the entry and
    ask; with a yes, add it to `hooks.SessionStart`, keeping every other key and its order (the
    engine's `--merge-settings`); with a no, leave it (`--skip-settings`). Git must ignore the file,
