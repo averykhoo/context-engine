@@ -91,7 +91,8 @@ require = "code"
 # opened, listed or started a process in); tests/conftest.py's scope guard fails any other test
 # that touches an excluded path, so a new reader cannot slip in unseen. The readers are re-run on
 # every file (`gate run --readers`): the lint test, the OKF byte round-trip over every record, an
-# orient of this repo, and the "ritual" sweep, which reads HANDOFF.md.
+# orient of this repo, the "ritual" sweep, which reads HANDOFF.md, and the plugin launcher's LF check,
+# whose `git check-attr` runs in the repo (CE-77).
 [gate.scopes.code]
 exclude = ["tasks/**", "docs/decisions/**", "docs/stories/**", "docs/ledger/**", "docs/working/**", "docs/evidence/**", "spike/**", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md"]
 readers = [
@@ -99,6 +100,7 @@ readers = [
     "tests/test_okf.py::test_every_record_in_this_repo_round_trips_byte_identical",
     "tests/test_review.py::test_orient_points_at_the_engine_register_in_a_foreign_repo_only",
     "tests/test_kit.py::test_no_living_framework_text_says_ritual",
+    "tests/test_plugin.py::test_the_launcher_keeps_lf_line_endings_on_every_checkout",  # git check-attr in the repo (CE-77)
 ]
 
 [gate.scopes.all]   # every file: a green run here is the whole gate on exactly this tree

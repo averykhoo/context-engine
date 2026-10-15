@@ -232,7 +232,7 @@ def test_the_plugins_mcp_entry_serves_the_repos_engine_over_stdio(tmp_path):
             return tools, out
 
     tools, out = asyncio.run(go())
-    assert tools == set(ops.OPS)
+    assert tools == {n for n, o in ops.OPS.items() if o.mcp}  # every operation but the CLI-only ones (CE-78)
     assert out.startswith("# orient") and "## Banner (2026-10-07b)" in out  # the project, not the plugin root
 
 
