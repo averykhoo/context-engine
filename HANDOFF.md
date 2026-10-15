@@ -9,7 +9,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
   meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
-- **2026-10-15b, committed, NOT pushed:** CE-41 (`ea14d74`, G-D3 skips gitignored copies such as `build/`), CE-87 (`34ea268`,
+- **Committed, NOT pushed (2026-10-15b):** CE-41 (`ea14d74`, G-D3 skips gitignored copies such as `build/`), CE-87 (`34ea268`,
   the lock timeout restarts on each hand-over; the lock is unfair). CE-27 (archive and freeze ops) is NOW. CE-88 (ids_in_use
   parses every record under the lock) and CE-89 (frozen wording owed by CE-41/CE-87) filed.
 - **The top-level session coordinates (DEC-44):** checks and verification go to agents; the rule text still says otherwise
