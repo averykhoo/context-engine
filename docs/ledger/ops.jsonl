@@ -583,3 +583,4 @@
 {"at": "2026-10-15T12:27:53+08:00", "session": "2026-10-15a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-15a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
 {"at": "2026-10-15T13:56:52+08:00", "session": "2026-10-15b", "actor": "claude-code/claude-opus-5-5", "op": "session.start", "id": "2026-10-15b", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
 {"at": "2026-10-15T13:57:13+08:00", "session": "2026-10-15b", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["updated", "body"], "mechanical": false}
+{"at": "2026-10-15T14:06:47+08:00", "session": "2026-10-15b", "actor": "claude-code/claude-opus-5-5", "op": "close", "id": "CE-41", "path": "tasks/CE-41-g-d3-resolves-a-bare-file-name-against-stale.md", "fields": ["state", "status", "closed", "moved", "updated", "body"], "mechanical": false}
