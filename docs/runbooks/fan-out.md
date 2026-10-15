@@ -64,6 +64,11 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
   line endings the byte checks expect ([gate.md](gate.md)).
 - Board, ledger and other working-state writes stay with the session, in the main tree.
 - Commit by path; never `git stash`: in a shared tree it swallows another session's work (P12).
+- A builder's commit carries the session's key like any agent commit: its message ends in one
+  trailer paragraph, `Session: <key>` and `Co-Authored-By:` together with no blank line between
+  them ([manual-mode § context-engine commit](manual-mode.md#context-engine-commit) gives the
+  template). Git reads trailers only from the last paragraph, so a blank line inside it makes the
+  commit read as foreign once it is merged.
 
 ## Workflows
 

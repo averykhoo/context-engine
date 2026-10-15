@@ -1170,6 +1170,30 @@ It writes no op line: it changes no record. It commits whatever `[engine] commit
 refuses (exit 2) whenever it commits nothing, naming why (among them: nothing changed among
 the paths given). Its reply counts the files git committed.
 
+**Every agent commit's message ends the same way,** through the engine or by hand (a builder in
+a worktree, a plain `git commit -o`): one last paragraph holding every trailer, `Session: <key>`
+with the others the harness or the task adds (`Co-Authored-By:`; `Closes: <id>` only where
+FRAMEWORK §6.10 item 1 puts it), one per line, with no blank line among them and nothing after
+them. Git reads trailers only from a message's last paragraph, so a `Session:` line followed by
+a blank line and another trailer is no trailer to git, and § Reconciling foreign commits
+(procedures.md) reads the commit as foreign. The template, whose `Sabotage:` lines
+([sabotage.md](sabotage.md) step 5) are a body paragraph of their own:
+
+<!-- commit-message-template -->
+```text
+<id>: <what changed>
+
+<why, and what the commit carries, in as many paragraphs as it needs>
+
+Sabotage: <what was broken> -> <test> red
+
+Closes: <id>
+Session: <key>
+Co-Authored-By: <name> <email>
+```
+
+Through `context-engine commit`, leave `Session:` out: the engine adds it to that paragraph.
+
 **Why:** a milestone policy leaves board writes uncommitted in the tree, so a plain
 `git commit -o` of a record would commit it without its op line, and G-W7 fails that commit on a
 clean checkout. Committing through the engine takes the lines and the files they name together,
