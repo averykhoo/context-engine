@@ -4,12 +4,14 @@ id: CE-78
 title: "Scoped gate: the code gate runs only when its inputs changed, proven by a per-scope content hash on each gate run's recorded result"
 brief: "No framework or kit edits while CE-7's trial runs (owner; F18). Each scope exclusion fails open: guard it"
 pri: NOW
-state: open
+state: closed
 deps: []
 source: session 2026-10-14c
 created: 2026-10-14
-moved: 2026-10-14g
-updated: 2026-10-14g
+moved: 2026-10-15a
+updated: 2026-10-15a
+status: deprecated
+closed: 2026-10-15a
 ---
 
 The framework (FRAMEWORK.md, the kit contract, `docs/runbooks/gate.md`) says the code gate runs only
@@ -77,3 +79,4 @@ mid-trial also moves adhoc's G-D0 (CE-7 trap F18).
 - 2026-10-14c (claude-code/claude-opus-5-5): Owner, 2026-10-14c, verbatim: "yes the framework itself should say that the code gate only needs to run when code is changed, and that should be tested via glob and hash checksum tied to each gate's results. see zanzibar for an example. but don't make the change to the framework now, another agent has started ce7. just file a task"
 - 2026-10-14g (claude-code/claude-opus-5-5): DEC-43 (owner, 2026-10-14g): start now; the CE-7 dep and the 2026-10-14c freeze are lifted for this task. adhoc keeps its pinned kit (DEC-41).
 - 2026-10-14g (claude-code/claude-opus-5-5): Owner, 2026-10-14g: picked CE-78 for NOW while CE-7 waits (DEC-43).
+- 2026-10-15a (claude-code/claude-opus-5-5): closed: done in a687954
