@@ -4,7 +4,8 @@ The kit is text in ``kit/`` beside this module, shipped as package data, so a pl
 ``pip install`` of the engine carries it and anyone can read it in the engine repo. ``init``
 copies the files a repo is missing and creates the empty record directories. It only ever
 creates: an existing file is never touched, except that ``CLAUDE.md`` gets the kit block
-appended when no kit block (of any version) is in it yet. An existing ``context.toml`` is kept,
+appended when no kit block (of any version) is in it yet, and the repo's ``.gitignore`` gets the
+engine env's line appended when it does not ignore that yet (DEC-41). An existing ``context.toml`` is kept,
 so init can be re-run after it is edited to fill in what is still missing.
 
 The kit block (CE-38, US-17) is a few lines between the kit markers: the ``framework:`` pin and
@@ -15,8 +16,9 @@ interpreter and repo root, so it is machine-local, like the MCP registration. in
 file when absent; one that exists holds the owner's permission grants, so the hook goes into it
 only with the owner's yes (``--merge-settings``, DEC-32), and nothing else in it changes.
 
-Deliberately not here: installing anything (the engine runs from its own environment and is
-never installed into the target repo's), registering the MCP server (a ``claude mcp add`` the
+Deliberately not here: installing anything (the engine runs from its own pinned environment in
+``.context-engine/env/``, made before init can run, and is never installed into the target repo's
+own environment), registering the MCP server (a ``claude mcp add`` the
 session runs, FRAMEWORK §8.0.2), and committing. ``init`` needs no ``context.toml``, because it
 is what writes the first one.
 """
@@ -44,6 +46,14 @@ CONTRACT_TARGET = "CLAUDE.md"
 GATE_PLACEHOLDER = "<this repo's own test command>"  # the bootloader's Gate stub, until the owner fills it in
 SETTINGS = ".claude/settings.local.json"  # the SessionStart hook: machine-local (absolute paths)
 SETTINGS_IGNORE = ".claude/.gitignore"
+# DEC-41: a target repo's engine runs from a pinned, non-editable install in ENGINE_ENV, inside the
+# repo's folder and gitignored, never from the repo's own env (kit README § 1). init cannot create
+# it (it runs from it); it makes the repo's own .gitignore ignore ENGINE_DIR, so no clone commits it.
+ENGINE_DIR = ".context-engine"
+ENGINE_ENV = f"{ENGINE_DIR}/env"
+REPO_IGNORE = ".gitignore"
+ENGINE_IGNORE = f"# context-engine: the engine's pinned env (kit README § 1)\n{ENGINE_DIR}/\n"
+APPENDED = (CONTRACT_TARGET, REPO_IGNORE)  # files init appends to in place, never replaces
 IMPORT_RE = re.compile(r"^@(\S+)[ \t]*$", re.MULTILINE)  # a CLAUDE.md import: `@path` on a line of its own
 # the repo's own Gate heading (CE-51): level 1 or 2, the word Gate, then nothing or `(...`, `: ...`, ` - ...`
 GATE_RE = re.compile(r"^ {0,3}#{1,2}[ \t]+Gate(?:[ \t]*[(:\u2013\u2014].*|[ \t]+-.*)?[ \t]*$", re.MULTILINE | re.IGNORECASE)
@@ -342,7 +352,59 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             skipped.append(f"{d}/.gitignore")
         else:
             writes[f"{d}/.gitignore"] = "*\n"
+    _plan_engine_ignore(root, writes, skipped, seen, labels, warnings)
     return writes, [labels.get(k, k) for k in writes], skipped, seen, warnings
+
+
+def _plan_engine_ignore(root: Path, writes: dict[str, str], skipped: list[str], seen: dict[str, str], labels: dict[str, str], warnings: list[str]) -> None:
+    """The repo's own ``.gitignore`` ignores ``ENGINE_DIR`` (DEC-41): created holding the line when
+    absent, the line appended (in the file's line endings) when it does not ignore it yet, and left
+    alone when it does. A tracked root line, not a self-ignoring ``.gitignore`` in the directory,
+    because every clone rebuilds the env there and must not see it as untracked."""
+    path = root / REPO_IGNORE
+    if not path.exists():
+        writes[REPO_IGNORE] = ENGINE_IGNORE
+        return
+    try:
+        old = path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        skipped.append(REPO_IGNORE)
+        warnings.append(f"{REPO_IGNORE} is not UTF-8, so init left it alone: add the line {ENGINE_DIR}/ to it, which the engine's env needs (kit README § 1)")
+        return
+    if _engine_ignored(old):
+        skipped.append(f"{REPO_IGNORE} (ignores {ENGINE_DIR}/)")
+        return
+    norm = old.replace("\r\n", "\n")
+    sep = "" if not norm or norm.endswith("\n\n") else ("\n" if norm.endswith("\n") else "\n\n")
+    add = sep + ENGINE_IGNORE
+    writes[REPO_IGNORE] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
+    seen[REPO_IGNORE] = old
+    labels[REPO_IGNORE] = f"{REPO_IGNORE} ({ENGINE_DIR}/ appended)"
+
+
+def _engine_ignored(text: str) -> bool:
+    """Whether a root ``.gitignore`` holding ``text`` ignores ``ENGINE_DIR``, the last matching line
+    winning as in git (a `!` line re-includes). An approximation of ``git check-ignore`` that errs
+    only toward appending the line, which is harmless (the appended line comes last, so a re-run
+    finds it): a line naming only something inside the directory (`.context-engine/env/`) does not
+    count, a leading space stays part of the pattern as in git, and a later `!` line that may
+    re-include anything inside it (`!.context-engine/env/`, or an unanchored `!env/`) undoes it."""
+    import fnmatch
+
+    state = False
+    for ln in text.splitlines():
+        ln = ln.rstrip()  # git drops trailing spaces but keeps leading ones
+        if not ln or ln.startswith("#"):
+            continue
+        neg = ln.startswith("!")
+        raw = (ln[1:] if neg else ln).rstrip("/")
+        pat = raw.lstrip("/")
+        top = pat.split("/")[0]
+        if pat in (f"{ENGINE_DIR}/*", f"{ENGINE_DIR}/**") or fnmatch.fnmatchcase(ENGINE_DIR, pat):
+            state = not neg
+        elif neg and ("/" not in raw or fnmatch.fnmatchcase(ENGINE_DIR, top)):  # a `*` or `**` top matches too
+            state = False  # unanchored, or anchored inside ENGINE_DIR: it may re-include part of the env
+    return state
 
 
 def gate_section(text: str) -> tuple[str, str] | None:
@@ -472,9 +534,10 @@ def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     so_far = f"created so far: {', '.join(done) or 'none'}; run init again, it skips what exists"
-    if rel == CONTRACT_TARGET and rel in seen:
+    if rel in APPENDED and rel in seen:
         if _current(path) != seen[rel]:
-            raise Refusal(f"{rel} changed while init ran, so the kit block was not appended", so_far)
+            what = "the kit block" if rel == CONTRACT_TARGET else f"{ENGINE_DIR}/"
+            raise Refusal(f"{rel} changed while init ran, so {what} was not appended", so_far)
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(text)
         done.append(rel)

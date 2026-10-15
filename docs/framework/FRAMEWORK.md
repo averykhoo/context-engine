@@ -1368,12 +1368,18 @@ instructions or `orient` output: an agent rightly discounts a grant that arrives
 Working instructions may come from any of these three sources; a grant may not.
 
 1. The owner gives, in chat: a charter (about a page), the first stories, and any mandates.
-2. The agent installs the engine into its own environment, pinned to a release tag or commit
-   (the engine runs from its own environment and is never installed into the repo's). The MCP
+2. The agent installs the engine into its own environment, pinned to a release tag or commit:
+   a non-editable install in `.context-engine/env/` in the repo's root, gitignored (the
+   kit README § 1 gives the lines and where the interpreter sits in it). The engine runs from that
+   environment and is never installed into the repo's own, so the repo never imports it; it lives
+   inside the repo's folder, so everything the repo runs is there, and a clone rebuilds it at the
+   ref the ledger names. A kit change made in the engine repo reaches the repo only when its pin
+   moves (the upgrade procedure, §8.0). The MCP
    server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
    operation, and a repo that wants the server registers it here.
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
-   runbooks, the kit block appended to `CLAUDE.md`, the contract it imports, and the hook. It
+   runbooks, the kit block appended to `CLAUDE.md`, the contract it imports, the hook, and
+   `.context-engine/` appended to the repo's `.gitignore` when nothing there ignores it. It
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the
@@ -1648,8 +1654,8 @@ on, and move only on upgrade.
   imports must exist and equal the installed engine's `kit/contract.md`, line endings aside;
   `orient` opens with these failures, so a session whose contract did not load is told
   at once.
-- **Upgrade procedure:** bump the engine's pinned ref (reinstall it in its own environment) and
-  the contract's `framework:` line, run the lint, fix the failures, and write a ledger line
+- **Upgrade procedure:** bump the engine's pinned ref (rebuild its environment,
+  `.context-engine/env/`, at the new ref, §6.9 step 2) and the contract's `framework:` line, run the lint, fix the failures, and write a ledger line
   naming the new ref. The kit's contract replaces `docs/framework/contract.md` whole, and the
   new kit block replaces the old one between its markers.
 - **Existing repos keep their own check numbers.** The package maps its ids onto them and
@@ -2026,6 +2032,7 @@ AGENTS.md                  # workflow conventions (how agents work), read first
 CLAUDE.md                * # product contract: the kit block (framework: <version>, imports docs/framework/contract.md), mandates, gate, traps; push-hold line on top
 HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
 context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
+.gitignore               * # the repo's own; init creates it, or appends `.context-engine/` to it when it does not ignore that yet
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)
@@ -2045,6 +2052,7 @@ docs/
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; carries its own .gitignore, never tracked
+.context-engine/env/        # the engine's pinned, non-editable env, made before init (§6.9 step 2); gitignored, never the repo's own env
 .claude/settings.local.json * # machine-local, gitignored (.claude/.gitignore): the SessionStart hook that runs orient
 .claude/skills/, .claude/workflows/, .claude/agents/   # project skills, tracked build workflows, the hk agent; the kit ships none, add when needed
 .scratch/                * # throwaway and gitignored: anything only there is lost (carries its own .gitignore)

@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Iterator
 
 from . import decisions as D
 from . import ledger as L
+from .bootstrap import ENGINE_DIR
 from .config import CONFIG_NAME, LIVENESS
 from .store import ALIASES, Failure, key_order
 
@@ -54,7 +55,7 @@ BOLD_CAPS_RE = re.compile(r"\*\*(?=[^*\n]*[A-Z]{4})[^*a-z\n]+\*\*")
 STRING_RE = re.compile(r"\"(?:[^\"\\]|\\.)*\"|'[^']*'")  # TOML strings, blanked before a `#` is read as a comment
 NUMBER_KEY_RE = re.compile(r"([\w-]+)\s*=\s*[-+]?\d[\d_]*(?:\.\d+)?(?=\s*(?:[,}\]]|$))")  # `key = 12`, also inside `{ ... }`
 PROVENANCE_RE = re.compile(r"provenance:\s*(MEASURED|JUDGEMENT)\b")
-SKIP_DIRS = {".git", ".scratch", ".context", "__pycache__", "node_modules", ".venv", "venv", ".pytest_cache"}
+SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_modules", ".venv", "venv", ".pytest_cache"}  # ENGINE_DIR holds the engine's env (kit README § 1)
 
 
 def lint(e: Engine) -> list[Failure]:
