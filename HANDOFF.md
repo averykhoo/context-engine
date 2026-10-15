@@ -3,14 +3,14 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-15c)
+## Banner (2026-10-15d)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
   meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
-- **Committed, NOT pushed (2026-10-15b, c):** CE-41 (`ea14d74`), CE-87 (`34ea268`), and 2026-10-15c's records. CE-27 (archive
-  and freeze ops) is NOW. CE-88 and CE-89 filed.
+- **Committed, NOT pushed (2026-10-15b to d):** CE-41 (`ea14d74`), CE-87 (`34ea268`), and the 2026-10-15c/d records. CE-27
+  (archive and freeze ops) is NOW. CE-88 and CE-89 filed. No session is open (2026-10-14g abandoned, 2026-10-15d).
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite, CE-92 close
   step 7 drops the second full gate); AAR and periodic review, owner-triggered (CE-90, US-12). Trap homes: see CE-29's log.
