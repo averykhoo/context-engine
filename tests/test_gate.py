@@ -420,3 +420,20 @@ def test_commit_checks_only_the_scope_so_an_engine_write_after_the_gate_run_does
     (repo / "src" / "a.py").write_text("a = 3\n", encoding="utf-8")
     with pytest.raises(Refusal, match="src/a.py is in gate scope 'code', which no green gate run covers"):
         e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR)
+
+
+def test_a_close_s_own_writes_leave_step_2_s_run_covering_the_code_and_a_code_change_does_not(repo):
+    """Clean close step 7 (procedures.md, CE-92) checks `gate status --require <scope>` instead of
+    a second test run: the close's writes after step 2 (the ledger entry, the banner) are records,
+    outside the code scope, so step 2's run still covers it; a code change after step 2 moves the
+    id, so status is red and step 7 runs the gate again."""
+    g = gate_of(repo)
+    e, key = _engine(repo)
+    assert G.run(repo, g, session=key, actor=ACTOR)[0] == 0  # step 2's gate
+    e.session_close(key, actor=ACTOR, rows="CE-1 (closed)", summary=["built it"], receipts={"guards": "gate green", "read": "board only"})
+    e.banner_set("- my banner", e.banner().sha, session=key, actor=ACTOR)  # step 3
+    code, text = G.status(repo, g, require="code")
+    assert code == 0 and "code: covered" in text and "all: NOT covered" in text, text  # all moved: the close did write
+    (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")  # a code change after step 2
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "code: NOT covered" in text, text

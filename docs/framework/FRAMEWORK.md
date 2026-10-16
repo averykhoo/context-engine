@@ -1116,9 +1116,12 @@ numbered for citation (the order is below):
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
      finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
      Its operation list goes into the digest.
-7. **Run the gate again, to prove this close,** then commit by path whatever the engine did not
-   (`context-engine commit <paths> -m ...`, which takes any write still uncommitted, with its
-   op line, §5.5 rule 4). Push only with permission, then watch CI (§6.8).
+7. **Prove this close with lint and the gate's status,** then commit by path whatever the engine
+   did not (`context-engine commit <paths> -m ...`, which takes any write still uncommitted, with
+   its op line, §5.5 rule 4). Since the gate run in item 2's receipt, the close has written only
+   records, which lie outside the code scope, so that run still covers the code (§8.5 G-V1): a
+   second test run is needed only when `gate status` says the scope's id moved, and a repo
+   without `[gate] require` runs the gate again. Push only with permission, then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
 **The order is not the numbering.** Items 2–4 and 6 are engine operations (`session.close`,
