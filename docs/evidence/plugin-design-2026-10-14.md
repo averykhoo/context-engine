@@ -1,5 +1,8 @@
 # Design: procedures as skills, and the context-engine Claude Code plugin (CE-77)
 
+FROZEN 2026-10-16 (session 2026-10-16a): CE-77 closed; below, the design as it stood (its CE-7
+mention is in passing, not a plan for it)
+
 ACTIVE-PLAN while CE-77 is open; freeze it when CE-77 closes.
 
 Session 2026-10-14g. What Claude Code does with skills, plugins, plugin hooks and plugin MCP servers

@@ -1429,24 +1429,27 @@ class Engine:
         if p.name == A.REDIRECTS:
             raise Refusal(f"{rel} has the name of an archive's redirect table ({A.REDIRECTS})", f"archive it by hand under another name (manual-mode.md § context-engine doc archive)")
         dest = self.root / dest_dir / p.name
-        if dest.exists():
-            raise Refusal(f"{dest_dir}/{p.name} exists already", "archive into another directory with --to, or by hand under a dated name (manual-mode.md § context-engine doc archive)")
-        if not self._git("ls-files", "--", rel).strip():
-            raise Refusal(f"{rel} is not tracked by git", "commit it first (an archive moves tracked material, `git mv`, so its history follows it), or delete it if it was never worth keeping")
-        if self._git("status", "--porcelain=v1", "--", rel).strip():
-            raise Refusal(f"{rel} has uncommitted changes", "commit them, or undo them, first: an archive moves the material as it stands in git, never repaired (FRAMEWORK §7.3)")
-        text = self._utf8(p, rel)
-        if text.lstrip("\ufeff").startswith("---"):
-            raise Refusal(f"{rel} opens with frontmatter, so `ARCHIVED <date>` cannot be its first line", "archive it by hand, the ARCHIVED line first after the frontmatter (manual-mode.md § context-engine doc archive)")
         today = self.today().isoformat()
         name = PurePosixPath(dest_dir, p.name).as_posix()
         table = self.root / dest_dir / A.REDIRECTS
         with self.store.lock():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            self.store.write_text(dest, A.archived(text, today, session, rel))
-            p.unlink()
+            # AC-83: every check and every read before the first write, so a refusal writes nothing
+            if dest.exists():
+                raise Refusal(f"{dest_dir}/{p.name} exists already", "archive into another directory with --to, or by hand under a dated name (manual-mode.md § context-engine doc archive)")
+            if not self._git("ls-files", "--", rel).strip():
+                raise Refusal(f"{rel} is not tracked by git", "commit it first (an archive moves tracked material, `git mv`, so its history follows it), or delete it if it was never worth keeping")
+            if self._git("status", "--porcelain=v1", "--", rel).strip():
+                raise Refusal(f"{rel} has uncommitted changes", "commit them, or undo them, first: an archive moves the material as it stands in git, never repaired (FRAMEWORK §7.3)")
+            text = self._utf8(p, rel)
+            if text.lstrip("\ufeff").startswith("---"):
+                raise Refusal(f"{rel} opens with frontmatter, so `ARCHIVED <date>` cannot be its first line", "archive it by hand, the ARCHIVED line first after the frontmatter (manual-mode.md § context-engine doc archive)")
             old = self._utf8(table, f"{dest_dir}/{A.REDIRECTS}") if table.exists() else None
-            self.store.write_text(table, A.redirects(old, dest_dir, A.redirect_row(rel, p.name, today, session, why)))
+            moved = A.archived(text, today, session, rel)
+            redirects = A.redirects(old, dest_dir, A.redirect_row(rel, p.name, today, session, why))
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            self.store.write_text(dest, moved)
+            p.unlink()
+            self.store.write_text(table, redirects)
             self.store.log("doc.archive", rel, p, session, actor, ["moved"])
             self.store.log("doc.archive", rel, dest, session, actor, ["archived"])
             self.store.log("doc.archive", rel, table, session, actor, ["redirect"])

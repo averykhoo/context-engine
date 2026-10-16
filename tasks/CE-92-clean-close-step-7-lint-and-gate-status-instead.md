@@ -32,3 +32,4 @@ Change step 7 to `context-engine lint` plus `context-engine gate status --requir
 
 - 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): released from the CE-7 hold; it can start without asking.
 - 2026-10-16a (claude-code/claude-opus-5-5): closed: done in 5581060
+- 2026-10-16a (claude-code/claude-opus-5-5): 4618f1f: readers re-run at step 7 (review finding)

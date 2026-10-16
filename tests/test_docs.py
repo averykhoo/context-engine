@@ -203,6 +203,9 @@ def test_archive_refuses_what_it_cannot_move_unrepaired_and_writes_nothing(repo)
     git(repo, "commit", "-q", "-m", "edited")
     write(repo, "docs/edited.md", "# E\n\nLIVING. Changed.\n")
     archive(repo, "docs/sub/old.md")  # takes the name docs/archive/old.md first
+    (repo / "docs/latin").mkdir()
+    (repo / "docs/latin/README.md").write_bytes("# Archiv\n\nGelöscht.\n".encode("latin-1"))  # a redirect table not in UTF-8
+    write(repo, "decisions/DEC-1.md", "# A decision\n\nLIVING.\n")
     cfg = load(repo)
     bare = dataclasses.replace(cfg, working=dataclasses.replace(cfg.working, archive=""))
     cases = [
@@ -214,6 +217,10 @@ def test_archive_refuses_what_it_cannot_move_unrepaired_and_writes_nothing(repo)
         ("docs/README.md", {}, "docs/README.md has the name of an archive's redirect table"),
         ("docs/b.md", {"to": "../elsewhere"}, "../elsewhere is outside this repo's root"),
         ("docs/b.md", {"config": bare}, "no archive directory given, and [working] has no `archive`"),
+        ("docs/b.md", {"to": "."}, "the archive directory is the repo root"),
+        ("docs/b.md", {"to": "decisions"}, "decisions holds decision records"),
+        ("decisions/DEC-1.md", {}, "decisions/DEC-1.md is a decision record, not a doc"),
+        ("docs/b.md", {"to": "docs/latin"}, "docs/latin/README.md is not UTF-8"),  # read before the first write
     ]
     status, files = git(repo, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(repo)
     for path, kw, says in cases:

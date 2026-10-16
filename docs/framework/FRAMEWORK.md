@@ -1113,9 +1113,11 @@ numbered for citation (the order is below):
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
    `task.close` refuses until then.
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
-5. Promote durable rules into the contract; file method lessons into runbooks; walk the rest of
-   §6.7's table (an evidence doc for scratch worth keeping, a decision for a conclusion reached,
-   `doc.archive` for a doc over its cap).
+5. Promotion (§6.7):
+   - **5a. Rules and lessons:** promote durable rules into the contract; file method lessons
+     into runbooks; change this document in place (§6.12).
+   - **5b. The rest of §6.7's table:** an evidence doc for scratch worth keeping, a decision for
+     a conclusion reached, `doc.archive` for a doc over its cap.
 6. Anything skipped becomes a baton.
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
      finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
