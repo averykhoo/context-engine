@@ -25,9 +25,11 @@ Steps:
 This likely absorbs CE-89 (frozen wording owed after CE-41 and CE-87).
 
 ## Traps
-- A FRAMEWORK edit: wait for the CE-7 hold, or ask.
+
+- Held by DEC-50 until the adhoc trial's feedback is in (CE-79, about 2026-10-21), so the text is not rewritten twice. Made NOW 2026-10-16a without that in view: ask the owner before starting.
 - Section numbers are cited across records: a missing number stays missing, never renumbered.
 - Guards read FRAMEWORK (the coverage map from CE-30, G-D4 liveness, AC-33's §6.6 text): run the gate after each cut.
+- doc archive moves a file; the archive step here is a copy to FRAMEWORK-v<version>.md, done by hand.
 
 ## Read first
 - docs/decisions/DEC-49-framework-md-holds-what-is-needed-to-understand.md
@@ -38,3 +40,4 @@ This likely absorbs CE-89 (frozen wording owed after CE-41 and CE-87).
 - 2026-10-15c (claude-code/claude-opus-5-5): "the DEC-47 task" in the body is CE-94 (incident citations).
 - 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): stays held until the trial's feedback is in (CE-79, about 2026-10-21), so the text is not rewritten twice.
 - 2026-10-16a (claude-code/claude-opus-5-5): Owner (2026-10-16a) picked it as NOW after CE-27 closed; that lifts the CE-7 kit-edit hold for it. CE-27's doc archive op can do the archive step.
+- 2026-10-16a (claude-code/claude-opus-5-5): Correction to the 2026-10-16a comment: DEC-50 (owner, 2026-10-15e) holds this until the trial feedback is in (CE-79, about 2026-10-21); the owner made it NOW on a recommendation that missed that. Confirm with the owner before starting. Also, doc archive (CE-27) moves a doc; step 1 here copies FRAMEWORK.md to FRAMEWORK-v<version>.md, so it is a by-hand copy, not that op.

@@ -7,9 +7,32 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-16a · kind: open
+## 2026-10-16a · kind: close
 
-- **opened:** 2026-10-16T07:51:43+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-92, CE-27, CE-93, CE-95, CE-96, CE-97
+- **receipts:**
+  - guards: gate PASSED in 501.7s (848 passed in 498.80s) on g1/code:1f39dc9d5c872827; gate readers
+    PASSED in 23.4s (177 passed) on g1/code+readers:9d1324850fd49355; linux gate: green on
+    5fa4fcb8df7d (848 passed); lint: clean
+  - read: orient; procedures.md Session start, Housekeeping, Clean close, Push and CI; task show
+    CE-27, CE-83, CE-92, CE-93
+- **summary** (the owner digest):
+  - CE-92 done (5581060, 4618f1f): clean close step 7 is lint + gate status, re-running only the
+    readers after the close's own writes (a review finding).
+  - CE-27 done (c901367, 5fa4fcb): doc freeze, doc archive, task close refuses an unfrozen
+    ACTIVE-PLAN; review found archive refusals left a half-move, fixed; stale plugin-design plan
+    frozen.
+  - Owner picked CE-93 as NOW; DEC-50 holds it to about 2026-10-21, which the recommendation missed:
+    confirm before starting (CE-93 Traps).
+  - Filed CE-95 (CE-27 review small fixes), CE-96 (doc archive beyond whole docs), CE-97 (flag plans
+    left open by by-hand closes).
+  - Coordinator pattern worked: every task and fix went to an agent, and each review agent found a
+    real gap the task agent had missed (DEC-44).
+  - MCP server ran pre-CE-27 code and refused writes ([working] archive key): restart Claude Code
+    before using MCP tools.
+  - Owed: push (owner approved) and its CI verdict, done right after this close.
+- **Still owed:**
+  - push to origin and the CI watcher's verdict
 
 ---
 
