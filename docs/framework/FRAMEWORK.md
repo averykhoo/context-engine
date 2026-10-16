@@ -1125,7 +1125,10 @@ numbered for citation (the order is below):
    its op line, §5.5 rule 4). Since the gate run in item 2's receipt, the close has written only
    records, which lie outside the code scope, so that run still covers the code (§8.5 G-V1): a
    second test run is needed only when `gate status` says the scope's id moved, and a repo
-   without `[gate] require` runs the gate again. Push only with permission, then watch CI (§6.8).
+   without `[gate] require` runs the gate again. The scope's readers read those records, so where
+   the scope names readers the close requires `<scope>+readers` and re-runs just the readers
+   (`gate run --readers`) when the close's writes left them uncovered. Push only with
+   permission, then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
 **The order is not the numbering.** Items 2–4 and 6 are engine operations (`session.close`,

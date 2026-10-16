@@ -426,14 +426,21 @@ def test_a_close_s_own_writes_leave_step_2_s_run_covering_the_code_and_a_code_ch
     """Clean close step 7 (procedures.md, CE-92) checks `gate status --require <scope>` instead of
     a second test run: the close's writes after step 2 (the ledger entry, the banner) are records,
     outside the code scope, so step 2's run still covers it; a code change after step 2 moves the
-    id, so status is red and step 7 runs the gate again."""
-    g = gate_of(repo)
+    id, so status is red and step 7 runs the gate again. The readers read those records (HANDOFF.md,
+    the op log), so the close's writes leave `<scope>+readers` red: step 7 re-runs them
+    (`gate run --readers`), as the full second run once did (review of 2026-10-16a)."""
+    g = gate_of(repo, scopes={"code": {"exclude": EXCLUDE, "readers": ["tests/test_r.py::test_reads"]}, "all": {}})
     e, key = _engine(repo)
     assert G.run(repo, g, session=key, actor=ACTOR)[0] == 0  # step 2's gate
+    assert G.status(repo, g, require="code+readers")[0] == 0  # step 2's run covered the readers too
     e.session_close(key, actor=ACTOR, rows="CE-1 (closed)", summary=["built it"], receipts={"guards": "gate green", "read": "board only"})
     e.banner_set("- my banner", e.banner().sha, session=key, actor=ACTOR)  # step 3
     code, text = G.status(repo, g, require="code")
     assert code == 0 and "code: covered" in text and "all: NOT covered" in text, text  # all moved: the close did write
+    code, text = G.status(repo, g, require="code+readers")
+    assert code == 1 and "code+readers: NOT covered" in text and "gate run --readers" in text, text  # the readers must re-run
+    assert G.run(repo, g, readers=True, session=key, actor=ACTOR)[0] == 0
+    assert G.status(repo, g, require="code+readers")[0] == 0
     (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")  # a code change after step 2
     code, text = G.status(repo, g, require="code")
     assert code == 1 and "code: NOT covered" in text, text
