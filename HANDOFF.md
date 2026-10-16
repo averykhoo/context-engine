@@ -3,29 +3,33 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-15e)
+## Banner (2026-10-16a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
   meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
-- **Committed, NOT pushed (2026-10-15b to e):** CE-41 (`ea14d74`), CE-87 (`34ea268`), and the 2026-10-15c/d/e records. CE-27
-  (archive and freeze ops) is NOW. CE-88 and CE-89 filed. No session is open (2026-10-15e).
+- **2026-10-16a:** CE-92 (close step 7: lint + gate status + readers) and CE-27 (`doc freeze`, `doc archive`, `task close`
+  refuses an unfrozen ACTIVE-PLAN) done; everything through that session's close was pushed after it (CI verdict in its digest).
+- **CE-93 is NOW (owner, 2026-10-16a) but DEC-50 holds it until the trial's feedback (about 2026-10-21):** ask the owner before
+  starting it. CE-95, CE-96, CE-97 filed from CE-27's review.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
-  by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite, CE-92 close
-  step 7 drops the second full gate); AAR and periodic review, owner-triggered (CE-90, US-12).
+  by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
+  periodic review, owner-triggered (CE-90, US-12).
 - **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
   never the banner (CE-29, spec text still held).
 - **The top-level session coordinates (DEC-44):** checks and verification go to agents; the rule text still says otherwise
   until CE-83 lands (a kit edit: ask first). CE-83 also names the CI watcher's model and the cheapest-viable-model line (DEC-45).
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
-  CE-81 (DEC-43) and CE-92 (DEC-50). CE-84, CE-85, CE-89 and CE-93 wait on it; CE-91 is decided with CE-83.
+  CE-81 (DEC-43), CE-92 (DEC-50) and CE-27 (owner, 2026-10-16a). CE-84, CE-85, CE-89 and CE-93 wait on it; CE-91 is decided
+  with CE-83.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
 - **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push, from the main checkout
-  (it exits 128 from a worktree, CE-86). The MCP server may run stale code after an engine change: restart Claude Code.
+  (it exits 128 from a worktree, CE-86). The MCP server runs stale code after an engine change (it refused writes on
+  2026-10-16a after CE-27 added `[working] archive`): restart Claude Code.
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
 
