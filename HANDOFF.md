@@ -9,8 +9,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
   meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
-- **2026-10-16a:** CE-92 (close step 7: lint + gate status + readers) and CE-27 (`doc freeze`, `doc archive`, `task close`
-  refuses an unfrozen ACTIVE-PLAN) done; everything through that session's close was pushed after it (CI verdict in its digest).
+- **Done and pushed (2026-10-16a):** CE-92 (close step 7: lint + gate status + readers) and CE-27 (`doc freeze`,
+  `doc archive`, `task close` refuses an unfrozen ACTIVE-PLAN); the push followed that session's close (CI verdict in its digest).
 - **CE-93 is NOW (owner, 2026-10-16a) but DEC-50 holds it until the trial's feedback (about 2026-10-21):** ask the owner before
   starting it. CE-95, CE-96, CE-97 filed from CE-27's review.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
