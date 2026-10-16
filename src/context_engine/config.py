@@ -66,6 +66,7 @@ class Working:
     decision_index: str = ""  # the generated decision index, e.g. docs/decisions/index.md (FRAMEWORK §6.5, G-D6)
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
     criteria: str = ""  # the criteria file, one `| AC-n | ... |` table row per criterion; `decision link` checks criterion ids against it
+    archive: str = ""  # the archive directory `doc archive` moves a doc into when given none (FRAMEWORK §7.3, CE-27); its README.md is the redirect table
 
 
 @dataclass(frozen=True)

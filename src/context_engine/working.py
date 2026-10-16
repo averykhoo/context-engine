@@ -20,10 +20,11 @@ import functools
 import json
 import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, NamedTuple
 
 from . import __version__
+from . import archive as A
 from . import decisions as D
 from . import guards as G
 from . import ledger as L
@@ -33,7 +34,7 @@ from . import bootstrap as K  # the kit: its block markers, kit block and contra
 from . import commit as C
 from . import gate as GATE
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
-from .config import Config
+from .config import CONFIG_NAME, Config
 from .errors import Refusal
 from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coerce, key_order
 
@@ -429,6 +430,7 @@ class Engine:
         def check(rec: Record) -> None:
             if rec.doc.get("state") == "closed":
                 raise Refusal(f"{rid} is already closed", "nothing to do; `reopen` it if it is not done")
+            self._plans_frozen(rec.id)
             was.append(str(rec.doc.get("pri")))
             if rec.doc.get("review"):
                 filed.extend(self._file_residuals(rec, session, actor))
@@ -444,6 +446,20 @@ class Engine:
         self.store.commit_trailers = [f"Closes: {rid}"]
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
+
+    def _plans_frozen(self, rid: str) -> None:
+        """CE-27 (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): refuse to close
+        the last open item an ACTIVE-PLAN doc names, which would turn G-D4 red on that doc. Off
+        with G-D4 (`[guards] off`)."""
+        if "G-D4" in self.store.config.guards.off:
+            return
+        left = [rel for rel, named in G.active_plans(self) if rid in named and not any(o for i, o in named.items() if i != rid)]
+        if left:
+            docs = ", ".join(left)
+            raise Refusal(
+                f"{rid} is the last open item that ACTIVE-PLAN {'doc' if len(left) == 1 else 'docs'} {docs} {'names' if len(left) == 1 else 'name'}, so closing it would turn G-D4 red (FRAMEWORK §6.7: a plan freezes when its item closes)",
+                f"freeze {'it' if len(left) == 1 else 'each'} first: {'; '.join(f'`doc freeze {d}`' for d in left)}; then close {rid} again (its commit carries the freeze)",
+            )
 
     def _now_left(self, was: list[str]) -> str:
         """CE-36: taking an item off NOW (`close`, `ask answer`, a demoting `promote`) can leave NOW
@@ -1328,6 +1344,115 @@ class Engine:
             return f"dry run, nothing written: would import {summary} into {kind.dir}{after}\n\nSave everything below this line as the id map's evidence doc, then import:\n\n{doc}"
         self.store.create_many(kind.name, items, session=session, actor=actor, op="import")
         return f"imported {summary} into {kind.dir}, each stamped" + (f"; index {self.w.decision_index} regenerated" if self.w.decision_index else "") + after
+
+    # -- docs: freeze and archive (FRAMEWORK §6.7, §7.2, §7.3, CE-27) --------------------
+
+    def _doc(self, path: str) -> tuple[str, Path]:
+        """A hand-written `.md` doc inside the root, as (repo-relative path, path): not a record,
+        whose liveness is its state (§6.7: a closed item stays in place)."""
+        raw = str(path).strip().replace("\\", "/")
+        q = Path(raw)
+        try:
+            rel = (q if q.is_absolute() else self.root / q).resolve().relative_to(self.root.resolve()).as_posix()
+        except (ValueError, OSError):
+            raise Refusal(f"{path} is outside this repo's root ({self.root})", "give a path relative to the repo root") from None
+        p = self.root / rel
+        if not raw or not p.is_file():
+            raise Refusal(f"there is no file {rel or path!r}", "give the doc's path relative to the repo root")
+        if p.suffix.lower() != ".md":
+            raise Refusal(f"{rel} is not a markdown doc", "freeze or archive only `.md` docs; move other material by hand with `git mv` (manual-mode.md § context-engine doc archive)")
+        for k in self.store.config.kinds.values():
+            if G._under(rel, (k.dir, *k.extra_dirs)):
+                raise Refusal(f"{rel} is a {k.name} record, not a doc", "a record stays where it is (FRAMEWORK §6.7: a closed item keeps its file); its state is changed by its own operations")
+        return rel, p
+
+    @staticmethod
+    def _utf8(p: Path, rel: str) -> str:
+        try:
+            return p.read_bytes().decode("utf-8")
+        except UnicodeDecodeError:
+            raise Refusal(f"{rel} is not UTF-8", "save it as UTF-8, then retry") from None
+
+    def doc_freeze(self, path: str, note: str = "", *, session: str, actor: str) -> str:
+        """FRAMEWORK §6.7 and §7.2: put `FROZEN <date> (session <key>): <note>` above the doc's
+        liveness declaration, so G-D4 reads it as FROZEN; nothing else in it changes. Refused
+        for a doc with no declaration in G-D4's window, one already FROZEN, one declared by a
+        frontmatter `liveness:` key, and one `[guards] liveness_given` declares (its opening
+        lines are not this repo's to edit)."""
+        self._check(session, actor)
+        rel, p = self._doc(path)
+        g = self.store.config.guards
+        given, _ = G.given(self)
+        if rel in given:
+            raise Refusal(f"{rel}'s liveness is given in config ([guards] liveness_given {given[rel][1]} = {given[rel][0]}): its opening lines are not this repo's to edit", "change the `liveness_given` entry instead, if the owner of that file agrees")
+        today = self.today().isoformat()
+        with self.store.lock():
+            text = self._utf8(p, rel)
+            flat = text.replace("\r\n", "\n")
+            own = G.declared(flat, g.liveness_lines)
+            if own.problem:
+                raise Refusal(f"{rel}: {own.problem}", "fix the declaration by hand first (G-D4)")
+            if own.word is None:
+                raise Refusal(f"{rel} declares no liveness in its first {g.liveness_lines} lines, so there is no declaration to freeze above", f"write `FROZEN {today} (session {session}): <why>` as a line of its own near the top by hand (manual-mode.md § context-engine doc freeze)")
+            if own.word == "FROZEN":
+                raise Refusal(f"{rel} is already FROZEN (line {own.line})", "nothing to do: a frozen doc is never edited (FRAMEWORK §7.2)")
+            if G.FM_LIVENESS_RE.match(flat.lstrip("\ufeff").split("\n")[own.line - 1]) and flat.lstrip("\ufeff").startswith("---"):
+                raise Refusal(f"{rel} declares {own.word} in its frontmatter (`liveness:`, line {own.line}), where no line can go above it", f"set `liveness: FROZEN` by hand, and say when and why in the body (manual-mode.md § context-engine doc freeze)")
+            named = list(G._named(flat, g.liveness_lines, G._board_ids(self))) if self.w.board else []
+            why = note.strip() or (f"{_one(named)} closed; below, the plan as it stood" if own.word == "ACTIVE-PLAN" and named else "below, the doc as it stood")
+            self.store.write_text(p, A.freeze(text, own.line, A.frozen_line(today, session, why)))
+            self.store.log("doc.freeze", rel, p, session, actor, ["liveness"])
+        return f"{rel}: FROZEN {today} written on line {own.line}, above its {own.word} line; G-D4 now reads it as FROZEN"
+
+    def doc_archive(self, path: str, to: str = "", why: str = "", *, session: str, actor: str) -> str:
+        """FRAMEWORK §7.3: move a tracked, committed doc, unrepaired, into the archive directory
+        (`to`, else `[working] archive`), opened with `ARCHIVED <date>`, and add its row to that
+        directory's redirect table (`README.md`, made by the first archive there). Not a
+        milestone (DEC-36): nothing is staged, and the next commit carries the old path's
+        deletion, the new file and the table with their op lines, which git shows as a rename."""
+        self._check(session, actor)
+        rel, p = self._doc(path)
+        where = (to or self.w.archive).strip().replace("\\", "/").strip("/")
+        if not where:
+            raise Refusal("no archive directory given, and [working] has no `archive`", "pass --to <directory>, or set `archive = \"docs/archive\"` in [working] of context.toml")
+        try:
+            dest_dir = (self.root / where).resolve().relative_to(self.root.resolve()).as_posix()
+        except (ValueError, OSError):
+            raise Refusal(f"{where} is outside this repo's root ({self.root})", "archive into a directory inside the repo") from None
+        if dest_dir in (".", ""):
+            raise Refusal("the archive directory is the repo root", "archive into a directory of its own, e.g. docs/archive")
+        for k in self.store.config.kinds.values():
+            if G._under(dest_dir, (k.dir, *k.extra_dirs)):
+                raise Refusal(f"{dest_dir} holds {k.name} records", "archive into a directory of its own, e.g. docs/archive")
+        if PurePosixPath(rel).parent.as_posix() == dest_dir:
+            raise Refusal(f"{rel} is already in the archive directory {dest_dir}", "nothing to do: nothing in an archive is moved again (FRAMEWORK §7.3)")
+        if p.name == A.REDIRECTS:
+            raise Refusal(f"{rel} has the name of an archive's redirect table ({A.REDIRECTS})", f"archive it by hand under another name (manual-mode.md § context-engine doc archive)")
+        dest = self.root / dest_dir / p.name
+        if dest.exists():
+            raise Refusal(f"{dest_dir}/{p.name} exists already", "archive into another directory with --to, or by hand under a dated name (manual-mode.md § context-engine doc archive)")
+        if not self._git("ls-files", "--", rel).strip():
+            raise Refusal(f"{rel} is not tracked by git", "commit it first (an archive moves tracked material, `git mv`, so its history follows it), or delete it if it was never worth keeping")
+        if self._git("status", "--porcelain=v1", "--", rel).strip():
+            raise Refusal(f"{rel} has uncommitted changes", "commit them, or undo them, first: an archive moves the material as it stands in git, never repaired (FRAMEWORK §7.3)")
+        text = self._utf8(p, rel)
+        if text.lstrip("\ufeff").startswith("---"):
+            raise Refusal(f"{rel} opens with frontmatter, so `ARCHIVED <date>` cannot be its first line", "archive it by hand, the ARCHIVED line first after the frontmatter (manual-mode.md § context-engine doc archive)")
+        today = self.today().isoformat()
+        name = PurePosixPath(dest_dir, p.name).as_posix()
+        table = self.root / dest_dir / A.REDIRECTS
+        with self.store.lock():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            self.store.write_text(dest, A.archived(text, today, session, rel))
+            p.unlink()
+            old = self._utf8(table, f"{dest_dir}/{A.REDIRECTS}") if table.exists() else None
+            self.store.write_text(table, A.redirects(old, dest_dir, A.redirect_row(rel, p.name, today, session, why)))
+            self.store.log("doc.archive", rel, p, session, actor, ["moved"])
+            self.store.log("doc.archive", rel, dest, session, actor, ["archived"])
+            self.store.log("doc.archive", rel, table, session, actor, ["redirect"])
+        cfg = (self.root / CONFIG_NAME).read_text(encoding="utf-8") if (self.root / CONFIG_NAME).exists() else ""
+        warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if f'"{rel}"' in cfg else ""
+        return f"{rel}: archived as {name} (first line ARCHIVED {today}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
 
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 

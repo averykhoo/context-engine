@@ -162,6 +162,14 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-79 | `tools/linux_gate.py [rev]` runs CI's gate job on any commit, pushed or not, in a Linux container on the owner's machine, set up like CI's runner (`ubuntu-latest`'s Ubuntu, git from the git-core PPA with the runner image's `safe.directory = *`, uid 1001, Python at the `requires-python` floor): a fresh clone of that commit, the workflow's install step, then its gate, exiting with the gate's status and naming the git and Python it ran; its steps match the workflow's | US-18 | tested |
 | AC-80 | No test's result depends on the machine's git config or on platform-specific standard-library internals: git in a test reads no system or global config, and no test patches an attribute of a standard-library module | US-18 | tested |
 
+## Freeze and archive (CE-27)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-81 | `doc freeze` writes `FROZEN <date> (session <key>): <why>` and a blank line above a doc's topmost liveness declaration as G-D4 reads it, keeping every other byte (a BOM, the line endings) and wrapping the line at 100 characters, and logs `doc.freeze`; it refuses, writing nothing, a doc already FROZEN, one with no declaration in the window, one declared by a frontmatter key or by `liveness_given`, a record, a file that is not `.md` and a path outside the root | US-9 | tested |
+| AC-82 | `task close` refuses, before any byte, to close the last open board item that an ACTIVE-PLAN doc G-D4 reads names in its window, naming each such doc with `doc freeze <doc>` as the remedy; once they are frozen the close goes through and G-D4 stays green; with G-D4 off it does not check | US-9 | tested |
+| AC-83 | `doc archive` moves a tracked, committed `.md` doc without frontmatter into `--to` or `[working] archive`, its first line `ARCHIVED <date> (session <key>), from <old path>.` and the rest unchanged; adds its row to that directory's `README.md` redirect table (made LIVING by the first archive, or a `## Redirects` section in a README without one); logs three `doc.archive` lines and stages nothing, so the next commit carries a rename; names a `context.toml` entry left on the old path; and refuses, writing nothing, an untracked doc, uncommitted changes, frontmatter, a name already archived there, a doc already in the directory or named `README.md`, a directory outside the root, and no directory | US-9 | tested |
+
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

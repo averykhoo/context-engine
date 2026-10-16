@@ -1109,9 +1109,13 @@ numbered for citation (the order is below):
    - `Still owed:`.
 3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
-   `Closes:` and `Sabotage:` lines, §5.5 rule 4), rank, mint (with the session key).
+   `Closes:` and `Sabotage:` lines, §5.5 rule 4), rank, mint (with the session key). Before a
+   close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
+   `task.close` refuses until then.
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
-5. Promote durable rules into the contract; file method lessons into runbooks (§6.7).
+5. Promote durable rules into the contract; file method lessons into runbooks; walk the rest of
+   §6.7's table (an evidence doc for scratch worth keeping, a decision for a conclusion reached,
+   `doc.archive` for a doc over its cap).
 6. Anything skipped becomes a baton.
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
      finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
@@ -1334,6 +1338,13 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
 | a component over its cap | archive with a redirect table | when the guard warns |
 | ACTIVE-PLAN doc | FROZEN | when its item closes |
 
+Two rows are engine operations. **ACTIVE-PLAN to FROZEN** is `doc.freeze`, which writes the
+FROZEN line G-D4 reads (§7.2), and `task.close` refuses to close the last open item an
+ACTIVE-PLAN doc names until that doc is frozen, so the close and the freeze land in one commit
+and G-D4 is never red between them. **Archive** is `doc.archive`, for a whole doc (§7.3). The
+other rows are the session's judgement: a clean close walks them (§6.3 items 4 and 5), and
+housekeeping turns old batons into tasks (§6.11).
+
 ### 6.8 Push and CI
 
 - gate before every push; where CI runs on a different platform from the session's machine,
@@ -1548,7 +1559,8 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 - One per item or investigation, dated, with its liveness declared near the top (G-D4). While
   ACTIVE-PLAN it names its board item there, and dated corrections are added at the top.
-  It freezes when the item closes: a FROZEN line with the date goes above the old declaration.
+  It freezes when the item closes: a FROZEN line with the date goes above the old declaration
+  (`doc.freeze` writes `FROZEN <date> (session <key>): <why>`), before the item's close.
 - The task row is the index and the doc is the body: `show <id>` alone must be enough to
   resume.
 - A TODO the author left in a frozen doc marks a known gap; it is not an instruction to whoever
@@ -1558,9 +1570,15 @@ fallback is a runbook section (P16). Not built yet (CE-18).
 
 - `git mv` the material, never repair it.
 - First line: `ARCHIVED YYYY-MM-DD`.
-- One redirect table per archive directory. Nothing in an archive is repaired, extended or kept
-  current.
+- One redirect table per archive directory: its `README.md`, one row per archived doc (old path,
+  new link, date, why). Nothing else in an archive is repaired, extended or kept current.
 - Archive headings act as the index (`## Pruned from HANDOFF.md on <date>`).
+- **The engine's operation is `doc.archive`** (CLI `doc archive <doc> [--to <dir>] [--why]`): a
+  whole `.md` doc, tracked and committed, without frontmatter, moved into `--to` or `[working]
+  archive`, first line `ARCHIVED <date> (session <key>), from <old path>.`, its row added to the
+  directory's `README.md` (created LIVING by the first archive there). It is not a milestone: the
+  next commit carries the move, which git shows as a rename. Pruning part of a file under a dated
+  heading needs a judgement of what goes, so it is done by hand (`manual-mode.md`).
 
 ### 7.4 Residual-risk register vs unverified hazards
 
@@ -1760,6 +1778,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
+| Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why)`: a whole doc into an archive directory with its redirect row (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message)`: the session's own commit by path, with the op log lines HEAD lacks and the files they name; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
@@ -1768,7 +1787,8 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
 
-**Out of scope for the MCP:** `.feature` files and code; gate runs; prose documents; and every
+**Out of scope for the MCP:** `.feature` files and code; gate runs; prose documents (beyond the
+FROZEN line `doc.freeze` adds and the move `doc.archive` makes); and every
 judgement: the session makes it by calling an operation, the tool never makes it.
 
 ### 8.0.3 Trial before adoption
@@ -1854,7 +1874,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   must agree. History directories hold provenance: each doc there is FROZEN, or ACTIVE-PLAN
   while its item is open. With a board configured, an ACTIVE-PLAN doc names its board item in
   the window, and is red once every item it names there is closed (§6.7: it freezes when its
-  item closes). Config: `[guards] liveness` and `history` (paths; both empty is off),
+  item closes; `task.close` refuses to close the last of them until `doc.freeze` has).
+  Config: `[guards] liveness` and `history` (paths; both empty is off),
   `liveness_given` (a repo-relative glob to a liveness; one that matches no file is red) and
   `liveness_lines`. A listed path that is missing, and a `liveness` list holding no doc, are red.
 - **G-D5:** derivable counts appear only in generated blocks, so a count of things in the tree

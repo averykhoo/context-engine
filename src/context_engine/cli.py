@@ -229,6 +229,15 @@ def build() -> argparse.ArgumentParser:
     wy = groups.add_parser("why", help="the decisions that link a task, criterion or file::symbol")
     wy.add_argument("target")
 
+    dd = groups.add_parser("doc", help="freeze or archive a hand-written doc (FRAMEWORK §6.7, §7.3)").add_subparsers(dest="op", required=True)
+    df_ = dd.add_parser("freeze", help="write a FROZEN line with the date above the doc's liveness line (G-D4 then reads it as FROZEN)")
+    df_.add_argument("path", help="the doc, relative to the root")
+    df_.add_argument("--note", default="", help="why it is frozen (default: the board items it names closed)")
+    da = dd.add_parser("archive", help="move a committed doc into an archive directory, unrepaired, first line ARCHIVED <date>, with a row in that directory's redirect table")
+    da.add_argument("path", help="the doc, relative to the root")
+    da.add_argument("--to", default="", help="the archive directory (default: [working] archive)")
+    da.add_argument("--why", default="", help="the redirect row's reason, e.g. `over its cap (G-D1)`")
+
     rg = groups.add_parser("register", help="the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
     rgs = rg.add_parser("show")
     rgs.add_argument("--engine", action="store_true", help="the engine's own register, shipped with the package")
@@ -277,6 +286,8 @@ CLI_OPS = {
     ("gate", "run"): "gate_run",
     ("gate", "status"): "gate_status",
     ("why", None): "why",
+    ("doc", "freeze"): "doc_freeze",
+    ("doc", "archive"): "doc_archive",
     ("register", "show"): "register_show",
     ("banner", "show"): "banner_show",
     ("banner", "set"): "banner_set",

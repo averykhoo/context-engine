@@ -529,7 +529,12 @@ def test_g_d4_a_history_doc_is_frozen_or_active_plan_while_the_item_it_names_is_
     ]
     (tmp_path / "evidence/live-2026-10-13.md").unlink()
     (tmp_path / "evidence/orphan-2026-10-13.md").unlink()
-    e.close(t.id, "landed", **W)  # the item lands: its plan must freeze
+    # the item lands: its plan must freeze. `task close` refuses while the plan is ACTIVE-PLAN
+    # (CE-27, tests/test_docs.py), so the plan comes back after the close, as a hand edit would
+    plan = (tmp_path / "evidence/plan-2026-10-13.md").read_bytes()
+    (tmp_path / "evidence/plan-2026-10-13.md").unlink()
+    e.close(t.id, "landed", **W)
+    (tmp_path / "evidence/plan-2026-10-13.md").write_bytes(plan)
     assert reds(e, "G-D4") == [f"evidence/plan-2026-10-13.md: is ACTIVE-PLAN, but every item it names ({t.id}) is closed"]
     write(tmp_path, "evidence/plan-2026-10-13.md", f"# Plan\n\nFROZEN 2026-10-13a: landed.\n\nACTIVE-PLAN for {t.id}.\n")  # the topmost wins
     assert reds(e, "G-D4") == []

@@ -65,6 +65,8 @@ CALLS = {
     "why": (["CE-1"], {"target": "CE-1"}),
     "hk_regen_index": ([], {}),
     "decision_import": (["log.md", "--dry-run"], {"path": "log.md", "dry_run": True}),
+    "doc_freeze": (["docs/plan.md", "--note", "CE-1 closed"], {"path": "docs/plan.md", "note": "CE-1 closed"}),
+    "doc_archive": (["docs/old.md", "--to", "docs/archive", "--why", "over its cap"], {"path": "docs/old.md", "to": "docs/archive", "why": "over its cap"}),
     "register_show": (["--engine"], {"engine": True}),
     "banner_show": ([], {}),
     "banner_set": (["--seen", "abc", "--text", "new"], {"seen": "abc", "text": "new"}),
@@ -197,8 +199,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions; record_retire: test_retire; commit, which needs git: test_commit)
-    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "commit"}
+    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions; record_retire: test_retire; commit, which needs git: test_commit; the doc ops: test_docs)
+    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "commit", "doc_freeze", "doc_archive"}
 
 
 @pytest.mark.criterion("AC-19")

@@ -99,6 +99,8 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
+| doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
+| doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table | `["moved"]`, `["archived"]`, `["redirect"]` |
 
 ### Record kinds (the kit's defaults)
 
@@ -582,6 +584,12 @@ Log one op line per close that added entries: `op: register.append`, `id` the ta
 register, `fields` the new INV ids. With residuals and no register configured, stop: configure
 one first.
 
+**If an ACTIVE-PLAN doc names the item** (a doc G-D4 reads, `[guards] liveness` or `history`,
+whose liveness is ACTIVE-PLAN and whose first `liveness_lines` lines name it) and every other
+board item named there is closed, stop: freeze that doc first (§ doc freeze), then close. The
+engine refuses the close until then, and names each such doc; with `[guards] off` naming G-D4 it
+does not check.
+
 **If the item was at NOW**, count the open items at NOW once it is closed. If NOW holds fewer
 than its cap (`[working.caps]`, 1 by default) while any item stays open, G-W5 is red from now
 on: tell the owner, naming the NEXT items (or saying NEXT is empty), and ask which one to
@@ -606,6 +614,10 @@ A question closed by `task close` would carry no decision in the owner's words, 
 would in effect have answered its own question (FRAMEWORK §5.3).
 The residuals move to the register at close because that is when the design is final, and the
 register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
+A plan that names the item is frozen before the close, not after: G-D4 turns red on an
+ACTIVE-PLAN doc once every item it names is closed (FRAMEWORK §6.7: it freezes when its item
+closes), and a freeze is the session's own step with no owner call in it, so the close refuses
+until it is done, and the freeze goes into the close's commit.
 An empty NOW is reported at close, not refused: refusing would block a close the owner wants,
 and the next NOW item is the owner's call; if it were reported only at the next gate, it would
 turn the gate red before anything could be committed.
@@ -817,6 +829,74 @@ print(os.path.dirname(context_engine.__file__))"` prints the directory) and say 
 Regulations). The engine's own
 register ships inside the package, so a repo the engine is pointed at can read what the engine
 cannot protect it from, without a checkout of the engine (FRAMEWORK §7.4).
+
+## Docs: freeze and archive
+
+Both work on a hand-written `.md` doc, never on a record: a record's liveness is its state, and a
+closed item keeps its file (FRAMEWORK §6.7).
+
+### context-engine doc freeze
+
+1. Find the doc's liveness declaration as G-D4 reads it (FRAMEWORK §8.3): the topmost line in its
+   first `liveness_lines` lines (10 by default) that opens a block (the file's first line, or one
+   after a blank line, a heading or the frontmatter) and is led, after a blockquote's `>` and
+   emphasis, by LIVING, ACTIVE-PLAN or FROZEN, or by `ARCHIVED <date>`; or a frontmatter
+   `liveness:` key. Stop if it is already FROZEN: nothing to do. Stop if `[guards]
+   liveness_given` names the doc: its opening lines are not this repo's to edit. If it declares
+   nothing, write the FROZEN line below as its own block near the top. If the declaration is a
+   frontmatter key, set it to `FROZEN` and say when and why in the body.
+2. Right above that line, insert `FROZEN <today, YYYY-MM-DD> (session <key>): <why>` and one
+   blank line, in the doc's own line endings; wrap the FROZEN line at 100 characters. With no
+   `--note`, the why of an ACTIVE-PLAN doc that names board items is `<their ids> closed; below,
+   the plan as it stood`. Change nothing else.
+3. Log one op line (§ What every write does). Not a milestone: the next commit carries it, the
+   close's commit when it is done just before `task close`.
+
+**Why:** an ACTIVE-PLAN doc freezes when its item closes (FRAMEWORK §6.7, §7.2), and a frozen doc
+is provenance that nobody keeps current. The FROZEN line goes above the old declaration, not over
+it: the topmost declaration is the one G-D4 counts, and the old line stays as part of the record
+of what the doc was. `task close` refuses to close the last open item a plan names until the plan
+is frozen (§ task close), so G-D4 is never red between a close and its freeze.
+
+### context-engine doc archive
+
+For a whole `.md` doc that git tracks, with no uncommitted change, and no frontmatter:
+
+1. The archive directory is `--to`, else `[working] archive` (the kit's default is
+   `docs/archive`). Stop if the doc is already in it, if a file of its name is already there
+   (choose another directory, or a dated name), or if the doc is named `README.md`, which is the
+   redirect table's name.
+2. Move it: `git mv <doc> <dir>/<name>`. Never repair it: no fixed links, no updated text. (The
+   engine moves the file without staging it, and the next commit records the move; git shows a
+   rename either way.)
+3. Make its first line `ARCHIVED <today, YYYY-MM-DD> (session <key>), from <old path>.`, then one
+   blank line, then the doc as it was, in its own line endings. A doc with frontmatter cannot take
+   that first line: by hand, put the ARCHIVED line first after the frontmatter, where G-D4 reads it
+   too.
+4. Add the doc's row to `<dir>/README.md`, the directory's one redirect table, after the last
+   row of the table headed `| Was | Now | Archived | Why |`. Its cells: the old path; a markdown
+   link whose text and target are both the archived file's name; `<today> (session <key>)`; the
+   why, or `—`. With no README, create it: `# Archive: <dir>`, a
+   blank line, a paragraph led by `LIVING:` saying that it is this directory's redirect table and
+   that nothing else here is repaired, extended or kept current, a blank line, then the table. A
+   README without that table gets a `## Redirects` section at its end holding it.
+5. Log three op lines (§ What every write does). Not a milestone: the next commit carries the old
+   path's deletion, the archived copy and the table.
+6. If `context.toml` names the old path (a route, a `[guards]` list), point the entry at the new
+   path or drop it, or lint is red (G-R1, G-D4); the engine's reply names such an entry. A link to
+   the old path in a doc lint reads (G-D3) is pointed at the archived copy.
+
+**Pruning part of a file** (an orientation note over its cap) is not an engine operation: what
+goes is a judgement. Cut the passage and append it unchanged to an archive file in the archive
+directory, under `## Pruned from <file> on <date>` (the headings are the file's index). A new
+archive file opens with `ARCHIVED <date>`, and gets its row in the redirect table once.
+
+**Why:** an archive answers "where did X go?" (FRAMEWORK §7.3). `git mv` keeps the history with
+the material (`git log --follow`). Never repairing it keeps it evidence of what was true when it
+was archived. The `ARCHIVED <date>` first line is a FROZEN declaration to G-D4, so an archived
+LIVING doc no longer claims to be kept current. One redirect table per directory is where anyone
+holding the old path finds the new one. Only whole docs, because a partial move needs judgement,
+and only committed ones, so the move carries nobody's half-made edit.
 
 ## The banner
 

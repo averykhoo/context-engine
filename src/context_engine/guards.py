@@ -590,14 +590,44 @@ def liveness(e: Engine) -> list[Failure]:
             if word == "LIVING" and _under(rel, g.history):
                 out.append(Failure("G-D4", rel, "is LIVING, but it sits in a history directory ([guards] history), which holds provenance", "freeze it (a FROZEN line at the top), or mark it ACTIVE-PLAN while its item is open; a doc kept current belongs outside the history directory"))
             if word == "ACTIVE-PLAN" and board is not None:
-                top = "\n".join(text.lstrip("\ufeff").split("\n")[: g.liveness_lines])
-                named = [i for i in dict.fromkeys(ID_RE.findall(top)) if i in board]
+                named = list(_named(text, g.liveness_lines, board))
                 if not named:
                     out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN but names no board item in its first {g.liveness_lines} lines, so nobody can tell when its item closes", "name the item it serves near the top (FRAMEWORK §7.2), or freeze it"))
                 elif not any(board[i] for i in named):
                     out.append(Failure("G-D4", rel, f"is ACTIVE-PLAN, but every item it names ({', '.join(named)}) is closed", "freeze it: a FROZEN line with the date at the top, above the ACTIVE-PLAN one (FRAMEWORK §6.7)"))
     if g.liveness and read == 0:
         out.append(Failure("G-D4", CONFIG_NAME, f"[guards] liveness ({', '.join(g.liveness)}) holds no doc, so G-D4 checks nothing there", "list the docs to check, or empty the list"))
+    return out
+
+
+def _named(text: str, window: int, board: dict[str, bool]) -> dict[str, bool]:
+    """The board items an ACTIVE-PLAN doc names in its window, each -> whether it is open."""
+    top = "\n".join(text.lstrip("\ufeff").split("\n")[:window])
+    return {i: board[i] for i in dict.fromkeys(ID_RE.findall(top)) if i in board}
+
+
+def active_plans(e: Engine) -> list[tuple[str, dict[str, bool]]]:
+    """Each doc G-D4 reads (`[guards] liveness` and `history`) whose liveness is ACTIVE-PLAN, as
+    (repo-relative path, the board items its window names -> open), read as `liveness` reads
+    it. `task close` reads it (CE-27): closing the last open item a plan names would turn G-D4
+    red, so the close refuses until the plan is frozen (`doc freeze`). Empty while G-D4 reads
+    nothing or `[working] board` is unset."""
+    g = e.store.config.guards
+    if not (g.liveness or g.history) or not e.w.board:
+        return []
+    table, _ = given(e)
+    board = _board_ids(e)
+    out: list[tuple[str, dict[str, bool]]] = []
+    seen: set[str] = set()
+    for rel, path in docs(e.root, (*g.liveness, *g.history)):
+        if path is None or rel in seen:
+            continue
+        seen.add(rel)
+        text = _text(path)
+        own = declared(text, g.liveness_lines)
+        word = own.word or (table[rel][0] if rel in table else None)
+        if word == "ACTIVE-PLAN" and not own.problem:
+            out.append((rel, _named(text, g.liveness_lines, board)))
     return out
 
 

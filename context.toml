@@ -77,6 +77,7 @@ read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orie
 register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
 decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it
 criteria = "docs/criteria.md"               # `decision link` checks a criterion id is a row here
+archive = "docs/archive"                    # `doc archive` with no --to (FRAMEWORK §7.3, CE-27); none archived yet
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
 
 # The scoped gate (FRAMEWORK §8.5 G-V1, CE-78): `context-engine gate run` runs the gate and records

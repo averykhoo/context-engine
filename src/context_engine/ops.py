@@ -400,6 +400,21 @@ def gate_status(e: Engine, c: Caller, require: str = "") -> tuple[int, str]:
     return G.status(e.root, e.store.config.gate, require=require)
 
 
+# -- docs: freeze and archive (FRAMEWORK §6.7, §7.2, §7.3, CE-27) ----------------------------
+
+
+@op(write=True)
+def doc_freeze(e: Engine, c: Caller, path: str, note: str = "") -> tuple[int, str]:
+    """Freeze a doc (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): write `FROZEN <date> (session <key>): <note>` above its liveness line, so G-D4 reads it as FROZEN; nothing else changes. Do it before `task_close` of the last open item the plan names, which refuses until then. `note` says why (default: the items it names closed)."""
+    return 0, e.doc_freeze(path, note, **c.kw)
+
+
+@op(write=True)
+def doc_archive(e: Engine, c: Caller, path: str, to: str = "", why: str = "") -> tuple[int, str]:
+    """Archive a tracked, committed `.md` doc (FRAMEWORK §7.3): move it unrepaired into the archive directory `to` (default `[working] archive`), its first line `ARCHIVED <date>`, and add a row (old path, new link, date, `why`) to that directory's redirect table, README.md. Not a milestone: the next commit carries the move (git shows a rename). The reply names any context.toml entry still pointing at the old path."""
+    return 0, e.doc_archive(path, to, why, **c.kw)
+
+
 # -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------
 
 
