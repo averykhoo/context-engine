@@ -107,6 +107,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-56](DEC-56-audio-workspace-prunes-claude-md-and-handoff-md.md): audio-workspace prunes CLAUDE.md and HANDOFF.md to the kit caps; a raised cap only as a dated cutover stopgap *(owner, 2026-10-17)*
 - [DEC-57](DEC-57-audio-workspace-s-unattributed-decisions-import.md): audio-workspace's unattributed decisions import with an explicit unrecorded actor; amendment sub-headings fold under their parent *(owner, 2026-10-17)*
 - [DEC-58](DEC-58-audio-workspace-engine-gate-is-tsc-lint-over.md): audio-workspace engine gate is tsc + lint over scope all; vitest and smoke stay before push by the runbook *(owner, 2026-10-17)*
+- [DEC-59](DEC-59-audio-workspace-task-prefix-aw-sessionstart.md): audio-workspace task prefix AW, SessionStart hook merged, backup by bundle and commit hash, no tag *(owner, 2026-10-17)*
 
 ## REJECTED
 
