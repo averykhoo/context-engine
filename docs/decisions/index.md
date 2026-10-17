@@ -99,6 +99,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-48](DEC-48-who-decides-is-set-by-reversibility-a-call-that.md): Who decides is set by reversibility: a call that is cheap to undo is the agent's *(owner, 2026-10-15)*
 - [DEC-49](DEC-49-framework-md-holds-what-is-needed-to-understand.md): FRAMEWORK.md holds what is needed to understand and use the framework, not its history *(owner, 2026-10-15)*
 - [DEC-50](DEC-50-traps-live-where-their-lifetime-matches-ce-29.md): Traps live where their lifetime matches (CE-29); CE-92 is released from the CE-7 hold, CE-93 stays held *(owner, 2026-10-15)*
+- [DEC-51](DEC-51-onboard-audio-workspace-now-as-a-full-migration.md): Onboard audio-workspace now as a full migration; vitest and smoke at push, not per commit *(owner, 2026-10-17)*
 
 ## REJECTED
 
