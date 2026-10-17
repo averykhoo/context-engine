@@ -7,6 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-17a · kind: close
+
+- **rows:** none
+- **receipts:**
+  - guards: none (read-only session)
+  - read: CE-43, CE-7, procedures.md § Bootstrap (via agent); audio-workspace tree (read-only)
+  - asked: Owner asked what onboarding audio-workspace (the transcription app) onto context-engine
+    would take, and whether it is straightforward
+- **summary** (the owner digest):
+  - Read-only assessment: onboarding audio-workspace is hard, about 5-10x the adhoc trial; CE-43
+    already tracks it, behind CE-7 and the trial hold (CE-79, ~2026-10-21)
+  - Main costs: 304-entry decisions.md (1.96 MB) is refused by decision import; HANDOFF.md 1660
+    lines; repo's own doc-shape tests (claudeMdShape, handoffShape) fight the kit caps; node+python
+    gate needs a wrapper
+  - Agent-reported, not yet verified first-hand: decisions.py::parse_entries ends an entry at an
+    inner '## ' heading, silently dropping text; worth filing as an engine bug
+  - aw-owner-1014 is a worktree of audio-workspace on wip/owner-1014, clean and fully merged into
+    main (14 behind, 0 ahead); safe to remove
+  - Owed by owner: wait for CE-79 or lift the hold; import all decisions or freeze decisions.md as
+    routed history; keep docs/issues/ as tracker; raise caps or prune; rewrite or retire doc-shape
+    tests
+  - Agent report kept at .scratch/aw-onboard/assessment.md (gitignored) until the owner decides
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-16a · kind: close
 
 - **rows:** CE-92, CE-27, CE-93, CE-95, CE-96, CE-97
