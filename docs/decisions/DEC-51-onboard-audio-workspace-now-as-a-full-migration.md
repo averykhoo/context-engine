@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-10-17
 session: 2026-10-17b
 body_sha: sha256:fb8846a1ed2ea384f716c71e5cbc38828557615d63ae40d0b5aeabef42e7d0fd
+tasks: [CE-43]
 ---
 
 Owner, 2026-10-17b, after the onboarding assessment of audio-workspace (CE-43):
