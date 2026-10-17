@@ -104,6 +104,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-53](DEC-53-audio-workspace-keeps-its-d-n-decision-ids-on.md): audio-workspace keeps its D-n decision ids on import *(owner, 2026-10-17)*
 - [DEC-54](DEC-54-audio-workspace-retires-handoffshape-and.md): audio-workspace retires handoffShape and decisionsIndex, rewrites claudeMdShape, keeps docLinks, architectureShape, runbookShape *(owner, 2026-10-17)*
 - [DEC-55](DEC-55-audio-workspace-open-issue-folders-become-tasks.md): audio-workspace open issue folders become tasks, a HANDOFF row naming a folder is that folder's task; the issues archive is routed history *(owner, 2026-10-17)*
+- [DEC-56](DEC-56-audio-workspace-prunes-claude-md-and-handoff-md.md): audio-workspace prunes CLAUDE.md and HANDOFF.md to the kit caps; a raised cap only as a dated cutover stopgap *(owner, 2026-10-17)*
 
 ## REJECTED
 
