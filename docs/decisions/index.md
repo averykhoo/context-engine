@@ -102,6 +102,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-51](DEC-51-onboard-audio-workspace-now-as-a-full-migration.md): Onboard audio-workspace now as a full migration; vitest and smoke at push, not per commit *(owner, 2026-10-17)*
 - [DEC-52](DEC-52-ce-98-the-decision-importer-fix-is-done-under.md): CE-98, the decision importer fix, is done under DEC-51's lift of the kit hold *(owner, 2026-10-17)*
 - [DEC-53](DEC-53-audio-workspace-keeps-its-d-n-decision-ids-on.md): audio-workspace keeps its D-n decision ids on import *(owner, 2026-10-17)*
+- [DEC-54](DEC-54-audio-workspace-retires-handoffshape-and.md): audio-workspace retires handoffShape and decisionsIndex, rewrites claudeMdShape, keeps docLinks, architectureShape, runbookShape *(owner, 2026-10-17)*
 
 ## REJECTED
 
