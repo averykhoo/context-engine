@@ -678,3 +678,4 @@
 {"at": "2026-10-17T19:43:42+08:00", "session": "2026-10-17b", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "ASK-14", "path": "tasks/ASK-14-is-ce-98-the-decision-importer-fix-covered-by.md", "fields": ["last_asked", "updated"], "mechanical": false}
 {"at": "2026-10-17T19:43:42+08:00", "session": "2026-10-17b", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "2026-10-17b", "path": "docs/ledger/session-log.md", "fields": ["asked"], "mechanical": false}
 {"at": "2026-10-17T19:43:58+08:00", "session": "2026-10-17b", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-17b", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-10-17T19:44:42+08:00", "session": "2026-10-17b", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-17b", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}

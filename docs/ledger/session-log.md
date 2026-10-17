@@ -7,10 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-17b · kind: open
+## 2026-10-17b · kind: close
 
-- **opened:** 2026-10-17T19:31:35+08:00 by claude-code/claude-opus-5-5
-- **asked:** ASK-7, ASK-8, ASK-9, ASK-10, ASK-11, ASK-12, ASK-13, ASK-14
+- **rows:** DEC-51 new; CE-43 LATER->NOW, dep CE-7 removed, dep CE-98 added; CE-93 NOW->NEXT; CE-98
+  new; ASK-7..ASK-14 new and raised
+- **receipts:**
+  - guards: lint clean; gate status --require code green (no code changed)
+  - read: audio-workspace CLAUDE.md, src/__tests__ doc-shape tests, decisions.md D-221; CE-43;
+    procedures § Intake
+  - asked: Owner: remove aw-owner-1014; full migration of audio-workspace now with a backup; vitest
+    and smoke before push, not per commit; fable review of the recommendations and plan
+- **summary** (the owner digest):
+  - Removed the aw-owner-1014 worktree (merged into main); its junctions were unlinked first and
+    main's node_modules checked intact (npm ls clean)
+  - DEC-51 records the owner's direction: full migration of audio-workspace now, backup first,
+    vitest and smoke before push; CE-43 is NOW
+  - CE-98 filed, A reproduced first-hand: decision import silently drops text after inner ##
+    headings (5,344 lines of audio-workspace's log), folds amendment headings into the wrong
+    decision, takes bare dates as actors
+  - Fable review (owner asked) agrees with the four recommendations; plan changes in CE-43's log:
+    pre-init commit, rehearsal on a clone, line-conservation check, one-commit freeze, gate scope
+    all with tsc + lint
+  - Owed by owner: ASK-7..ASK-14, ASK-14 first (does DEC-51 lift the hold for the CE-98 engine fix);
+    wip/owner-1014 branch kept, merged, delete if wanted
+  - Scratch kept on purpose: .scratch/aw-onboard (assessment, importer probes, fable review);
+    conclusions are in CE-43, CE-98 and the asks
+- **Still owed:**
+  - nothing
 
 ---
 
