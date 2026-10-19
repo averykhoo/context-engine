@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14g
 created: 2026-10-14
 moved: 2026-10-14g
-updated: 2026-10-15a
+updated: 2026-10-19a
 ---
 
 DEC-44 (owner, 2026-10-14g): the main session is the coordinator. Told to do something, it
@@ -59,3 +59,4 @@ quotes checked first-hand) found:
 
 - 2026-10-15a (claude-code/claude-opus-5-5): DEC-45 widens scope: CI watcher brief (procedures § Push and CI, fan-out § Watchers, both kit copies) names the watcher's model (haiku or sonnet, not just 'a cheap model'), and adds a step for when the excerpt is not enough: the watcher saves the full failed-job log (gh run view <id> --log-failed) beside its report, or the coordinator sends a second watch-only agent for it
 - 2026-10-15a (claude-code/claude-opus-5-5): Model census (2026-10-15a, .scratch/wf-2026-10-15a/model-census.md, quotes checked first-hand): FRAMEWORK §6.6 already says 'The default for delegated work is the cheaper model that can do it.' (kit carries it) but CLAUDE.md § Rules names no default or cheaper model, so fan-out.md's pointer ('The repo's values (its default and cheaper models, for one) are in its CLAUDE.md') dangles, and a reader of CLAUDE.md falls through to the owner's global default of opus. Add to CLAUDE.md § Rules: the cheapest viable model per subagent (haiku for watchers, sonnet for bulk reading and census, opus for code and review). A per-role roster stays CE-39's.
+- 2026-10-19a (claude-code/claude-opus-5-5): DEC-60 (owner, 2026-10-19a) widens scope: the coordinator runs every task through ultracode subagents, even a single task, never doing it itself; working the board defaults the session to the coordinator role; every subagent persists to a file as it goes (already in fan-out.md § Delegating reading and auditing; make the contract say it too, since the Windows crash of 2026-10-17/18 killed a session). This also settles the census's 'A single-task request is unaffected.' line: it goes.

@@ -7,9 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-19a · kind: open
+## 2026-10-19a · kind: close
 
-- **opened:** 2026-10-19T10:31:09+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-83 (log: DEC-60 widens scope)
+- **receipts:**
+  - guards: none added (records only; no code touched)
+  - read: DEC-44, CE-83, fan-out.md persist lines
+  - asked: record the coordinator note; default to coordinator on the board; subagents persist to
+    files
+- **summary** (the owner digest):
+  - DEC-60 records the owner's coordinator note verbatim: every task, even one, goes to ultracode
+    subagents; the board defaults to the coordinator role; subagents persist to files
+  - CE-83 (the DEC-44 rule-text rewrite) now carries DEC-60's scope, including dropping 'A
+    single-task request is unaffected.'
+  - Persistence is already written in fan-out.md; CE-83 also puts it in the contract
+  - Memory updated so later sessions follow DEC-60 before CE-83 lands
+  - Owed (owner): say whether CE-83 may start now; it is a kit edit under the CE-7 freeze
+- **Still owed:**
+  - Owner: lift the CE-7 freeze for CE-83 or leave it LATER
 
 ---
 
