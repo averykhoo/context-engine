@@ -7,9 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-19c · kind: open
+## 2026-10-19c · kind: close
 
-- **opened:** 2026-10-19T18:04:10+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-43 (log + Traps: DEC-61 no push)
+- **receipts:**
+  - guards: none added (records only)
+  - read: CE-43, DEC-59
+  - asked: add 'don't push audio-workspace at all' to the migration plan
+- **summary** (the owner digest):
+  - DEC-61 records 'don't push that repo at all' verbatim, with the relayed demo-hold note as
+    context
+  - CE-43 plan: nothing pushed to audio-workspace during the hold; commits and backup stay local;
+    hold notice survives the CLAUDE.md/HANDOFF.md prune
+  - CE-43 ## Traps carries it, so orient shows it to every session
+  - Start no earlier than 2026-10-21 and after CE-98; the note's tag point is stale (DEC-59 dropped
+    the tag)
+  - Owed: banner still says CE-43 is blocked on ASK-7..ASK-14; all are answered, CE-98 is the one
+    blocker
+- **Still owed:**
+  - Refresh the banner's CE-43 line (ASK-7..14 answered)
+  - Owner: say when the demo hold lifts
 
 ---
 
