@@ -2,8 +2,11 @@
 
 import importlib.util
 import re
+import shutil
+import subprocess
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from ruamel.yaml import YAML
@@ -67,6 +70,94 @@ def test_the_local_linux_gate_runs_the_workflow_s_steps_on_its_runner_s_shape():
     image, script = lg.dockerfile(floor), lg.script("0" * 40, floor)
     assert "ppa:git-core/ppa" in image and "directory = *" in image and "-u 1001" in image, image
     assert script.index("clone") < script.index("checkout -q " + "0" * 40) < script.index(lg.INSTALL) < script.index(lg.GATE), script
+
+
+def _linux_gate():
+    spec = importlib.util.spec_from_file_location("linux_gate", REPO / "tools" / "linux_gate.py")
+    lg = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lg)
+    return lg
+
+
+def _git(cwd, *args):
+    p = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.autocrlf=false", *args],
+                       cwd=cwd, capture_output=True, text=True)
+    assert p.returncode == 0, (args, p.returncode, p.stderr)
+    return p.stdout.strip()
+
+
+def _repo_and_worktree(tmp_path):
+    """A plain repository and a worktree of it, the worktree holding a commit on no branch (CE-86)."""
+    host = tmp_path / "host"
+    main, wt = host / "repo", host / "wt"
+    main.mkdir(parents=True)
+    _git(main, "init", "-q", "-b", "main")
+    (main / "f.txt").write_text("main\n", encoding="utf-8")
+    _git(main, "add", "f.txt")
+    _git(main, "commit", "-q", "-m", "main")
+    _git(main, "worktree", "add", "-q", "--detach", str(wt))
+    (wt / "f.txt").write_text("worktree only\n", encoding="utf-8")
+    _git(wt, "commit", "-q", "-am", "in the worktree, on no branch")
+    return host, main, wt
+
+
+def test_the_local_linux_gate_mounts_a_git_dir_a_worktree_s_commit_can_be_cloned_from(tmp_path):
+    """CE-86: run from a git worktree, tools/linux_gate.py mounted the checkout, whose `.git` file
+    names a host path the container does not have, so `git clone /src` exited 128. What it mounts
+    must clone on its own: here the mount is a copy of `source()`, and the host repo is moved away
+    before the clone, as it is absent in the container. The worktree's commit exists only there. A
+    plain clone works as before, and its `source()` is absolute: a relative `.git` would be mounted
+    from the caller's directory, not the repository's."""
+    lg = _linux_gate()
+    host, main, wt = _repo_and_worktree(tmp_path)
+    plain = lg.source(main)
+    assert plain.is_absolute() and plain.samefile(main / ".git"), plain
+    cases = {"wt": (wt, "worktree only\n"), "main": (main, "main\n")}
+    shas = {}
+    for name, (root, _) in cases.items():
+        shutil.copytree(lg.source(root), tmp_path / f"src-{name}")  # docker run -v <source>:/src:ro
+        shas[name] = _git(root, "rev-parse", "HEAD")
+    host.rename(tmp_path / "gone")  # the container has none of the host's paths
+    for name, (_, text) in cases.items():
+        w = tmp_path / f"w-{name}"
+        _git(tmp_path, "clone", "-q", "--no-checkout", str(tmp_path / f"src-{name}"), w.name)  # the script's two git steps
+        _git(w, "-c", "advice.detachedHead=false", "checkout", "-q", shas[name])
+        assert (w / "f.txt").read_text(encoding="utf-8") == text, name
+
+
+@pytest.mark.parametrize("platform", ["linux", "win32"])
+def test_the_local_linux_gate_s_docker_run_mounts_what_source_returns(tmp_path, monkeypatch, platform):
+    """CE-86: `main` must mount `source(ROOT)`, not ROOT, on both of its branches (through
+    `wslpath` on Windows, the path itself elsewhere). Run here from a worktree, with every wsl and
+    docker call recorded instead of run; git runs for real."""
+    lg = _linux_gate()
+    _, _, wt = _repo_and_worktree(tmp_path)
+    monkeypatch.setattr(lg, "ROOT", wt)
+    monkeypatch.setattr(lg, "floor", lambda: "3.12")
+    calls = []
+
+    def run(cmd, *args, **kwargs):
+        if cmd[0] == "git":
+            return subprocess.run(cmd, *args, **kwargs)
+        calls.append(cmd)
+        out = "/wsl/" + cmd[-1] if cmd[:4] == ["wsl", "-e", "wslpath", "-a"] else ""
+        return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
+
+    # the module's own names, not the standard library's (tests/test_portability.py, AC-80)
+    monkeypatch.setattr(lg, "sys", SimpleNamespace(platform=platform))
+    monkeypatch.setattr(lg, "subprocess", SimpleNamespace(run=run, DEVNULL=subprocess.DEVNULL, STDOUT=subprocess.STDOUT))
+    assert lg.main([]) == 0
+    gitdir = lg.source(wt)
+    assert not gitdir.samefile(wt), gitdir
+    (docker_run,) = [c for c in calls if "-v" in c]
+    mount = docker_run[docker_run.index("-v") + 1]
+    if platform == "win32":
+        (wslpath,) = [c for c in calls if "wslpath" in c]
+        assert wslpath[-1] == gitdir.as_posix(), wslpath
+        assert mount == f"/wsl/{gitdir.as_posix()}:/src:ro", mount
+    else:
+        assert mount == f"{gitdir}:/src:ro", mount
+    assert docker_run[-1] == lg.script(_git(wt, "rev-parse", "HEAD"), "3.12"), docker_run
 
 
 def test_the_dev_extra_carries_the_build_system_requires():

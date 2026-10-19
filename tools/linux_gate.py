@@ -11,6 +11,8 @@ then the gate. It prints the git and Python versions it ran with: CI's git moves
 compare them with the CI log's when the two disagree.
 
 Usage: <interpreter> tools/linux_gate.py [rev]   (default HEAD; the commit need not be pushed)
+It runs from a plain clone or a git worktree alike: what it mounts is the repository's git dir,
+not the checkout (CE-86).
 Needs docker: on Windows through WSL (`wsl docker`, the engine in the default distro), elsewhere
 `docker` on PATH. The image is built once and cached. Exit status is the gate's; the full log is
 .scratch/linux-gate/<sha>.log. tests/test_ci.py keeps the steps in step with the workflow."""
@@ -46,6 +48,16 @@ def dockerfile(py: str) -> str:
     ])
 
 
+def source(root: Path) -> Path:
+    """The git dir the container clones from: the repository's common git dir (CE-86). A worktree's
+    `.git` is a file naming a host path (`<repo>/.git/worktrees/<name>`) that does not exist in the
+    container, so mounting the checkout itself made `git clone` exit 128 there. The common dir holds
+    every object and ref, the worktree's own commits included, and names no path outside itself."""
+    out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=root,
+                         capture_output=True, text=True, check=True).stdout.strip()
+    return Path(out)
+
+
 def script(sha: str, py: str) -> str:
     return " && ".join([
         "git --version", f"python{py} --version",
@@ -61,11 +73,12 @@ def main(argv: list[str]) -> int:
     sha = subprocess.run(["git", "rev-parse", "--verify", rev + "^{commit}"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
     py = floor()
     tag = f"context-engine-linux-gate:{RUNNER.replace(':', '-')}-py{py}"
+    gitdir = source(ROOT)  # not ROOT: a worktree's .git file names a host path the container lacks
     if sys.platform == "win32":
         docker = ["wsl", "-e", "docker"]
-        src = subprocess.run(["wsl", "-e", "wslpath", "-a", ROOT.as_posix()], capture_output=True, text=True, check=True).stdout.strip()
+        src = subprocess.run(["wsl", "-e", "wslpath", "-a", gitdir.as_posix()], capture_output=True, text=True, check=True).stdout.strip()
     else:
-        docker, src = ["docker"], str(ROOT)
+        docker, src = ["docker"], str(gitdir)
     subprocess.run([*docker, "build", "-q", "-t", tag, "-"], input=dockerfile(py), text=True, check=True, stdout=subprocess.DEVNULL)
     log = ROOT / ".scratch" / "linux-gate" / f"{sha}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
