@@ -3,27 +3,29 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-17b)
+## Banner (2026-10-19e)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
   meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
-- **CE-43 is NOW (DEC-51, owner 2026-10-17b): onboard audio-workspace as a full migration, ahead of the trial feedback**
-  (next week); backup first; its vitest and live smoke run before push, not per commit. Blocked on ASK-7..ASK-14 (owner) and
-  CE-98 (decision import drops text silently; ASK-14 asks if DEC-51's lift covers it). The plan and its fable review
-  (pre-init commit, rehearsal on a clone, line-conservation check, one-commit freeze) are in CE-43's log.
+- **CE-43 is NOW (DEC-51): onboard audio-workspace as a full migration, backup first.** ASK-7..ASK-14 are answered
+  (DEC-52..DEC-59, 2026-10-17c); CE-98 (the decision importer fix) was finished and committed by 2026-10-19e after 2026-10-17c
+  died mid-fix. DEC-61: nothing is pushed to audio-workspace during its demo hold. Session 2026-10-19d is doing the prep
+  (backup, survey, rehearsal on a clone) on the owner's word; 2026-10-17c's prep drafts are in `.scratch/ce-17c/` and a copy
+  sits beside the audio-workspace backup outside this repo (private content: never commit them here).
 - **CE-93 moved to NEXT (2026-10-17b, for CE-43); DEC-50 still holds it until the trial's feedback.** CE-95..CE-97 from CE-27.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
   periodic review, owner-triggered (CE-90, US-12).
 - **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
   never the banner (CE-29, spec text still held).
-- **The top-level session coordinates (DEC-44):** checks and verification go to agents; the rule text still says otherwise
-  until CE-83 lands (a kit edit: ask first). CE-83 also names the CI watcher's model and the cheapest-viable-model line (DEC-45).
+- **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
+  verification go to agents; the rule text still says otherwise until CE-83 lands (a kit edit: ask first). CE-83 also names the
+  CI watcher's model and the cheapest-viable-model line (DEC-45).
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
-  CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a) and CE-43 (DEC-51). CE-84, CE-85, CE-89 and CE-93 wait on it; CE-91 is decided
-  with CE-83.
+  CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a), CE-43 (DEC-51) and CE-98 (DEC-52). CE-84, CE-85, CE-89 and CE-93
+  wait on it; CE-91 is decided with CE-83.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
