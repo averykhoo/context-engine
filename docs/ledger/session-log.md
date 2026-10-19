@@ -7,6 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-19b · kind: close
+
+- **rows:** CE-99 (new, LATER)
+- **receipts:**
+  - guards: none added (records only)
+  - read: .scratch/rerank-census/census.md; FRAMEWORK §5.2
+  - asked: think through and recommend a goal-driven rerank step when NOW/NEXT clear, triggered by
+    the coordinator
+- **summary** (the owner digest):
+  - CE-99 holds the owner's rerank words verbatim plus a recommended design (trigger, inputs, agent
+    proposal, verifier, apply with reasons)
+  - Census: goals exist (charter G-1..G-7) but tasks cannot name one, and no milestone concept
+    exists
+  - NOW empty is already detected (G-W5 red, engine asks the owner); the rerank replaces that ask
+    with criteria
+  - Owed (owner): define the next milestone; approve a goals field on tasks; approve-before-apply or
+    agent-applies; lift the freeze for CE-99/CE-83
+- **Still owed:**
+  - Owner: answer CE-99's open points
+  - Delete .scratch/rerank-census once CE-99 is built (its findings are in CE-99)
+
+---
+
 ## 2026-10-19a · kind: close
 
 - **rows:** CE-83 (log: DEC-60 widens scope)
