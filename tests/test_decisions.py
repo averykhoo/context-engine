@@ -8,6 +8,7 @@ import re
 
 import pytest
 
+from context_engine import decisions as D
 from context_engine import guards as G
 from context_engine import okf
 from context_engine import ops as engine_ops
@@ -608,7 +609,8 @@ def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(en
     for rid, start in [("D-4", '> (owner, 2026-10-06: "start work on it")\n\n- **What it is.**'), ("D-3", "Body three.\n\n#### a sub-heading inside an entry\n\nMore of three."), ("D-1", "Body one.")]:
         assert okf.canonical(get(rid).body).startswith(start), rid
         assert okf.canonical(get(rid).body).strip("\n") in LOG  # a verbatim slice of the log
-    assert "Not an entry" not in get("D-1").body
+    assert okf.canonical(get("D-1").body) == "Body one.\n\n## Appendix\n\nNot an entry.\n"  # CE-98: the last entry runs to the end of the log, like every entry
+    assert "not imported: lines 1-3 (before the first entry, from '# Decisions log'), line 12 (before the first entry, from '## Entries')" in out  # not the rejected table's lines: they are records
     d3, d4, d2, d1 = get("D-3"), get("D-4"), get("D-2"), get("D-1")
     assert (d3.get("decision_status"), d3.get("status"), d3.get("superseded_by")) == ("SUPERSEDED", "deprecated", ["D-4"])
     assert (d4.get("supersedes"), d4.get("relaxes"), d4.get("actor"), d4.get("decided")) == (["D-3"], ["D-2"], "owner asked + agent", dt.date(2026, 10, 6))
@@ -635,6 +637,28 @@ def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(en
         (("*(agent, 2026-10-05)*", "*(agent, yesterday)*"), "no YYYY-MM-DD date"),
         (("**relaxes D-2**", "**relaxes D-9**"), "links D-9"),
         (("| keeping two duplicates | **removed**: duplicates | D-1 |", "| keeping two | duplicates | **removed** | D-1 |"), "has 4 cells"),
+        # CE-98: a heading the import cannot read refuses, naming its line; none folds into the entry above
+        (("### D-1 – the first", "### D-1 FIX – the first"), "line 32: .* starts with D-1 but is not an entry heading"),
+        (("### D-4 -- the new way", "### D-4a -- the new way"), "line 14: .* has the id D-4a, which has no number of its own"),
+        (("*(agent, 2026-10-05)*", "*(2026-10-05)*"), "the heading of D-3 \\(line 20\\) has a date where the actor goes"),
+        (("Body three.", "Body three.\n\n```python"), "line 24: a code fence '```python' is never closed"),
+        (("More of three.", "More of three.\n\n## Amendments\n\n### D-1 FIX -- under D-3's amendments, so not D-1's"), "starts with D-1 but is not an entry heading"),
+        (("More of three.", "More of three.\n\n### D-3 FIX -- its own id, but not under its own amendments"), "line 28: .* starts with D-3 but is not an entry heading"),
+        (("*(agent, 2026-10-05)*", "*(, 2026-10-05)*"), "the heading of D-3 \\(line 20\\) names no actor"),
+        (("*(agent, 2026-10-05)*", "*(agent, 2026-02-30)*"), "the heading of D-3 \\(line 20\\) has a date '2026-02-30' that is not a real day"),
+        (("Body three.\n\n#### a sub-heading inside an entry\n\nMore of three.", "## Amendments\n\nOnly an amendment."), "D-3 \\(line 20\\) has no text under its heading"),
+        # CE-98, 2026-10-19e: what the review found folding, cut or unstamped now refuses, naming its line
+        (("*(agent, 2026-10-05)*", "*(made normative 2026-10-05)*"), "the heading of D-3 \\(line 20\\) has no comma between its actor and its date, so the actor would be 'made normative 2026-10-05'"),
+        (("### D-3 -- the gate", " ### D-3 -- the gate"), "line 20: .* starts with D-3 but is not an entry heading"),
+        (("### D-3 -- the gate", "###  D-3 -- the gate"), "line 20: .* starts with D-3 but is not an entry heading"),
+        (("### D-3 -- the gate", "### **D-3** -- the gate"), "line 20: .* starts with D-3 but is not an entry heading"),
+        (("### D-3 -- the gate", "### [D-3] -- the gate"), "line 20: .* starts with D-3 but is not an entry heading"),
+        (("More of three.", "More of three.\n\n## Amendments\n\n- a fix\n\n## 3. More rules\n\nX must be Y."), "line 32: '## 3. More rules' comes after D-3's own `## Amendments` \\(line 28\\)"),
+        (("More of three.", "More of three.\n\n```md\n## Amendments\n```"), "line 29: a `## Amendments` line inside a code fence or comment in D-3"),
+        (("More of three.", "More of three.\n\n<!--\n## Amendments\n-->"), "line 29: a `## Amendments` line inside a code fence or comment in D-3"),
+        (("Body three.", "Body three.\n\n<!-- a comment"), "line 24: an HTML comment '<!-- a comment' is never closed"),
+        (("| keeping two duplicates | **removed**: duplicates | D-1 |", "| keeping two duplicates | **removed**: duplicates | D-1 |\n\n| other | table |\n|---|---|"), "line 12: a second table under `## Built and rejected"),
+        (("More of three.", "More of three.\n\n## Amendments\n\n### D-3 -- FIX *(owner, 2026-10-06)*\n\nThe fix."), "line 30: .* is an entry heading for D-3 under D-3's own `## Amendments` \\(line 28\\)"),
     ],
 )
 def test_import_is_all_or_nothing(eng, edit, match, tmp_path_factory):
@@ -667,8 +691,161 @@ def test_import_dry_run_writes_nothing_and_the_cli_runs_it(eng):
     path = write_log(eng)
     assert eng.import_log(path, dry_run=True, **W).startswith("dry run, nothing written: would import 4 entries")
     assert not (eng.root / "decisions").exists()
+    files = lambda: sorted(p.relative_to(eng.root).as_posix() for p in eng.root.rglob("*"))  # noqa: E731
+    before = files()
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "import", path, "--dry-run"]) == 0
+    assert files() == before  # CE-98: not even the lock file the write ops' batch would create
     assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "import", path]) == 0
     assert len(list((eng.root / "decisions").glob("D-*.md"))) == 6
+
+
+# -- CE-98: the import never loses text silently -------------------------------------------------
+
+SHAPED = """# A log in groups
+
+Intro, not an entry.
+
+## 2026-10-02
+
+### D-3 -- three *(owner, 2026-10-02)*
+
+Body three.
+
+## 1. An inner section
+
+Inner text of three.
+
+```bash
+# a comment in a fence
+### D-9 -- in a fence, so not an entry *(owner, 2026-01-01)*
+```
+
+```a span``` at a line's start opens no fence
+
+<!--
+### D-8 -- a draft in a comment, so not an entry *(owner, 2026-01-01)*
+-->
+
+## 2026-10-01
+
+### D-2 -- two *(unrecorded, 2026-10-01)*
+
+Body two.
+
+## Amendments
+
+### D-2 FIX (2026-10-03) -- folded under its parent's amendments
+
+Fix text.
+
+### D-1 -- one *(agent, 2026-09-30)*
+
+Body one.
+
+## 1. The last entry's own section
+
+Its text.
+
+## Amendments
+
+### D-1 FIX -- under the last entry's own amendments
+
+Fix of one.
+
+## 2026-09
+"""
+
+
+@pytest.mark.criterion("AC-42")
+def test_an_inner_heading_stays_in_its_entry_and_every_line_left_out_is_named(eng):
+    parsed = D.parse_log(SHAPED)
+    lines = SHAPED.split("\n")
+    held = [lines[e.line - 1] for e in parsed.entries] + [ln for e in parsed.entries for ln in e.body.split("\n")]
+    held += [ln for x in parsed.excluded for ln in lines[x.first - 1 : x.last]]
+    assert sorted(ln for ln in held if ln.strip()) == sorted(ln for ln in lines if ln.strip())  # every line is somewhere
+    out = eng.import_log(write_log(eng, SHAPED), **W)
+    assert "\n" not in out and "1 with actor `unrecorded`" in out and "2 entries' own `## Amendments` kept" in out and "4 `#`/`## ` headings kept inside 3 entries" in out
+    assert "not imported: lines 1-5 (before the first entry, from '# A log in groups'), 2 headings with no text of their own (lines 26, 52)" in out
+    get = lambda i: eng.store.get(i).doc  # noqa: E731
+    three = okf.canonical(get("D-3").body)
+    assert three.startswith("Body three.\n\n## 1. An inner section\n\nInner text of three.\n\n```bash\n# a comment in a fence\n### D-9") and "2026-10-01" not in three
+    assert "```a span``` at a line's start opens no fence\n\n<!--\n### D-8 -- a draft in a comment" in three
+    d2 = get("D-2")
+    assert okf.canonical(d2.body) == "Body two.\n" and d2.get("actor") == "unrecorded" and d2.get("decided") == dt.date(2026, 10, 1)
+    assert "### D-2 FIX (2026-10-03)" in okf.get_section(d2.body, "Amendments") and "Fix text." in d2.body
+    d1 = get("D-1")  # the last entry runs to the end of the log, like every entry: its own sections and `## Amendments` stay its
+    assert okf.canonical(d1.body) == "Body one.\n\n## 1. The last entry's own section\n\nIts text.\n"
+    assert "### D-1 FIX -- under the last entry's own amendments\n\nFix of one." in okf.get_section(d1.body, "Amendments") and "2026-09" not in d1.body
+    assert {p.name.split("-")[1] for p in (eng.root / "decisions").glob("D-*.md")} == {"1", "2", "3"}  # no D-8 (in a comment), no D-9 (in a fence)
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-42")
+def test_a_rejected_table_inside_an_entry_stays_that_entrys_text(eng):
+    text = "### D-2 -- two *(owner, 2026-10-02)*\n\nBody two.\n\n## 6. What was rejected\n\n| thing | verdict |\n|---|---|\n| x | **rejected** (2026-10-02) |\n\n### D-1 -- one *(owner, 2026-10-01)*\n\nBody one.\n"
+    out = eng.import_log(write_log(eng, text), **W)
+    assert out.startswith("imported 2 entries (D-1..D-2, ids kept); 1 `#`/`## ` headings kept inside 1 entries") and "rejected rows" not in out
+    assert "## 6. What was rejected\n\n| thing | verdict |\n|---|---|\n| x | **rejected** (2026-10-02) |\n" in eng.store.get("D-2").doc.body
+
+
+FENCED = """# Log
+
+How to write a rejected table:
+
+```md
+## Rejected (example)
+
+| thing | verdict |
+|---|---|
+| EXAMPLE | **rejected** (2026-01-01) |
+```
+
+### D-2 -- two *(owner, 2026-10-02)*
+
+Body two.
+
+### D-1 -- one *(owner, 2026-10-01)*
+
+Body one.
+
+## 6. What was rejected and why
+
+| thing | verdict |
+|---|---|
+| y | **rejected** (2026-10-01) |
+
+## 7. Consequences
+
+Consequence text of one.
+"""
+
+
+@pytest.mark.criterion("AC-42")
+def test_the_rejected_table_is_read_only_before_the_first_entry_and_outside_fences(eng):
+    out = eng.import_log(write_log(eng, FENCED), **W)
+    assert out.startswith("imported 2 entries (D-1..D-2, ids kept); 2 `#`/`## ` headings kept inside 1 entries") and "rejected rows" not in out
+    assert "not imported: lines 1-11 (before the first entry, from '# Log')" in out
+    assert {p.name.split("-")[1] for p in (eng.root / "decisions").glob("D-*.md")} == {"1", "2"}  # no REJECTED record
+    assert okf.canonical(eng.store.get("D-1").doc.body) == "Body one.\n\n" + FENCED.split("Body one.\n\n")[1]  # the last entry's rejected section and all after it
+    assert eng.store.lint() == []
+
+
+@pytest.mark.criterion("AC-42")
+def test_a_refusal_names_every_line_the_import_cannot_read_at_once_in_line_order(eng):
+    text = LOG.replace("### D-4 -- the new way", "### D-4a -- the new way").replace("*(agent, 2026-10-05)*", "*(2026-10-05)*").replace("### D-1 – the first", "### D-1b – the first")
+    with pytest.raises(Refusal) as r:
+        eng.import_log(write_log(eng, text), **W)
+    assert r.value.message.startswith("line 14: '### D-4a -- the new way")  # the first by line, not by the order found
+    assert r.value.message.endswith("; 3 lines in all that the import cannot read: letter id x2 (lines 14, 32); date as actor x1 (line 20)")
+    assert not (eng.root / "decisions").exists()
+
+
+@pytest.mark.criterion("AC-42")
+def test_the_dry_run_doc_names_each_line_left_out_and_each_heading_kept_inside_an_entry(eng):
+    doc = eng.import_log(write_log(eng, SHAPED), dry_run=True, **W).split("then import:\n\n")[1]
+    no_text = D.EMPTY_HEADING
+    assert f"## Not imported\n\n- lines 1-5: before the first entry: '# A log in groups'\n- line 26: {no_text}: '## 2026-10-01'\n- line 52: {no_text}: '## 2026-09'\n" in doc
+    assert "## Headings kept inside entries\n\n- line 11, in D-3: '## 1. An inner section'\n- line 32, in D-2: '## Amendments'\n- line 42, in D-1: \"## 1. The last entry's own section\"\n- line 46, in D-1: '## Amendments'\n" in doc
 
 
 # -- DEC-37: an import renames to the framework's form, and each old id stays an alias --------------

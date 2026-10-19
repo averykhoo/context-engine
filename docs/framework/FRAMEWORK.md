@@ -1170,6 +1170,8 @@ whatever the commit policy. The steps in order: `procedures.md` § Pause; pickin
 **Actor vocabulary:** `owner` · `agent (<model-id>)` · `owner + agent` · `owner asked`
 (the owner requested it and the agent chose how) · `owner reported + agent` (the owner
 reported a problem and the agent decided the fix).
+- **`unrecorded`**, only on an imported entry whose log names no one (CE-98): explicit and
+  visible in the index, never a guessed actor.
 - **With more than one human,** `owner` becomes `human:<id>`, e.g. `human:alice asked`. The
   charter names one owner per repo and lists the other humans and their **roles**: who may
   decide what (goals, priorities, a feature area). Other humans' stories are recorded under
@@ -1281,7 +1283,14 @@ dash) migrate with `decision.import` (§11.4): every entry keeps its number and 
 stamped, and an id in another prefix takes the kind's with its old id as an alias; a heading's trailing note (`SUPERSEDED by D-n`, `relaxes D-n`, ...) becomes links in
 both directions plus an amendment; and a "built and rejected" table becomes one REJECTED record
 per row, with new ids and `refs` to the entries that hold the reasoning. It writes all or
-nothing. Until a repo migrates, its log is read as it is; the read adapter is not built.
+nothing, and **never loses text silently** (CE-98): an entry runs to the next entry heading (the
+last to the end of the log), and a `#`/`## ` heading inside it stays in its text; whatever no
+record holds (before the first entry, an empty group heading) is named by line in its output;
+and a line it cannot read refuses, naming every such line: an id-like `### ` heading that is not
+an entry (`D-107 FIX`, a letter id such as `D-159b`, an indented or dressed entry heading), which
+goes under its parent's `## Amendments` (an entry's own `## Amendments` becomes its record's
+first amendments, and a `## ` heading after it refuses), an attribution with no actor or a date
+for one, and a fence or comment never closed. Headings in fences and HTML comments are text. Until a repo migrates, its log is read as it is; the read adapter is not built.
 
 ### 6.6 Delegation and build rounds
 

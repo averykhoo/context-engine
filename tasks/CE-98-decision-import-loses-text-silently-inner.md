@@ -16,7 +16,7 @@ Found while assessing audio-workspace for a full migration (CE-43, DEC-51). Veri
 
 Defects in `src/context_engine/decisions.py`:
 
-- **A, silent text loss.** `decisions.py::STOP_RE` (`^#{1,2} `) ends an entry at any `## ` heading, so text between an inner `## ` and the next `### ` entry belongs to no entry and is dropped with no refusal. audio-workspace `docs/decisions.md` (29,402 lines, measured 2026-10-17): 73 entries hold an inner `## `; 5,344 lines would be lost (4,428 non-blank).
+- **A, silent text loss.** `STOP_RE` in `decisions.py` (`^#{1,2} `; the fix removes it) ends an entry at any `## ` heading, so text between an inner `## ` and the next `### ` entry belongs to no entry and is dropped with no refusal. audio-workspace `docs/decisions.md` (29,402 lines, measured 2026-10-17): 73 entries hold an inner `## `; 5,344 lines would be lost (4,428 non-blank).
 - **B, amendment headings fold into the wrong entry.** `decisions.py::ENTRY_RE` needs a dash right after the id, so `### D-107 FIX`, `### D-75 AMENDED`, `### D-4 (amended)` are not entries; their text folds into the entry above. Same file: 10 such headings, 6 fold into a different decision (D-107 FIX into D-109, D-4 (amended) into D-12).
 - **C, letter-suffixed ids** (`D-159b`): `ENTRY_RE`'s id group is `-\d+`, so the entry folds into the one above, or is dropped with no refusal when it is the first heading.
 - **D, a bare date becomes the actor.** `parse_entries` takes `attr.split(",")[0]` as actor and refuses only an empty one, so `*(2026-07-25)*` gives `actor='2026-07-25'`. Same file: 15 headings.

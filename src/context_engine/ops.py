@@ -55,8 +55,9 @@ class Op:
         """Run the operation on ``target`` (from ``self.target``), as the CLI and the MCP server
         both do. A write runs in one store batch, so whatever commit the policy makes after it
         (FRAMEWORK §5.5 rule 4: at a milestone, after every write, or only a pause's) is made
-        once, by path, with its op log lines, and its reply says what the commit did."""
-        if not (self.write and self.engine):
+        once, by path, with its op log lines, and its reply says what the commit did. A dry run
+        writes nothing, so it takes no batch: the batch's lock would create the lock file (CE-98)."""
+        if not (self.write and self.engine) or kw.get("dry_run"):
             return self.fn(target, c, **kw)
         store = target.store
         store.last_commit = Outcome()

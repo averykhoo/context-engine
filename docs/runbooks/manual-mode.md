@@ -1179,10 +1179,41 @@ on a branch; nothing is written if any check fails.
    with an `imported_from` and the same title (each was imported before): import only the
    entries added since, without the rejected table, and record one whose number is taken as
    `context-engine record new` does, with `aliases: [<old id>]` and the next free number.
-2. Each entry starts at a heading `### <id> -- <title> *(<attribution>)*`, optionally followed
-   by ` -- <note>` (`—` and `–` work as the dash), and runs to the next entry heading or the next
-   `#` or `## ` heading. Its text is copied verbatim; an entry with no text stops the import.
-3. Frontmatter: `title`; `actor`, the attribution up to its first comma or semicolon; `decided`,
+2. Each entry starts at a heading `### <id> -- <title> *(<attribution>)*` at the start of its
+   line, optionally followed by ` -- <note>` (`—` and `–` work as the dash), and runs to the next
+   entry heading; the last entry runs to the end of the log. A `#` or `## ` heading inside it
+   stays in its text, except headings with nothing under them just before the next entry or the
+   end (a log's date groups, `## 2026-08-29`). A heading inside a code fence or an HTML comment
+   block (`<!--` to `-->`) is text. Its text is copied verbatim; an entry with no text stops the
+   import. Text no record holds (before the first entry, bar the rejected table of step 5, and
+   those empty headings) is not imported, and the output names it by line; the dry run's id map
+   also lists every `#`/`## ` heading kept inside an entry, by line, so check that each belongs
+   where it landed (a group heading with an intro under it, such as `## Earlier` followed by a
+   paragraph, lands in the entry above, and an appendix after the last entry lands in that
+   entry: move it above the first entry in the copy).
+   The import stops, naming every such line at once, on a line it cannot read:
+   - a `### ` heading that starts with an id but is not an entry heading (`### D-107 FIX`,
+     `### D-4 (amended)`, a letter id such as `### D-159b -- ...`, and an entry heading not at
+     the line's start or with its id dressed, ` ### D-2 -- ...`, `###  D-2 -- ...`,
+     `### **D-2** -- ...`, `### [D-2] -- ...`). It is never folded into the entry above: move
+     it, in the copy, under a `## Amendments` heading at the end of its parent's text
+     (`D-107`'s, `D-159`'s), where an id-like heading naming that same entry is part of the
+     entry; or write it as an entry heading of its own; or make it `####`. An amendment written
+     as a full entry heading of its parent's id under that `## Amendments` stops the import too:
+     write it `### D-107 FIX`, with no dash or attribution;
+   - an attribution with no actor, a date where the actor goes (`*(2026-07-25)*`), a date inside
+     the actor with no comma before it (`*(made normative 2026-07-24)*`), or no date; write
+     `*(unrecorded, <date>)*` when the log does not say who decided, never a guessed actor (the
+     date from git history if the log has none);
+   - a `#` or `## ` heading after an entry's own `## Amendments` (its text would be an
+     amendment, not stamped), and a `## Amendments` line inside a code fence or comment in an
+     entry (the record's stamp would end there);
+   - a code fence or an HTML comment that is never closed.
+   An entry whose text has its own `## Amendments` heading keeps it, the last entry too: the text
+   above it is stamped (`body_sha`), the text under it becomes the record's first amendments,
+   verbatim, and a heading note (step 4) is appended after them.
+3. Frontmatter: `title`; `actor`, the attribution up to its first comma or semicolon (`unrecorded`
+   when the log names no one, kept as written); `decided`,
    the last `YYYY-MM-DD` in it; `session`, the importing session; `decision_status: BUILT`
    unless the note says `SUPERSEDED by <id>`; `attribution`, the whole parenthetical, when it
    says more than `<actor>, <date>`; `imported_from`, the log's path.
@@ -1190,7 +1221,9 @@ on a branch; nothing is written if any check fails.
    `narrowed by <id>` become links to the new ids, written on both records (a link to an id not
    in the log stops the import); a SUPERSEDED record also gets `status: deprecated`. The note
    itself is kept, old ids and all, as an amendment: `imported heading note: <note>`.
-5. A `## ` section whose heading says "rejected" and holds a table: each row becomes a
+5. The first `## ` section before the first entry whose heading says "rejected" and holds a
+   table outside a fence or comment (one inside an entry is that entry's text; a second table in
+   that section stops the import): each row becomes a
    `decision_status: REJECTED` record with the next free id above the highest imported one, in
    row order, and no alias. Title: the first
    cell; body: the line *Imported from the table under*, the heading as `` `## <heading>` `` and
@@ -1201,7 +1234,9 @@ on a branch; nothing is written if any check fails.
 6. Stamp every record, log one `import` line each, and regenerate the index.
 7. The id map, one table row per record (`| id in the log | record | status | title |`, a
    rejected row's first cell `(rejected table row <n>)`), under a title and a FROZEN line, saved
-   as an evidence doc; `--dry-run` prints it, ready to save, after its summary. Every entry the import set BUILT because the log gave no status is
+   as an evidence doc, with a `## Not imported` and a `## Headings kept inside entries` list
+   (step 2); `--dry-run` prints it, ready to save, after its summary, and writes nothing to the
+   repo, not even the lock file. Every entry the import set BUILT because the log gave no status is
    reviewed, and `decision set <id> --set decision_status=<status>` corrects any that was parked,
    deferred or not built.
 

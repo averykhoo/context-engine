@@ -1318,7 +1318,7 @@ class Engine:
             source = src.name
         amap = self.store.alias_map()
         before = {str(r.doc.get("title")): r.id for r in self.store.heads(kind.name) if r.doc.get("imported_from") and str(r.doc.get(D.STATUS_KEY)) == "REJECTED"}
-        planned, notes = D.plan_import(src.read_bytes().decode("utf-8-sig"), kind.prefix, self.store.ids_in_use(kind), source, amap, before)
+        planned, notes, parsed = D.plan_import(src.read_bytes().decode("utf-8-sig"), kind.prefix, self.store.ids_in_use(kind), source, amap, before)
         for e in planned:  # the rule every write applies (G-D2), checked here so the dry run says what the import would
             for msg, _ in self.store.alias_problems(e.id, e.fields.get(ALIASES) or [], amap):
                 raise Refusal(f"the log's entry {e.old} would become {e.id}, whose old id {msg.removeprefix('has alias ')}", "the old id cannot stay an alias: rename the entry in the copy (or, if the prefix is a kind's here, change that kind's prefix), then import again")
@@ -1339,7 +1339,7 @@ class Engine:
             doc = (
                 f"# Decision id map: {source} into {kind.dir}\n\nFROZEN. Printed by `context-engine decision import --dry-run` on "
                 f"{self.today().isoformat()}, session {session}; the import gives each record below its id, and the old id, where "
-                f"there was one, stays in its `{ALIASES}` (FRAMEWORK §11.4).\n\n{D.id_map(planned)}"
+                f"there was one, stays in its `{ALIASES}` (FRAMEWORK §11.4). Line numbers are the log's.\n\n{D.id_map(planned)}\n{D.layout(parsed)}"
             )
             return f"dry run, nothing written: would import {summary} into {kind.dir}{after}\n\nSave everything below this line as the id map's evidence doc, then import:\n\n{doc}"
         self.store.create_many(kind.name, items, session=session, actor=actor, op="import")
