@@ -109,6 +109,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-58](DEC-58-audio-workspace-engine-gate-is-tsc-lint-over.md): audio-workspace engine gate is tsc + lint over scope all; vitest and smoke stay before push by the runbook *(owner, 2026-10-17)*
 - [DEC-59](DEC-59-audio-workspace-task-prefix-aw-sessionstart.md): audio-workspace task prefix AW, SessionStart hook merged, backup by bundle and commit hash, no tag *(owner, 2026-10-17)*
 - [DEC-60](DEC-60-the-coordinator-runs-every-task-through.md): The coordinator runs every task through ultracode subagents, even a single task, and is the default whenever the board is worked *(owner, 2026-10-19)*
+- [DEC-61](DEC-61-audio-workspace-is-never-pushed-during-its.md): audio-workspace is never pushed during its migration (demo hold): the cutover stays local *(owner, 2026-10-19)*
 
 ## REJECTED
 
