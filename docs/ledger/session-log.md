@@ -7,6 +7,18 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-19e · kind: open
+
+- **opened:** 2026-10-19T18:25:35+08:00 by claude-code/claude-opus-5-5
+
+---
+
+## 2026-10-19d · kind: open
+
+- **opened:** 2026-10-19T18:21:02+08:00 by claude-code/claude-opus-5-5
+
+---
+
 ## 2026-10-19c · kind: close
 
 - **rows:** CE-43 (log + Traps: DEC-61 no push)
@@ -74,9 +86,10 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-17c · kind: open
+## 2026-10-17c · kind: abandoned
 
 - **opened:** 2026-10-17T19:50:22+08:00 by claude-code/claude-opus-5-5
+- **abandoned:** 2026-10-19e: never closed or paused (cut off by a computer restart over the weekend, last write 2026-10-17 20:39; the owner asked 2026-10-19e to carry its work on: the uncommitted CE-98 importer fix and the CE-43 prep drafts in `.scratch/ce-17c/`)
 
 ---
 
