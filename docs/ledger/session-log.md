@@ -7,6 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-19g · kind: close
+
+- **rows:** none
+- **receipts:**
+  - guards: none (read-only)
+  - read: CE-60, CE-58, CE-65, CE-83, CE-91
+  - asked: Tell me about CE-60 item 2, CE-58 and CE-65; and CE-83 together with CE-91.
+- **summary** (the owner digest):
+  - Read-only: briefed the owner on CE-60 item 2, CE-58, CE-65, and CE-83 with CE-91; nothing
+    changed.
+  - Owed to the owner: a ruling on CE-60 item 2's kit wording, and on the CE-83+CE-91 kit edit (CE-7
+    hold).
+- **Still owed:**
+  - nothing
+
+---
+
 ## 2026-10-19f · kind: close
 
 - **rows:** CE-52 (closed); CE-86 (closed); CE-66 (closed); CE-72 (closed); CE-62 (closed, already
