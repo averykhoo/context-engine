@@ -7,6 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-20a · kind: close
+
+- **rows:** CE-43
+- **receipts:**
+  - guards: no code changed in this repo; audio-workspace gate PASSED in 24.4s (lint: clean)
+  - read: CE-43
+- **summary** (the owner digest):
+  - audio-workspace migration merged into its local main and set up (hook, MCP, engine env); gate
+    green there; nothing pushed
+  - Owner: restart Claude Code in audio-workspace to load its hook and MCP; this repo's MCP already
+    works
+- **Still owed:**
+  - remove the ce-cutover worktree and branch when the owner says; push audio-workspace after the
+    demo hold lifts
+
+---
+
 ## 2026-10-19g · kind: close
 
 - **rows:** none
