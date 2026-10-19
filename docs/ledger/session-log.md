@@ -7,9 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-19f · kind: open
+## 2026-10-19f · kind: close
 
-- **opened:** 2026-10-19T20:50:26+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-52 (closed); CE-86 (closed); CE-66 (closed); CE-72 (closed); CE-62 (closed, already
+  done by fb9c1f5); CE-46 (repo half done, open for init half); CE-60 (items 1 and 3 done, open for
+  frozen item 2)
+- **receipts:**
+  - guards: gate PASSED in 294.5s (910 passed in 291.99s (0:04:51)) on g1/all:72344ae0e22eeaa3,
+    g1/code:71c60b7cff55751e; gate readers PASSED in 24.7s (200 passed) on
+    g1/code+readers:a15529bbd07fff21; lint: clean
+  - read: orient; task list; workflow reports in .scratch/ce-19f and .scratch/board-triage
+- **summary** (the owner digest):
+  - Read-only board triage: ~12 small items were buildable now without the CE-7 freeze or colliding
+    with CE-43; owner picked CE-86, CE-46, CE-62, CE-66, CE-52, CE-60, CE-72.
+  - Built by one ultracode workflow: a worktree builder per task, an adversarial reviewer per patch,
+    one fix round (CE-86 test did not pin main's mount; CE-66 rename handling disagreed with the
+    by-hand step).
+  - Closed CE-52, CE-86, CE-66, CE-72, and CE-62 (already done by fb9c1f5, re-proved by sabotage in
+    a worktree).
+  - CE-46 stays open for the init/bootstrap half (after CE-43); CE-60 stays open for item 2, a
+    frozen manual-mode row whose proposed wording is in its log.
+  - Banner updated: linux_gate.py now runs from a worktree; .gitattributes pins the kit LF.
+  - Note: engine edits (working.py, cli.py) landed in main while 2026-10-19d migrates
+    audio-workspace; neither is on the import path.
+- **Still owed:**
+  - Push of 13 local commits (a9fc2e0..) needs the owner's word, then tools/linux_gate.py and a CI
+    watcher
+  - CE-60 item 2 and CE-46's init half wait on the CE-7 freeze and CE-43
 
 ---
 
