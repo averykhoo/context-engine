@@ -72,7 +72,8 @@ def test_a_correction_inserts_brackets_and_stripping_them_gives_back_the_words_b
     assert doc.get("body_sha") == stamp == okf.typed_sha(doc.body)  # never re-stamped: it pins the words as typed
     amendments = okf.get_section(doc.body, "Amendments")
     assert amendments.count("corrected: at ") == 3 and "an amendment before any correction" in amendments
-    assert [o["op"] for o in ops(eng)].count("correct") == 3
+    # the stamp is untouched, so the op log names the body alone (CE-60; manual-mode's op log table)
+    assert [o["fields"] for o in ops(eng) if o["op"] == "correct"] == [["body"]] * 3
     assert eng.store.lint() == []
 
 
