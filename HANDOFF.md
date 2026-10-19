@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-19e)
+## Banner (2026-10-19f)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -29,9 +29,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
-- **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
-- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push, from the main checkout
-  (it exits 128 from a worktree, CE-86). The MCP server runs stale code after an engine change (it refused writes on
+- **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal
+  (`.gitattributes` pins them LF since CE-46's repo half; init's half waits for CE-43).
+- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push (from a
+  worktree too since CE-86). The MCP server runs stale code after an engine change (it refused writes on
   2026-10-16a after CE-27 added `[working] archive`): restart Claude Code.
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
