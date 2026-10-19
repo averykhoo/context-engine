@@ -165,6 +165,25 @@ def test_one_operation_that_writes_twice_makes_one_commit(repo):
     assert git(repo, "log", "-1", "--format=%s").strip() == "engine: new DEC-1, ask.answer ASK-1"
 
 
+def test_an_operation_that_writes_twice_and_is_no_milestone_makes_one_commit(repo):
+    """`record stamp` of two ids is two writes, each under its own lock, and no milestone (no
+    batch of its own): the one commit is `Op.call`'s batch, which the milestone `ask answer`
+    above no longer shows, its own batch covering it (CE-66)."""
+    for n in (1, 2):
+        (repo / "decisions").mkdir(exist_ok=True)
+        (repo / "decisions" / f"DEC-{n}-by-hand.md").write_text(
+            f"---\ntype: Decision\nid: DEC-{n}\ntitle: By hand {n}\nactor: owner\ndecided: 2026-10-08\n"
+            f"session: 2026-10-08a\ndecision_status: BUILT\n---\n\nWords {n}.\n", encoding="utf-8")
+    git(repo, "add", "decisions")
+    git(repo, "commit", "-q", "-m", "two decisions by hand")
+    c = start(repo)
+    before = count(repo)
+    _, line = run(repo, "record_stamp", c, ids=["DEC-1", "DEC-2"])
+    assert count(repo) == before + 1, line
+    names = files_at(repo)
+    assert "decisions/DEC-1-by-hand.md" in names and "decisions/DEC-2-by-hand.md" in names, names
+
+
 def test_the_session_ledger_is_committed_at_start_and_close(repo):
     c = start(repo)
     assert files_at(repo) == ["ledger.md", "ops.jsonl"]

@@ -15,7 +15,7 @@ from context_engine import ledger as L
 from context_engine import okf
 from context_engine.cli import main
 from context_engine.errors import Refusal
-from context_engine.working import Engine
+from context_engine.working import Engine, status_paths
 
 from conftest import _toml
 
@@ -585,6 +585,34 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     status = _git(root, "status", "--porcelain")
     assert "wip.py" in status and "M  HANDOFF.md" in status
     assert rec.id in out and re.search(r"; committed [0-9a-f]{7,}$", out), out
+
+
+def test_pause_open_lists_paths_as_they_are_on_disk_not_as_git_quotes_them(eng):
+    """`git status` without -z quotes a non-ASCII path (core.quotepath) and writes a rename as
+    `old -> new`; the pause reads -z, so it lists a path by its real name, a rename's both ends,
+    and never a quoted spelling the carried set cannot match (CE-66). A rename is listed by its
+    new path only, as manual-mode § context-engine pause open says."""
+    root = eng.root
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    _git(root, "config", "core.quotepath", "true")  # git's default, whatever this machine sets
+    (root / "old name.md").write_text("x\n", encoding="utf-8")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+    key = started(eng)
+    (root / "café notes.md").write_text("é\n", encoding="utf-8")
+    _git(root, "mv", "old name.md", "new name.md")
+    eng.pause_open("half-built parser", "run the gate", **kw(key))
+    rec = next(eng.store.records("pause"))
+    assert set(rec.doc.get("uncommitted")) == {"café notes.md", "new name.md"}
+
+
+def test_status_paths_reads_the_nul_separated_porcelain():
+    """A rename's source is a field of its own, read and dropped, never taken for an entry (its
+    `ld.md` would be a path); a path keeps its quotes and arrows (CE-66)."""
+    z = 'R  new.md\0old.md\0?? a -> b.md\0 M "q".md\0C  copy.md\0orig.md\0'
+    assert status_paths(z) == ["new.md", "a -> b.md", '"q".md', "copy.md"]
 
 
 def test_the_pause_commit_ends_with_a_session_trailer(eng):

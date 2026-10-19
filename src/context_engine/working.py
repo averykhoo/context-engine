@@ -125,6 +125,23 @@ def _one(items) -> str:
     return ", ".join(items) if items else "none"
 
 
+def status_paths(z: str) -> list[str]:
+    """Every path `git status --porcelain=v1 -z` names, from the top of the work tree, as it is
+    on disk: -z neither quotes a path (non-ASCII, a quote, a backslash) nor writes `old -> new`.
+    A rename or copy entry (`R`/`C` in either column) is followed by its source path, a field of
+    its own, which is read and dropped: a rename is listed by its new path, as the by-hand step
+    does (manual-mode § context-engine pause open, CE-66)."""
+    out: list[str] = []
+    fields = iter(z.split("\0"))
+    for entry in fields:
+        if len(entry) < 4:
+            continue  # the empty field after the last NUL
+        out.append(entry[3:])
+        if "R" in entry[:2] or "C" in entry[:2]:
+            next(fields, None)  # the source path, never read as an entry of its own
+    return list(dict.fromkeys(out))
+
+
 def _same_words(a: okf.Document, b: okf.Document) -> bool:
     """Two append-only records carry the same words as typed (above `## Amendments`, logged
     corrections undone): the test of a replacement story, a new record with the same words (`record retire --by
@@ -856,8 +873,8 @@ class Engine:
         # the pause's own commit carries the op log's uncommitted lines and the files they name,
         # so they are not left uncommitted (INV-45); the list holds what stays so
         carried = C.pending(self.root, self.store.config.oplog)
-        for line in self._git("status", "--porcelain=v1", "--untracked-files=all").splitlines():
-            path = line[3:].split(" -> ")[-1].strip('"')
+        # -z: a path as it is on disk, never quoted, so it matches the carried set (CE-66)
+        for path in status_paths(self._git("status", "--porcelain=v1", "-z", "--untracked-files=all")):
             if path not in carried:
                 dirty.append(path)
         fields = {
