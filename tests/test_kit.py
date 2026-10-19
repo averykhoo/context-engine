@@ -680,6 +680,28 @@ def test_init_copies_the_runbooks_and_keeps_an_edited_one(tmp_path):
     assert "docs/runbooks/procedures.md" in out.split("; skipped")[1], out
 
 
+def test_the_kit_and_its_byte_compared_copies_check_out_lf_on_every_machine(tmp_path):
+    """CE-46: with core.autocrlf=true (Git for Windows' default) a clone, merge or cherry-pick
+    writes text files CRLF, and the kit's byte checks above go red: init copies a CRLF kit, and a
+    runbook checked out CRLF beside an LF kit file differs. .gitattributes pins eol=lf for the
+    kit and for each copy of it this repo keeps, so every checkout writes them LF. git reads the
+    committed .gitattributes in an empty repo, as a fresh clone would (no .git/info/attributes)."""
+    import shutil
+    import subprocess
+
+    paths = sorted(p.relative_to(REPO).as_posix() for p in B.KIT.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+    paths += [f"docs/runbooks/{name}" for name in RUNBOOKS] + [B.CONTRACT_DEST]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], capture_output=True, check=True)
+    shutil.copyfile(REPO / ".gitattributes", tmp_path / ".gitattributes")
+    out = subprocess.run(["git", "check-attr", "text", "eol", "--", *paths], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+    attrs = {}
+    for line in out.splitlines():
+        path, attr, value = line.rsplit(": ", 2)
+        attrs.setdefault(path, {})[attr] = value
+    unpinned = [p for p in paths if attrs.get(p) != {"text": "set", "eol": "lf"}]
+    assert unpinned == [], f"not pinned `text eol=lf` in .gitattributes: {unpinned}"
+
+
 @pytest.mark.criterion("AC-37")
 def test_the_wheel_carries_every_kit_file(tmp_path):
     """Build the wheel from a copy of the source and check every kit file is in it (package-data

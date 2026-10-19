@@ -1,2 +1,7 @@
 docs/ledger/ops.jsonl merge=union
 plugin/scripts/* text eol=lf
+# CE-46: the kit, and the copies of it the gate compares byte for byte, stay LF on every checkout,
+# so core.autocrlf=true (a Windows clone, a merge, a cherry-pick) cannot redden the gate.
+src/context_engine/kit/** text eol=lf
+docs/runbooks/*.md text eol=lf
+docs/framework/contract.md text eol=lf
