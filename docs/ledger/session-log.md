@@ -78,9 +78,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-19d · kind: open
+## 2026-10-19d · kind: close
 
-- **opened:** 2026-10-19T18:21:02+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-43 (comment: cutover done locally on AW branch ce-cutover)
+- **receipts:**
+  - guards: none
+  - read: CE-43, CE-98, DEC-51..DEC-62
+- **summary** (the owner digest):
+  - CE-43: audio-workspace migrated locally on branch ce-cutover (worktree
+    audio-workspace-ce-cutover), nothing pushed; AW main untouched.
+  - DEC-62 recorded: owner's rulings for the cutover (today, local branch, asks LATER, engine
+    commits exempt in AGENTS.md, drafts).
+  - 304 decisions imported with 0 lines lost, 117 board records, 11 draft stories; rehearsed twice,
+    verified 3x, 0 blockers.
+  - Owner's Merge/Compare convergence note added to AW-65.
+- **Still owed:**
+  - Owner: merge ce-cutover into AW main after the demo (then re-run AW's gate); push only after the
+    hold lifts, vitest + smoke first; review the 43-ask digest (.scratch/ce-43/ask-digest-live.md)
+    and ASK-46.
 
 ---
 
