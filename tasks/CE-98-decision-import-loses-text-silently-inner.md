@@ -4,12 +4,14 @@ id: CE-98
 title: 'decision import loses text silently: inner ## headings, amendment headings, letter ids, date-as-actor'
 brief: 'The import never drops text silently: unplaceable text is a refusal naming its line'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-10-17b
 created: 2026-10-17
-moved: 2026-10-17b
-updated: 2026-10-17b
+moved: 2026-10-19e
+updated: 2026-10-19e
+status: deprecated
+closed: 2026-10-19e
 ---
 
 Found while assessing audio-workspace for a full migration (CE-43, DEC-51). Verified by an agent on 2026-10-17b (synthetic fixtures through `decisions.py::parse_entries` in process and `decision import --dry-run` in a throwaway repo, which exited 0 with no warning), and A re-run first-hand by the session the same day.
@@ -26,3 +28,7 @@ Defects in `src/context_engine/decisions.py`:
 Coverage (`tests/test_decisions.py`): `test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways` only checks a `## ` after the LAST entry is excluded; nothing covers A between entries, B, C or D. `test_import_is_all_or_nothing` covers E's refusal.
 
 Fix direction: the import must never lose text silently. Any text it cannot place is a refusal naming the line, or kept in the entry; amendment headings and letter ids get an explicit rule (refuse with a remedy, or attach to their own id); a date-shaped actor is refused. Each fix gets a sabotaged test (DEC-11).
+
+## Log
+
+- 2026-10-19e (claude-code/claude-opus-5-5): closed: a8879f9: the import keeps every line inside an entry or names it, and refuses every heading it cannot read; the dry run writes nothing. Gate green 2026-10-19 (898 passed). The leftover #/####-level entry-shaped heading is CE-100.
