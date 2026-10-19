@@ -7,9 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-19e · kind: open
+## 2026-10-19e · kind: close
 
-- **opened:** 2026-10-19T18:25:35+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-98 closed (a8879f9); CE-100 new LATER; CE-43 commented; BTN-4 added and done
+- **receipts:**
+  - guards: gate green 2026-10-19 19:08 (898 passed, code covered); Linux gate not run (no push)
+  - read: orient, CE-43, CE-98, DEC-61, procedures § Housekeeping, 17c's .scratch notes
+- **summary** (the owner digest):
+  - 2026-10-17c died in the weekend restart mid-CE-98; marked abandoned, its work carried here
+    (BTN-4, done).
+  - CE-98 committed a8879f9: 2 reviewers' 11 reproduced findings fixed, verified independently,
+    34/34 sabotage red, gate green.
+  - Leftover: an entry-shaped heading at #/##/#### level folds silently (not in audio-workspace) ->
+    CE-100, LATER.
+  - 17c's audio-workspace prep drafts copied to the backup dir (private: kept out of this public
+    repo); their owner questions are in CE-43's log.
+  - Banner refreshed (it was stale since 2026-10-19c's close and turned the gate red).
+  - 2026-10-19d owns CE-43 prep and has the CE-98 hash; .scratch/ce-17c/ left for it, its cleanup is
+    CE-43's.
+  - Owed to the owner: nothing pushed; a push needs your OK plus the Linux gate.
+- **Still owed:**
+  - nothing
 
 ---
 
