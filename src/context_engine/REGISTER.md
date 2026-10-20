@@ -363,9 +363,9 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 ## INV-51: a hand edit between live, unspecified and unconfirmed passes lint
 
-- **affects:** the owner, whose stories are retired and whose words record why; every agent session, which follows the G-I1 and G-I2 remedies and intake step 5; every repo the kit deploys to, whose stories retired by hand before adoption now go G-I2 red
-- **why not eliminated:** no op owns those moves, and the op log records keys, not values
-- **control:** individual: FRAMEWORK §8.1 G-I2 Not checked; a confirm op is the follow-up
+- **affects:** the owner, whose confirmations are recorded; every repo the kit deploys to, where a reconstruction confirmed by hand before adoption goes G-I2 red until record confirm records the owner's words
+- **why not eliminated:** no operation owns the move between live and unspecified, and the op log records keys, not values; an actor rewritten by hand (a reconstruction turned into owner) gets past the confirm check
+- **control:** individual: G-I2 (guards.py::confirm_problems) fails a reconstruction that is live or unspecified with no logged record confirm, and a confirmed story made unconfirmed again (CE-58)
 - **from:** CE-49, session 2026-10-13c
 
 ## INV-52: supersedes and superseded_by not mirrored, a self link or a cycle passes, for stories and decisions both
