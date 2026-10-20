@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-10-20e
 created: 2026-10-20
 moved: 2026-10-20e
-updated: 2026-10-20e
+updated: 2026-10-20f
 ---
 
 Rerank edge cases: goals check on task reopen, lenient Last rerank line, same-session owner records
@@ -26,3 +26,5 @@ From CE-99's verifier (2026-10-20e, .scratch/ce-99/verify.md):
 ## Read first
 
 ## Log
+
+- 2026-10-20f (claude-code/claude-opus-5-5): 2026-10-20f: items 2 and 3 are moot since 393e9e4 (Last rerank is quoted, never a trigger; newer_than removed). Only item 1, the goals check on task reopen, remains.

@@ -7,9 +7,25 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-20f · kind: open
+## 2026-10-20f · kind: close
 
-- **opened:** 2026-10-20T23:26:25+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-99 (reopened, closed 5d4d3ab); DEC-64 (amended, owner); DEC-68 (amended); CE-103
+  (commented)
+- **receipts:**
+  - guards: gate all PASSED 961 (393e9e4); linux_gate PASSED 961 (50.8s); gate readers PASSED; lint:
+    clean
+  - read: DEC-64; CE-99; .scratch/ce-99 build and verify reports
+  - asked: none
+- **summary** (the owner digest):
+  - Owner (DEC-64 amendment): rerank only when NEXT is empty; orient's 'rerank due' now fires only
+    then (393e9e4).
+  - Removed the Last-rerank-never and newer-owner-record triggers; Last rerank is quoted, never a
+    trigger; DEC-68 amended.
+  - Verified by a second agent (ship); gate 961 passed; linux_gate green.
+  - CE-103 narrowed to the goals check on task reopen.
+  - Owner approved the push of 9d7938d..HEAD (CE-99 work and this change).
+- **Still owed:**
+  - CI watcher verdict on the push
 - **start head:** 2feaa551c060dadfc45619fd75fbc6978e1a5a33
 
 ---
