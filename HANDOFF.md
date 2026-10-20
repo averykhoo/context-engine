@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-20c)
+## Banner (2026-10-20d)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -24,8 +24,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
   In the rule text since CE-83 (17470c8, 2026-10-20b): contract § Rules, FRAMEWORK §6.6 "The coordinator".
-- **Unpushed since 2026-10-20b** (CE-60, CE-83, CE-91, CE-58, CE-65, INV-51): push only on the owner's word, after
-  `tools/linux_gate.py`; the owner should read 17470c8 (the contract rewrite) first.
+- **Pushed 2026-10-20d through 78cbe4e; CI green** (run 39419037601). Every push: gate, then `tools/linux_gate.py`, then a CI
+  watcher. 78cbe4e fixed a Linux-only red: test_foreign's commit helper set no user.name (CE-67 trap).
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
   CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a), CE-43 (DEC-51), CE-98 (DEC-52), and CE-60, CE-58, CE-65, CE-83,
   CE-91 (DEC-63), CE-99 (DEC-65). CE-84, CE-85, CE-89, CE-93 and CE-102 wait on it.
