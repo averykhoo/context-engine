@@ -1272,8 +1272,7 @@ def task_goal_failures(e: Engine, known: set[str]) -> list[Failure]:
     return out
 
 
-LAST_RERANK_RE = re.compile(r"^Last rerank:[ \t]*(\S*)[ \t]*$", re.M)  # the charter's line (CE-99, DEC-68)
-SESSION_KEY_RE = re.compile(rf"{KEY_RE}")
+LAST_RERANK_RE = re.compile(r"^Last rerank:[ \t]*(\S*)[ \t]*$", re.M)  # the charter's line (CE-99, DEC-68): quoted by orient's rerank due, never a trigger
 
 
 def last_rerank(text: str) -> str | None:
@@ -1281,27 +1280,6 @@ def last_rerank(text: str) -> str | None:
     charter has no such line. The first line wins (a second one is the rerank's to tidy)."""
     m = LAST_RERANK_RE.search(text.replace("\r\n", "\n"))
     return m.group(1) if m else None
-
-
-def owner_mark(doc) -> str | None:
-    """When an owner record (`actor: owner` or `human:<id>`) was made, for orient's rerank-due
-    check: its `session:` key, else its `decided:` or `date:` as YYYY-MM-DD; None for an agent's
-    record or one with neither."""
-    if not CONFIRM_BY_RE.fullmatch(str(doc.get("actor") or "")):
-        return None
-    session = str(doc.get("session") or "")
-    if SESSION_KEY_RE.fullmatch(session):
-        return session
-    day = str(doc.get("decided") or doc.get("date") or "")
-    return day if re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) else None
-
-
-def newer_than(mark: str, last: str) -> bool:
-    """Whether an owner record made at ``mark`` (a session key or a date) comes after the rerank
-    of session ``last``: keys by `key_order`; a bare date only when its day is after the rerank's."""
-    if len(mark) == 10:
-        return mark > last[:10]
-    return key_order(mark) > key_order(last)
 
 
 def retire_hint(rid: str) -> str:

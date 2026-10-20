@@ -133,10 +133,9 @@ close among them, and each such commit takes with it what was still uncommitted 
 
 The sprint: a full re-rank of the open board against the charter's goals and its next milestone
 (the charter's § Next milestone, its exit criteria). Clean close keeps only a light reorder (the
-standup, § Clean close item 4). The full re-rank runs when NOW and NEXT hold no task, when the
-owner asks for it, and when orient says "rerank due" and the owner agrees. Orient also says it when
-an owner decision or story is newer than the charter's `Last rerank:` line; it flags, and never
-runs, the re-rank. Every open item is read, so it costs tokens: run it once a sprint, not once a
+standup, § Clean close item 4). The full re-rank runs when NEXT holds no task while tasks are
+open (orient then says "rerank due"; what NOW holds does not matter, and an owner question does
+not count as a task), and whenever the owner asks for it. Orient flags it, and never runs it. Every open item is read, so it costs tokens: run it once a sprint, not once a
 session. It is its own procedure, not housekeeping, because it forms new intent (an order).
 
 | § | Do | Engine | By hand | Why |
@@ -145,7 +144,7 @@ session. It is its own procedure, not housekeeping, because it forms new intent 
 | 2 | A second, different agent verifies the proposal: no item ranked above an open item it depends on, NOW holds one item, NEXT at most five, and every move cites a goal or an exit criterion | — | read the proposal against `task list` | the agent that ranked does not check its own ranking (FRAMEWORK §6.6) |
 | 3 | Apply the verified promotes and demotes, with one comment per move giving its reason, and flag every move in the close digest | `context-engine task promote <id> <tier>`; `context-engine task comment <id> "rerank: <reason>"` | [§ task promote](manual-mode.md#context-engine-task-promote); [§ task comment](manual-mode.md#context-engine-task-comment) | a move is cheap to undo, so it is the agent's call (FRAMEWORK P8); the comment keeps the reason on the item |
 | 4 | Drops, retirements and any change to the milestone wait for the owner: raise each as an owner question carrying the proposal's reason as its recommendation | `context-engine ask new "<title>" --brief "<recommendation>"` | [§ ask new](manual-mode.md#context-engine-ask-new) | removing work, or changing what the board is ranked against, is the owner's call |
-| 5 | Write this session's key on the charter's `Last rerank:` line, and commit it by path | `context-engine commit <charter> -m "<message>"` | [§ The last rerank](manual-mode.md#the-last-rerank); [§ context-engine commit](manual-mode.md#context-engine-commit) | orient reads the line to say "rerank due" when owner direction is newer than the last re-rank |
+| 5 | Write this session's key on the charter's `Last rerank:` line, and commit it by path | `context-engine commit <charter> -m "<message>"` | [§ The last rerank](manual-mode.md#the-last-rerank); [§ context-engine commit](manual-mode.md#context-engine-commit) | the line records when the board was last re-ranked; orient quotes it beside "rerank due", and it never makes a re-rank due |
 
 ## Pause (§6.4)
 

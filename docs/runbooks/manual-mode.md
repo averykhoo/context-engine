@@ -556,19 +556,14 @@ above the threshold must show whom it can hurt and how each risk is controlled (
 
 The charter's `Last rerank:` line (in its § Next milestone) holds the session key of the last
 full re-rank (`procedures.md` § Rerank), or `never`. Step 5 of the re-rank replaces the value with
-the session's key; it is the one edit to the charter that needs no owner. A re-rank is due (what
-orient says) when either holds:
+the session's key; it is the one edit to the charter that needs no owner. The line is a record of
+when the re-rank ran, never a trigger. A re-rank is due (what orient says) only when NEXT holds no
+task while tasks are open: what NOW holds does not matter, and an owner question does not count
+as a task. Where `[guards] charter` is set and the line has a value, orient quotes it after the
+reason (`(last rerank: <value>)`). The owner can ask for a re-rank at any time.
 
-1. NOW and NEXT hold no task (an owner question does not count) while tasks are open;
-2. where `[guards] charter` is set: the charter has no `Last rerank:` line, it says `never`, its
-   value is not a session key, or a decision or story whose `actor` is `owner` or `human:<id>` was
-   made after it: by its `session:` key in session order (`2026-10-08z` before `2026-10-08aa`),
-   or, with no `session:`, by its `decided:` or `date:` when that day is after the re-rank's.
-   Amendments are not read.
-
-**Why:** the full re-rank reads the whole board, so it runs once a sprint; owner direction that
-lands between sprints may change the order, so it is flagged, and the owner decides whether to
-re-rank early.
+**Why:** the full re-rank reads the whole board, so it runs once a sprint: when the five NEXT
+slots are worked through, not each time NOW empties, and not each time owner direction lands.
 
 ### context-engine task dep
 

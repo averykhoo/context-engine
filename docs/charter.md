@@ -60,8 +60,9 @@ milestone change is the owner's call; the rerank (procedures.md § Rerank) never
 Last rerank: never
 
 The `Last rerank:` line above holds the session key of the last full rerank, or `never`. The
-rerank writes it (procedures.md § Rerank), the one edit to this file that needs no owner; orient
-reads it to say "rerank due" when an owner decision or story is newer.
+rerank writes it (procedures.md § Rerank), the one edit to this file that needs no owner. It
+records when the rerank ran; it never makes one due (orient says "rerank due" only when NEXT holds
+no task, DEC-64).
 
 ## Anti-goals (must not happen)
 

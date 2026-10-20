@@ -80,9 +80,8 @@ SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
 BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
-RERANK_HOW = "The full rerank is procedures.md § Rerank: run it when NOW and NEXT are empty or the owner asks; otherwise ask the owner whether to run it now."
+RERANK_HOW = "The full rerank is procedures.md § Rerank: run it now that NEXT is empty, or whenever the owner asks."
 RERANK_REST = "procedures.md § Rerank"
-RERANK_SHOWN = 5  # owner records orient names before "and n more"
 
 
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
@@ -1642,46 +1641,20 @@ class Engine:
 
     def rerank_due(self) -> list[str]:
         """Why a full rerank of the board is due (procedures § Rerank; FRAMEWORK §5.2; CE-99,
-        DEC-64 and its amendment, DEC-68): NOW and NEXT hold no task while tasks are open (the
-        sprint is done), or the charter's `Last rerank:` line is missing, `never`, not a session
-        key, or older than an owner decision or story. Orient flags it; nothing here runs it.
-
-        Not read: amendments (an owner amendment that shifts priorities is the coordinator's to
-        flag), owner questions on the board (they wait on the owner, not on a rank), and the
-        charter while `[guards] charter` is unset (then only the empty-board reason applies)."""
-        out = []
+        DEC-64 and its 2026-10-20f amendment): NEXT holds no task while tasks are open (the
+        sprint is done). NOW does not count, and neither do owner questions on the board (they
+        wait on the owner, not on a rank). Orient flags it; nothing here runs it. The charter's
+        `Last rerank:` line, where `[guards] charter` is set, is only quoted, never a trigger."""
         task = self.w.task
         open_tasks = [r for r in self._open_board() if r.kind.name == task] if task else []
-        if open_tasks and not any(r.doc.get("pri") in ("NOW", "NEXT") for r in open_tasks):
-            out.append(f"NOW and NEXT hold no task, {len(open_tasks)} open below them: the sprint is done")
+        if not open_tasks or any(r.doc.get("pri") == "NEXT" for r in open_tasks):
+            return []
+        line = f"NEXT holds no task, {len(open_tasks)} open: the sprint is done"
         rel = self.store.config.guards.charter
         path = self.root / rel if rel else None
-        if path is None or not path.is_file():
-            return out
-        last = G.last_rerank(path.read_text(encoding="utf-8"))
-        if last is None:
-            out.append(f"{rel} has no `Last rerank:` line, so no rerank is on record")
-        elif last == "never":
-            out.append(f"{rel} says `Last rerank: never`")
-        elif not G.SESSION_KEY_RE.fullmatch(last):
-            out.append(f"{rel} has `Last rerank: {last}`, which is not a session key")
-        else:
-            newer = self._owner_records_since(last)
-            if newer:
-                more = f" and {len(newer) - RERANK_SHOWN} more" if len(newer) > RERANK_SHOWN else ""
-                out.append(f"owner records newer than the last rerank ({last}): {', '.join(newer[:RERANK_SHOWN])}{more}")
-        return out
-
-    def _owner_records_since(self, last: str) -> list[str]:
-        """The ids of the owner's decisions and stories made after session ``last`` (G.owner_mark)."""
-        kinds = [k for k in (self.w.decision, self.store.config.guards.stories) if k]
-        out = []
-        for name in dict.fromkeys(kinds):
-            for r in self.store.heads(name):
-                mark = G.owner_mark(r.doc)
-                if mark and G.newer_than(mark, last):
-                    out.append(r.id)
-        return out
+        if path is not None and path.is_file() and (last := G.last_rerank(path.read_text(encoding="utf-8"))):
+            line += f" (last rerank: {last})"
+        return [line]
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
         """The open batons and pauses, ``session``'s own first, then pauses (work in flight, on a

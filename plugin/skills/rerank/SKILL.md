@@ -1,6 +1,6 @@
 ---
 name: rerank
-description: Use in a repo run by context-engine (context.toml at its root) when orient says "rerank due", when NOW and NEXT hold no task, or when the owner asks to re-rank or reprioritise the board. The full re-rank (FRAMEWORK §5.2) - a ranking agent proposes moves against the charter's goals and next milestone, a second agent verifies, the coordinator applies promotes and demotes, drops wait for the owner, and the charter's Last rerank line is updated.
+description: Use in a repo run by context-engine (context.toml at its root) when orient says "rerank due" (NEXT holds no task), or when the owner asks to re-rank or reprioritise the board. The full re-rank (FRAMEWORK §5.2) - a ranking agent proposes moves against the charter's goals and next milestone, a second agent verifies, the coordinator applies promotes and demotes, drops wait for the owner, and the charter's Last rerank line is updated.
 ---
 
 # Rerank

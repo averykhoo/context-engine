@@ -1,8 +1,8 @@
 ---
 type: Task
 id: CE-99
-title: 'Goal-driven rerank: when NOW empties, the coordinator reranks the board against the charter goals and the next milestone'
-brief: "Built 2026-10-20e: task goals (G-I1), charter milestone and Last rerank, orient's rerank due, procedures § Rerank"
+title: 'Goal-driven rerank: when NEXT holds no task, the coordinator reranks the board against the charter goals and the next milestone'
+brief: 'Built 2026-10-20e; 2026-10-20f (DEC-64 amendment): orient says rerank due only when NEXT holds no task'
 pri: NEXT
 state: open
 deps: []

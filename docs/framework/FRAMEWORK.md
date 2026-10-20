@@ -780,10 +780,10 @@ ranking. Do not re-rank at session start. Ranking runs at two cadences:
 - **the standup, at every clean close** (§6.3 item 4): a light reorder of what the session
   touched, with no full read of the board;
 - **the sprint, the full re-rank** (§6.14): every open item read against the charter's goals and
-  its next milestone, when NOW and NEXT are both cleared (their caps together), when the owner asks,
-  or when orient says "rerank due" (owner direction newer than the last re-rank) and the owner
-  agrees. Orient flags it; it never runs it. Re-ranking every session would spend that read when
-  the order is unlikely to have changed.
+  its next milestone, when NEXT holds no task while tasks are open (orient says "rerank due"; NOW
+  does not count), or when the owner asks. Orient flags it; it never runs it. Re-ranking every
+  session, or every time NOW empties or owner direction lands, would spend that read when the
+  order is unlikely to have changed.
 
 **Cross-repo work:** the task lives in the repo where the outcome is needed; other repos carry
 a pointer row.
@@ -792,7 +792,7 @@ a pointer row.
 in the session's ledger `rows:`. Nothing is open and done at once. Taking the NOW item off NOW
 (closing it, answering it if it is an owner question, or demoting it) while others stay open
 leaves G-W5 red: the operation still succeeds, and its reply says so and asks the owner which item
-to promote (the engine picks none). When NEXT is empty too, the sprint is over: the re-rank
+to promote (the engine picks none). When NEXT holds no task, the sprint is over: the re-rank
 (§6.14) proposes what comes next.
 
 **Closing does not move the file.** Close sets `state: closed`, and the engine derives OKF
@@ -1636,10 +1636,10 @@ light reorder (§6.3 item 4, the standup); this is the sprint, which reads every
 runs once a sprint, not once a session. It forms new intent (an order), so it is not housekeeping
 (§6.11).
 
-**When:** NOW and NEXT hold no task while tasks are open; the owner asks; or orient says "rerank
-due" and the owner agrees. Orient says "rerank due" in the first case, and when the charter's
-`Last rerank:` line is missing, `never`, or older than an owner decision or story (by `session:`
-key, else by date). It flags; it never runs the re-rank. Every open task names, in `goals`, the
+**When:** NEXT holds no task while tasks are open (whatever NOW holds; an owner question is not
+a task), or the owner asks. Orient says "rerank due" only in the first case; the
+charter's `Last rerank:` line records when the last re-rank ran and is quoted
+beside it, never a trigger. It flags; it never runs the re-rank. Every open task names, in `goals`, the
 charter goals it serves (G-I1, where `[guards] task_goals` is set), so the re-rank has a goal to
 cite for each item.
 
