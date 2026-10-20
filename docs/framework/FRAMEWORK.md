@@ -733,6 +733,10 @@ a single revertible cutover commit.
 - frontmatter: `type: Task` (OKF), `id, title, brief, pri, deps, state, created, moved,
   updated, closed, source, labels`; a question also carries `last_asked`, `blocks` and, once
   answered, `answered`;
+- `goals`: the charter goals (`G-n`) a task serves, at least one, set at `task new --goals` and
+  changed by `task set`; G-I1 checks every open task's goals against the charter where
+  `[guards] task_goals` names the kind, and the write refuses a goal the charter lacks. Closed
+  tasks are history and are not read. The re-rank (§6.14) cites them;
 - `brief`: ≤120 characters, **a constraint, not a summary**;
 - body: summary, `## Traps`, and `## Read first`, whose relative links and `file::symbol`
   pointers G-D3 resolves on an open item when the board directory is among the docs `[guards]
@@ -772,7 +776,14 @@ a single revertible cutover commit.
   (`task.section`).
 
 **Ranking:** NOW (exactly 1), NEXT (≤5), LATER, SOMEDAY. An owner assignment overrides the
-ranking. Do not re-rank at session start; re-rank at clean close.
+ranking. Do not re-rank at session start. Ranking runs at two cadences:
+- **the standup, at every clean close** (§6.3 item 4): a light reorder of what the session
+  touched, with no full read of the board;
+- **the sprint, the full re-rank** (§6.14): every open item read against the charter's goals and
+  its next milestone, when NOW and NEXT are both cleared (their caps together), when the owner asks,
+  or when orient says "rerank due" (owner direction newer than the last re-rank) and the owner
+  agrees. Orient flags it; it never runs it. Re-ranking every session would spend that read when
+  the order is unlikely to have changed.
 
 **Cross-repo work:** the task lives in the repo where the outcome is needed; other repos carry
 a pointer row.
@@ -781,7 +792,8 @@ a pointer row.
 in the session's ledger `rows:`. Nothing is open and done at once. Taking the NOW item off NOW
 (closing it, answering it if it is an owner question, or demoting it) while others stay open
 leaves G-W5 red: the operation still succeeds, and its reply says so and asks the owner which item
-to promote (the engine picks none).
+to promote (the engine picks none). When NEXT is empty too, the sprint is over: the re-rank
+(§6.14) proposes what comes next.
 
 **Closing does not move the file.** Close sets `state: closed`, and the engine derives OKF
 `status: deprecated` from it (§9.3). `list --state closed` shows closed items apart, and a path
@@ -1145,7 +1157,8 @@ numbered for citation (the order is below):
    - `Still owed:`.
 3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
-   `Closes:` and `Sabotage:` lines, §5.5 rule 4), rank, mint (with the session key). Before a
+   `Closes:` and `Sabotage:` lines, §5.5 rule 4), a light reorder (the standup; the full
+   re-rank is §6.14), mint (with the session key; a task names its `goals`, §5.2). Before a
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
    `task.close` refuses until then.
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
@@ -1360,6 +1373,10 @@ this role for every request, one task or several, and by default whenever the bo
 - three things stay with the coordinator: it records owner words verbatim (§6.2), since only it
   holds the transcript; it makes the final call on a verifier's verdict, reading the report, not
   the files; and trivial bookkeeping (one engine op, `git status`) is done inline.
+
+**The full re-rank** (§6.14) has the same shape: one ranking agent proposes and persists, a
+second, different agent verifies, and the coordinator applies the moves that are its call and
+raises the rest to the owner.
 
 **Build rounds:**
 1. map;
