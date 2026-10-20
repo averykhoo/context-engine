@@ -18,3 +18,7 @@ The agent's call (cheap to undo, FRAMEWORK P8), made while building CE-99 under 
 **What "newer" means:** an owner record (`actor: owner` or `human:<id>`) of the decision or story kind whose `session:` key sorts after the last rerank's key; a record with only a date counts as newer when its date is after the rerank's date. Amendments are not read (an owner amendment that changes priorities is the coordinator's to flag, or the owner's to ask for).
 
 Why: the charter already holds the goals and now the milestone, so the rerank reads one file; a separate state file or a ledger field would be one more thing to route and lint. Undo: move the line and point orient at the new place.
+
+## Amendments
+
+- **2026-10-20f (claude-code/claude-opus-5-5):** Superseded in part by DEC-64's 2026-10-20f amendment (owner: "Rerank should only run when next is empty"). Orient no longer reads the `Last rerank:` line as a trigger: "rerank due" fires only when NEXT holds no task while tasks are open. The charter keeps the line as a record of when the last rerank ran (the rerank still writes it, procedures.md § Rerank step 5), and orient quotes its value after the reason. The section "What 'newer' means" no longer applies: the newer-owner-record trigger, and the missing / `never` / not-a-session-key triggers, are removed (`guards.py::owner_mark` and `guards.py::newer_than` with them). The task-goals part (G-I1, `[guards] task_goals`) stands unchanged.
