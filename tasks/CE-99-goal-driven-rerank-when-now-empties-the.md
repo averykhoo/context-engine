@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-19b
 created: 2026-10-19
 moved: 2026-10-19b
-updated: 2026-10-19b
+updated: 2026-10-20b
 ---
 
 Owner, 2026-10-19b, verbatim:
@@ -32,3 +32,7 @@ Owner, 2026-10-19b, verbatim:
 4. A second agent verifies the proposal (deps respected, caps NOW=1, NEXT<=5, every move cites a G-n or exit criterion).
 5. Apply: the coordinator applies with task promote, one task comment per move carrying the reason; owner approves before applying (until DEC-48 lands, then only drops and milestone changes need the owner).
 6. By-hand fallback in procedures.md and manual-mode.md (P16); clean-close step 4 stays a light reorder.
+
+## Log
+
+- 2026-10-20b (claude-code/claude-opus-5-5): Design answers recorded: DEC-64 (milestone = framework fully built, G-7; required task goals, backfilled; agent applies moves, owner approves drops and milestone changes) and its 2026-10-20b amendment (full rerank when NOW and NEXT are both cleared, or on owner request; a new owner direction only flags 'rerank due'; clean close keeps the light reorder). Building it still waits on the kit hold (DEC-63 does not cover CE-99).
