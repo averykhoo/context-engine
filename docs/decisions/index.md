@@ -114,6 +114,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-63](DEC-63-go-ahead-with-ce-60-item-2-ce-58-ce-65-ce-83.md): Go ahead with CE-60 item 2, CE-58, CE-65, CE-83 and CE-91; CE-83's three open points stay as written *(owner, 2026-10-20)*
 - [DEC-64](DEC-64-ce-99-rerank-milestone-is-the-framework-fully.md): CE-99 rerank: milestone is the framework fully built; tasks carry required goals; the agent applies moves, the owner approves drops *(owner, 2026-10-20)*
 - [DEC-65](DEC-65-lift-the-kit-hold-for-ce-99-build-it-next-the.md): Lift the kit hold for CE-99; build it next (the recommendation of ASK-15) *(owner, 2026-10-20)*
+- [DEC-66](DEC-66-a-replaced-reconstruction-is-re-confirmed-by.md): A replaced reconstruction is re-confirmed by asking the owner again, never by quoting earlier words (the recommendation of ASK-16) *(owner, 2026-10-20)*
 
 ## REJECTED
 
