@@ -21,3 +21,12 @@ Context (the session's words, not the owner's): the options as offered were:
 - "Required, backfilled": new tasks must name G-n (lint checks it like stories); the first rerank backfills the open items.
 - "Agent; you approve drops": per DEC-48, promotes and demotes are applied by the coordinator and flagged in the close digest; dropping or retiring an item, or changing the milestone, waits for the owner.
 - The trigger answer is a question, not a pick; the session answers it in chat and the trigger is settled by a later amendment.
+
+## Amendments
+
+- **2026-10-20b (claude-code/claude-opus-5-5):** Owner, 2026-10-20b, verbatim: "agreed for updated q4 answer"
+
+  Context (the session's words, not the owner's), the trigger the owner agreed to:
+  - Clean close keeps its light reorder (no full read): the standup.
+  - The full rerank runs when NOW and NEXT are both cleared (about six tasks), when orient says "rerank due", and whenever the owner asks: the sprint.
+  - A new owner decision or story that changes priorities makes orient say "rerank due" without running the rerank; the owner chooses whether to run it early.
