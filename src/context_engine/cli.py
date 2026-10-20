@@ -189,6 +189,12 @@ def build() -> argparse.ArgumentParser:
     why = rr.add_mutually_exclusive_group(required=True)
     why.add_argument("--why", help="the owner's words verbatim, or what was wrong with the story")
     why.add_argument("--file", type=Path, help="read `why` from a file (owner words keep their line breaks)")
+    rf = _sub(r, "confirm", "confirm a story an agent reconstructed: unconfirmed to live, with the owner's words")
+    rf.add_argument("id", help="the story's id")
+    rf.add_argument("words", nargs="?", help="the owner's words confirming it, verbatim (or --file)")
+    rf.add_argument("--file", type=Path, help="read the words from a file (owner words keep their line breaks)")
+    rf.add_argument("--by", default="owner", help="whose words: owner (the default) or human:<id>; never an agent")
+    rf.add_argument("--status", default="live", help="live (the default), or unspecified while no criterion comes from the story")
 
     dc = _sub(groups, "decision", "decision records (FRAMEWORK §6.5)").add_subparsers(dest="op", required=True)
     ds = _sub(dc, "supersede", "NEW replaces OLD: link them both ways and mark OLD SUPERSEDED")
@@ -280,6 +286,7 @@ CLI_OPS = {
     ("record", "amend"): "record_amend",
     ("record", "correct"): "record_correct",
     ("record", "retire"): "record_retire",
+    ("record", "confirm"): "record_confirm",
     ("decision", "supersede"): "decision_supersede",
     ("decision", "set"): "decision_set",
     ("decision", "link"): "decision_link",
@@ -324,13 +331,13 @@ def _params(args: argparse.Namespace) -> dict:
     if words and (a[words] is None) == (a.get("file") is None):  # CE-73: the words come one way, exactly
         raise Refusal(f"`{args.group} {a['op']}` got its {words} {'both as an argument and with --file' if a[words] is not None else 'neither as an argument nor with --file'}", f"give the {words} one way: as the argument, or written to a file and passed with --file")
     if a.get("file") is not None:
-        into = {("record", "retire"): "why", ("record", "new"): "body", ("ask", "answer"): "words"}.get((args.group, a.get("op")), "text")
+        into = {("record", "retire"): "why", ("record", "new"): "body", ("ask", "answer"): "words", ("record", "confirm"): "words"}.get((args.group, a.get("op")), "text")
         a[into] = _read(a["file"])
     return a
 
 
 # (group, verb) -> the optional positional that --file stands in for (CE-73)
-WORDS = {("record", "amend"): "text", ("ask", "answer"): "words"}
+WORDS = {("record", "amend"): "text", ("ask", "answer"): "words", ("record", "confirm"): "words"}
 
 
 def _parse(argv: list[str] | None) -> argparse.Namespace:

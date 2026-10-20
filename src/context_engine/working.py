@@ -99,7 +99,7 @@ def _milestone(fn):
     """The operation is a milestone (FRAMEWORK §5.5 rule 4, DEC-36): under the `milestones`
     policy its end commits its writes, with every op log line HEAD lacks and the files they
     name. Milestones are what must reach HEAD at once: a task's close, owner words (a story or
-    decision recorded, amended, retired or superseded; a question answered), a hand-off to the
+    decision recorded, amended, retired or superseded; a story confirmed; a question answered), a hand-off to the
     next session (a baton, a pause), the session's own close or pause, and the banner, which a
     clean close writes after the session's close. Every other write stays uncommitted and goes
     into the next commit."""
@@ -954,13 +954,16 @@ class Engine:
             preset = [f"`{k}`" for k in G.RETIRE_KEYS if k in fields] + (["`status: deprecated`"] if str(fields.get("status")) == "deprecated" else [])
             if preset:
                 problems.insert(0, f"would be created with {preset[0]}, which only `record retire` writes")
+            status = str(fields.get("story_status"))
+            if status in G.CONFIRMED and G.AGENT_ACTOR_RE.fullmatch(str(fields.get("actor") or "")):
+                problems.insert(0, f"would be created `{status}` with an agent's actor, but an agent's reconstruction is created `unconfirmed` and only `record confirm` moves it on, with the owner's words")
         known, bad = G.known_goals(self)
         if known is not None and "G-I1" not in off:
             if not known:  # the charter is missing or yields no goal: no story's goals can be checked
                 raise Refusal(f"no story can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
             problems += G.goal_problems(fields.get("goals"), known, legacy=False)  # the charter's own failures are lint's (G-I1)
         if problems:
-            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed (`retired`, `status: deprecated`, `supersedes` and `superseded_by` are set only by `record retire`), and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
+            raise Refusal(f"the story {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), "pass `--set actor=owner` (or `human:<id>`), a `date` as YYYY-MM-DD or none for today, `story_status` from live, unspecified, unconfirmed (`unconfirmed` for an agent's reconstruction, which only `record confirm` moves on; `retired`, `status: deprecated`, `supersedes` and `superseded_by` are set only by `record retire`), and `goals=[G-n, ...]` naming goals of the charter; a goal the charter lacks is an owner question (FRAMEWORK §6.2 step 2)")
 
     def stamp(self, ids: list[str], *, session: str, actor: str) -> str:
         """Freeze each record's body hash, once; all ids are checked before any is written."""
@@ -1052,6 +1055,55 @@ class Engine:
         self.store.update([*([new] if new else []), rid], mutate, session=session, actor=actor, op="retire", amend={rid: head + why})
         tail = f"; superseded by {new}, which now supersedes {rid}" if new else ""
         return f"{rid}: retired by {by} (status: deprecated){tail}; the reason is under ## Amendments"
+
+    @_milestone
+    def confirm(self, rid: str, words: str, *, by: str = "owner", status: str = "live", session: str, actor: str) -> str:
+        """Confirm a story an agent reconstructed (FRAMEWORK §3.2, §11.4): `story_status:
+        unconfirmed` becomes ``status`` (`live`, or `unspecified` while no criterion comes from it),
+        with the confirmer's words as an amendment, in one write. ``by`` is `owner` or `human:<id>`,
+        whose words ``words`` are, verbatim: an agent never confirms intent. The `actor` stays the
+        agent's: provenance is never rewritten. A confirmation is not redone: a story that a logged
+        `confirm` confirmed is refused, whatever its frontmatter says now. A reconstruction made
+        `live` or `unspecified` by hand, with no logged `confirm`, may be confirmed here to record
+        whose words confirmed it."""
+        self._check(session, actor)
+        kind = self.store.config.guards.stories
+        if not kind:
+            raise Refusal("no kind holds the stories ([guards] stories is unset)", "set `stories` in [guards] of context.toml to the kind holding the stories (the kit's is `story`); `record confirm` confirms a story")
+        prefix = self.store.config.kind(kind).prefix
+        if self.store.config.kind_for_id(rid).name != kind:
+            raise Refusal(f"{rid} is not a story", f"`record confirm` confirms a story ({prefix}-n) an agent reconstructed; a decision's status is `decision set`")
+        by, words, status = by.strip(), words.strip("\n"), status.strip()
+        if not G.CONFIRM_BY_RE.fullmatch(by):
+            raise Refusal(f"`by: {by}` is neither `owner` nor `human:<id>`", "a story is confirmed in the words of the owner (or of a human the charter names): pass `by` as `owner` or `human:<id>`, with their words verbatim; an agent never confirms intent")
+        if not words.strip():
+            raise Refusal("no words", "pass the owner's words verbatim: what they said when they confirmed the story")
+        if status not in G.CONFIRMED:
+            raise Refusal(f"`status: {status}` is neither `live` nor `unspecified`", "confirm a story as `live`, or as `unspecified` while no criterion comes from it yet (G-T1)")
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            d = recs[rid].doc
+            now = str(d.get("story_status") or "")
+            done = G.logged_confirms(self).get(rid)
+            if done is not None:
+                if now == "unconfirmed":
+                    raise Refusal(f"{rid} was confirmed by `record confirm` in session {done.get('session')}, and a hand edit has since made it `unconfirmed`",
+                                  "a confirmation stands: restore `story_status` from git (`git log -p` on the file); if the owner withdrew the story, `record retire` it with their words")
+                raise Refusal(f"{rid} is already confirmed (`record confirm` in session {done.get('session')})", "nothing to do; more of the owner's words go in with `record amend`")
+            if now == "retired":
+                raise Refusal(f"{rid} is retired", "a retirement is final: to bring the intent back, record it as a new story (`record new story`) with the owner's words")
+            who = str(d.get("actor") or "")
+            if not G.AGENT_ACTOR_RE.fullmatch(who):
+                raise Refusal(f"{rid}'s actor is `{who}`, not an agent's reconstruction, so there is nothing to confirm",
+                              "`record confirm` confirms a story an agent reconstructed (`actor: agent (reconstructed from ...)`); an owner's story is recorded `live` at `record new`")
+            if now not in ("unconfirmed", *G.CONFIRMED):
+                raise Refusal(f"{rid} is `story_status: {now}`, none of unconfirmed, live, unspecified", "restore `story_status` from git (`git log -p` on the file)")
+            d.set("story_status", status)
+            return {rid: ["story_status"]}
+
+        head = f"confirmed (by {by}" + ("; unspecified" if status == "unspecified" else "") + "): "
+        self.store.update([rid], mutate, session=session, actor=actor, op="confirm", amend={rid: head + words})
+        return f"{rid}: confirmed by {by} (story_status: {status}); their words are under ## Amendments"
 
     # -- decisions (FRAMEWORK §6.5, CE-5) -----------------------------------------------
 

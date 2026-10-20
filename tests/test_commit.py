@@ -510,7 +510,7 @@ MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions
 # DEC-36's milestones: a task's close, the owner-words writes, a hand-off (baton, pause) and the
 # session's own close or pause; and the banner, which a clean close writes after the session's
 # close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
-MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "decision_supersede",
+MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "record_confirm", "decision_supersede",
               "baton_add", "pause_open", "session_close", "session_pause", "banner_set"}
 OWNER = {"actor": "owner", "story_status": "live"}
 
@@ -590,6 +590,8 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("record_new", kind="story", title="A story", body="the owner's words", fields=OWNER)
     w("record_new", kind="story", title="Again", body="the owner's words", fields=OWNER)
     w("record_retire", id="US-1", why="recorded again", by="agent", superseded_by="US-2")
+    w("record_new", kind="story", title="Rebuilt", body="the agent's reading", fields={"actor": "agent (x, reconstructed from notes)", "story_status": "unconfirmed"})
+    w("record_confirm", id="US-3", words="yes, that is it")
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")
     w("pause_open", in_flight="half done", resume="finish it")

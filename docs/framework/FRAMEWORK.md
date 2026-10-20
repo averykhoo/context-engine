@@ -498,6 +498,22 @@ The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words g
   `record.new` refuses a story created as `retired`, with
   `status: deprecated`, or with a story link (`supersedes`, `superseded_by`: lists of story ids,
   written only by `record.retire`).
+
+**Confirming a story** an agent reconstructed is owner intent too, so it is an operation that
+records whose words: `record.confirm(id, words, by, status)` (CLI `record confirm`).
+- **Whose call:** `by: owner` (the default) or `human:<id>`, with their words verbatim. An agent
+  never confirms a story.
+- **What it writes, in one write:** `story_status: live`, or `unspecified` (`status`) while no
+  criterion comes from the story yet (G-T1), and the words as an amendment (`confirmed (by
+  <who>): <words>`); one op log line. The `actor` stays the agent's: the text above
+  `## Amendments` is still the reconstruction.
+- **It refuses** a story whose actor is not an agent's reconstruction, a retired story, a story
+  whose hash does not match, and a story that a logged `confirm` confirmed, even when a hand edit
+  has since made it `unconfirmed` again. A reconstruction made `live` or `unspecified` by hand (no logged
+  `confirm`) may be confirmed by the operation, which records whose words confirmed it.
+  `record.new` refuses a reconstruction created `live` or `unspecified`: it starts `unconfirmed`.
+  So a confirmed reconstruction that `record.retire --by agent` replaces leaves a successor that
+  is `unconfirmed` until it is confirmed again.
 - **Lint (G-I2)** fails a story marked retired that no logged `retire` retired, a story that a
   logged `retire` retired but that is no longer `retired` with `status: deprecated`, and a story
   that is deprecated but not retired. A retired story is history: G-I1, G-I2's provenance checks
@@ -868,7 +884,7 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      carries `Closes: <id>` (§6.10) and the close's optional message body, which holds the
      `Sabotage:` and receipt lines a finished task's commit carries;
    - **owner words:** a story or decision recorded (`record.new`), amended, retired or
-     superseded, and a question answered (`ask.answer`): until committed they exist in one
+     superseded, a story confirmed (`record.confirm`), and a question answered (`ask.answer`): until committed they exist in one
      working tree and one transcript (§6.2);
    - **a hand-off:** a baton (`baton.add`) or a pause (`pause.open`), which the next session
      must find whatever happens to this one;
@@ -1091,7 +1107,9 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
    and flags it in the digest.
 5. If the new intent contradicts an existing decision or criterion, say so at once, and record
    the outcome as a decision that supersedes or amends the old one. A story the owner withdraws,
-   or one a new story replaces, is retired with the owner's words (`record retire`, §3.2).
+   or one a new story replaces, is retired with the owner's words (`record retire`, §3.2). A
+   story an agent reconstructed that the owner confirms is confirmed with their words (`record
+   confirm`, §3.2).
 6. **On a design change, run a criteria census:** every existing criterion in scope is
    classified KEEP / rewrite / retire, with the work assigned to tasks or slices. The census
    is an evidence doc.
@@ -1813,7 +1831,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
 | Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why)`: a whole doc into an archive directory with its redirect row (§7.3) |
@@ -1847,13 +1865,17 @@ Decisions as records follow once the core holds.
 - **G-I2:** every story that is not retired has an actor, a date and a status from the
   vocabulary. `unconfirmed` requires `actor: agent (reconstructed from …)`. `record.new` of a
   story refuses what G-I2 and G-I1 would fail, by the same checks, and a story created with what
-  only `record.retire` writes (§3.2). Every retired story was retired by `record.retire` (a
+  only `record.retire` writes (§3.2), or a reconstruction created `live` or `unspecified`. Every
+  retired story was retired by `record.retire` (a
   logged `retire`, so who and why are recorded), and every story it retired is still `retired`
   with `status: deprecated`; only a retired story is deprecated; each id in a story's
-  `superseded_by` or `supersedes` is a story, and only a retired story has `superseded_by`. Not
-  checked: a hand edit from one status other than `retired` to another (no operation owns those
-  moves, and the op log records which keys changed, not their values), a retired story's
-  frontmatter after the retirement (history), that the retirement's amendment is still there, that `supersedes` mirrors
+  `superseded_by` or `supersedes` is a story, and only a retired story has `superseded_by`.
+  Every reconstruction that is `live` or `unspecified` was confirmed by `record.confirm` (a
+  logged `confirm`, so whose words confirmed it are recorded), and no story it confirmed is
+  `unconfirmed` again. Not checked: a hand edit between `live` and `unspecified` (no operation
+  owns that move, and the op log records which keys changed, not their values), an `actor`
+  rewritten by hand, a retired story's
+  frontmatter after the retirement (history), that the retirement's or a confirmation's amendment is still there, that `supersedes` mirrors
   `superseded_by`, and an op log line written by hand (trusted as written, as G-W7 trusts it).
 
 The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
@@ -2236,8 +2258,9 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   becoming a refusal.
 - **Back-filled stories are reconstructions, never the owner's words:**
   `actor: agent (reconstructed from D-n / PRD § / commit …)`, `story_status: unconfirmed`. The
-  owner confirms them through **one batched digest question**, not one question per story. A
-  story the repo had already retired by hand is red under G-I2 until `record.retire --by owner`
+  owner confirms them through **one batched digest question**, not one question per story, and
+  each confirmed story is moved on by `record.confirm` with the owner's words from that answer
+  (§3.2). A story the repo had already retired by hand is red under G-I2 until `record.retire --by owner`
   retires it, with the owner's words from that same batched answer (§3.2).
 - Adopt structural changes (board size, ledger rotation) **by trial**, with a single
   revertible cutover commit.

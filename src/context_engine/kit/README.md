@@ -243,7 +243,8 @@ place:
   docs under `liveness` too.
 
 `context-engine lint` then shows what still disagrees (dead routes, records that break the
-schema, docs that declare no liveness). Back-filled stories are reconstructions, never the owner's words (§11.4).
+schema, docs that declare no liveness). Back-filled stories are reconstructions, never the owner's words (§11.4): they are
+recorded `unconfirmed`, and `record confirm` moves each on with the owner's words once they confirm it.
 
 **The repo's existing ids** take the framework's form in the first session (every step needs
 the session key), each keeping its number where it has one, and each old id stays in the

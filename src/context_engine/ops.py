@@ -320,6 +320,12 @@ def record_retire(e: Engine, c: Caller, id: str, why: str, by: str, superseded_b
     return 0, e.retire(id, why, by=by, superseded_by=superseded_by, **c.kw)
 
 
+@op(write=True)
+def record_confirm(e: Engine, c: Caller, id: str, words: str, by: str = "owner", status: str = "live") -> tuple[int, str]:
+    """Confirm a story an agent reconstructed: story_status unconfirmed to `status` (`live`, or `unspecified` while no criterion comes from it), the confirmer's `words` verbatim as an amendment. `by` is `owner` or `human:<id>`; an agent never confirms. Not redone once logged."""
+    return 0, e.confirm(id, words, by=by, status=status, **c.kw)
+
+
 # -- decisions (FRAMEWORK §6.5) -----------------------------------------------------------
 
 

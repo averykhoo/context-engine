@@ -55,6 +55,7 @@ CALLS = {
     "record_amend": (["DEC-1", "more"], {"id": "DEC-1", "text": "more"}),
     "record_correct": (["DEC-1", "--after", "a", "--text", "b"], {"id": "DEC-1", "after": "a", "text": "b"}),
     "record_retire": (["US-1", "--by", "agent", "--superseded-by", "US-2", "--why", "w"], {"id": "US-1", "by": "agent", "superseded_by": "US-2", "why": "w"}),
+    "record_confirm": (["US-1", "--by", "human:avery", "--status", "unspecified", "the words"], {"id": "US-1", "by": "human:avery", "status": "unspecified", "words": "the words"}),
     "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
     "decision_set": (["DEC-1", "--set", "tags=a", "--unset", "reopen_if"], {"id": "DEC-1", "fields": {"tags": "a"}, "unset": ["reopen_if"]}),
     "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
@@ -199,8 +200,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions; record_retire: test_retire; commit, which needs git: test_commit; the doc ops: test_docs)
-    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "commit", "doc_freeze", "doc_archive"}
+    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs)
+    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive"}
 
 
 @pytest.mark.criterion("AC-19")

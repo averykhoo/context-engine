@@ -1041,6 +1041,8 @@ AGENT_ACTOR_RE = re.compile(r"agent \([^()]*reconstructed from .+\)")
 STORY_ACTOR_RE = re.compile(rf"owner|human:\S+|{AGENT_ACTOR_RE.pattern}")  # FRAMEWORK §3.2
 RETIRE_BY_RE = re.compile(r"owner|human:\S+|agent")  # whose call a `record retire` is (FRAMEWORK §3.2)
 RETIRE_KEYS = ("supersedes", "superseded_by")  # a story's links: only `record retire` writes them
+CONFIRM_BY_RE = re.compile(r"owner|human:\S+")  # whose words a `record confirm` records: never an agent's (FRAMEWORK §3.2)
+CONFIRMED = ("live", "unspecified")  # what `record confirm` makes an agent's reconstruction (FRAMEWORK §3.2)
 SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
 INTENT_OFF = "unset it in [guards] to switch the guard off"
 
@@ -1255,6 +1257,34 @@ def logged_retires(e: Engine) -> dict[str, dict]:
     return out
 
 
+def logged_confirms(e: Engine) -> dict[str, dict]:
+    """The newest logged `record confirm` of each story, by id."""
+    out: dict[str, dict] = {}
+    for _, op in _ops(e):
+        if isinstance(op, dict) and op.get("op") == "confirm" and "story_status" in (op.get("fields") or ()):
+            out[str(op.get("id"))] = op
+    return out
+
+
+def confirm_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[tuple[str, str, str, str]]:
+    """G-I2 on confirmations, as (id, path, message, remedy): a story that is not retired, whose
+    actor is an agent's reconstruction and whose status is `live` or `unspecified`, was confirmed by
+    `record confirm` (a logged `confirm` line), so whose words confirmed it are recorded; and a
+    story that a logged `confirm` confirmed is not `unconfirmed` again. Retired stories are history."""
+    done = logged_confirms(e)
+    out = []
+    for rid, rel, doc in stories:
+        status = str(doc.get("story_status") or "")
+        op = done.get(rid)
+        if status in CONFIRMED and op is None and AGENT_ACTOR_RE.fullmatch(str(doc.get("actor") or "")):
+            out.append((rid, rel, f"is `{status}` with an agent's actor, but no `record confirm` of it is logged, so nothing records who confirmed the reconstruction or in what words",
+                        f"if the owner confirmed it, record their words: `record confirm {rid} --by owner --file <their words>` (add `--status unspecified` if it has no criterion yet); if not, restore `story_status: unconfirmed` from git (`git log -p` on the file)"))
+        elif op is not None and status == "unconfirmed":
+            out.append((rid, rel, f"was confirmed by `record confirm` in session {op.get('session')}, but its frontmatter now says `story_status: unconfirmed`",
+                        f"a confirmation stands: restore `story_status` from git (`git log -p` on the file); if the owner withdrew the story, `record retire {rid} --by owner --why \"<their words>\"`"))
+    return out
+
+
 def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[tuple[str, str, str, str]]:
     """G-I2 on retires, as (id, path, message, remedy): a retired story was retired by `record
     retire` (a logged `retire` line), so who retired it and why are recorded; a story that a logged
@@ -1291,11 +1321,13 @@ def story_fields(e: Engine) -> list[Failure]:
     vocabulary (`owner`, `human:<id>`, `agent (reconstructed from ...)`), a date and a
     `story_status` from the vocabulary, and `unconfirmed` only with an agent's actor
     (`story_problems`); every retired story was retired by `record retire`, and stays retired
-    (`retire_problems`). Off while `stories` is unset.
+    (`retire_problems`); every agent's reconstruction that is `live` or `unspecified` was confirmed by
+    `record confirm`, and is not `unconfirmed` again (`confirm_problems`). Off while `stories` is unset.
 
     Not checked: whether the actor really spoke (git cannot tell, FRAMEWORK §3.2), `via`, a hand
-    edit from one status other than `retired` to another (live, unspecified, unconfirmed: no operation owns those
-    moves yet, and the op log records which keys a write changed, not their values), a retired
+    edit between `live` and `unspecified` (no operation owns that move, and the op log records which
+    keys a write changed, not their values), an actor rewritten by hand (an agent's reconstruction
+    made the owner's would pass), that a confirmation's amendment is still there, a retired
     story's frontmatter after the retirement (history), that the amendment a retirement wrote is still
     there, that `supersedes` mirrors `superseded_by`, and an op log line written by hand (it is
     trusted as written, as G-W7 trusts it)."""
@@ -1307,7 +1339,8 @@ def story_fields(e: Engine) -> list[Failure]:
         return f"a story's provenance is set at `record new` and never rewritten: record the story again with the right actor, date and status and the owner's words as they are (`record new story`), then retire this one: {retire_hint(rid)}"
 
     out = [Failure("G-I2", rel, f"{rid}: {p}", remedy(rid)) for rid, rel, doc in stories for p in story_problems(doc)]
-    return out + [Failure("G-I2", rel, f"{rid} {msg}", rem) for rid, rel, msg, rem in retire_problems(e, stories)]
+    out += [Failure("G-I2", rel, f"{rid} {msg}", rem) for rid, rel, msg, rem in retire_problems(e, stories)]
+    return out + [Failure("G-I2", rel, f"{rid} {msg}", rem) for rid, rel, msg, rem in confirm_problems(e, stories)]
 
 
 def _criteria(e: Engine, guard: str) -> tuple[list[Criterion], list[Failure]]:

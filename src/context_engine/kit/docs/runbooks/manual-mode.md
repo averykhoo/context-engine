@@ -68,7 +68,7 @@ These hold for every operation below. The per-operation sections only list what 
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
 | **Log the operation** | Append one line to `docs/ledger/ops.jsonl` (format below). | The op log is the audit trail: who changed which keys, in which session. G-W7 reads it. |
-| **Commit the write** | At a milestone, commit the op log with every path its uncommitted lines name, by path and at once; every other write stays uncommitted and goes into the next commit. The milestones (`[engine] commit = "milestones"`, the default): task close; record new, amend and retire; decision supersede; ask answer; baton add; pause open; session close and session pause; banner set. The uncommitted lines are those `git diff HEAD -- docs/ledger/ops.jsonl` adds; if git has never seen the op log, every line. Leave out a named path git ignores, or one that is gone and git never knew. `git add -- <paths git has never seen>`, then `git commit --only -m "engine: <op> <id>, <op> <id>" -m "Session: <key>" -- docs/ledger/ops.jsonl <paths>` (with many paths, `--pathspec-from-file`; this operation's own `<op> <id>` first; a task close and a pause take the titles their sections give). Lines another session left uncommitted go in too, with their files: add `-m "Also carries <n> op log lines left uncommitted by session <key>, with the files they name."` before the trailer. Your own commits take the same lines and files with them (§ context-engine commit). Never `--no-verify`; if the commit fails, `git rm -q --cached` what you added. Do not commit during a merge, rebase, cherry-pick, revert or bisect, on a detached HEAD, with `GIT_DIR` or `GIT_INDEX_FILE` set, before `context.toml` is tracked, while the op log lacks lines HEAD has, or while a record it would carry does not parse (a hand edit in progress): commit when that is fixed. The engine does all this itself and says `not committed: <why>` in the reply of a write it would have committed, when it cannot. With `"every-write"` every write operation commits; with `"off"` the engine commits only a pause and says nothing, and the session commits no later than its close or pause (an older `context.toml` saying `true` means `"milestones"`, and `false` means `"off"`). | Lint reads the op log and the records together (G-W7), so a record committed without its line fails lint on a clean checkout. By path, so what another session staged or left untracked stays as it was. At milestones, because what they commit is costly to lose or must be at HEAD now, while a write left uncommitted costs little to lose: the next commit carries it, whoever makes it (FRAMEWORK §5.5 rule 4). |
+| **Commit the write** | At a milestone, commit the op log with every path its uncommitted lines name, by path and at once; every other write stays uncommitted and goes into the next commit. The milestones (`[engine] commit = "milestones"`, the default): task close; record new, amend, retire and confirm; decision supersede; ask answer; baton add; pause open; session close and session pause; banner set. The uncommitted lines are those `git diff HEAD -- docs/ledger/ops.jsonl` adds; if git has never seen the op log, every line. Leave out a named path git ignores, or one that is gone and git never knew. `git add -- <paths git has never seen>`, then `git commit --only -m "engine: <op> <id>, <op> <id>" -m "Session: <key>" -- docs/ledger/ops.jsonl <paths>` (with many paths, `--pathspec-from-file`; this operation's own `<op> <id>` first; a task close and a pause take the titles their sections give). Lines another session left uncommitted go in too, with their files: add `-m "Also carries <n> op log lines left uncommitted by session <key>, with the files they name."` before the trailer. Your own commits take the same lines and files with them (§ context-engine commit). Never `--no-verify`; if the commit fails, `git rm -q --cached` what you added. Do not commit during a merge, rebase, cherry-pick, revert or bisect, on a detached HEAD, with `GIT_DIR` or `GIT_INDEX_FILE` set, before `context.toml` is tracked, while the op log lacks lines HEAD has, or while a record it would carry does not parse (a hand edit in progress): commit when that is fixed. The engine does all this itself and says `not committed: <why>` in the reply of a write it would have committed, when it cannot. With `"every-write"` every write operation commits; with `"off"` the engine commits only a pause and says nothing, and the session commits no later than its close or pause (an older `context.toml` saying `true` means `"milestones"`, and `false` means `"off"`). | Lint reads the op log and the records together (G-W7), so a record committed without its line fails lint on a clean checkout. By path, so what another session staged or left untracked stays as it was. At milestones, because what they commit is costly to lose or must be at HEAD now, while a write left uncommitted costs little to lose: the next commit carries it, whoever makes it (FRAMEWORK §5.5 rule 4). |
 | **Engine-owned keys** | Never hand-edit `type`, `id` or `body_sha` on an existing record. | Ids are never reused or renumbered (P3). `body_sha` pins an owner's words (G-D10). |
 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
@@ -93,6 +93,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body"]` (the stamp is untouched) |
 | record retire | `retire`: one line for the successor, then one for the story | the record | the successor: `["supersedes"]`; the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor) |
+| record confirm | `confirm` | the story | `["story_status", "body"]` |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
@@ -390,7 +391,9 @@ Check every record, then the working state. `--working` does only the second hal
   charter, and every goal is named by one such story; no goal id leads two rows. **G-I2**, every
   story that is not `retired` has an `actor` of `owner`, `human:<id>` or `agent (reconstructed
   from ...)`, a `date` of YYYY-MM-DD, a `story_status` of live, unspecified or unconfirmed, and
-  `unconfirmed` goes with an agent's actor only; every `retired` story has a `retire` line in
+  `unconfirmed` goes with an agent's actor only; every story with an agent's actor that is `live`
+  or `unspecified` has a `confirm` line in the op log (§ context-engine record confirm), and no
+  story such a line confirmed is `unconfirmed` again; every `retired` story has a `retire` line in
   the op log (§ context-engine record retire), and every story such a line retired is still
   `retired` with `status: deprecated`; only a `retired` story has `status: deprecated`; every id
   in a story's `superseded_by` or `supersedes` is a story, and only a retired story has
@@ -939,7 +942,8 @@ another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a lo
    required, `actor` above all, must be given; if it is missing, stop. For a story (the kind
    `[guards] stories` names), stop too unless it passes G-I2 and G-I1 of § context-engine lint:
    `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
-   vocabulary but not `retired`, there is no `status: deprecated`, `supersedes` or
+   vocabulary but not `retired`, and `unconfirmed` when the actor is an agent's (§ context-engine
+   record confirm moves it on), there is no `status: deprecated`, `supersedes` or
    `superseded_by` (§ context-engine record retire writes those), and `goals` names at least one
    goal of the charter, each written `G-n`. A record carried over from a repo's own log (an entry
    added after its import) gets `aliases: [<old id>]` here, under G-D2's alias rule; a decision's
@@ -1023,7 +1027,10 @@ name this step). `record retire <id> --by <who> --why "<words>" [--superseded-by
    them together. The successor goes first because its change is safe to repeat: if the story's
    write fails, the step can be run again.
 5. With a successor, the criteria that came from the story still name it in their `from` cells,
-   and lint G-T1 says the successor has none: add the successor's id to those cells.
+   and lint G-T1 says a `live` successor has none: add the successor's id to those cells. A
+   successor that is an agent's reconstruction is created `unconfirmed` (§ context-engine record
+   new), so a confirmation of the story does not carry over: it waits for § context-engine record
+   confirm, and G-T1 does not read it until then.
 
 **Why:** a story is the owner's words, so retiring one is owner intent, as recording it is: who
 decided and why are kept with the story, under its amendments, and the op log line is what lint
@@ -1034,6 +1041,36 @@ retirement needs the story's own
 words on the successor, so it moves a record and never drops owner intent. `status: deprecated`
 is OKF's word for "kept for history, no longer current" (FRAMEWORK §9.3); a retired story
 serves no goal (G-I1) and needs no criterion (G-T1).
+
+### context-engine record confirm
+
+Confirm a story an agent reconstructed (`actor: agent (reconstructed from ...)`, `story_status:
+unconfirmed`): the owner read it and said it is what they meant. `record confirm <id> --file
+<words.md> [--by <who>] [--status unspecified]`.
+1. Say whose words they are. `--by owner` (the default) or `human:<id>`; the words are theirs,
+   verbatim, written to a file and passed with `--file` (or given as the argument). An agent
+   never confirms a story on its own: stop, and ask the owner (FRAMEWORK §11.4 asks once, for
+   all of them, in one batched question).
+2. Check before any change. The record must be a story whose `actor` is an agent's
+   reconstruction and which is not `retired` (to bring a retired story's intent back, record a
+   new story); its hash must match (as § context-engine record amend). A story that an earlier
+   `confirm` line of the op log confirmed is not confirmed again, even if a hand edit has since
+   made it `unconfirmed`: stop, and restore it from git. A reconstruction already `live` or
+   `unspecified` with no such line was confirmed by hand: confirm it here, so whose words
+   confirmed it are recorded.
+3. Set `story_status: live`, or `unspecified` with `--status unspecified` when no criterion comes
+   from the story yet (lint G-T1 fails a `live` story with none). Leave `actor` as it is. Then
+   append an amendment as in § context-engine record amend, with the text `confirmed (by
+   <who>): <words>`, or `confirmed (by <who>; unspecified): <words>`.
+4. Log one `confirm` line (table above) and commit it with the story.
+
+**Why:** a reconstruction is the agent's reading of the owner's intent, never their words; the
+owner's confirmation is what makes it intent, so it is recorded as owner words are, under the
+story's amendments, and the op log line is what lint reads. G-I2 fails a reconstruction that is
+`live` or `unspecified` with no logged `confirm` (a hand edit of `story_status`, which lint cannot
+otherwise tell from any other, since the op log records keys, not values), and a story that a
+logged `confirm` confirmed but that is `unconfirmed` again. The `actor` stays the agent's because
+provenance is never rewritten: the words above `## Amendments` are still the agent's.
 
 ## Decisions
 
