@@ -45,6 +45,6 @@ artifact the way a stranger would. Its brief says:
 
 | Do | Why |
 |---|---|
-| Re-run every `BROKEN` repro first-hand against the source | an agent's report is evidence, not a finding |
+| Have a verifier agent (not the trial agent) re-run every `BROKEN` repro against the source; the coordinator reads its report and makes the call | an agent's report is evidence, not a finding (FRAMEWORK §6.6) |
 | Put the trial in a tracked evidence doc the same hour, and file a board item for each `BROKEN` or `CONFUSING` finding | scratch is throwaway space: anything kept only there is lost (P10) |
 | Fix everything `BROKEN` and release it as the next patch version | a published version cannot be repaired in place |

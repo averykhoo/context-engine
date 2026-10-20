@@ -82,18 +82,32 @@ remedy.
 **Ultracode** (the `Workflow` tool, multi-agent orchestration) needs no per-request opt-in when
 it keeps the session's own context and tokens down: bulky reading, auditing or verification
 pushed into agents, only verdicts kept.
-- What decides is the shape of the work, not permission: a real fan-out with a reconcile step;
-- not a cheap lookup, and not coupled work split up to go "faster".
+- What decides how work is split is its shape, not permission: a real fan-out with a reconcile
+  step;
+- one check goes to one agent, not a fan-out, and coupled work is not split up to go "faster".
 
-**Several tasks in one session:** when one request asks for more than one task,
-- each task goes to its own subagent, which owns it end to end and can persist (not `Explore`);
-- that task agent pushes the work down again, to its own subagents or a workflow;
+**The coordinator:** the top-level session coordinates and does not do the work itself. It takes
+this role for every request, one task or several, and by default whenever the board is worked.
+- each task, even a lone one, goes to its own subagent through ultracode; that agent owns the
+  task end to end, can persist (not `Explore`), and pushes the work down again, to its own
+  subagents or a workflow;
+- told to check something, the coordinator sends an agent; to verify, it sends another agent,
+  never the one that did the work, and the work a commit, a push or a record write carries is
+  verified that way first;
+- every subagent persists its output to its own file as it goes, so a session that dies loses
+  nothing;
 - the top-level conversation stays clear: progress, blockers and delays, then the digest;
-- judgement and owner words stay at the top: the session records owner words verbatim (§6.2)
-  and verifies first-hand before a commit, a push or a record write;
 - tasks that touch the same files go to one agent or run in sequence (disjoint ownership,
-  below).
+  below);
+- three things stay with the coordinator: it records owner words verbatim (§6.2), since only it
+  holds the transcript; it makes the final call on a verifier's verdict, reading the report, not
+  the files; and trivial bookkeeping (one engine op, `git status`) is done inline.
 
+- **Who decides** (FRAMEWORK P8): a call that is cheap to undo, in time and tokens, is the
+  agent's, recorded PROVISIONAL with its own actor and flagged in the close digest, not raised as
+  a question. A local commit or a record write is cheap to undo; a push, a release, a published
+  tag, deleting untracked files, owner words and anything outside the repo are not, and stay the
+  owner's.
 - **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
   Never fan out with fable: it wastes tokens.
 - Commit by path, through `context-engine commit <paths> -m "<message>"`, which takes the op

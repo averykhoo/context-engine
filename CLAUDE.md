@@ -111,9 +111,9 @@ This repo's values for those steps:
 ## Rules
 
 - **Never run `context-engine init` here** (it holds the kit's sources). Close eagerly, without asking (DEC-31).
-- **Several tasks in one request** (DEC-16, FRAMEWORK §6.6): one subagent per task; it hands
-  the work to its own subagents or a workflow; the top level only reports progress, blockers
-  and delays. Owner words and first-hand verification stay with the top-level session.
+- **Coordinator** (DEC-16, DEC-44, DEC-60; contract § Rules): every task, even one, to an ultracode
+  subagent; checks and verification to agents. Cheapest viable model (DEC-45): haiku for watchers,
+  sonnet for bulk reading and census, opus for code and review.
 - Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths no uncommitted op
   line names, and for a `code` path only on a green `gate status --require code`); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge

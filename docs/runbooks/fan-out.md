@@ -10,15 +10,17 @@ liveness: LIVING
 # Fan-out
 
 How a session hands work to agents and builds in rounds. The rules are FRAMEWORK §6.6 and the
-framework contract § Rules (when to use a workflow, several tasks in one request, model choice);
+framework contract § Rules (when to use a workflow, the coordinator, model choice);
 this file is how to follow them. The repo's values (its default and cheaper models, for one) are
 in its `CLAUDE.md`.
 
 ## Delegating reading and auditing
 
-- **The test:** would doing it inline flood the session's context with file contents? Then
-  delegate it and take back a table. A lookup whose file and symbol are already known is done
-  inline: delegating it is pure overhead.
+- **The coordinator sends an agent** for every check, lookup or verification, however small
+  (FRAMEWORK §6.6); only trivial bookkeeping (one engine op, `git status`) stays inline.
+- **Inside a task agent, the test is:** would doing it inline flood the agent's context with
+  file contents? Then delegate it and take back a table. A lookup whose file and symbol are
+  already known is done inline there.
 - **The prompt names** the question, the verdict form (`file::symbol` evidence, never file
   dumps), and the one file the agent persists to.
 - **Persist incrementally, one file per agent:** each finding is appended as it lands, not
@@ -29,10 +31,12 @@ in its `CLAUDE.md`.
 - **An agent that delegates waits for its own agents** before it hands back: an agent left
   running in the background can die with its parent's return, its report unwritten.
 - **A report is evidence, not a finding.** What heads for a record, a commit or a golden is
-  verified first-hand by the session; reports that contradict each other are reconciled, never
-  averaged. Agents audit; the session decides and deletes.
-- **A skeptic pass** is recommended after a review: a second agent tries to refute each
-  reviewer's findings before the session acts on any, which removes false findings cheaply.
+  checked by a verifier: another agent than the one that did the work, persisting like any
+  other. The coordinator reads the verifier's report, not the files, and makes the final call.
+  Reports that contradict each other are reconciled, never averaged. Agents audit; the session
+  decides and deletes.
+- **The verifier is a skeptic by default:** after a build or a review, it tries to refute each
+  claim or finding before the session acts on any, which removes false findings cheaply.
 - **Clean up:** the session deletes the run's scratch files once their conclusions are in tracked
   files (P10), in the same session.
 
@@ -41,7 +45,8 @@ in its `CLAUDE.md`.
 A background watcher (CI after a push, a release run, a long job) only watches: no fix, no
 re-run, no cancel, no push. Its brief names what it watches by commit hash, how to read it, the
 verdict to return per run, and its persist file; the CI watcher's brief is in
-[procedures.md § Push and CI](procedures.md#push-and-ci-68). A cheap model is enough.
+[procedures.md § Push and CI](procedures.md#push-and-ci-68). Use the cheapest model that can
+do it: haiku, or sonnet when it must read the logs.
 
 ## Build rounds
 
@@ -59,7 +64,8 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
 
 ## Worktrees for parallel builders
 
-- One worktree and one branch per builder; the session merges and verifies first-hand.
+- One worktree and one branch per builder; the task agent merges, and a verifier agent checks
+  the merge.
 - The gate in a worktree imports that worktree's code, and the worktree is checked out with the
   line endings the byte checks expect ([gate.md](gate.md)).
 - Board, ledger and other working-state writes stay with the session, in the main tree.

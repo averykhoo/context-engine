@@ -572,7 +572,7 @@ def _paragraph(text: str, start: str) -> str:
 
 
 @pytest.mark.criterion("AC-33")
-@pytest.mark.parametrize("start", ["**Ultracode**", "**Several tasks in one session:**", "- **Do not use `fable` subagents"])
+@pytest.mark.parametrize("start", ["**Ultracode**", "**The coordinator:**", "- **Do not use `fable` subagents"])
 def test_the_kit_contract_carries_framework_6_6_verbatim(start):
     fw = FRAMEWORK.read_text(encoding="utf-8").replace("\r\n", "\n")
     six = fw[fw.index("### 6.6 ") : fw.index("### 6.7 ")]

@@ -204,9 +204,16 @@ every guard has been shown to fail.**
 - **Each guard's docstring says what it deliberately does NOT check.**
 
 **P8. Owner attention is the scarcest resource.**
-- **The "who decides" test:**
-  - agents make engineering and architecture calls and record their reasoning;
-  - only goals, priorities and genuine preferences go to the owner;
+- **The "who decides" test**, in this order:
+  - **reversibility first:** a call that is cheap to undo, in time and tokens, is the agent's,
+    whatever kind of call it is. A local commit or a record write is cheap to undo: git reverts
+    it. A push, a release, a published tag, deleting untracked files, owner words and anything
+    outside the repo are not, and stay the owner's;
+  - then the kind of call: agents make engineering and architecture calls and record their
+    reasoning; goals, priorities and genuine preferences that are not cheap to undo go to the
+    owner;
+  - an agent's call where the owner would otherwise decide is recorded PROVISIONAL and flagged
+    in the close digest, so the owner can push back (§5.3, §5.6);
   - a consultation with another model is a recommendation, not an order.
 - **Ration what is raised:** standing owner questions are bounded by the NEXT cap (§5.3).
 
@@ -224,7 +231,8 @@ recorded only there is already lost.
 **P11. Delegate reading to save context; parallelise building only when file ownership is
 disjoint. Judgement stays with the session.**
 - Reading and auditing go to subagents, which return verdicts, not file dumps (§6.6).
-- Several tasks in one request: one subagent per task, and the top level only reports (§6.6).
+- The top-level session coordinates: every task, even a lone one, goes to a subagent, checks and
+  verification go to agents, and the top level only reports (§6.6).
 - Building: parallel builders work under disjoint file ownership, with no fan-out on a
   dependency chain (§6.6).
 - Agents audit, and the session decides.
@@ -805,6 +813,10 @@ into the flat directory once the schema carries `state` (§11.4).
   tasks it unblocked.
 - **The agent never answers its own question.** If the agent can decide, it was not an owner
   question.
+- **A reversible recommendation is the agent's decision, not a question.** Where the
+  recommendation is cheap to undo (P8), the agent makes the call: a decision with the agent's own
+  actor and `decision_status: PROVISIONAL`, carrying the options and the why, and flagged in the
+  close digest (§5.6) so the owner can push back. No `ASK-n` row is opened.
 
 ### 5.4 Batons and pause records
 
@@ -962,7 +974,8 @@ behalf. Each session's chat close-out includes a digest of **at most 7 lines**:
 - agent decisions of consequence, by id and one line each;
 - criteria created, rewritten or retired, as counts plus anything surprising;
 - owner questions raised (§5.3);
-- anything the owner might want to push back on, flagged explicitly.
+- anything the owner might want to push back on, flagged explicitly, including every PROVISIONAL
+  call an agent made where the owner would otherwise have decided (§5.3).
 
 **The digest is also written into the session's ledger entry** as its `summary:` block, so it
 is tracked. Anyone using plain git sees what each agent session did and decided, without access
@@ -1073,7 +1086,9 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 3. Draft the criteria. They are **live by default** (§3.3). Show the owner **a digest of three
    to seven lines**, never files. If the story is `sign-off: required`, the criteria stay
    `planned` until the owner signs them off.
-4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them.
+4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them. One whose
+   recommendation is cheap to undo is not owner-only (P8): the agent decides it, PROVISIONAL,
+   and flags it in the digest.
 5. If the new intent contradicts an existing decision or criterion, say so at once, and record
    the outcome as a decision that supersedes or amends the old one. A story the owner withdraws,
    or one a new story replaces, is retired with the owner's words (`record retire`, §3.2).
@@ -1304,19 +1319,26 @@ for one, and a fence or comment never closed. Headings in fences and HTML commen
 **Ultracode** (the `Workflow` tool, multi-agent orchestration) needs no per-request opt-in when
 it keeps the session's own context and tokens down: bulky reading, auditing or verification
 pushed into agents, only verdicts kept.
-- What decides is the shape of the work, not permission: a real fan-out with a reconcile step;
-- not a cheap lookup, and not coupled work split up to go "faster".
+- What decides how work is split is its shape, not permission: a real fan-out with a reconcile
+  step;
+- one check goes to one agent, not a fan-out, and coupled work is not split up to go "faster".
 
-**Several tasks in one session:** when one request asks for more than one task,
-- each task goes to its own subagent, which owns it end to end and can persist (not `Explore`);
-- that task agent pushes the work down again, to its own subagents or a workflow;
+**The coordinator:** the top-level session coordinates and does not do the work itself. It takes
+this role for every request, one task or several, and by default whenever the board is worked.
+- each task, even a lone one, goes to its own subagent through ultracode; that agent owns the
+  task end to end, can persist (not `Explore`), and pushes the work down again, to its own
+  subagents or a workflow;
+- told to check something, the coordinator sends an agent; to verify, it sends another agent,
+  never the one that did the work, and the work a commit, a push or a record write carries is
+  verified that way first;
+- every subagent persists its output to its own file as it goes, so a session that dies loses
+  nothing;
 - the top-level conversation stays clear: progress, blockers and delays, then the digest;
-- judgement and owner words stay at the top: the session records owner words verbatim (§6.2)
-  and verifies first-hand before a commit, a push or a record write;
 - tasks that touch the same files go to one agent or run in sequence (disjoint ownership,
-  below).
-
-A single-task request is unaffected.
+  below);
+- three things stay with the coordinator: it records owner words verbatim (§6.2), since only it
+  holds the transcript; it makes the final call on a verifier's verdict, reading the report, not
+  the files; and trivial bookkeeping (one engine op, `git status`) is done inline.
 
 **Build rounds:**
 1. map;
@@ -1335,7 +1357,9 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
   Never fan out with fable: it wastes tokens.
 - When it really is necessary, do whatever minimizes its cost: one agent, the narrowest prompt,
   a capped output, verdicts back rather than prose. Say why in the session summary.
-- The default for delegated work is the cheaper model that can do it.
+- The default for delegated work is the cheapest model that can do it: a watcher needs the
+  least, bulk reading and a census a little more, code and review the most. The repo's
+  contract names the models.
 
 ### 6.7 Promotion and demotion
 
