@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-20d)
+## Banner (2026-10-20e)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -17,14 +17,14 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
   periodic review, owner-triggered (CE-90, US-12). DEC-48 is in the rule text since CE-91 (2026-10-20b).
-- **CE-99 (goal-driven rerank) design is settled (DEC-64 + amendment):** milestone = framework fully built (G-7); tasks carry
-  required `goals`; full rerank when NOW and NEXT are both cleared or on owner request. NEXT; kit hold lifted for it (DEC-65).
+- **CE-99 closed 2026-10-20e (rerank built, FRAMEWORK §6.14):** tasks carry charter `goals` (G-I1); orient says "rerank due"
+  (`Last rerank: never`): the first full rerank is owed, at the owner's word. DEC-68 PROVISIONAL; follow-ups in CE-103.
 - **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
   never the banner (CE-29, spec text still held).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
   In the rule text since CE-83 (17470c8, 2026-10-20b): contract § Rules, FRAMEWORK §6.6 "The coordinator".
-- **Pushed 2026-10-20d through 78cbe4e; CI green** (run 39419037601). Every push: gate, then `tools/linux_gate.py`, then a CI
+- **Pushed 2026-10-20d through 78cbe4e; CI green** (run 39419037601); 9d7938d..HEAD (CE-99) unpushed. Every push: gate, then `tools/linux_gate.py`, then a CI
   watcher. 78cbe4e fixed a Linux-only red: test_foreign's commit helper set no user.name (CE-67 trap).
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
   CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a), CE-43 (DEC-51), CE-98 (DEC-52), and CE-60, CE-58, CE-65, CE-83,
