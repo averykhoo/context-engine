@@ -91,7 +91,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | session start, close, pause | `session.start`, `session.close`, `session.pause` | id = session key, path = the ledger | `["kind"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
-| record correct | `correct` | the record | `["body_sha", "body"]` |
+| record correct | `correct` | the record | `["body"]` (the stamp is untouched) |
 | record retire | `retire`: one line for the successor, then one for the story | the record | the successor: `["supersedes"]`; the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor) |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
@@ -700,7 +700,9 @@ check them yourself.
 
 **Why:** a question waiting on the owner is a board item, so it is ranked and gets raised, never
 buried in prose (FRAMEWORK §5.3). "Why owner-only" makes the asker check that it really is the
-owner's call (P8).
+owner's call (P8). A question whose recommendation is cheap to undo is not: record it instead as
+your own decision, with your own actor and `decision_status: PROVISIONAL` (§ context-engine
+record new), and flag it in the close digest.
 
 ### context-engine ask raised
 
