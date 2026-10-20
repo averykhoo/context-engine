@@ -4,14 +4,15 @@ id: CE-99
 title: 'Goal-driven rerank: when NEXT holds no task, the coordinator reranks the board against the charter goals and the next milestone'
 brief: 'Built 2026-10-20e; 2026-10-20f (DEC-64 amendment): orient says rerank due only when NEXT holds no task'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-19b
 created: 2026-10-19
 moved: 2026-10-20f
 updated: 2026-10-20f
 goals: [G-7]
-closed:
+closed: 2026-10-20f
+status: deprecated
 ---
 
 Owner, 2026-10-19b, verbatim:
@@ -43,3 +44,4 @@ Owner, 2026-10-19b, verbatim:
 - 2026-10-20e (claude-code/claude-opus-5-5): Verifier (2026-10-20e): the G-D12 concern above is wrong; guards.py::coverage counts closed items too, and lint stays clean after task close CE-99 (checked in a scratch clone). Ship verdict, no fix first; follow-ups filed. Backfilled goals flagged for the first rerank: G-7 likely missing on CE-34, CE-6, CE-12, CE-28, CE-42; CE-88 fits no goal; CE-61 may be G-5; G-1 on CE-17, CE-84 debatable.
 - 2026-10-20e (claude-code/claude-opus-5-5): closed: done in 54d437c, 33d3832, a555396; verified 2026-10-20e
 - 2026-10-20f (claude-code/claude-opus-5-5): reopened: owner 2026-10-20f (DEC-64 amendment): rerank due only when NEXT is empty
+- 2026-10-20f (claude-code/claude-opus-5-5): closed: trigger narrowed in 393e9e4; verified 2026-10-20f
