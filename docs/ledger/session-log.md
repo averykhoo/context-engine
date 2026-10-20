@@ -7,9 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-20c · kind: open
+## 2026-10-20c · kind: close
 
-- **opened:** 2026-10-20T19:37:35+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-15, ASK-16, ASK-17 (answered: DEC-65, DEC-66, DEC-67); CE-99 (NEXT); CE-102 (new)
+- **receipts:**
+  - guards: no code changed; lint: clean; gate status code+readers: green
+  - read: ASK-15, ASK-16, ASK-17
+- **summary** (the owner digest):
+  - Owner agreed to the three recommendations: DEC-65 (kit hold lifted for CE-99), DEC-66
+    (re-confirm by asking again), DEC-67 (INV-51 keeps its title)
+  - CE-99 promoted to NEXT; CE-102 filed to put DEC-66 into the rule text (kit edit, still under the
+    hold)
+  - Still unpushed: 2026-10-20b's and this session's commits; push on the owner's word after
+    tools/linux_gate.py
+- **Still owed:**
+  - push, on the owner's word (run tools/linux_gate.py first)
 - **start head:** c0eee8b09ed28b1f7b608a4bf9c75e9c0772717b
 
 ---

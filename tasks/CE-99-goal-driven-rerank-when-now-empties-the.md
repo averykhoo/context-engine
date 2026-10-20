@@ -3,13 +3,13 @@ type: Task
 id: CE-99
 title: 'Goal-driven rerank: when NOW empties, the coordinator reranks the board against the charter goals and the next milestone'
 brief: Design awaits owner answers (milestone record, task goals field, who approves); kit edit under the CE-7 freeze
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 source: session 2026-10-19b
 created: 2026-10-19
-moved: 2026-10-19b
-updated: 2026-10-20b
+moved: 2026-10-20c
+updated: 2026-10-20c
 ---
 
 Owner, 2026-10-19b, verbatim:
@@ -36,3 +36,4 @@ Owner, 2026-10-19b, verbatim:
 ## Log
 
 - 2026-10-20b (claude-code/claude-opus-5-5): Design answers recorded: DEC-64 (milestone = framework fully built, G-7; required task goals, backfilled; agent applies moves, owner approves drops and milestone changes) and its 2026-10-20b amendment (full rerank when NOW and NEXT are both cleared, or on owner request; a new owner direction only flags 'rerank due'; clean close keeps the light reorder). Building it still waits on the kit hold (DEC-63 does not cover CE-99).
+- 2026-10-20c (claude-code/claude-opus-5-5): DEC-65 (owner, 2026-10-20c, ASK-15): the kit hold is lifted for CE-99; build it next. Promoted to NEXT.
