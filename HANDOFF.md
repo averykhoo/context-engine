@@ -16,12 +16,16 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **CE-93 moved to NEXT (2026-10-17b, for CE-43); DEC-50 still holds it until the trial's feedback.** CE-95..CE-97 from CE-27.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
-  periodic review, owner-triggered (CE-90, US-12). CE-99 (goal-driven rerank) waits on three owner answers.
+  periodic review, owner-triggered (CE-90, US-12). DEC-48 is in the rule text since CE-91 (2026-10-20b).
+- **CE-99 (goal-driven rerank) design is settled (DEC-64 + amendment):** milestone = framework fully built (G-7); tasks carry
+  required `goals`; full rerank when NOW and NEXT are both cleared or on owner request. Building it waits on ASK-15 (kit hold).
 - **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
   never the banner (CE-29, spec text still held).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
-  verification go to agents. CE-83 (with CE-91 and CE-60 item 2) is being written into the rule text by session 2026-10-20b
-  (DEC-63); CE-58 and CE-65 follow in that session.
+  verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
+  In the rule text since CE-83 (17470c8, 2026-10-20b): contract § Rules, FRAMEWORK §6.6 "The coordinator".
+- **2026-10-20b's commits are unpushed** (CE-60, CE-83, CE-91, CE-58, CE-65, INV-51): push only on the owner's word, after
+  `tools/linux_gate.py`; the owner should read 17470c8 (the contract rewrite) first.
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
   CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a), CE-43 (DEC-51), CE-98 (DEC-52), and CE-60, CE-58, CE-65, CE-83,
   CE-91 (DEC-63). CE-84, CE-85, CE-89, CE-93 and CE-99 wait on it.
