@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-20b · kind: open
+## 2026-10-20b · kind: close
 
-- **opened:** 2026-10-20T16:20:49+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-60 (closed); CE-83 (closed); CE-91 (closed); CE-58 (closed); CE-65 (closed); CE-99
+  (design settled, DEC-64); CE-39 (comment); CE-101 (new); ASK-15, ASK-16, ASK-17 (new, raised)
+- **receipts:**
+  - guards: gate PASSED in 228.0s (944 passed in 227.24s (0:03:47)) on g1/all:1ae3f00d58ea5382,
+    g1/code:ab880f592ed8a018, g1/code+readers:29faba1150278d50; lint: clean
+  - read: CE-60, CE-58, CE-65, CE-83, CE-91, CE-99, CE-39, DEC-16
+  - asked: ASK-15, ASK-16, ASK-17
+- **summary** (the owner digest):
+  - CE-60, CE-83, CE-91, CE-58, CE-65 done, gated and closed on DEC-63's go-ahead; nothing pushed
+  - Rule text now says the top level coordinates every request (CE-83) and that reversible calls are
+    the agent's (CE-91)
+  - record confirm + G-I2 check (CE-58); foreign commits partitioned by session start heads (CE-65)
+  - CE-99 rerank design settled: DEC-64 + amendment (milestone: framework fully built; sprint-style
+    trigger)
+  - Owner: ASK-15 (lift the kit hold for CE-99), ASK-16 (re-confirming a replaced story), ASK-17
+    (INV-51 title)
+  - Owner: review 17470c8 (contract rewrite) before pushing; push needs your word
+- **Still owed:**
+  - push of 2026-10-20b's commits, on the owner's word (run tools/linux_gate.py first)
+  - answers to ASK-15, ASK-16, ASK-17
 
 ---
 
