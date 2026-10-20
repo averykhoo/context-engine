@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-20b)
+## Banner (2026-10-20c)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -18,7 +18,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
   periodic review, owner-triggered (CE-90, US-12). DEC-48 is in the rule text since CE-91 (2026-10-20b).
 - **CE-99 (goal-driven rerank) design is settled (DEC-64 + amendment):** milestone = framework fully built (G-7); tasks carry
-  required `goals`; full rerank when NOW and NEXT are both cleared or on owner request. Building it waits on ASK-15 (kit hold).
+  required `goals`; full rerank when NOW and NEXT are both cleared or on owner request. NEXT; kit hold lifted for it (DEC-65).
 - **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
   never the banner (CE-29, spec text still held).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
@@ -28,7 +28,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   `tools/linux_gate.py`; the owner should read 17470c8 (the contract rewrite) first.
 - **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). Lifted for CE-77, CE-78,
   CE-81 (DEC-43), CE-92 (DEC-50), CE-27 (owner, 2026-10-16a), CE-43 (DEC-51), CE-98 (DEC-52), and CE-60, CE-58, CE-65, CE-83,
-  CE-91 (DEC-63). CE-84, CE-85, CE-89, CE-93 and CE-99 wait on it.
+  CE-91 (DEC-63), CE-99 (DEC-65). CE-84, CE-85, CE-89, CE-93 and CE-102 wait on it.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
