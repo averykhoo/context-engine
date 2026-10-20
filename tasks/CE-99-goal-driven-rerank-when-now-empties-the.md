@@ -38,3 +38,4 @@ Owner, 2026-10-19b, verbatim:
 
 - 2026-10-20b (claude-code/claude-opus-5-5): Design answers recorded: DEC-64 (milestone = framework fully built, G-7; required task goals, backfilled; agent applies moves, owner approves drops and milestone changes) and its 2026-10-20b amendment (full rerank when NOW and NEXT are both cleared, or on owner request; a new owner direction only flags 'rerank due'; clean close keeps the light reorder). Building it still waits on the kit hold (DEC-63 does not cover CE-99).
 - 2026-10-20c (claude-code/claude-opus-5-5): DEC-65 (owner, 2026-10-20c, ASK-15): the kit hold is lifted for CE-99; build it next. Promoted to NEXT.
+- 2026-10-20e (claude-code/claude-opus-5-5): Builds FRAMEWORK §6.14 Rerank (the sprint) and procedures § Rerank. Before this item closes, G-D12 needs §6.14 owned elsewhere: a row in a new dated coverage map (docs/evidence/framework-coverage-<date>.md), or another open item naming §6.14.

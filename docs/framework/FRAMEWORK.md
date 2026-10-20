@@ -1611,6 +1611,35 @@ path) plus restoring only the paths the session's op log says it wrote, recorded
 a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its by-hand
 fallback is a runbook section (P16). Not built yet (CE-18).
 
+### 6.14 Rerank (the sprint)
+
+The full re-rank of the open board against the charter's goals and its **next milestone**: one
+named milestone with its exit criteria, in the charter's § Next milestone. Clean close keeps only a
+light reorder (§6.3 item 4, the standup); this is the sprint, which reads every open item and so
+runs once a sprint, not once a session. It forms new intent (an order), so it is not housekeeping
+(§6.11).
+
+**When:** NOW and NEXT hold no task while tasks are open; the owner asks; or orient says "rerank
+due" and the owner agrees. Orient says "rerank due" in the first case, and when the charter's
+`Last rerank:` line is missing, `never`, or older than an owner decision or story (by `session:`
+key, else by date). It flags; it never runs the re-rank. Every open task names, in `goals`, the
+charter goals it serves (G-I1, where `[guards] task_goals` is set), so the re-rank has a goal to
+cite for each item.
+
+1. **Propose:** the coordinator sends a ranking agent (judgement, so the strongest model the
+   contract names) to read the goals, the milestone, and every open item's brief and deps. It
+   persists its proposal to its own file and returns, per item, keep, promote, demote or drop,
+   each with a one-line reason citing a `G-n` or an exit criterion; an item serving no goal is
+   flagged for SOMEDAY or retirement.
+2. **Verify:** a second, different agent checks the proposal: no item above an open item it
+   depends on, NOW holds one, NEXT at most five, every move cites a goal or criterion (§6.6).
+3. **Apply:** the coordinator applies the promotes and demotes (cheap to undo, so the agent's call,
+   P8), one task comment per move carrying its reason, and flags every move in the close digest.
+4. **Owner calls:** drops, retirements and a change of milestone wait for the owner, raised as
+   owner questions with the proposal's reason as the recommendation.
+5. **Record it:** the session's key replaces the charter's `Last rerank:` value (the one charter
+   edit that needs no owner), committed by path.
+
 ---
 
 ## 7. Record layer details

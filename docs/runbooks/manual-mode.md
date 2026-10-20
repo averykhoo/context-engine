@@ -266,8 +266,11 @@ ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`
 3. other sessions with an open stub in the ledger, which the session then shows the owner, one
    line each (`procedures.md` § Session start); say `none` when there are none;
 4. board items at NOW and NEXT (as `context-engine task list`);
+   then, only when a re-rank is due (§ The last rerank), a `Rerank due: tell the owner` part:
+   one line per reason, then where the re-rank is (`procedures.md` § Rerank);
 5. owner questions to raise now: open at NOW or NEXT, or overdue (see session close step 3);
-6. the NOW item's brief, `## Traps` and `## Read first`;
+6. the NOW item's brief, `## Traps` and `## Read first` (with no NOW item, `no NOW item`, and
+   `: rerank due (above)` after it when a re-rank is due);
 7. in a repo whose `[working] register` is not the engine's own `REGISTER.md`: one line,
    `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
@@ -510,6 +513,8 @@ the residual lines out first. `aliases` lists the item's earlier ids when it was
 repo's own board (`aliases=[1h, est-activity]`), under G-D2's alias rule (§ lint). A new list
 replaces the old one: name every alias that is dropped in the reply, since it no longer resolves.
 Only a write that sets `aliases` checks them; a clash made elsewhere shows in lint G-D2.
+`goals` on a task where `[guards] task_goals` names the kind: at least one goal of the charter,
+each in the form `G-n`; never unset it on an open task (lint G-I1).
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule.
@@ -546,6 +551,24 @@ residual is never at `eliminate`; a risk controlled only at `individual` is a `r
 **Why:** re-ranking is progress on the board, so it bumps `moved`, and it is where the caps are
 enforced. Promotion to NOW is the last point before building starts, so it is where a design
 above the threshold must show whom it can hurt and how each risk is controlled (P17, P18).
+
+### The last rerank
+
+The charter's `Last rerank:` line (in its § Next milestone) holds the session key of the last
+full re-rank (`procedures.md` § Rerank), or `never`. Step 5 of the re-rank replaces the value with
+the session's key; it is the one edit to the charter that needs no owner. A re-rank is due (what
+orient says) when either holds:
+
+1. NOW and NEXT hold no task (an owner question does not count) while tasks are open;
+2. where `[guards] charter` is set: the charter has no `Last rerank:` line, it says `never`, its
+   value is not a session key, or a decision or story whose `actor` is `owner` or `human:<id>` was
+   made after it: by its `session:` key in session order (`2026-10-08z` before `2026-10-08aa`),
+   or, with no `session:`, by its `decided:` or `date:` when that day is after the re-rank's.
+   Amendments are not read.
+
+**Why:** the full re-rank reads the whole board, so it runs once a sprint; owner direction that
+lands between sprints may change the order, so it is flagged, and the owner decides whether to
+re-rank early.
 
 ### context-engine task dep
 

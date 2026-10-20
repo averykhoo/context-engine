@@ -80,6 +80,9 @@ SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
 BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
+RERANK_HOW = "The full rerank is procedures.md § Rerank: run it when NOW and NEXT are empty or the owner asks; otherwise ask the owner whether to run it now."
+RERANK_REST = "procedures.md § Rerank"
+RERANK_SHOWN = 5  # owner records orient names before "and n more"
 
 
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
@@ -1606,6 +1609,9 @@ class Engine:
 
         top = [ln for ln in self.list(pri="NOW")]
         sections.append(Part("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`", rank=1))
+        due = self.rerank_due()
+        if due:
+            sections.append(Part("Rerank due: tell the owner", "\n".join(f"- {d}" for d in due) + "\n" + RERANK_HOW, RERANK_REST, rank=1))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
@@ -1622,7 +1628,7 @@ class Engine:
                 parts.append(f"{name}:\n{okf.get_section(body, name) or 'none'}")
             sections.append(Part(f"Top item: {rec.id} {rec.doc.get('title')}", "\n\n".join(parts), f"`context-engine task show {rec.id}`", rank=2))
         else:
-            sections.append(Part("Top item", "no NOW item", "`context-engine task list`", rank=2))
+            sections.append(Part("Top item", "no NOW item" + (": rerank due (above)" if due else ""), "`context-engine task list`", rank=2))
         pointer = self._engine_register_line()
         if pointer:
             sections.append(Part("Engine register", pointer, "`context-engine register show --engine`", rank=2))
@@ -1633,6 +1639,49 @@ class Engine:
             sections.insert(0, Part("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`", rank=0))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
+
+    def rerank_due(self) -> list[str]:
+        """Why a full rerank of the board is due (procedures § Rerank; FRAMEWORK §5.2; CE-99,
+        DEC-64 and its amendment, DEC-68): NOW and NEXT hold no task while tasks are open (the
+        sprint is done), or the charter's `Last rerank:` line is missing, `never`, not a session
+        key, or older than an owner decision or story. Orient flags it; nothing here runs it.
+
+        Not read: amendments (an owner amendment that shifts priorities is the coordinator's to
+        flag), owner questions on the board (they wait on the owner, not on a rank), and the
+        charter while `[guards] charter` is unset (then only the empty-board reason applies)."""
+        out = []
+        task = self.w.task
+        open_tasks = [r for r in self._open_board() if r.kind.name == task] if task else []
+        if open_tasks and not any(r.doc.get("pri") in ("NOW", "NEXT") for r in open_tasks):
+            out.append(f"NOW and NEXT hold no task, {len(open_tasks)} open below them: the sprint is done")
+        rel = self.store.config.guards.charter
+        path = self.root / rel if rel else None
+        if path is None or not path.is_file():
+            return out
+        last = G.last_rerank(path.read_text(encoding="utf-8"))
+        if last is None:
+            out.append(f"{rel} has no `Last rerank:` line, so no rerank is on record")
+        elif last == "never":
+            out.append(f"{rel} says `Last rerank: never`")
+        elif not G.SESSION_KEY_RE.fullmatch(last):
+            out.append(f"{rel} has `Last rerank: {last}`, which is not a session key")
+        else:
+            newer = self._owner_records_since(last)
+            if newer:
+                more = f" and {len(newer) - RERANK_SHOWN} more" if len(newer) > RERANK_SHOWN else ""
+                out.append(f"owner records newer than the last rerank ({last}): {', '.join(newer[:RERANK_SHOWN])}{more}")
+        return out
+
+    def _owner_records_since(self, last: str) -> list[str]:
+        """The ids of the owner's decisions and stories made after session ``last`` (G.owner_mark)."""
+        kinds = [k for k in (self.w.decision, self.store.config.guards.stories) if k]
+        out = []
+        for name in dict.fromkeys(kinds):
+            for r in self.store.heads(name):
+                mark = G.owner_mark(r.doc)
+                if mark and G.newer_than(mark, last):
+                    out.append(r.id)
+        return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
         """The open batons and pauses, ``session``'s own first, then pauses (work in flight, on a
