@@ -7,9 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-20e · kind: open
+## 2026-10-20e · kind: close
 
-- **opened:** 2026-10-20T22:32:35+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-99 (closed, e088eb7); CE-103 (new, LATER); DEC-68 (PROVISIONAL)
+- **receipts:**
+  - guards: gate all PASSED 959 (225.0s, 2026-10-20T23:09:44+08:00); gate readers PASSED 212
+    (20.3s); lint: clean
+  - read: orient (hook); CE-99; DEC-64; procedures.md § Housekeeping, § Clean close
+  - asked: none
+- **summary** (the owner digest):
+  - CE-99 built and closed: tasks carry charter goals (G-I1), charter names the next milestone
+    (G-7), orient says 'rerank due', procedures § Rerank / FRAMEWORK §6.14.
+  - Second agent verified: ship; 959 passed; spot-sabotage of 4 guards red.
+  - PROVISIONAL DEC-68 (agent): Last rerank line in the charter; goals a guard on open tasks, not a
+    required field; only new owner records (not amendments) trigger rerank due.
+  - 42 open tasks tagged with goals (no moves); verifier flags likely retags for the first rerank
+    (G-7 on CE-34, CE-6, CE-12, CE-28, CE-42; CE-88 fits none).
+  - Orient now says 'rerank due' (Last rerank: never): the first full rerank is owed, at the owner's
+    word.
+  - Follow-ups in CE-103 (reopen goals check, lenient Last rerank line, same-session records).
+  - Nothing pushed; tools/linux_gate.py not run.
+- **Still owed:**
+  - Owner: run the first rerank now or wait for NOW+NEXT to clear
+  - Push 9d7938d..HEAD needs owner permission and tools/linux_gate.py first
 - **start head:** c0f24def43596553a5e866fbd66aa0b3789c0c2c
 
 ---
