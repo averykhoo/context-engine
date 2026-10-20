@@ -9,8 +9,9 @@ deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5, CE-74, CE-75]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-14g
-updated: 2026-10-15b
+updated: 2026-10-20e
 closed:
+goals: [G-6, G-1]
 ---
 
 In a worktree of adhoc, on a branch: write `context.toml` and `.mcp.json`; import the board,

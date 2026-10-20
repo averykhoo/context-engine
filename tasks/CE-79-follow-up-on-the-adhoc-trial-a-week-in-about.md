@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-14d
-updated: 2026-10-14f
+updated: 2026-10-20e
+goals: [G-6]
 ---
 
 Owner, 2026-10-14d, verbatim: "make a new task to follow up in about a week to see how the trial is going."

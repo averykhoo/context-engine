@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-17b
-updated: 2026-10-17b
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 DEC-49 (owner): FRAMEWORK.md should be "what's needed to understand and use the framework, not what's needed to be a historian". It also approves dedupe-2.

@@ -9,8 +9,9 @@ deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-13b
+updated: 2026-10-20e
 closed:
+goals: [G-3]
 ---
 
 Build step 5 (FRAMEWORK §6.11): baton expiry into tasks; stale `kind: open` stubs into

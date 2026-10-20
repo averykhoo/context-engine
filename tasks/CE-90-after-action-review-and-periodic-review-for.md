@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-15c
-updated: 2026-10-15c
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 US-12 (amended 2026-10-15c). The owner triggers these by hand today and does not need them built yet. Two loops:

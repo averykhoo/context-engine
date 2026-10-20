@@ -9,8 +9,9 @@ deps: [CE-6]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-08a
-updated: 2026-10-09e
+updated: 2026-10-20e
 closed:
+goals: [G-3]
 ---
 
 A `.claude/agents/housekeeper.md` whose tools are only the `hk_` set, for work that needs

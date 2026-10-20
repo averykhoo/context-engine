@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-15a
 created: 2026-10-15
 moved: 2026-10-15a
-updated: 2026-10-15a
+updated: 2026-10-20e
+goals: [G-1]
 ---
 
 Owner, 2026-10-15a (DEC-45): a session closed, then needed fixing. Today the follow-up is a new session with no link back (procedures § Clean close: 'More work asked for after the close starts a new session'). Proposed: session start --follows <key>; the ledger stub carries follows: <key>; orient and the close digest name it. Closed sessions are never reopened.

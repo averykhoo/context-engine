@@ -2,14 +2,15 @@
 type: Task
 id: CE-99
 title: 'Goal-driven rerank: when NOW empties, the coordinator reranks the board against the charter goals and the next milestone'
-brief: Design awaits owner answers (milestone record, task goals field, who approves); kit edit under the CE-7 freeze
+brief: "Built 2026-10-20e: task goals (G-I1), charter milestone and Last rerank, orient's rerank due, procedures § Rerank"
 pri: NEXT
 state: open
 deps: []
 source: session 2026-10-19b
 created: 2026-10-19
 moved: 2026-10-20c
-updated: 2026-10-20c
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 Owner, 2026-10-19b, verbatim:

@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-13a
 created: 2026-10-13
 moved: 2026-10-13a
-updated: 2026-10-20b
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 Owner, 2026-10-13a: the coordinator and the other agent roles should be defined in the framework, not left in a global config. Today there are no custom agent definitions (no `.claude/agents/` in this repo or `~/.claude`); every role runs on a built-in type, and the role definitions are scattered over FRAMEWORK §6.6 and the owner's global `CLAUDE.md`.

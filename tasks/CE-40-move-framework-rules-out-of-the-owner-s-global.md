@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-13a
 created: 2026-10-13
 moved: 2026-10-13a
-updated: 2026-10-15c
+updated: 2026-10-20e
+goals: [G-6, G-7]
 ---
 
 Owner, 2026-10-13a: framework rules belong in the framework, not the owner's global `~/.claude/CLAUDE.md`. That file mixes machine facts (two shells, broken bare `python`, conda paths, Docker in WSL, token recipes) with rules that are framework-shaped: the CI babysitter on every push, the fresh-user install trial after a release, the `.scratch/` sweep and its four classes, delegation and persistence, commit by path, gate before push, HANDOFF read and write-back, assurance traps.

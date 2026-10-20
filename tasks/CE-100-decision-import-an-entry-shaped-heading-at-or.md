@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-19e
 created: 2026-10-19
 moved: 2026-10-19e
-updated: 2026-10-19e
+updated: 2026-10-20e
+goals: [G-6]
 ---
 
 Left over from CE-98 (2026-10-19e). The verifier found that a `#### D-2 -- two *(owner, 2026-07-24)*` heading (four hashes) folds silently into the entry above's stamped body: no refusal, no note, and not in the dry run's layout. The fixer disclosed the `## D-5 -- t *(owner, d)*` case, which is kept as an inner heading and at least listed in the layout. The audio-workspace copy has 0 lines matching either shape (grep 2026-10-19), so the CE-43 migration is not affected.

@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-13c
 created: 2026-10-13
 moved: 2026-10-13c
-updated: 2026-10-13c
+updated: 2026-10-20e
+goals: [G-2]
 ---
 
 From CE-49's review (2026-10-13c, residual INV-52): `record retire` and `decision supersede` write supersedes and superseded_by both ways, but nothing checks it in the stored files, so a hand edit can leave one side, a self link or a cycle with lint green. Recommendation: one lint check over both kinds, naming the record and the missing side.

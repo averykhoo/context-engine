@@ -9,8 +9,9 @@ deps: [CE-1]
 source: session 2026-10-08b
 created: 2026-10-08
 moved: 2026-10-08b
-updated: 2026-10-11c
+updated: 2026-10-20e
 closed:
+goals: [G-7, G-1]
 ---
 
 US-10; serves FRAMEWORK P15 (an agent that starts with no context knows what is tested). Two steps:

@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-09e
 created: 2026-10-09
 moved: 2026-10-09e
-updated: 2026-10-12c
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 Owner story US-13 (2026-10-09). Agent notes for the design are in FRAMEWORK §12.3 (Rollback and close). Owner words recorded this session must survive a rollback.

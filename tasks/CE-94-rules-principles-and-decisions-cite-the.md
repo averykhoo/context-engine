@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-15c
-updated: 2026-10-15c
+updated: 2026-10-20e
+goals: [G-7]
 ---
 
 DEC-47 (owner). FRAMEWORK §0.2 says every component exists because its absence caused a recorded failure, but the failures are prose ("seen 2026-10-13", "a false green, seen 2026-10-08d") or sit in the archived FRAMEWORK-v0.5.md.

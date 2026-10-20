@@ -9,7 +9,8 @@ deps: []
 source: session 2026-10-14a
 created: 2026-10-14
 moved: 2026-10-14a
-updated: 2026-10-14a
+updated: 2026-10-20e
+goals: [G-6]
 ---
 
 Lint flags the kit's placeholder gate command left in CLAUDE.md.

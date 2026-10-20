@@ -116,6 +116,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-65](DEC-65-lift-the-kit-hold-for-ce-99-build-it-next-the.md): Lift the kit hold for CE-99; build it next (the recommendation of ASK-15) *(owner, 2026-10-20)*
 - [DEC-66](DEC-66-a-replaced-reconstruction-is-re-confirmed-by.md): A replaced reconstruction is re-confirmed by asking the owner again, never by quoting earlier words (the recommendation of ASK-16) *(owner, 2026-10-20)*
 - [DEC-67](DEC-67-inv-51-keeps-its-old-title-no-g-w13-alias-the.md): INV-51 keeps its old title; no G-W13 alias (the recommendation of ASK-17) *(owner, 2026-10-20)*
+- [DEC-68](DEC-68-ce-99-the-last-rerank-line-lives-in-the-charter.md): CE-99: the last-rerank line lives in the charter; task goals are a G-I1 check on open tasks *(claude-code/claude-opus-5-5, 2026-10-20)*
 
 ## REJECTED
 
