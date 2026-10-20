@@ -17,6 +17,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import re
+import subprocess
 import textwrap
 from dataclasses import dataclass
 
@@ -140,14 +141,21 @@ def sub_bullets(head: str, items: list[str]) -> str:
     return out
 
 
-def render_open(key: str, at: str, actor: str) -> str:
-    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}")
+START_HEAD = "start head"  # HEAD when the session started: it reconciles foreign commits up to it (CE-65)
+
+
+def _head(head: str | None) -> str:
+    return bullet(START_HEAD, head) if head else ""
+
+
+def render_open(key: str, at: str, actor: str, head: str | None = None) -> str:
+    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _head(head)
 
 
 RECEIPTS = ("guards", "read", "asked")
 
 
-def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str]) -> str:
+def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None) -> str:
     rec = [f"{k}: {receipts[k]}" for k in RECEIPTS if receipts.get(k)]
     return (
         f"## {key} · kind: close\n\n"
@@ -155,11 +163,101 @@ def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[st
         + sub_bullets("- **receipts:**", rec)
         + sub_bullets("- **summary** (the owner digest):", summary)
         + sub_bullets("- **Still owed:**", owed or ["nothing"])
+        + _head(head)
     )
 
 
-def render_pause(key: str, rows: str, deferred: str) -> str:
-    return f"## {key} · kind: pause\n\n" + bullet("rows", rows) + bullet("deferred", deferred)
+def render_pause(key: str, rows: str, deferred: str, head: str | None = None) -> str:
+    return f"## {key} · kind: pause\n\n" + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
+
+
+# -- foreign commits (FRAMEWORK §6.10, CE-65) ----------------------------------------------
+
+SHA_RE = re.compile(r"\b[0-9a-f]{7,40}\b")
+
+
+def _git(root, *args: str) -> str | None:
+    """git's stdout, or None when git is missing or the command fails (no repo, no commits)."""
+    try:
+        p = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, encoding="utf-8", stdin=subprocess.DEVNULL)
+    except OSError:
+        return None
+    return p.stdout if p.returncode == 0 else None
+
+
+def head_sha(root) -> str | None:
+    """HEAD's full hash, or None outside a git checkout or before its first commit."""
+    out = _git(root, "rev-parse", "--verify", "-q", "HEAD")
+    return out.strip() or None if out else None
+
+
+def reconciled(led: Ledger) -> set[str]:
+    """The hashes, as written, that a ``kind: foreign`` entry already names in its ``commits:``."""
+    return {m for e in led.entries if e.kind == "foreign" for m in SHA_RE.findall(e.field("commits") or "")}
+
+
+def _newest_in_history(root, heads: set[str]) -> str | None:
+    """The one of ``heads`` nearest HEAD in HEAD's history; a hash no longer in it (rebased away,
+    or gone from the object store) is dropped."""
+    if heads:
+        for sha in (_git(root, "rev-list", "HEAD") or "").split():
+            if sha in heads:
+                return sha
+    return None
+
+
+def foreign_baseline(root, led: Ledger, key: str | None, ledger_path: str) -> str | None:
+    """The commit after which ``key`` looks for foreign commits (FRAMEWORK §6.10 item 2).
+
+    `session start` records HEAD as the session's ``start head``, under the lock that mints its
+    key, and a session reconciles the commits after the newest start head of a session keyed
+    before it, up to and including its own start head (`foreign_range`). Those ranges partition
+    HEAD's history: each foreign commit is exactly one session's, the first session whose start
+    head it is at or before; except that a session's own start head rebased away, or a start head
+    on a merged side branch, lets two ranges overlap (a double report, never a skip). A later key's start head is no baseline (that session may not have
+    reconciled yet), and nor is "the newest commit touching the ledger that ``key`` did not
+    make": another live session's milestone commits the ledger and moves that past foreign
+    commits no session has reconciled (CE-65). Before any earlier entry records a start head,
+    that older rule is the fallback, which can skip a commit once at the switch-over; None means
+    the whole history."""
+    heads = {e.field(START_HEAD) for e in led.entries if e.field(START_HEAD) and (key is None or key_order(e.key) < key_order(key))}
+    base = _newest_in_history(root, heads)
+    if base:
+        return base
+    args = ["log", "-1", "--format=%H"]
+    if key:
+        args += ["--invert-grep", f"--grep=Session: {key}"]
+    out = _git(root, *args, "--", ledger_path)
+    return out.strip() or None if out else None
+
+
+def foreign_range(root, led: Ledger, key: str | None, ledger_path: str) -> tuple[str | None, str]:
+    """``(baseline, end)``: ``key`` reconciles ``baseline..end``. ``end`` is its own start head,
+    or HEAD when it recorded none (no key, a stub written before start heads, or a start head no
+    longer in HEAD's history). A commit after the newest start head is the next session's."""
+    own = led.get(key) if key else None
+    end = _newest_in_history(root, {own.field(START_HEAD)}) if own and own.field(START_HEAD) else None
+    return foreign_baseline(root, led, key, ledger_path), end or "HEAD"
+
+
+def foreign_commits(root, led: Ledger, key: str | None, ledger_path: str) -> list[tuple[str, str, str]]:
+    """``(hash, author, subject)`` of each commit in ``key``'s range (`foreign_range`) that carries
+    no ``Session:`` line and that no ``kind: foreign`` entry names yet, oldest first. A ``Session:``
+    line outside the trailer paragraph (an older layout) still makes the commit an agent's
+    (procedures.md § Reconciling foreign commits)."""
+    base, end = foreign_range(root, led, key, ledger_path)
+    out = _git(root, "log", "--reverse", "--format=%H%x1f%an%x1f%s%x1f%B%x1e", f"{base}..{end}" if base else end)
+    named = reconciled(led)
+    found = []
+    for rec in (out or "").split("\x1e"):
+        parts = rec.strip("\n").split("\x1f")
+        if len(parts) < 4:
+            continue
+        sha, author, subject, body = parts
+        if re.search(r"^Session:", body, re.MULTILINE) or any(sha.startswith(n) for n in named):
+            continue
+        found.append((sha, author, subject))
+    return found
 
 
 # -- banner -------------------------------------------------------------------------------

@@ -871,7 +871,10 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    - **live sessions visible:** open stubs are the sessions in flight, and `orient()` lists
      them;
    - **crashes detectable:** a stub never closed within the configured window is a session
-     that died; housekeeping marks it `kind: abandoned` and files a baton (G-W11).
+     that died; housekeeping marks it `kind: abandoned` and files a baton (G-W11);
+   - **a baseline for foreign commits:** the stub records HEAD as its `start head`, read under
+     the same lock, and the close or pause keeps it; the session reconciles foreign commits up
+     to it (§6.10 item 2).
 2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen)`
    refuses when the banner's hash differs from the one this session last saw; re-read, merge
    and retry.
@@ -1484,10 +1487,26 @@ procedures. The agent sessions absorb the cost:
    other engine commit has no task id: it records working state, not a task's work. An engine
    commit also carries whatever was still uncommitted before it, other tasks' board writes included, and
    its `Ops:` line names them: the one exception to one task per commit.
-2. **At session start, reconcile foreign commits** since the newest commit that touched the
-   ledger and was not made by this session (its `session.start` stays uncommitted until its
-   first commit; the steps and the entry's format: `procedures.md` § Reconciling foreign
-   commits):
+2. **At session start, reconcile foreign commits** made after the newest `start head` (§5.5
+   rule 1) recorded by a session keyed before this one, up to and including this session's own
+   start head, leaving out those a `kind: foreign` entry already names. These ranges partition
+   HEAD's history: every foreign commit is exactly one session's, the first session whose start
+   head it is at or before, however many are open at once; a commit made after the newest start
+   head is the next session's. A later key's start head is no baseline (that session may not
+   have reconciled yet), and neither is the newest commit touching the ledger: another live
+   session's milestone commits the ledger and would move it past foreign commits nobody has
+   reconciled (CE-65). A start head no longer in HEAD's history (rebased away) is dropped, and
+   a session whose own start head is dropped reconciles up to HEAD. Two cases can then report a
+   commit twice, though none is skipped: a session's own start head rebased away (its range
+   and the next one's overlap), and a merged side branch (a start head on the branch is not on
+   the first-parent line the next baseline is taken from); the `kind: foreign` entry, once
+   written, keeps a named commit out.
+   Before any earlier entry records a start head, the baseline is the newest commit touching the
+   ledger that this session did not make; at that switch-over a foreign commit can be skipped
+   once, the bug the start heads remove. A session that records its start head and dies before
+   reconciling leaves its range unreconciled. The engine's ledger module computes the list
+   (`foreign_commits`; no command runs it yet). The steps and the entry's format:
+   `procedures.md` § Reconciling foreign commits:
    - write a ledger entry `kind: foreign` summarising them (author, what changed);
    - run the tier-1 trace-check over them, to check what criteria or prose they may have made
      stale;

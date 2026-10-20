@@ -224,7 +224,8 @@ class Engine:
 
     def session_start(self, *, actor: str) -> str:
         """Mint ``max(newest ledger key, banner key) + 1 letter`` under the lock and reserve it
-        with a ``kind: open`` stub (AC-10)."""
+        with a ``kind: open`` stub (AC-10), recording HEAD as its ``start head``: the session
+        reconciles foreign commits up to it (CE-65)."""
         if not actor or not ACTOR_RE.match(actor):
             self._check("2000-01-01a", actor)  # raises the actor refusal
         path = self._path("ledger")
@@ -232,7 +233,7 @@ class Engine:
             led = self.read_ledger()
             b = self.banner()
             key = L.next_key(L.newest([*led.keys(), b.key if b else None]), self.today())
-            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor)))
+            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor, L.head_sha(self.root))))
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, led.render())
             self.store.log("session.start", key, path, key, actor, ["kind"])
@@ -284,7 +285,7 @@ class Engine:
             if unraised:
                 raise Refusal(f"overdue owner questions {_one(unraised)} were not raised this session (G-W8)", "raise each in chat, then run `ask raised`, or `ask later` if the owner defers")
 
-        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or []), "session.close", check)
+        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD)), "session.close", check)
         return f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
 
     @_milestone
@@ -293,7 +294,7 @@ class Engine:
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
             raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
-        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred), "session.pause")
+        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD)), "session.pause")
         return f"session {key} paused: ledger entry written"
 
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------

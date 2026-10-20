@@ -20,7 +20,7 @@ AUTHOR = "Claude <noreply@anthropic.com>"
 def reconcile_format() -> str:
     """The `git log --format` procedures § Reconciling foreign commits finds foreign commits with."""
     text = (KIT / "docs" / "runbooks" / "procedures.md").read_text(encoding="utf-8")
-    found = re.findall(r"`git log --format='([^']*%\(trailers:key=Session[^']*)' <sha>\.\.HEAD`", text)
+    found = re.findall(r"`git log --format='([^']*%\(trailers:key=Session[^']*)' <sha>\.\.<end>`", text)
     assert len(found) == 1, found
     return found[0]
 

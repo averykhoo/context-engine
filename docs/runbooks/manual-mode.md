@@ -169,7 +169,11 @@ different case or one extra BOM gives a hash that never matches the engine's.*
    ## 2026-10-08e · kind: open
 
    - **opened:** 2026-10-08T19:02:11+08:00 by claude-code/<model-id>
+   - **start head:** <git rev-parse HEAD, the full hash>
    ```
+
+   Read HEAD in the same step as the key (step 1), before anything else is committed. Outside a
+   git checkout, or before its first commit, leave the `start head` line out.
 4. Leave it uncommitted: a session start is not a milestone, so it stays uncommitted and goes
    into the next commit, yours or another session's (§ What every write does, **Commit the
    write**).
@@ -185,7 +189,9 @@ Match that by hand.
 **Why:** two sessions minting a key at the same time could otherwise collide. The stub reserves
 the key the moment it is minted, shows the session is live (`orient` lists open stubs), and
 leaves evidence if the session dies (G-W11) (FRAMEWORK §5.5 rule 1). The banner key
-counts too, because a session may have written the banner before its ledger entry.
+counts too, because a session may have written the banner before its ledger entry. The start
+head is where this session's reconciling of foreign commits ends and the next session's begins
+(procedures.md § Reconciling foreign commits).
 
 ### context-engine session close
 
@@ -214,8 +220,10 @@ counts too, because a session may have written the banner before its ledger entr
      - one line per point, 1 to 7 of them
    - **Still owed:**
      - nothing
+   - **start head:** <the stub's start head, unchanged>
    ```
-   Leave out the `asked:` line if it is empty. Op log: `session.close`, fields `["kind"]`.
+   Leave out the `asked:` line if it is empty, and the `start head` line if the stub has none.
+   Op log: `session.close`, fields `["kind"]`.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
 what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
@@ -230,7 +238,10 @@ what was read. The asked check stops owner questions going unraised for days (G-
 
    - **rows:** ...
    - **deferred:** ...
+   - **start head:** <the stub's start head, unchanged>
    ```
+
+   Leave out the `start head` line if the stub has none.
 
 **Why:** a session interrupted mid-work still leaves a ledger entry (one per session, no
 exceptions, FRAMEWORK §7.1). More than 2 pauses in a row without a close fails G-W2, because
