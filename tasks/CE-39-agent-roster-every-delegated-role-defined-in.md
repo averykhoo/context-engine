@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-13a
 created: 2026-10-13
 moved: 2026-10-13a
-updated: 2026-10-13a
+updated: 2026-10-20b
 ---
 
 Owner, 2026-10-13a: the coordinator and the other agent roles should be defined in the framework, not left in a global config. Today there are no custom agent definitions (no `.claude/agents/` in this repo or `~/.claude`); every role runs on a built-in type, and the role definitions are scattered over FRAMEWORK §6.6 and the owner's global `CLAUDE.md`.
@@ -29,3 +29,4 @@ Decide whether the kit ships the subagent roles as `.claude/agents/*.md` (prompt
 
 - 2026-10-13a (claude-code/claude-opus-5-5): docs checked: docs/evidence/claude-code-hooks-2026-10-13.md. .claude/agents/*.md takes model: fable among others, so the arbiter can be a named agent; project agents win over user agents. The main thread can run as a named agent (--agent or "agent" in settings.json), but its prompt then replaces Claude Code's default system prompt: weigh that before making the coordinator one.
 - 2026-10-13a (claude-code/claude-opus-5-5): Owner, DEC-18 amended 2026-10-13a: two standing fable cases, the arbiter (decisions against the repo's goals, open questions thought through) and the difficult parts of proofs.
+- 2026-10-20b (claude-code/claude-opus-5-5): Coordinator row superseded by CE-83 (17470c8): the top-level session itself (DEC-16, DEC-44, DEC-60; FRAMEWORK §6.6 'The coordinator'); every request, and the board by default; every task to an ultracode subagent, checks and verification to agents; keeps owner words verbatim, the final call on a verifier's report (not the files), and trivial bookkeeping (DEC-63); reports progress. Its 'verifies first-hand' wording no longer holds.
