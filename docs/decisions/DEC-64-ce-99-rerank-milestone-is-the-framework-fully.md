@@ -30,3 +30,13 @@ Context (the session's words, not the owner's): the options as offered were:
   - Clean close keeps its light reorder (no full read): the standup.
   - The full rerank runs when NOW and NEXT are both cleared (about six tasks), when orient says "rerank due", and whenever the owner asks: the sprint.
   - A new owner decision or story that changes priorities makes orient say "rerank due" without running the rerank; the owner chooses whether to run it early.
+
+- **2026-10-20f (claude-code/claude-opus-5-5):** Owner, 2026-10-20f, verbatim:
+
+  "Rerank should only run when next is empty , you can update the script so it triggers a bit more appropriately
+
+  I know this means there's a bunch of stuff clogging up next for a few days but don't worry for now
+
+  Okay to push"
+
+  Context (the session's words, not the owner's): this replaces the amendment's trigger. Orient says "rerank due" only when NEXT holds no task while tasks are open; the empty-NOW-and-NEXT condition, the `Last rerank: never` condition and the newer-owner-record condition no longer trigger it. The owner can still ask for a rerank at any time; clean close keeps its light reorder. "Okay to push" covers this session's push of the CE-99 work and this change.
