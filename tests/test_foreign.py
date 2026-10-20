@@ -23,7 +23,8 @@ def git(root, *args):
 
 def commit(root, title, *, session=None, author=None, body="", paths=(".",)):
     msg = title + (f"\n\n{body}" if body else "") + (f"\n\nSession: {session}" if session else "")
-    who = ["-c", f"user.name={author}"] if author else []
+    # always a name: git on Linux has no fallback when the account has none (CE-67 divergence)
+    who = ["-c", f"user.name={author or 'x'}"]
     git(root, "add", "--", *paths)
     subprocess.run(["git", "-c", "user.email=x@example.com", *who, "commit", "-q", "--allow-empty", "-m", msg], cwd=root, check=True, capture_output=True)
     return git(root, "rev-parse", "HEAD")
