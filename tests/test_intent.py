@@ -196,6 +196,81 @@ def test_record_new_story_without_a_date_is_dated_today_before_the_checks_run(ch
     assert reds(e, "G-I2") == []
 
 
+# -- G-I1 on the board: open tasks name the goals they serve (CE-99, DEC-64) ---------------
+
+
+def goal_tasks(root, **guards) -> Engine:
+    """The chain with `[guards] task_goals` naming the task kind, whose `goals` is a list."""
+    cfg = config(**{"task_goals": "task", **guards})
+    cfg["kinds"]["task"]["types"] = {"goals": "list", "deps": "list"}
+    (root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    return Engine(root)
+
+
+def goal_task(root, tid: str, goals: str | None, state: str = "open") -> None:
+    status = "deprecated" if state == "closed" else "draft"
+    line = "" if goals is None else f"goals: {goals}\n"
+    write(root, f"tasks/{tid}-x.md", f"---\ntype: Task\nid: {tid}\ntitle: t\npri: LATER\nstate: {state}\nstatus: {status}\n{line}---\n\nbody\n")
+
+
+@pytest.mark.criterion("AC-86")
+def test_g_i1_every_open_task_names_goals_of_the_charter_in_the_standard_form(chain):
+    goal_task(chain, "CE-1", "[G-1, G-2]")
+    goal_task(chain, "CE-2", None)
+    goal_task(chain, "CE-3", "[G-9]")
+    goal_task(chain, "CE-4", "[G2]")  # a task's goals are written by `task set`: no legacy form
+    goal_task(chain, "CE-5", None, state="closed")  # history: filed before tasks carried goals
+    assert reds(goal_tasks(chain), "G-I1") == [
+        "tasks/CE-2-x.md: CE-2 names no goal (`goals` is empty)",
+        "tasks/CE-3-x.md: CE-3 `goals` names G-9, which is not a goal of the charter",
+        "tasks/CE-4-x.md: CE-4 `G2` in `goals` is not in the standard id form; write G-2",
+    ]
+    assert reds(make(chain), "G-I1") == []  # off while `task_goals` is unset
+    assert reds(goal_tasks(chain, off=["G-I1"]), "G-I1") == []
+
+
+@pytest.mark.criterion("AC-86")
+def test_g_i1_task_goals_without_a_charter_is_red_half_set(chain):
+    assert reds(goal_tasks(chain, charter=""), "G-I1") == [
+        "context.toml: [guards] task_goals is set but `charter` is not, so no task's goals are checked"]
+
+
+@pytest.mark.criterion("AC-86")
+def test_task_new_and_task_set_refuse_goals_the_charter_lacks_before_writing(chain):
+    e = goal_tasks(chain)
+    for goals, match in [([], r"names no goal"), (["G-3"], r"names G-3, which is not a goal of the charter"), (["G1"], r"not in the standard id form; write G-1")]:
+        with pytest.raises(Refusal, match=match):
+            e.new("task", "New", goals=goals, **W)
+        assert not (chain / "tasks").exists() or list((chain / "tasks").iterdir()) == []
+    rec = e.new("task", "New", goals=["G-2"], **W)
+    assert rec.doc.get("goals") == ["G-2"]
+    with pytest.raises(Refusal, match=r"names G-8, which is not a goal of the charter"):
+        e.set(rec.id, {"goals": "[G-8]"}, **W)
+    with pytest.raises(Refusal, match=r"names no goal"):
+        e.set(rec.id, {}, unset=("goals",), **W)
+    assert e.store.get(rec.id).doc.get("goals") == ["G-2"]
+    assert e.set(rec.id, {"goals": "[G-1, G-2]"}, **W) == f"{rec.id}: set goals"
+    assert e.new("task", "Housekeeping", **W).doc.get("goals") is None  # goals=None: no judgement asked of a tool
+    assert make(chain).new("task", "Unchecked", goals=[], **W).id  # off while `task_goals` is unset
+
+
+@pytest.mark.criterion("AC-86")
+def test_task_new_through_the_cli_takes_goals_and_refuses_none(chain):
+    from context_engine.cli import run
+
+    goal_tasks(chain)
+    argv = ["--root", str(chain), "--session", W["session"], "--actor", ACTOR, "task", "new", "Via CLI"]
+    with pytest.raises(Refusal, match=r"names no goal"):
+        run(argv)
+    code, out = run([*argv, "--goals", "G-1, G-2"])
+    assert code == 0 and Engine(chain).store.get(out.split(":")[0]).doc.get("goals") == ["G-1", "G-2"]
+    from context_engine import ops
+
+    o = ops.OPS["task_new"]  # the MCP tool's path: `goals` left out is None, not a pass
+    with pytest.raises(Refusal, match=r"names no goal"):
+        o.call(o.target(str(chain)), ops.Caller(W["session"], ACTOR), title="Via MCP")
+
+
 # -- G-T1 ----------------------------------------------------------------------------------
 
 

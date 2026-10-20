@@ -152,9 +152,9 @@ def lint(e: Engine, c: Caller, working: bool = False) -> tuple[int, str]:
 
 
 @op(write=True)
-def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", id: str = "") -> tuple[int, str]:
-    """File a board item. `brief` is a constraint, not a summary (at most 120 characters). `id` keeps an imported number (a never-used id of the kind's series); none takes the next."""
-    rec = e.new(kind, title, pri=pri, brief=brief, deps=deps or [], body=body, rid=id, **c.kw)
+def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", id: str = "", goals: list[str] | None = None) -> tuple[int, str]:
+    """File a board item. `brief` is a constraint, not a summary (at most 120 characters). `id` keeps an imported number (a never-used id of the kind's series); none takes the next. `goals` names the charter goals (G-n) a task serves; required where `[guards] task_goals` names the kind."""
+    rec = e.new(kind, title, pri=pri, brief=brief, deps=deps or [], body=body, rid=id, goals=goals or [], **c.kw)
     return 0, f"{rec.id}: created at {pri} ({_rel(e, rec.path)})"
 
 

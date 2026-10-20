@@ -472,8 +472,9 @@ records that were valid when written but stale now. A non-empty result is a fail
    it is over 48 characters, take the first 48 and drop everything from the last `-` on, even a
    whole word. An empty slug gives `tasks/<id>.md`. The slug never changes afterwards.
 5. Frontmatter, in order: `type`, `id`, `title`, `brief` (if any), `pri` (default LATER),
-   `state: open`, `deps: [...]`, `source: session <key>`, `created: <today>`, `moved: <key>`,
-   `updated: <key>`. Body, unless you write your own:
+   `state: open`, `deps: [...]`, `goals: [G-n, ...]` (for a task where `[guards] task_goals` names
+   the kind: at least one goal of the charter, in the form `G-n`), `source: session <key>`,
+   `created: <today>`, `moved: <key>`, `updated: <key>`. Body, unless you write your own:
 
    ```
    <title>.

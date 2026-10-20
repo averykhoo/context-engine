@@ -87,6 +87,7 @@ def build() -> argparse.ArgumentParser:
     n.add_argument("--deps", default="", help="the ids it depends on, comma- or space-separated")
     n.add_argument("--body", default="", help="the item's body (default: the title, then empty ## Traps, ## Read first and ## Log)")
     n.add_argument("--id", default="", help="keep an imported number: a never-used id of the kind's series (default: the next free one)")
+    n.add_argument("--goals", default="", help="the charter goals it serves, e.g. G-2,G-7; required where [guards] task_goals names the kind")
     st = _sub(t, "set", "set or unset frontmatter fields no operation owns (e.g. brief, labels, aliases)")
     st.add_argument("id", help="the item's id")
     st.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="a field to set; repeat for each")
@@ -318,7 +319,7 @@ def _params(args: argparse.Namespace) -> dict:
         a["fields"] = _fields(a["set"])
     if isinstance(a.get("prefix"), list):
         a["prefix"] = _fields(a["prefix"], "--prefix")
-    for name in ("deps", "add", "remove", "blocks"):
+    for name in ("deps", "add", "remove", "blocks", "goals"):
         if isinstance(a.get(name), str):
             a[name] = _ids(a[name])
     if isinstance(a.get("ids"), list):

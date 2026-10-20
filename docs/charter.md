@@ -45,6 +45,24 @@ name them `G1` to `G7` in `goals:`; lint (G-I1) reads `G1` as `G-1`, and owner w
 | G-6 | **Works for every repo the owner has**, whatever its language or environment | dogfooded here first (CE-8), then adopted by the owner's other repos (adhoc, intervals, zanzibar, audio-workspace) | US-9 |
 | G-7 | **The whole framework is built, not just the engine** | every component, procedure and guard in FRAMEWORK.md is either built (tool, guard or skill), or written down as deliberately prose-only, or explicitly deferred with a reason | US-9 |
 
+## Next milestone
+
+The one milestone the board is ranked against (DEC-64, owner 2026-10-20b; FRAMEWORK §5.2). A
+milestone change is the owner's call; the rerank (procedures.md § Rerank) never makes it.
+
+**Framework fully built** (G-7). Its exit criteria:
+
+1. Every component, procedure and guard FRAMEWORK.md names is built (a tool, guard or skill), or
+   written down as deliberately prose-only, or deferred with a reason.
+2. FRAMEWORK.md is rewritten for its users: what is needed to understand and use the framework
+   (CE-93, DEC-49).
+
+Last rerank: never
+
+The `Last rerank:` line above holds the session key of the last full rerank, or `never`. The
+rerank writes it (procedures.md § Rerank), the one edit to this file that needs no owner; orient
+reads it to say "rerank due" when an owner decision or story is newer.
+
 ## Anti-goals (must not happen)
 
 - **A server the owner has to start or manage** (owner: *"not just a non-goal, its an

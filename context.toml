@@ -32,7 +32,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", goals = "list", labels = "list", review = "list" }
 
 [kinds.question]
 type = "Question"
@@ -297,6 +297,7 @@ coverage_spec = "docs/framework/FRAMEWORK.md"           # G-D12 (CE-30): every c
 coverage_maps = "docs/evidence/framework-coverage-*.md"  # G-D12: the frozen, dated coverage maps (CE-16); the newest by file-name date is read
 charter = "docs/charter.md"   # G-I1 (CE-25): its goal table's `G-n` rows are the goals a story's `goals` may name
 stories = "story"             # G-I1, G-I2, G-T1, G-T6: the kind holding the stories
+task_goals = "task"           # G-I1 (CE-99, DEC-64): every open task names, in `goals`, the charter goals it serves
 tests = ["tests"]             # G-T2: where tests claim criteria, as `@pytest.mark.criterion("AC-n")` (the default `claim` pattern)
 liveness = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework", "docs/ledger/session-log.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D4 (CE-33): every tracked doc that is not a record
 history = ["docs/evidence", "spike"]  # G-D4: provenance directories, FROZEN (or ACTIVE-PLAN while the item is open)

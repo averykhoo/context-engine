@@ -64,7 +64,7 @@ dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
 enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
-types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", labels = "list", review = "list" }
+types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", goals = "list", labels = "list", review = "list" }
 
 [kinds.question]
 type = "Question"
@@ -145,6 +145,7 @@ coverage_maps = ""           # G-D12: a repo-relative glob of frozen, dated cove
 # criteria, is red (half set).
 charter = ""                 # G-I1: the charter (docs/charter.md); its table rows led by a goal id (`| G-1 | ... |`) are the goals a story's `goals` may name
 stories = ""                 # G-I1, G-I2, G-T1, G-T6: the kind holding the stories ("story"); G-T1 and G-T6 also read [working] criteria
+task_goals = ""              # G-I1: the board kind ("task") whose open items must name, in `goals`, the charter goals they serve; set it with `charter`, after `task set <id> --set goals=[G-n]` on every open task
 tests = []                   # G-T2: files and directories where tests and drivers claim criteria (e.g. ["tests"])
 claim = '''criterion(?:\(\s*["']|:\s*)([A-Z]+-[1-9][0-9]*)'''   # G-T2: one group, the claimed id; this default reads `@pytest.mark.criterion("AC-n")` and a `criterion: AC-n` comment
 

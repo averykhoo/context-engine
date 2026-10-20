@@ -116,6 +116,7 @@ class Guards:
     coverage_maps: str = ""  # G-D12: a repo-relative glob of dated coverage maps; the newest by the date and session letters in its file name is read
     charter: str = ""  # G-I1: the charter, whose table rows led by a goal id (`G-n`) are the goals a story's `goals` may name; unset is off
     stories: str = ""  # G-I1, G-I2, G-T1, G-T6: the record kind holding the stories; unset turns all four off
+    task_goals: str = ""  # G-I1: the board kind whose open items must name the charter goals they serve in `goals` (CE-99, DEC-64); unset is off
     tests: tuple[str, ...] = ()  # G-T2: files and directories whose claims trace tests and drivers to criteria; empty is off
     claim: str = CLAIM  # G-T2: a regex whose one group is the criterion id a test or driver claims
     liveness: tuple[str, ...] = ()  # G-D4: files and directories whose docs declare their liveness near the top; empty is off
@@ -271,6 +272,8 @@ def from_dict(raw: dict) -> Config:
         raise Refusal(f"[guards] `off` names {unknown[0]!r}, which lint does not report", f"use guard ids lint reports: {', '.join(LINT_IDS)}")
     if g.get("stories") and g["stories"] not in kinds:
         raise Refusal(f"[guards] `stories` names kind {g['stories']!r}, which is not declared", f"name the stories' kind ({', '.join(sorted(kinds))}), or unset it")
+    if g.get("task_goals") and g["task_goals"] not in kinds:
+        raise Refusal(f"[guards] `task_goals` names kind {g['task_goals']!r}, which is not declared", f"name the tasks' kind ({', '.join(sorted(kinds))}), or unset it")
     try:
         groups = re.compile(g.get("claim", CLAIM)).groups
     except re.error as err:

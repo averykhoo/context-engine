@@ -1152,7 +1152,7 @@ def story_problems(doc) -> list[str]:
 
 
 def goal_problems(goals, known: set[str], legacy: bool = True) -> list[str]:
-    """G-I1 on one story's `goals`: at least one, each a goal of the charter (`known`). A legacy
+    """G-I1 on one story's or open task's `goals`: at least one, each a goal of the charter (`known`). A legacy
     `G3` reads as `G-3` in the stored files (``legacy``); a new write must use the standard form. `record new`
     calls it too."""
     values = D.as_list(goals)
@@ -1217,11 +1217,14 @@ def goals(e: Engine) -> list[Failure]:
     retired, and every such story names at least one goal, each a goal of the charter (a legacy
     `G3` reads as `G-3`). Off while `charter` is unset; red when `charter` is set without
     `stories` (half set, as G-D12's pair), when the charter is missing or yields no goal rows,
-    and on a charter goal id not in the standard form.
+    and on a charter goal id not in the standard form. With `task_goals` set, every open task names
+    goals of the charter too (`task_goal_failures`), and `task_goals` without `charter` is red.
 
     Not checked: whether a story really serves the goal it names (judgement, at intake), the
     charter's own prose (its `Stories` column included), and retired stories (history)."""
     g = e.store.config.guards
+    if g.task_goals and not g.charter:  # half set: open tasks would go unchecked under a clean lint
+        return [Failure("G-I1", CONFIG_NAME, "[guards] task_goals is set but `charter` is not, so no task's goals are checked", "set [guards] charter to the charter, or unset task_goals")]
     if g.charter and not g.stories:  # half set: the guard would be off under a clean lint
         return [Failure("G-I1", CONFIG_NAME, "[guards] charter is set but `stories` is not, so no story is checked against the charter", "set [guards] stories to the kind holding the stories, or unset charter to switch G-I1 off")] + known_goals(e)[1]
     if not (g.charter and g.stories):
@@ -1229,6 +1232,7 @@ def goals(e: Engine) -> list[Failure]:
     known, out = known_goals(e)
     if not known:
         return out
+    out += task_goal_failures(e, known)
     served: set[str | None] = set()
     for rid, rel, doc in _stories(e):
         if doc.get("story_status") == "retired":
@@ -1238,6 +1242,33 @@ def goals(e: Engine) -> list[Failure]:
         served |= {goal_id(v) for v in D.as_list(doc.get("goals"))}
     for gid in sorted(known - served, key=lambda x: int(x[2:])):
         out.append(Failure("G-I1", g.charter, f"goal {gid} is served by no story", f"record the owner's story for it (`record new story ... --set goals=[{gid}]`), or ask the owner whether the goal still stands (FRAMEWORK §3.1)"))
+    return out
+
+
+def task_goal_failures(e: Engine, known: set[str]) -> list[Failure]:
+    """G-I1 on the board (CE-99, DEC-64): every open item of the `[guards] task_goals` kind names
+    at least one goal in `goals`, each a goal of the charter, in the standard id form (a task's
+    goals are set by `task set`, so no legacy form is kept). Off while `task_goals` is unset.
+
+    Not checked: closed items (history, filed before tasks carried goals), whether an item really
+    serves the goal it names (judgement: the rerank, procedures § Rerank), and other board kinds
+    (an owner question serves whatever it blocks)."""
+    name = e.store.config.guards.task_goals
+    if not name:
+        return []
+    st = e.store
+    kind = st.config.kind(name)
+    out = []
+    for path in st._files(kind):
+        rid = st._id_of(kind, path)
+        try:
+            doc = st.read(path)
+        except Exception:
+            continue  # the schema check reports an unreadable record
+        if rid is None or doc.get("state") != "open":
+            continue
+        for p in goal_problems(doc.get("goals"), known, legacy=False):
+            out.append(Failure("G-I1", st._rel(path), f"{rid} {p}", f"name the charter goals it serves: `context-engine task set {rid} --set goals=[G-n, ...]`; an item serving no goal is a rerank's to flag for SOMEDAY or retirement (procedures § Rerank), and a goal the charter lacks is an owner question (FRAMEWORK §3.1)"))
     return out
 
 

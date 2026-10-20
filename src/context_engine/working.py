@@ -316,12 +316,17 @@ class Engine:
         if len(holders) >= cap:
             raise Refusal(f"{pri} already holds {len(holders)} of {cap} ({_one(holders)})", f"demote one with `promote <id> LATER` first")
 
-    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None, rid: str = "") -> Record:
+    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None, rid: str = "", goals: list[str] | None = None) -> Record:
         """File a board item with the next free id, or with ``rid`` when an import keeps a number
-        (`Q8` becomes ASK-8, FRAMEWORK §11.4): an id of the kind's series that was never used."""
+        (`Q8` becomes ASK-8, FRAMEWORK §11.4): an id of the kind's series that was never used.
+        An item of the `[guards] task_goals` kind names the charter goals it serves (``goals``,
+        G-I1's write-time twin, CE-99); ``goals=None`` skips that check, for housekeeping, which
+        makes no judgement call (an expired baton's task is then G-I1's to flag)."""
         self._check(session, actor)
         if kind not in self._board():
             raise Refusal(f"{kind!r} is not a board kind", f"use one of {', '.join(self._board())}")
+        if goals is not None:
+            self._task_goal_check(kind, goals)
         if len(brief) > BRIEF_MAX:
             raise Refusal(f"the brief is {len(brief)} characters", f"cut it to {BRIEF_MAX}: a constraint, not a summary")
         for d in deps or []:
@@ -330,7 +335,10 @@ class Engine:
         fields: dict[str, Any] = {"title": title}
         if brief:
             fields["brief"] = brief
-        fields.update(pri=pri, state="open", deps=list(deps or []), source=f"session {session}", created=self.today(), moved=session, updated=session)
+        fields.update(pri=pri, state="open", deps=list(deps or []))
+        if goals:
+            fields["goals"] = list(goals)
+        fields.update(source=f"session {session}", created=self.today(), moved=session, updated=session)
         fields.update(extra or {})
         text = body if body.strip() else TASK_BODY.format(summary=title + ".")
         if rid:
@@ -339,6 +347,22 @@ class Engine:
                 raise Refusal(f"{rid} is not an id of the {k.name} series", f"give an id of the form {k.prefix}-n, or none for the next free one")
             return self.store.create_many(kind, [(rid.strip(), fields, text)], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, text, session=session, actor=actor)
+
+    def _task_goal_check(self, kind: str, goals: list[str]) -> None:
+        """Refuse a task of the `[guards] task_goals` kind whose `goals` are not goals of the
+        charter in the standard form (G-I1 at write time). Quiet for other kinds and while G-I1
+        is off or has no charter to read."""
+        g = self.store.config.guards
+        if kind != g.task_goals or "G-I1" in g.off:
+            return
+        known, bad = G.known_goals(self)
+        if known is None:
+            return
+        if not known:
+            raise Refusal(f"no task's goals can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
+        problems = G.goal_problems(goals, known, legacy=False)
+        if problems:
+            raise Refusal(f"the task {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), f"pass `--goals G-n,...` naming the charter goals it serves ({', '.join(sorted(known, key=lambda x: int(x[2:])))}); a goal the charter lacks is an owner question (FRAMEWORK §3.1)")
 
     def _board_set(self, rid: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), body: Callable[[str], str] | None = None, check: Callable[[Record], None] | None = None, mechanical: bool = False, op: str = "set") -> Record:
         kind = self.store.config.kind_for_id(rid)
@@ -362,6 +386,8 @@ class Engine:
             raise Refusal(f"the brief is {len(raw['brief'])} characters", f"cut it to {BRIEF_MAX}")
         kind = self.store.config.kind_for_id(rid)
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
+        if "goals" in changes or "goals" in unset:
+            self._task_goal_check(kind.name, [] if "goals" in unset else list(changes.get("goals") or []))
         if changes.get("review") is not None:
             self._review_triggers(changes["review"])
         review = None if "review" in unset else changes.get("review")
