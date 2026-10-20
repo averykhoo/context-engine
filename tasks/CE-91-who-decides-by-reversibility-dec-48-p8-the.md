@@ -4,12 +4,14 @@ id: CE-91
 title: 'Who decides by reversibility (DEC-48): P8, the contract and the owner-question rules'
 brief: "Kit and FRAMEWORK edit: wait for the CE-7 hold or the owner's word; an undo that is cheap in time and tokens is the test"
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-10-15c
 created: 2026-10-15
-moved: 2026-10-15c
-updated: 2026-10-15e
+moved: 2026-10-20b
+updated: 2026-10-20b
+status: deprecated
+closed: 2026-10-20b
 ---
 
 DEC-48 (owner): a call that can easily be undone, without wasting much time or tokens, is the agent's (opus, or fable where DEC-18 allows it).
@@ -33,3 +35,4 @@ Do it with CE-83, which edits the same rule text (P8 and P11, §6.6).
 ## Log
 
 - 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): not released on its own; it is decided together with CE-83 when the owner rules on that kit edit.
+- 2026-10-20b (claude-code/claude-opus-5-5): closed: done in 5e7d887 (rule text in 17470c8, by-hand wording in 6d6983e)
