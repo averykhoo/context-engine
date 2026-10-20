@@ -112,6 +112,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-61](DEC-61-audio-workspace-is-never-pushed-during-its.md): audio-workspace is never pushed during its migration (demo hold): the cutover stays local *(owner, 2026-10-19)*
 - [DEC-62](DEC-62-audio-workspace-cutover-goes-today-on-a-local.md): audio-workspace cutover goes today on a local branch; asks LATER; engine commits exempt; charter and stories as drafts *(owner, 2026-10-19)*
 - [DEC-63](DEC-63-go-ahead-with-ce-60-item-2-ce-58-ce-65-ce-83.md): Go ahead with CE-60 item 2, CE-58, CE-65, CE-83 and CE-91; CE-83's three open points stay as written *(owner, 2026-10-20)*
+- [DEC-64](DEC-64-ce-99-rerank-milestone-is-the-framework-fully.md): CE-99 rerank: milestone is the framework fully built; tasks carry required goals; the agent applies moves, the owner approves drops *(owner, 2026-10-20)*
 
 ## REJECTED
 
