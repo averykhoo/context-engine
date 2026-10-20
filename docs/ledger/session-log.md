@@ -7,9 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-20d · kind: open
+## 2026-10-20d · kind: close
 
-- **opened:** 2026-10-20T19:44:42+08:00 by claude-code/claude-opus-5-5
+- **rows:** none (push session; 78cbe4e fixes a test helper, no task)
+- **receipts:**
+  - guards: gate PASSED 948 passed (Windows, 78cbe4e); linux gate: green on 78cbe4e7c3ca, 948
+    passed; CI gate success
+  - read: orient (SessionStart hook), git log origin/main..HEAD
+- **summary** (the owner digest):
+  - Pushed main 7fd3997..78cbe4e (67 commits from 2026-10-17a to 2026-10-20c); CI gate run
+    39419037601 green.
+  - Pre-push check: Windows gate green (948 passed), but tools/linux_gate.py was red (9 setup errors
+    in tests/test_foreign.py).
+  - Cause: test_foreign.py::commit set user.email but not user.name; the Linux container has no
+    ident name. Fixed in 78cbe4e, both gates green (948).
+  - The banner had asked the owner to read 17470c8 (the contract rewrite) before pushing; it is now
+    pushed, so review it after the fact if not yet read.
+- **Still owed:**
+  - Owner: read 17470c8 (contract rewrite), now public
 - **start head:** b9a007f5554cf4480a2e2c81f9f27eb8ca725550
 
 ---
