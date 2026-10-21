@@ -9,7 +9,7 @@ deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5, CE-74, CE-75]
 source: session 2026-10-08a
 created: 2026-10-08
 moved: 2026-10-14g
-updated: 2026-10-20e
+updated: 2026-10-21a
 closed:
 goals: [G-6, G-1]
 ---
@@ -42,6 +42,7 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - 2026-10-14f (claude-code/claude-opus-5-5): Owner, 2026-10-14f, verbatim: "okay its running now, just update the item to say the trial has started and we'll check back in a week or so then push". The trial has started: the owner's first real Claude Code session is running in adhoc's folder (2026-10-14f). Check back in about a week (CE-79, about 2026-10-21): score the sessions against CE-4, then the owner decides what follows.
 - 2026-10-14g (claude-code/claude-opus-5-5): DEC-43 (owner, 2026-10-14g): moved off NOW until next week (about 2026-10-21, with CE-79); nothing to do on it until then.
 - 2026-10-15b (claude-code/claude-opus-5-5): Owner, 2026-10-15b, verbatim: "we'll leave the adhoc trial running with whatever version it has for now, we'll just move on and integrate the feedback later". So adhoc keeps its pinned kit (engine 38ed38e); no re-pin before the trial; CE-41/CE-27 fixes reach adhoc only when its feedback is integrated.
+- 2026-10-21a (claude-code/claude-opus-5-5): adhoc's context-engine-feedback.md (AAR, 594 lines, as of adhoc bfea740) copied verbatim to docs/evidence/adhoc-feedback-2026-10-21.md on the owner's word; not yet integrated or scored.
 
 ## Traps
 
