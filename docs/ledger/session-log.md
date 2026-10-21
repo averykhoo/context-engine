@@ -7,9 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-21a · kind: open
+## 2026-10-21a · kind: close
 
-- **opened:** 2026-10-21T08:47:44+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-7 (comment; feedback copied, still open)
+- **receipts:**
+  - guards: lint: clean; gate readers PASSED in 12.6s (212 passed in 11.80s) on
+    g1/code+readers:d7cd29823c4a51cc; code covered on g1/code:d5d6a5318d6f9a9a
+  - read: orient (SessionStart hook); tasks/ASK-*.md states; docs/working/BTN-*.md states; CE-98;
+    adhoc context-engine-feedback.md
+- **summary** (the owner digest):
+  - Answered: no open owner questions (ASK-1..17 closed, BTN-1..4 done); explained CE-98 (closed
+    a8879f9).
+  - Copied adhoc's context-engine-feedback.md (adhoc bfea740) verbatim to
+    docs/evidence/adhoc-feedback-2026-10-21.md behind a FROZEN line (b8b5d8a); CE-7 comment links
+    it.
+- **Still owed:**
+  - Integrate and score the adhoc feedback (CE-7, CE-79 due about today).
+  - Push: not pushed; ask first.
 - **start head:** ac03e768c8824c5ddee360e4b75e70c5076a1207
 
 ---

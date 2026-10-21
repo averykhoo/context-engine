@@ -854,3 +854,4 @@
 {"at": "2026-10-20T23:43:55+08:00", "session": "2026-10-20f", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-20f", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
 {"at": "2026-10-21T08:47:44+08:00", "session": "2026-10-21a", "actor": "claude-code/claude-opus-5-5", "op": "session.start", "id": "2026-10-21a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
 {"at": "2026-10-21T08:47:49+08:00", "session": "2026-10-21a", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-7", "path": "tasks/CE-7-adhoc-trial.md", "fields": ["updated", "body"], "mechanical": false}
+{"at": "2026-10-21T08:48:45+08:00", "session": "2026-10-21a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-21a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
