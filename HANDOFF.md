@@ -10,7 +10,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **CE-7 (adhoc trial) scored and closed 2026-10-21b: fix first, then keep; re-pin adhoc once, after the fixes.** 12 sessions
   (9 closed, 3 abandoned by hand); start cost -23.7% (missed the -25% bar), close cost -48% (met); C = 0
   (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
-  CE-104..CE-125; fix first: CE-124, CE-104, CE-63, CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin. adhoc start-cost cleanup done 2026-10-21c (HANDOFF banner-only; adhoc 09ae685, local).
+  CE-104..CE-125; fix first: CE-124, CE-104, CE-63, CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin.
+  adhoc start-cost cleanup done 2026-10-21c (HANDOFF banner-only; adhoc 09ae685, local).
 - **CE-43 is NOW (DEC-51): audio-workspace migrated, merged into its LOCAL main and set up (2026-10-20a); gate green there.**
   DEC-61: nothing is pushed to audio-workspace during its demo hold. Owed: the owner restarts Claude Code there; remove the
   ce-cutover worktree and branch on the owner's word; push after the hold lifts. 2026-10-17c's prep drafts are in
