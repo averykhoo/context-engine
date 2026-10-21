@@ -4,14 +4,15 @@ id: CE-7
 title: Adhoc trial on adhoc main, scored against the CE-4 rubric
 brief: Trial STARTED 2026-10-14 on adhoc main (DEC-42); check back about 2026-10-21 (CE-79), score against CE-4
 pri: NEXT
-state: open
+state: closed
 deps: [CE-3, CE-4, CE-5, CE-8, CE-24, CE-38, ASK-5, CE-74, CE-75]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-14g
+moved: 2026-10-21b
 updated: 2026-10-21b
-closed:
+closed: 2026-10-21b
 goals: [G-6, G-1]
+status: deprecated
 ---
 
 In a worktree of adhoc, on a branch: write `context.toml` and `.mcp.json`; import the board,
@@ -44,6 +45,7 @@ the CE-4 baseline. The owner decides whether the branch merges.
 - 2026-10-15b (claude-code/claude-opus-5-5): Owner, 2026-10-15b, verbatim: "we'll leave the adhoc trial running with whatever version it has for now, we'll just move on and integrate the feedback later". So adhoc keeps its pinned kit (engine 38ed38e); no re-pin before the trial; CE-41/CE-27 fixes reach adhoc only when its feedback is integrated.
 - 2026-10-21a (claude-code/claude-opus-5-5): adhoc's context-engine-feedback.md (AAR, 594 lines, as of adhoc bfea740) copied verbatim to docs/evidence/adhoc-feedback-2026-10-21.md on the owner's word; not yet integrated or scored.
 - 2026-10-21b (claude-code/sonnet): CE-7 census filed 2026-10-21b: F1 CE-104, F2 CE-105, F3 CE-124, F4 CE-106, F5 CE-107, F6 CE-108, F7 CE-109, F8 CE-110, F9 CE-111, F12 CE-112, F16 CE-113 (NEXT), F17 CE-114, F18 CE-115, F19 CE-116, F20 CE-117, F21 CE-118, F22 CE-119, F23 CE-120, F24 CE-121, F25 CE-122, F26 CE-123; comments on CE-63 (F13), CE-101 (F15).
+- 2026-10-21b (claude-code/claude-opus-5-5): closed: f022af4: scored against CE-4 (docs/evidence/adhoc-trial-score-2026-10-21.md, verified by a second agent): fix first, then keep; re-pin once after the fixes. AAR filed as CE-104..CE-125 (713dc1d). INV-31 probes and the re-pin stay with CE-79.
 
 ## Traps
 
