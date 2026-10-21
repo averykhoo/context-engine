@@ -3,12 +3,14 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-20f)
+## Banner (2026-10-21b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **The adhoc trial (CE-7) runs on its pinned kit (engine `38ed38e`), with CE-79 about 2026-10-21:** the owner moves on
-  meanwhile and integrates its feedback later (2026-10-15b, CE-7 log); no re-pin first. Owed: INV-31 probes, scoring against CE-4.
+- **CE-7 (adhoc trial) scored and closed 2026-10-21b: fix first, then keep; re-pin adhoc once, after the fixes.** 12 sessions
+  (9 closed, 3 abandoned by hand); start cost -23.7% (missed the -25% bar), close cost -48% (met); C = 0
+  (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
+  CE-104..CE-125; fix first: CE-124, CE-104, CE-63, CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin.
 - **CE-43 is NOW (DEC-51): audio-workspace migrated, merged into its LOCAL main and set up (2026-10-20a); gate green there.**
   DEC-61: nothing is pushed to audio-workspace during its demo hold. Owed: the owner restarts Claude Code there; remove the
   ce-cutover worktree and branch on the owner's word; push after the hold lifts. 2026-10-17c's prep drafts are in
