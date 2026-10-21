@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-14d
-updated: 2026-10-20e
+updated: 2026-10-21b
 goals: [G-6]
 ---
 
@@ -29,3 +29,4 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 ## Log
 
 - 2026-10-14f (claude-code/claude-opus-5-5): 2026-10-14f: the trial has started (owner: "okay its running now"); the first real session in adhoc is running. Check back about 2026-10-21.
+- 2026-10-21b (claude-code/claude-opus-5-5): 2026-10-21b: CE-7 closed (scored, f022af4). Left here: the INV-31 live probes (resume, /clear, compaction) in adhoc, which need the owner; the re-pin off 38ed38e after CE-124, CE-104, CE-63, CE-125; adhoc's 3 dropped owed items (INV-31 probes, 19a .scratch inventory, 16b AD-17 -187 dB outlier) belong on adhoc's board.

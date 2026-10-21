@@ -7,9 +7,25 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-21b · kind: open
+## 2026-10-21b · kind: close
 
-- **opened:** 2026-10-21T12:01:16+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-7 (closed); CE-104..CE-125 (filed, LATER; CE-113 NEXT); CE-63, CE-101, CE-79
+  (commented)
+- **receipts:**
+  - guards: lint: clean; gate readers PASSED in 10.1s (234 passed in 9.41s) on
+    g1/code+readers:cfcde5f3265a07d7; code covered on g1/code:d5d6a5318d6f9a9a
+  - read: orient; docs/evidence/adhoc-feedback-2026-10-21.md via census agent; CE-7, CE-79, CE-4,
+    adhoc baseline via scoring agent
+- **summary** (the owner digest):
+  - CE-7 closed: adhoc trial scored vs CE-4 (f022af4): 12 sessions (9 closed, 3 hand-abandoned);
+    start cost -23.7% (missed -25%), close cost -48% (met), C=0.
+  - Verdict: fix first, then keep; re-pin adhoc once after CE-124, CE-104, CE-63, CE-125.
+  - AAR filed as CE-104..CE-125 (CE-113, delegated rulings stamped as owner's, at NEXT); comments on
+    CE-63, CE-101; all verified by separate agents.
+- **Still owed:**
+  - INV-31 probes (resume, /clear, compaction) in a live adhoc session: owner (CE-79).
+  - Does CE-7's close lift the kit-edit hold (banner bullet)? Owner's call.
+  - Push: not pushed; ask first.
 - **start head:** 1f3f7d7c105560162c255beb3298282aef280c69
 
 ---
