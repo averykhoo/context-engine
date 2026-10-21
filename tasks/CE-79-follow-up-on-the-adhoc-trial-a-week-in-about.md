@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-14d
-updated: 2026-10-21b
+updated: 2026-10-21c
 goals: [G-6]
 ---
 
@@ -30,3 +30,4 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 
 - 2026-10-14f (claude-code/claude-opus-5-5): 2026-10-14f: the trial has started (owner: "okay its running now"); the first real session in adhoc is running. Check back about 2026-10-21.
 - 2026-10-21b (claude-code/claude-opus-5-5): 2026-10-21b: CE-7 closed (scored, f022af4). Left here: the INV-31 live probes (resume, /clear, compaction) in adhoc, which need the owner; the re-pin off 38ed38e after CE-124, CE-104, CE-63, CE-125; adhoc's 3 dropped owed items (INV-31 probes, 19a .scratch inventory, 16b AD-17 -187 dB outlier) belong on adhoc's board.
+- 2026-10-21c (claude-code/claude-opus-5-5): 2026-10-21c: adhoc start-cost cleanup done (owner-approved), adhoc commits ebfdbe9, f3898c5, 09ae685, 273b183 (local, not pushed): CLAUDE.md no longer says read HANDOFF in full; HANDOFF banner-only (7,847 -> 1,254 B), banner 4.2 KB -> 884 B, orient 5,402 -> 2,095 B; durable content moved to adhoc docs/facts.md and docs/methods.md; AD-28 (-187 dB outlier), AD-29 (.scratch inventory, 32 GB) filed. Verified line by line by a second agent: nothing lost. Still for the re-pin: drop adhoc CLAUDE.md's coordinator section (917 B), now in the kit contract. Open in adhoc: DEC-75 pyannote SpeechSeparation check (AD-2) has no row; .scratch 32 GB sweep is AD-29.
