@@ -7,9 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-21c · kind: open
+## 2026-10-21c · kind: close
 
-- **opened:** 2026-10-21T13:54:59+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-79 (commented: adhoc cleanup done)
+- **receipts:**
+  - guards: lint: clean; no code or test change in this repo (gate status code covered on
+    g1/code:d5d6a5318d6f9a9a)
+  - read: audit .scratch/adhoc-cleanup/audit.md; agent reports edits.md, verify.md
+- **summary** (the owner digest):
+  - adhoc cleanup (owner-approved): HANDOFF banner-only 7,847 -> 1,254 B, orient 5,402 -> 2,095 B;
+    adhoc commits ebfdbe9..273b183, local, not pushed.
+  - Verified line by line by a second agent: nothing lost; coordinated with the live adhoc session
+    2026-10-21c, none of its files committed.
+- **Still owed:**
+  - adhoc: push when you choose (its own session's call); DEC-75 pyannote check has no row there.
+  - context-engine: not pushed; ask first.
 - **start head:** 976b3ad75d962a2f8bb28c43c6edd307f7ba4181
 
 ---
