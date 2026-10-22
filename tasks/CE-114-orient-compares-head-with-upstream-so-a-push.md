@@ -4,13 +4,15 @@ id: CE-114
 title: orient compares HEAD with upstream so a push made outside a session is not lost
 brief: A push outside any session is recorded nowhere; orient compares HEAD/upstream and says so
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-23a
+updated: 2026-10-23a
+status: deprecated
+closed: 2026-10-23a
 ---
 
 orient compares HEAD with upstream so a push made outside a session is not lost
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 26, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): closed: done in 8c0c5b8,5409b40 (sweep 2026-10-23a; verified by an independent agent, gate green on main)
