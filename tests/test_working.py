@@ -1441,6 +1441,39 @@ def test_a_commit_newer_than_the_closes_resets_the_window(eng, monkeypatch):
     assert eng.stale_stubs(me) == []
 
 
+def _repo(root):
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+
+
+def _commit_as(root, key, when, name="wip.txt"):
+    """A by-hand commit carrying the op log, trailered for ``key``, with committer and author date ``when``."""
+    (root / name).write_text(f"{key}\n", encoding="utf-8")
+    _git(root, "add", "-A")
+    env = {**os.environ, "GIT_COMMITTER_DATE": when, "GIT_AUTHOR_DATE": when}
+    subprocess.run(["git", "commit", "-q", "-m", f"by hand\n\nSession: {key}"], cwd=root, check=True, env=env)
+
+
+def test_a_commit_counts_by_its_op_log_position_not_its_date(eng):
+    """CE-129: a commit's date can be wrong (a skewed clock, a rebase), so the closes after a
+    session's newest commit are the ones its op log does not carry, whatever its date says."""
+    _repo(eng.root)
+    dead = started(eng)
+    _commit_as(eng.root, dead, "2031-01-01T00:00:00+08:00")  # a clock years fast: newer than every close by date
+    _closes(eng, 3)
+    me = started(eng)
+    assert [k for k, *_ in eng.stale_stubs(me)] == [dead], eng.staleness([dead])
+    live = started(eng)
+    _closes(eng, 3)
+    _commit_as(eng.root, live, "2031-01-02T00:00:00+08:00", "more.txt")  # carries all three closes
+    assert live not in [k for k, *_ in eng.stale_stubs(me)], eng.staleness([live])
+    _closes(eng, 3)
+    assert live in [k for k, *_ in eng.stale_stubs(me)], eng.staleness([live])
+
+
 def test_a_stub_with_no_op_line_counts_from_when_it_opened(eng):
     """A stub written by hand without its op line is not stale for closes that came before it."""
     _closes(eng, 3)

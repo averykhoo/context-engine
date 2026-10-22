@@ -297,16 +297,21 @@ class Engine:
         """For each key, how many other sessions closed or paused after its last activity, and when
         that was (``last_active``): DEC-29's window (CE-124). The op log is read in order, so a
         close counts only when its line comes after the key's newest line, and, when the key's
-        newest activity is a commit, only when it is no older than that commit. A live session
-        resets the count by doing anything. A stub with neither (written by hand without its op
-        line) counts from its `opened` time.
+        newest activity is a commit, only when its line is not in the op log that commit carries
+        (CE-129: op log position, not a date, so a skewed clock or a rebase that rewrote the
+        committer date does not move the window). A live session resets the count by doing
+        anything. A commit whose op log cannot be read (it is gone, or it carries none) falls back
+        to its date; a stub with neither an op line nor a commit (written by hand) counts from
+        its `opened` time.
 
-        Not checked: a commit whose committer date is wrong (a skewed clock, or a rebase that
-        rewrote it) moves the floor with it."""
+        Not checked: a close written to the working op log before that commit but not carried by
+        it (another session's close it left uncommitted) counts as after it, so the window can
+        close one session early; which activity is newest is still chosen by time
+        (``last_active``)."""
         seen = self.last_active(keys)
         want = set(keys)
         last: dict[str, int] = {}
-        closes: list[tuple[int, str, str]] = []
+        closes: list[tuple[int, str, str, str]] = []
         log = self.root / self.store.config.oplog
         lines = log.read_bytes().decode("utf-8", errors="replace").splitlines() if log.is_file() else []
         for n, ln in enumerate(lines):
@@ -319,7 +324,7 @@ class Engine:
             if o.get("session") in want:
                 last[str(o["session"])] = n
             if o.get("op") in ("session.close", "session.pause"):
-                closes.append((n, str(o.get("session")), str(o.get("at") or "")))
+                closes.append((n, str(o.get("session")), str(o.get("at") or ""), ln.strip()))
 
         def when(at: str) -> dt.datetime | None:
             try:
@@ -333,11 +338,25 @@ class Engine:
         for k in keys:
             at, what = seen.get(k, ("", ""))
             if not at and led.get(k) is not None:  # no op line and no commit: count from its stub's `opened`
-                at, what = (led.get(k).field("opened") or "").split(" by ")[0], "commit"
-            floor = when(at) if what.startswith("commit") else None
-            n = sum(1 for i, s, a in closes if i > last.get(k, -1) and s != k and (floor is None or ((w := when(a)) is not None and w >= floor)))
+                at, what = (led.get(k).field("opened") or "").split(" by ")[0], "opened"
+            carried = self._carried_log(what.split()[1]) if what.startswith("commit ") else None
+            floor = when(at) if carried is None and (what.startswith("commit") or what == "opened") else None
+
+            def after(line: str, a: str) -> bool:
+                if carried is not None:
+                    return line not in carried
+                return floor is None or ((w := when(a)) is not None and w >= floor)
+
+            n = sum(1 for i, s, a, line in closes if i > last.get(k, -1) and s != k and after(line, a))
             out[k] = (n, at or "never")
         return out
+
+    def _carried_log(self, sha: str) -> set[str] | None:
+        """The op log lines commit ``sha`` carries (CE-129), or None when git cannot show it."""
+        text = L._git(self.root, "show", f"{sha}:./{self.store.config.oplog}")
+        if not text:
+            return None
+        return {ln.strip() for ln in text.splitlines() if ln.strip()}
 
     def stale_stubs(self, session: str | None = None) -> list[tuple[str, int, str]]:
         """(key, closes or pauses since its last activity, that time) for every other session's
