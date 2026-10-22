@@ -355,6 +355,55 @@ def test_a_timed_out_git_returns_on_time_and_names_the_lock_it_left(repo, monkey
     assert "not committed: git took over 2s (a hook?)" in line, line
 
 
+def test_a_post_commit_hook_timeout_after_head_moved_is_a_commit_with_a_warning(repo, monkeypatch):
+    """CE-127: HEAD moved to the commit before a slow post-commit hook made git time out. That is
+    a commit: the reply says so, and the new record's `git add` is not taken back (that left the
+    index without a file HEAD has, so a plain commit would delete it)."""
+    c = start(repo)
+    _hook(repo, "sleep 6", name="post-commit")
+    monkeypatch.setattr(C, "GIT_TIMEOUT", 2)
+    before = head(repo)
+    t = time.monotonic()
+    _, line = run(repo, "task_new", c, title="Slow post-commit hook")
+    assert time.monotonic() - t < 5.5, line
+    assert head(repo) != before and f"; committed {head(repo)}" in line, line
+    assert "WARNING: git took over 2s after the commit landed (a post-commit hook?)" in line, line
+    assert any(n.startswith("tasks/CE-1") for n in files_at(repo))
+    assert git(repo, "status", "--porcelain", "--untracked-files=all").strip() == ""  # the index is HEAD's
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_post_commit_hook_timeout_after_a_partial_commit_resets_the_index(repo, monkeypatch):
+    """CE-127 on the partial path (CE-125): the real index's reset runs after git's commit, so a
+    timeout there skipped it and the index kept the old op log and lacked the new file."""
+    a, b, key, theirs = _two(repo)
+    _hook(repo, "sleep 6", name="post-commit")
+    monkeypatch.setattr(C, "GIT_TIMEOUT", 2)
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert line.startswith(f"committed {head(repo)}") and "WARNING: git took over 2s after the commit landed" in line, line
+    assert "a.py" in files_at(repo) and f"left uncommitted: 2 op lines of {key}" in line, line
+    status = git(repo, "status", "--porcelain", "--untracked-files=all").splitlines()
+    assert sorted(status) == sorted([" M ops.jsonl", " M ledger.md", f"?? {theirs}"]), status  # nothing staged: the index is HEAD's
+
+
+def test_a_timeout_counts_as_landed_only_for_this_commit_on_the_head_before(repo, tmp_path):
+    """`_landed` names HEAD only when its parent is the HEAD before and its message is this
+    one: HEAD unmoved, or moved by another commit, is a timeout before the commit."""
+    g = C._Git(repo)
+    before = C._rev(g, "HEAD")
+    msg = tmp_path / "message"
+    msg.write_bytes(b"CE-9: mine\n\nSession: 2026-10-22b\n")
+    assert C._landed(g, before, msg) == ""  # HEAD did not move
+    git(repo, "commit", "-q", "--allow-empty", "-F", str(msg))
+    assert C._landed(g, before, msg) == head(repo)
+    git(repo, "commit", "-q", "--allow-empty", "-F", str(msg))
+    assert C._landed(g, before, msg) == ""  # the same message, but its parent is not the HEAD before
+    git(repo, "reset", "-q", "--hard", before)
+    git(repo, "commit", "-q", "--allow-empty", "-m", "someone else")
+    assert C._landed(g, before, msg) == ""  # another message
+
+
 @pytest.mark.parametrize("var", ["GIT_DIR", "GIT_INDEX_FILE"])
 def test_git_environment_variables_skip_the_commit_loudly(repo, tmp_path, monkeypatch, var):
     """Inside a git hook git sets these; a commit would go to that repo or index, not this tree."""

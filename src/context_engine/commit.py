@@ -37,7 +37,13 @@ the session commits those paths by hand (manual-mode § What every write does):
   progress; a detached HEAD; ``GIT_DIR``-style variables set (inside a git hook);
   ``context.toml`` not tracked by the enclosing repo; the op log gitignored, or missing lines HEAD has; a named record whose
   frontmatter does not parse (a hand edit in progress); and git refusing the commit (a hook,
-  the identity, ``index.lock`` held past its retries, a timeout).
+  the identity, ``index.lock`` held past its retries, a timeout before the commit landed).
+
+A timeout after the commit landed (a slow ``post-commit`` hook: HEAD moved to this commit before
+git was stopped) is a commit, not a failure (CE-127): the reply says ``committed <sha>`` with a
+WARNING, the real index's entries for the committed paths are reset to HEAD's (the partial
+commit's own reset never ran, and a ``git add`` of a new file is not taken back), and a failed
+reset names the command to run by hand.
 
 Output, the message and the paths go through temporary files, never pipes. On Windows a hook's
 child process can hold a pipe open after git is killed, so a timeout would not bound the time
@@ -594,20 +600,30 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     untracked = list(dict.fromkeys(untracked))
     msg = tmp / "message"
     msg.write_bytes((session_message(text, ops, session) if text is not None else message(ops, session, **how)).encode("utf-8"))
-    if left:  # another session's lines stay out: commit a partial op log from a temporary index
-        c = _commit_partial(git, tmp, prefix, oplog, head_text, fresh, paths, msg)
-        if isinstance(c, Outcome):
-            return dataclasses.replace(c, note=f"{c.note}; {remedy}", left=whose)
-    else:
-        if untracked:
-            a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
-            if a.returncode != 0:
-                return Outcome(note=f"`git add` failed ({_first_error(a)}); {remedy}")
-        try:
+    before = _rev(git, "HEAD")
+    try:
+        if left:  # another session's lines stay out: commit a partial op log from a temporary index
+            c = _commit_partial(git, tmp, prefix, oplog, head_text, fresh, paths, msg)
+            if isinstance(c, Outcome):
+                return dataclasses.replace(c, note=f"{c.note}; {remedy}", left=whose)
+        else:
+            if untracked:
+                a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
+                if a.returncode != 0:
+                    return Outcome(note=f"`git add` failed ({_first_error(a)}); {remedy}")
             c = git.write("commit", "--only", "-F", str(msg), f"--pathspec-from-file={_pathspec(tmp, 'commit', paths)}", "--pathspec-file-nul")
-        except subprocess.TimeoutExpired:
-            _unstage(git, tmp, untracked)
+    except subprocess.TimeoutExpired:
+        sha = _landed(git, before, msg)
+        if not sha:  # it timed out before HEAD moved: nothing was committed
+            if not left:
+                _unstage(git, tmp, untracked)
             raise
+        # HEAD moved to this commit, then git was stopped (a post-commit hook): committed (CE-127)
+        warn = f"git took over {GIT_TIMEOUT}s after the commit landed (a post-commit hook?) and was stopped"
+        r = _reset(git, tmp, prefix, [oplog, *(p for p in paths if p != oplog)] if left else paths)
+        if r:
+            warn += f"; {r}"
+        c = subprocess.CompletedProcess("timed-out-after-commit", 0, f"[{sha}]", warn)
     if c.returncode != 0:
         if not left:
             _unstage(git, tmp, untracked)
@@ -616,7 +632,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
         return Outcome(note=f"`git commit` failed ({_first_error(c)}); {remedy}", paths=tuple(paths), left=whose)
     m = SHA_RE.search(c.stdout)
     sha = m.group(1) if m else git.run("rev-parse", "--short", "HEAD").stdout.strip()
-    warn = c.stderr if c.args == "reset-failed" else ""
+    warn = c.stderr if c.args in ("reset-failed", "timed-out-after-commit") else ""
     if text is not None:  # the session's own commit reports what git committed, not what it was given
         shown = git.run("show", "--name-only", "-z", "--format=", "HEAD").stdout
         paths = [x.strip("\n") for x in shown.split("\0") if x.strip("\n")]
@@ -651,12 +667,51 @@ def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: st
         return Outcome(note=f"`git update-index` failed ({_first_error(u)})")
     c = alt.write("commit", "-F", str(msg))
     if c.returncode == 0:
-        r = git.write("reset", "-q", "HEAD", f"--pathspec-from-file={_pathspec(tmp, 'reset', [oplog, *rest])}", "--pathspec-file-nul")
-        if r.returncode != 0:  # committed, but the real index still holds the old entries: a plain commit would undo it
-            c.stderr = (f"the index was not updated ({_first_error(r)}): before any other commit, run "
-                        f"`git reset -q HEAD -- {' '.join([prefix + oplog, *(prefix + p for p in rest)])}`")
+        r = _reset(git, tmp, prefix, [oplog, *rest])
+        if r:
+            c.stderr = r
             c.args = "reset-failed"
     return c
+
+
+def _reset(git: _Git, tmp: Path, prefix: str, paths: list[str]) -> str:
+    """Set the real index's entries for ``paths`` to HEAD's, as ``git commit --only`` leaves
+    them. Empty when it did; else the warning naming the command to run by hand, since the real
+    index still holds the old entries and a plain commit would undo the work."""
+    try:
+        r = git.write("reset", "-q", "HEAD", f"--pathspec-from-file={_pathspec(tmp, 'reset', paths)}", "--pathspec-file-nul")
+        why = _first_error(r) if r.returncode != 0 else ""
+    except subprocess.TimeoutExpired:
+        why = f"`git reset` took over {GIT_TIMEOUT}s"
+    if not why:
+        return ""
+    return f"the index was not updated ({why}): before any other commit, run `git reset -q HEAD -- {' '.join(prefix + p for p in paths)}`"
+
+
+def _rev(git: _Git, rev: str) -> str:
+    """The full hash ``rev`` names, or empty when it names none (no commit yet)."""
+    p = git.run("rev-parse", "-q", "--verify", f"{rev}^{{commit}}")
+    return p.stdout.strip() if p.returncode == 0 else ""
+
+
+def _landed(git: _Git, before: str, msg: Path) -> str:
+    """After a commit timed out: HEAD's short hash when HEAD moved to this commit (its parent is
+    ``before`` and its message is ``msg``), so git was stopped after it landed; else empty."""
+    try:
+        now = _rev(git, "HEAD")
+        if not now or now == before or _rev(git, "HEAD^") != before:
+            return ""
+        body = git.run("log", "-1", "--format=%B", "HEAD").stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    norm = lambda s: "\n".join(ln.rstrip() for ln in s.replace("\r\n", "\n").strip().split("\n"))
+    if norm(body) != norm(msg.read_bytes().decode("utf-8")):
+        return ""  # another commit moved HEAD meanwhile
+    try:
+        short = git.run("rev-parse", "--short", now).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        short = ""
+    return short or now
 
 
 def _unstage(git: _Git, tmp: Path, untracked: list[str]) -> None:
