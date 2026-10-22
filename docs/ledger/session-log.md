@@ -11,7 +11,7 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 - **opened:** 2026-10-22T08:27:28+08:00 by claude-code/claude-opus-5-5
 - **start head:** 5872a4fb95e5419e758ab4e2bce724e0b0d1f98a
-- **asked:** ASK-18
+- **asked:** ASK-18, ASK-19, ASK-20
 
 ---
 
