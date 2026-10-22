@@ -64,7 +64,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + links(e) + supersede_links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -436,6 +436,95 @@ def links(e: Engine) -> list[Failure]:
                     bad.append(f"line {n}: link `{t}` names no heading of {hit.name}")
         out += [Failure("G-D3", rel, b, "point it at the path, heading or symbol that exists (grep it first), or drop it") for b in bad]
     return out
+
+
+MIRROR = {"supersedes": "superseded_by", "superseded_by": "supersedes"}
+
+
+def supersede_links(e: Engine) -> list[Failure]:
+    """G-D3 on the `supersedes` and `superseded_by` links of every record kind's records, stories
+    and decisions alike (CE-57, INV-52): no record names itself; each id a link names resolves to a
+    record of the same kind (directly or by an alias) and names this record back in the mirrored
+    key; and the chain has no cycle. `record retire` and `decision supersede` write both sides, so
+    a failure here is a hand edit, named with the record and the side that is missing.
+
+    Not checked: a link naming no record of the story kind (G-I2 reports it, with its own remedy),
+    whether the record that is superseded is also retired or `SUPERSEDED` (G-I2 for stories, the
+    decision's own status), and links between kinds (no operation writes one)."""
+    st = e.store
+    amap = st.alias_map()
+    stories = e.store.config.guards.stories
+    out: list[Failure] = []
+    for kind in st.config.kinds.values():
+        heads: dict[str, tuple[str, object]] = {}
+        for path in st._files(kind):
+            rid = st._id_of(kind, path)
+            if not rid:
+                continue
+            try:
+                heads[rid] = (st._rel(path), st.read(path))
+            except Exception:
+                continue  # the schema check reports an unreadable record
+        if not any(doc.get(k) for _, doc in heads.values() for k in MIRROR):
+            continue
+
+        def resolve(ref: str) -> str | None:
+            if ref in heads:
+                return ref
+            hits = [h for h in amap.get(ref, []) if h in heads]
+            return hits[0] if len(hits) == 1 else None
+
+        remedy = ("restore the links from git (`git log -p` on both files); story links are written only by `record retire`"
+                  if kind.name == stories else
+                  "restore the links from git (`git log -p` on both files); `decision supersede <old> <new>` writes both sides at once")
+        later: dict[str, set[str]] = {}  # each record and the records that supersede it
+        for rid, (rel, doc) in sorted(heads.items()):
+            for key, back in MIRROR.items():
+                for ref in D.as_list(doc.get(key)):
+                    target = resolve(ref)
+                    if target == rid:
+                        out.append(Failure("G-D3", rel, f"{rid} `{key}` names {ref}, itself", remedy))
+                    elif target is None:
+                        if kind.name != stories:
+                            out.append(Failure("G-D3", rel, f"{rid} `{key}` names {ref}, which is no {kind.name} record", remedy))
+                    else:
+                        if rid not in {resolve(r) for r in D.as_list(heads[target][1].get(back))}:
+                            out.append(Failure("G-D3", rel, f"{rid} `{key}` names {target}, but {target} does not name {rid} in `{back}`: the missing side is {target}'s `{back}`", remedy))
+                        old, new = (target, rid) if key == "supersedes" else (rid, target)
+                        later.setdefault(old, set()).add(new)
+        for cycle in _cycles(later):
+            rel = heads[cycle[0]][0]
+            out.append(Failure("G-D3", rel, f"supersedes links form a cycle: {' -> '.join([*cycle, cycle[0]])} (each is superseded by the next)", remedy))
+    return out
+
+
+def _cycles(graph: dict[str, set[str]]) -> list[list[str]]:
+    """Each cycle of ``graph`` once, as its nodes from the smallest, by depth-first search."""
+    found: dict[frozenset[str], list[str]] = {}
+    done: set[str] = set()
+
+    def walk(node: str, path: list[str]) -> None:
+        if node in path:
+            cyc = path[path.index(node):]
+            if len(cyc) > 1:
+                i = cyc.index(min(cyc, key=key_order_id))
+                found.setdefault(frozenset(cyc), cyc[i:] + cyc[:i])
+            return
+        if node in done:
+            return
+        for nxt in sorted(graph.get(node, ())):
+            walk(nxt, [*path, node])
+        done.add(node)
+
+    for start in sorted(graph):
+        walk(start, [])
+    return list(found.values())
+
+
+def key_order_id(rid: str) -> tuple[str, int]:
+    """An id's sort key: its series, then its number (`DEC-9` before `DEC-10`)."""
+    prefix, _, num = rid.rpartition("-")
+    return (prefix, int(num) if num.isdigit() else 0)
 
 
 # -- G-T3 existence in normative text ----------------------------------------------------

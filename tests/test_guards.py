@@ -176,6 +176,52 @@ def test_g_d3_a_bare_name_never_resolves_to_a_stale_copy_under_build(tmp_path):
         assert reds(e, "G-D3") == ["docs/guide.md: line 1: `working.py` has no `OLD_RE` (from `working.py::OLD_RE`)"], kind
 
 
+def linked(tmp_path) -> Engine:
+    cfg = config()
+    cfg["kinds"]["decision"] = {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "replaced", "required": ["title"]}
+    cfg["kinds"]["story"] = {"type": "Story", "prefix": "US", "dir": "stories", "mode": "replaced", "required": ["title"]}
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n- true now\n", encoding="utf-8")
+    return Engine(tmp_path)
+
+
+def rec(tmp_path, rid: str, **links) -> None:
+    d = "decisions" if rid.startswith("DEC") else "stories"
+    lines = [f"{k}: [{', '.join(v)}]" for k, v in links.items()]
+    write(tmp_path, f"{d}/{rid}-x.md", "\n".join(["---", f"id: {rid}", "title: x", *lines, "---", "", "body", ""]))
+
+
+def test_g_d3_supersedes_links_are_mirrored_never_self_and_never_a_cycle_for_both_kinds(tmp_path):
+    e = linked(tmp_path)
+    rec(tmp_path, "DEC-1", superseded_by=["DEC-2"])
+    rec(tmp_path, "DEC-2", supersedes=["DEC-1"])
+    rec(tmp_path, "US-1", superseded_by=["US-2"])
+    rec(tmp_path, "US-2", supersedes=["US-1"])
+    assert reds(e, "G-D3") == []
+    # one side dropped by hand, for each kind: the record that still has its side is named, with the missing side
+    rec(tmp_path, "DEC-2")
+    rec(tmp_path, "US-1")
+    assert reds(e, "G-D3") == [
+        "decisions/DEC-1-x.md: DEC-1 `superseded_by` names DEC-2, but DEC-2 does not name DEC-1 in `supersedes`: the missing side is DEC-2's `supersedes`",
+        "stories/US-2-x.md: US-2 `supersedes` names US-1, but US-1 does not name US-2 in `superseded_by`: the missing side is US-1's `superseded_by`",
+    ]
+    [red, *_] = [f for f in e.lint() if f.guard == "G-D3"]
+    assert "`decision supersede <old> <new>` writes both sides" in red.remedy
+    # a self link, and a link naming no decision
+    rec(tmp_path, "DEC-2", supersedes=["DEC-2", "DEC-9"])
+    rec(tmp_path, "US-1", superseded_by=["US-2"])
+    assert reds(e, "G-D3") == [
+        "decisions/DEC-1-x.md: DEC-1 `superseded_by` names DEC-2, but DEC-2 does not name DEC-1 in `supersedes`: the missing side is DEC-2's `supersedes`",
+        "decisions/DEC-2-x.md: DEC-2 `supersedes` names DEC-2, itself",
+        "decisions/DEC-2-x.md: DEC-2 `supersedes` names DEC-9, which is no decision record",
+    ]
+    # a cycle, every side mirrored
+    rec(tmp_path, "DEC-1", superseded_by=["DEC-2"], supersedes=["DEC-3"])
+    rec(tmp_path, "DEC-2", supersedes=["DEC-1"], superseded_by=["DEC-3"])
+    rec(tmp_path, "DEC-3", supersedes=["DEC-2"], superseded_by=["DEC-1"])
+    assert reds(e, "G-D3") == ["decisions/DEC-1-x.md: supersedes links form a cycle: DEC-1 -> DEC-2 -> DEC-3 -> DEC-1 (each is superseded by the next)"]
+
+
 # -- G-T3 ----------------------------------------------------------------------------------
 
 CRITERIA = """# Criteria
