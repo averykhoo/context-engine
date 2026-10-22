@@ -1397,6 +1397,40 @@ def test_orient_flags_next_work_whose_deps_are_parked(eng):
     assert heading not in eng.orient(key)
 
 
+# -- orient: upstream and foreign commits (CE-114, CE-101) -----------------------------------------
+
+
+def _section(out, heading):
+    return out.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0] if f"## {heading}\n" in out else None
+
+
+@pytest.mark.criterion("AC-93")
+def test_orient_compares_head_with_upstream_and_flags_a_push_made_outside_a_session(eng, tmp_path_factory):
+    """CE-114 (adhoc AAR entry 26): a push made while no session was open was recorded nowhere."""
+    root = eng.root
+    assert _section(eng.orient(None), "Upstream") is None  # no git, no upstream: nothing said
+    _repo(root)
+    assert _section(eng.orient(None), "Upstream") is None  # no upstream
+    remote = tmp_path_factory.mktemp("remote") / "origin.git"
+    _git(remote.parent, "init", "-q", "--bare", "-b", "main", str(remote))
+    _git(root, "remote", "add", "origin", str(remote))
+    _git(root, "push", "-q", "-u", "origin", "main")  # no session open: the op log has none
+    lines = _section(eng.orient(None), "Upstream").splitlines()
+    assert lines[0] == "- HEAD is 0 commits ahead of origin/main and 0 behind (as of the last fetch)", lines
+    assert lines[1].startswith("- the last push to origin/main, at ") and "came while no session was open: tell the owner" in lines[1], lines
+    key = started(eng)  # open from here on
+    _commit_as(root, key, "2026-10-08T00:00:00+08:00")
+    assert _section(eng.orient(key), "Upstream").splitlines()[0] == "- HEAD is 1 commit ahead of origin/main and 0 behind (as of the last fetch)"
+    _git(root, "push", "-q")
+    assert _section(eng.orient(key), "Upstream").splitlines() == ["- HEAD is 0 commits ahead of origin/main and 0 behind (as of the last fetch)"]  # pushed inside a session
+    eng.session_close(key, actor=ACTOR, rows="none", summary=["pushed"], receipts=receipts())
+    dead, other = started(eng), started(eng)
+    eng.session_abandon(dead, force=True, **kw(other))  # an abandoned stub's window ends there
+    eng.session_close(other, actor=ACTOR, rows="none", summary=["abandoned one"], receipts=receipts())
+    _git(root, "push", "-q")
+    assert "came while no session was open" in _section(eng.orient(None), "Upstream")
+
+
 # -- one agent, one actor spelling (CE-122) -------------------------------------------------------
 
 

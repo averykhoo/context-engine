@@ -1869,6 +1869,9 @@ class Engine:
         stories = self.unspecified_stories()
         if stories:  # CE-48
             sections.append(Part("Unspecified stories and the items G-T1 counts", "\n".join(stories), "`context-engine lint` (G-T1)", rank=2))
+        upstream = self.upstream_lines()
+        if upstream:  # CE-114
+            sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
@@ -2023,6 +2026,63 @@ class Engine:
             by = [i for i, text in board if pat.search(text)]
             out.append(f"- {rid}: named by {_one(by)}; G-T1 counts {'it' if len(by) == 1 else 'them'}: check one is the task to specify {rid}" if by
                        else f"- {rid}: no open board item names it (G-T1 is red): `task new` the work to specify it")
+        return out
+
+    def _session_windows(self) -> list[tuple[dt.datetime, dt.datetime | None]]:
+        """When each session in the op log was open: its `session.start` to its close, pause or
+        abandon (None while it is still open)."""
+        log = self.root / self.store.config.oplog
+        start: dict[str, dt.datetime] = {}
+        end: dict[str, dt.datetime] = {}
+        for ln in (log.read_bytes().decode("utf-8", errors="replace").splitlines() if log.is_file() else []):
+            try:
+                o = json.loads(ln)
+                at = dt.datetime.fromisoformat(str(o["at"]).strip())
+            except (ValueError, KeyError, TypeError):
+                continue
+            at = at if at.tzinfo else at.astimezone()
+            op = o.get("op")
+            if op == "session.start":
+                start.setdefault(str(o.get("session")), at)
+            elif op in ("session.close", "session.pause"):
+                end[str(o.get("session"))] = at
+            elif op == "session.abandon":
+                end[str(o.get("id"))] = at
+        return [(s, end.get(k)) for k, s in start.items()]
+
+    def upstream_lines(self) -> list[str]:
+        """HEAD against its upstream branch, and whether the upstream's last push came while no
+        session was open (CE-114; adhoc AAR entry 26: a push made outside any session was
+        recorded nowhere, and the ledger said nothing was pushed). The push time is the local
+        reflog's `update by push` entry for the upstream ref. Empty with no upstream or no git.
+
+        Not checked: a push from another clone (this reflog never sees it; the counts show it
+        after a fetch); a push inside a session that the session's close did not record."""
+        up = (L._git(self.root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") or "").strip()
+        if not up:
+            return []
+        counts = (L._git(self.root, "rev-list", "--left-right", "--count", "HEAD...@{upstream}") or "").split()
+        out = []
+        if len(counts) == 2:
+            ahead, behind = counts
+            out.append(f"- HEAD is {ahead} commit{'s' if ahead != '1' else ''} ahead of {up} and {behind} behind (as of the last fetch)")
+        ref = (L._git(self.root, "rev-parse", "--symbolic-full-name", "@{upstream}") or "").strip()
+        log = L._git(self.root, "reflog", "show", "--date=iso-strict", "--format=%gd%x09%gs", ref) if ref else None
+        for row in (log or "").splitlines():
+            sel, _, subject = row.partition("\t")
+            if not subject.startswith("update by push"):
+                continue
+            m = re.search(r"@\{(.+)\}$", sel)
+            try:
+                at = dt.datetime.fromisoformat(m.group(1)) if m else None
+            except ValueError:
+                at = None
+            if at is None:
+                break
+            at = at if at.tzinfo else at.astimezone()
+            if not any(s <= at and (e is None or at <= e) for s, e in self._session_windows()):
+                out.append(f"- the last push to {up}, at {m.group(1)}, came while no session was open: tell the owner, and record it in this session's close (what was pushed, and whether the gate ran first)")
+            break  # the newest push only
         return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
