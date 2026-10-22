@@ -1374,6 +1374,29 @@ def test_a_value_of_the_wrong_declared_type_is_refused(eng):
         eng.store.set(rec.id, {"moved": "yesterday"}, **kw(key))
 
 
+# -- orient flags next work that waits on parked work (CE-116) ------------------------------------
+
+
+@pytest.mark.criterion("AC-91")
+def test_orient_flags_next_work_whose_deps_are_parked(eng):
+    """Adhoc AAR entry 28: the banner's next task waited on a SOMEDAY task and nothing said so."""
+    heading = "## Next work waits on parked items: tell the owner\n"
+    key = started(eng)
+    parked = task(eng, key, "Parked", pri="SOMEDAY")
+    later = task(eng, key, "Later work")
+    nxt = task(eng, key, "Next work", pri="NEXT", deps=[parked.id])
+    named = task(eng, key, "The banner's next", deps=[parked.id, later.id])  # LATER: flagged only as the banner's next
+    quiet = task(eng, key, "Waits on work, not parked", pri="NEXT", deps=[later.id])
+    section = eng.orient(key).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert section.splitlines() == [f"- {nxt.id} (NEXT) waits on {parked.id}, which is SOMEDAY (parked): drop the dep, promote it, or re-rank {nxt.id}"], section
+    (eng.root / "HANDOFF.md").write_text(NOTE.replace("- The banner says where things stand.", f"- Next (owner): {named.id}.").format(key="2026-10-07b"), encoding="utf-8")
+    section = eng.orient(key).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert f"- {named.id} (LATER, named next in the banner) waits on {parked.id}, which is SOMEDAY (parked): drop the dep, promote it, or re-rank {named.id}" in section.splitlines(), section
+    assert quiet.id not in section and later.id + "," not in section
+    eng.promote(parked.id, "LATER", **kw(key))
+    assert heading not in eng.orient(key)
+
+
 # -- one agent, one actor spelling (CE-122) -------------------------------------------------------
 
 

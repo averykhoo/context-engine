@@ -1860,6 +1860,9 @@ class Engine:
         due = self.rerank_due()
         if due:
             sections.append(Part("Rerank due: tell the owner", "\n".join(f"- {d}" for d in due) + "\n" + RERANK_HOW, RERANK_REST, rank=1))
+        parked = self.parked_deps()
+        if parked:  # CE-116
+            sections.append(Part("Next work waits on parked items: tell the owner", "\n".join(parked), "`context-engine task show <id>`", rank=1))
         plans = self.plans_to_freeze()
         if plans:  # CE-97
             sections.append(Part("Plans to freeze: their items are closed", "\n".join(plans), "`context-engine lint` (G-D4)", rank=1))
@@ -1970,6 +1973,33 @@ class Engine:
             if named and not any(named.values()):
                 how = f"set its `[guards] liveness_given` entry ({given[rel][1]}) to FROZEN in {CONFIG_NAME}" if rel in given else f"`context-engine doc freeze {rel}`"
                 out.append(f"- {rel}: ACTIVE-PLAN, but {_one(sorted(named, key=key_order))} {'is' if len(named) == 1 else 'are all'} closed; freeze it: {how}")
+        return out
+
+    def parked_deps(self) -> list[str]:
+        """Each item the session may take up next whose `deps` it cannot meet (CE-116; adhoc AAR
+        entry 28: the banner's next task waited on a SOMEDAY task and nothing said so): the open
+        NOW and NEXT items and the board ids a banner line holding the word "next" names, each
+        dep that is an open SOMEDAY item (parked).
+
+        Not checked: a dep that is open at LATER (work not yet done, not parked); a dep that is
+        no board item (lint's to report); a "next" the banner names without the word on its line."""
+        heads = {r.id: r for r in self.board_heads()}
+        wanted = [r.id for r in self._open_board() if r.doc.get("pri") in ("NOW", "NEXT")]
+        b = self.banner()
+        named_next = [i for ln in (b.text.splitlines() if b else []) if re.search(r"\bnext\b", ln, re.IGNORECASE) for i in ID_RE.findall(ln) if i in heads]
+        out = []
+        for rid in dict.fromkeys([*wanted, *named_next]):
+            rec = heads[rid]
+            if rec.doc.get("state") != "open":
+                continue
+            why = []
+            for d in (str(x) for x in D.as_list(rec.doc.get("deps"))):
+                dep = heads.get(d)
+                if dep is not None and dep.doc.get("state") == "open" and dep.doc.get("pri") == "SOMEDAY":
+                    why.append(f"{d}, which is SOMEDAY (parked)")
+            if why:
+                where = f"{rec.doc.get('pri')}" + (", named next in the banner" if rid in named_next else "")
+                out.append(f"- {rid} ({where}) waits on {'; '.join(why)}: drop the dep, promote it, or re-rank {rid}")
         return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
