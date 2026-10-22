@@ -369,7 +369,8 @@ class Engine:
     def session_abandon(self, key: str = "", *, session: str, actor: str, force: bool = False, stale: bool = False) -> str:
         """Mark another session's stale stub `kind: abandoned` (CE-124, DEC-69 amending DEC-29):
         its lines kept, an `abandoned:` line added, and a baton filed for what it left in flight
-        (its op log lines HEAD lacks). ``stale`` does it for every stub past the window, which
+        (its op log lines HEAD lacks, and the open board items whose `updated` or `moved` names it,
+        CE-131). ``stale`` does it for every stub past the window, which
         start-of-session housekeeping runs without the owner's word: by then the stub was shown to
         the owner at every one of those sessions. A single ``key`` short of the window is refused
         unless ``force`` (the owner's word); the session's own key is always refused."""
@@ -417,14 +418,24 @@ class Engine:
                     continue
                 if isinstance(o, dict) and o.get("session") == key and o.get("path") != self.w.ledger:  # this commit carries the ledger's
                     left.append(str(o.get("path") or "?"))
+            # CE-131: the open board items it was working on, as the board records it (the last
+            # session to write or move each), so a task it took up is not left looking owned
+            claimed = [r.id for r in self._open_board() if key in (str(r.doc.get("updated") or ""), str(r.doc.get("moved") or ""))]
             baton = ""
-            if left and self.w.baton:
-                files = list(dict.fromkeys(left))
-                step = (f"Settle what {key} left in flight: {len(left)} uncommitted op line{'s' if len(left) != 1 else ''} naming "
-                        f"{', '.join(files[:5])}{' (+' + str(len(files) - 5) + ' more)' if len(files) > 5 else ''}: review them, then commit them "
-                        f"with `context-engine commit --sweep`, or undo them by hand")
+            if (left or claimed) and self.w.baton:
+                parts = []
+                if left:
+                    files = list(dict.fromkeys(left))
+                    parts.append(f"{len(left)} uncommitted op line{'s' if len(left) != 1 else ''} naming "
+                                 f"{', '.join(files[:5])}{' (+' + str(len(files) - 5) + ' more)' if len(files) > 5 else ''}: review them, then commit them "
+                                 f"with `context-engine commit --sweep`, or undo them by hand")
+                if claimed:
+                    parts.append(f"open item{'s' if len(claimed) != 1 else ''} it last wrote or moved, "
+                                 f"{', '.join(claimed[:8])}{' (+' + str(len(claimed) - 8) + ' more)' if len(claimed) > 8 else ''}: "
+                                 f"check each one's state and log, then take it up, re-rank it or comment on it")
+                step = f"Settle what {key} left in flight: " + "; and ".join(parts)
                 baton = "; " + self.baton_add(step, f"session {key} was abandoned by {session} (never closed or paused)", session=session, actor=actor).split(":")[0] + " filed for what it left in flight"
-        return f"{key}: abandoned ({n} closes or pauses since its last activity, {last}){baton or '; it left nothing uncommitted'}"
+        return f"{key}: abandoned ({n} closes or pauses since its last activity, {last}){baton or '; it left nothing uncommitted and no open item it last wrote'}"
 
     @_milestone
     def session_pause(self, key: str, *, actor: str, rows: str, deferred: str) -> str:

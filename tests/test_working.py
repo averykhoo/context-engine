@@ -1474,6 +1474,27 @@ def test_a_commit_counts_by_its_op_log_position_not_its_date(eng):
     assert live in [k for k, *_ in eng.stale_stubs(me)], eng.staleness([live])
 
 
+def test_the_abandon_baton_names_the_open_items_the_dead_session_took_up(eng):
+    """CE-131: a session that committed everything still leaves the tasks it was working on;
+    the baton names the open items it last wrote or moved, not only uncommitted op lines."""
+    _repo(eng.root)
+    first = started(eng)
+    took, other, done = task(eng, first, "Taken up"), task(eng, first, "Not touched"), task(eng, first, "Finished")
+    eng.session_close(first, actor=ACTOR, rows="none", summary=["filed"], receipts=receipts())
+    dead = started(eng)
+    eng.touch(took.id, **kw(dead))
+    eng.touch(done.id, **kw(dead))
+    eng.close(done.id, "done", **kw(dead))
+    _commit_as(eng.root, dead, "2026-10-08T00:00:00+08:00")  # everything it wrote is committed
+    _closes(eng, 3)
+    me = started(eng)
+    out = eng.session_abandon(dead, **kw(me))
+    assert "BTN-1 filed" in out, out
+    body = next(eng.store.records("baton")).doc.body
+    assert f"Settle what {dead} left in flight: open item it last wrote or moved, {took.id}: check" in body, body
+    assert "uncommitted" not in body and other.id not in body and done.id not in body, body
+
+
 def test_a_stub_with_no_op_line_counts_from_when_it_opened(eng):
     """A stub written by hand without its op line is not stale for closes that came before it."""
     _closes(eng, 3)
