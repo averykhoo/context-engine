@@ -4,13 +4,15 @@ id: CE-122
 title: Normalise CE_ACTOR at session start so one agent has one spelling
 brief: CE_ACTOR is free text and one agent signed under several names; normalise or refuse at session start
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-23a
+updated: 2026-10-23a
+status: deprecated
+closed: 2026-10-23a
 ---
 
 Normalise CE_ACTOR at session start so one agent has one spelling
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 35, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): closed: done in cb24085 (sweep 2026-10-23a; verified by an independent agent, gate green on main)
