@@ -1384,7 +1384,7 @@ def _closes(eng, n):
         eng.session_close(k, actor=ACTOR, rows="none", summary=["nothing"], receipts=receipts())
 
 
-@pytest.mark.criterion("AC-52")
+@pytest.mark.criterion("AC-88")
 def test_session_abandon_marks_a_stale_stub_and_files_a_baton_for_what_it_left(eng):
     dead = started(eng)
     task(eng, dead, "Half done")  # its uncommitted write: what it left in flight
@@ -1403,6 +1403,7 @@ def test_session_abandon_marks_a_stale_stub_and_files_a_baton_for_what_it_left(e
     assert dead not in section
 
 
+@pytest.mark.criterion("AC-88")
 def test_a_stub_short_of_the_window_or_ones_own_is_refused(eng):
     live = started(eng)
     _closes(eng, 2)
@@ -1419,6 +1420,7 @@ def test_a_stub_short_of_the_window_or_ones_own_is_refused(eng):
         eng.session_abandon(live, force=True, **kw(me))
 
 
+@pytest.mark.criterion("AC-88")
 def test_activity_resets_the_window(eng):
     """DEC-29: a live session resets the count by doing anything."""
     busy = started(eng)
@@ -1431,6 +1433,7 @@ def test_activity_resets_the_window(eng):
     assert [k for k, *_ in eng.stale_stubs(me)] == [busy]
 
 
+@pytest.mark.criterion("AC-88")
 def test_a_commit_newer_than_the_closes_resets_the_window(eng, monkeypatch):
     """A session whose newest activity is a commit (no op line) is live since that commit."""
     quiet = started(eng)
@@ -1457,6 +1460,7 @@ def _commit_as(root, key, when, name="wip.txt"):
     subprocess.run(["git", "commit", "-q", "-m", f"by hand\n\nSession: {key}"], cwd=root, check=True, env=env)
 
 
+@pytest.mark.criterion("AC-88")
 def test_a_commit_counts_by_its_op_log_position_not_its_date(eng):
     """CE-129: a commit's date can be wrong (a skewed clock, a rebase), so the closes after a
     session's newest commit are the ones its op log does not carry, whatever its date says."""
@@ -1474,6 +1478,7 @@ def test_a_commit_counts_by_its_op_log_position_not_its_date(eng):
     assert live in [k for k, *_ in eng.stale_stubs(me)], eng.staleness([live])
 
 
+@pytest.mark.criterion("AC-88")
 def test_the_abandon_baton_names_the_open_items_the_dead_session_took_up(eng):
     """CE-131: a session that committed everything still leaves the tasks it was working on;
     the baton names the open items it last wrote or moved, not only uncommitted op lines."""
@@ -1495,6 +1500,7 @@ def test_the_abandon_baton_names_the_open_items_the_dead_session_took_up(eng):
     assert "uncommitted" not in body and other.id not in body and done.id not in body, body
 
 
+@pytest.mark.criterion("AC-88")
 def test_a_stub_with_no_op_line_counts_from_when_it_opened(eng):
     """A stub written by hand without its op line is not stale for closes that came before it."""
     _closes(eng, 3)
