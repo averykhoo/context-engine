@@ -255,6 +255,25 @@ def test_task_new_and_task_set_refuse_goals_the_charter_lacks_before_writing(cha
 
 
 @pytest.mark.criterion("AC-86")
+def test_task_reopen_refuses_a_task_that_would_reopen_with_no_goals(chain):
+    """CE-103: G-I1 reads only open tasks, so a task closed before tasks carried goals reopens
+    into a red lint unless the reopen checks what `task new` and `task set` check."""
+    e = goal_tasks(chain)
+    goal_task(chain, "CE-1", None, state="closed")
+    goal_task(chain, "CE-2", "[G-9]", state="closed")
+    goal_task(chain, "CE-3", "[G-2]", state="closed")
+    for tid, match in [("CE-1", r"reopening CE-1 would leave an open task G-I1 fails: the task names no goal"), ("CE-2", r"names G-9, which is not a goal of the charter")]:
+        with pytest.raises(Refusal, match=match) as r:
+            e.reopen(tid, "more to do", **W)
+        assert f"`task set {tid} --set goals=[G-n,...]`" in r.value.remedy
+        assert e.store.get(tid).doc.get("state") == "closed"
+    e.set("CE-1", {"goals": "[G-1]"}, **W)  # the remedy: a closed task takes its goals
+    assert e.reopen("CE-1", "more to do", **W) == "CE-1: reopened"
+    assert e.reopen("CE-3", "more to do", **W) == "CE-3: reopened"
+    assert make(chain).reopen("CE-2", "unchecked", **W) == "CE-2: reopened"  # off while `task_goals` is unset
+
+
+@pytest.mark.criterion("AC-86")
 def test_task_new_through_the_cli_takes_goals_and_refuses_none(chain):
     from context_engine.cli import run
 

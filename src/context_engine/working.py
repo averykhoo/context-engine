@@ -861,6 +861,11 @@ class Engine:
                 # `answers:` names this question). A question closed without an answer (a
                 # pre-CE-20 `task close`, audit A20) carries no `answered:` and may reopen.
                 raise Refusal(f"{rid} was answered by the owner, and an answered question never reopens (FRAMEWORK §5.3)", self._answered_remedy(rid, answered))
+            try:  # CE-103: a closed task is not read by G-I1, so it may lack goals; open, it is read
+                self._task_goal_check(rec.kind.name, D.as_list(rec.doc.get("goals")))
+            except Refusal as r:
+                raise Refusal(f"reopening {rid} would leave an open task G-I1 fails: {r.message}",
+                              f"name the charter goals it serves first, `task set {rid} --set goals=[G-n,...]` (a closed task takes it), then reopen it") from None
 
         self._board_set(rid, {"state": "open", "closed": None, "moved": session}, session=session, actor=actor, unset=("status",), check=check, body=self._log_line(session, actor, f"reopened: {msg.strip()}"), op="reopen")
         return f"{rid}: reopened"
