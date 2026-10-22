@@ -4,13 +4,15 @@ id: CE-124
 title: 'Revisit DEC-29: session abandon as an engine op'
 brief: Adhoc trial abandoned stale stubs by hand 3 times; decide on a session abandon op or keep DEC-29
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-22b
+updated: 2026-10-22b
+status: deprecated
+closed: 2026-10-22b
 ---
 
 Revisit DEC-29: session abandon as an engine op
@@ -25,3 +27,5 @@ What went wrong (adhoc AAR entries 3 and 25, docs/evidence/adhoc-feedback-2026-1
 - docs/decisions/DEC-29-abandoning-a-stale-session-stub-stays-a-by-hand.md
 
 ## Log
+
+- 2026-10-22b (claude-code/claude-opus-5-5): closed: done in e74be36
