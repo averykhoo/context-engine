@@ -114,6 +114,9 @@ ENTRY_RE = re.compile(rf"^### (?P<id>{ID})[ \t]+{DASH}[ \t]+(?P<rest>.*?)[ \t]*$
 # a `###` heading (as CommonMark reads one) that starts like an entry but is not one: `### D-107 FIX`,
 # `### D-159b -- ...`, ` ### D-2 -- ...`, `###  D-2 -- ...`, `### **D-2** -- ...`, `### [D-2] -- ...`
 IDLIKE_RE = re.compile(rf"^ {{0,3}}###[ \t]+[*_\[`]*(?P<id>{ID})(?P<suffix>[A-Za-z0-9]*)\b")
+# a heading at a level the importer does not read (`#`, `##`, `####` to `######`) shaped like an entry,
+# an id then an attribution: `#### D-2 -- two *(owner, 2026-07-24)*` would fold into the entry above (CE-100)
+SHAPED_RE = re.compile(rf"^ {{0,3}}(?P<hashes>#{{1,2}}|#{{4,6}})[ \t]+[*_\[`]*(?P<id>{ID})\b.*\*\(.*\)\*")
 HEADING_TAIL = re.compile(rf"^(?P<title>.*?)[ \t]+\*\((?P<attr>.*?)\)\*(?:[ \t]+{DASH}[ \t]+(?P<note>.*))?$")
 SECTION_RE = re.compile(r"^#{1,2} ")  # a `#` or `## ` heading: inside an entry it is kept
 FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
@@ -249,6 +252,15 @@ def _idlike(n: int, line: str) -> Problem:
     return Problem(
         n, "not an entry heading", f"line {n}: {show!r} starts with {rid} but is not an entry heading (`### <id> -- title *(actor, date)*`, from the line's start)",
         f"in the copy: if it amends {rid}, move it under a `## Amendments` heading at the end of {rid}'s text; if it is an entry, write its heading as one; if it is a sub-heading, make it `####`; then import again",
+    )
+
+
+def _shaped(n: int, line: str) -> Problem:
+    m = SHAPED_RE.match(line)
+    rid, level = m["id"], len(m["hashes"])
+    return Problem(
+        n, "entry heading at another level", f"line {n}: {line[:80]!r} is shaped like an entry heading for {rid} (an id, then `*(actor, date)*`), but at level {level}, and the import reads entries only at `### `",
+        f"in the copy: if it is an entry, write its heading `### {rid} -- title *(actor, date)*`; if it is part of the entry above, reword the heading so it does not start with an id and an attribution; then import again",
     )
 
 
@@ -395,6 +407,7 @@ def parse_log(text: str) -> Parsed:
         if e:
             entries.append(e)
     problems += [_idlike(i + 1, lines[i]) for i in stray]
+    problems += [_shaped(i + 1, ln) for i, ln in enumerate(lines) if i not in h.hidden and SHAPED_RE.match(ln)]
     problems.sort(key=lambda p: p.line)
     excluded.sort(key=lambda x: x.first)
     return Parsed(entries, excluded, table, inner, problems)

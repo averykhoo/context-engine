@@ -709,6 +709,11 @@ def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(en
         (("Body three.", "Body three.\n\n<!-- a comment"), "line 24: an HTML comment '<!-- a comment' is never closed"),
         (("| keeping two duplicates | **removed**: duplicates | D-1 |", "| keeping two duplicates | **removed**: duplicates | D-1 |\n\n| other | table |\n|---|---|"), "line 12: a second table under `## Built and rejected"),
         (("More of three.", "More of three.\n\n## Amendments\n\n### D-3 -- FIX *(owner, 2026-10-06)*\n\nThe fix."), "line 30: .* is an entry heading for D-3 under D-3's own `## Amendments` \\(line 28\\)"),
+        # CE-100: an entry-shaped heading at a level the import does not read refuses, naming its line
+        (("#### a sub-heading inside an entry", "#### D-7 -- seven *(owner, 2026-07-24)*"), "line 24: .* is shaped like an entry heading for D-7 .* at level 4"),
+        (("#### a sub-heading inside an entry", "###### **D-7** -- seven *(owner, 2026-07-24)*"), "line 24: .* entry heading for D-7 .* at level 6"),
+        (("## Appendix", "## D-7 -- seven *(owner, 2026-07-24)*"), "line 36: .* is shaped like an entry heading for D-7 .* at level 2"),
+        (("# Decisions log", "# D-7 -- seven *(owner, 2026-07-24)*"), "line 1: .* is shaped like an entry heading for D-7 .* at level 1"),
     ],
 )
 def test_import_is_all_or_nothing(eng, edit, match, tmp_path_factory):
@@ -724,6 +729,13 @@ def test_import_is_all_or_nothing(eng, edit, match, tmp_path_factory):
     with pytest.raises(Refusal, match=match):
         e.import_log(path, **W)
     assert not (fresh / "decisions").exists() and not (fresh / "ops.jsonl").exists()
+
+
+def test_an_entry_shaped_heading_in_a_fence_or_comment_or_without_an_attribution_is_text(eng):
+    text = LOG.replace("#### a sub-heading inside an entry", "#### D-7 is a sub-heading with no attribution\n\n```md\n#### D-8 -- in a fence *(owner, 2026-07-24)*\n```\n\n<!--\n## D-9 -- in a comment *(owner, 2026-07-24)*\n-->")
+    eng.import_log(write_log(eng, text), **W)  # CE-100: none of these is shaped like an entry outside a fence or comment
+    body = okf.canonical(eng.store.get("D-3").doc.body)
+    assert "#### D-7 is a sub-heading" in body and "#### D-8 -- in a fence" in body and "## D-9 -- in a comment" in body
 
 
 @pytest.mark.criterion("AC-42")
