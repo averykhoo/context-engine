@@ -7,9 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-22a · kind: open
+## 2026-10-22a · kind: close
 
-- **opened:** 2026-10-22T08:24:07+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-43 (closed); DEC-34 (amended); CE-44 (comment)
+- **receipts:**
+  - guards: no code changed; gate not run (records only, engine commits)
+  - read: orient, CE-43, CE-44, DEC-34; audio-workspace git state via a sonnet agent
+- **summary** (the owner digest):
+  - CE-43 closed: audio-workspace pushed 2026-10-22 07:16 +0800 (origin/main a139fde5), cutover
+    commits on origin, no demo-hold notice left.
+  - DEC-34 amended with owner words: every ask records context, options and a reasoned
+    recommendation, unless too costly or genuinely a human judgement; CE-44 widened to match.
+  - NOW is empty (G-W5): owner to pick from NEXT; recommended CE-79 (adhoc follow-up, due
+    2026-10-21).
+- **Still owed:**
+  - audio-workspace: remove the merged, never-pushed ce-cutover worktree and branch (owner's word);
+    CI for the 2026-10-22 push not checked
+  - promote a NEXT item to NOW
 - **start head:** c46ef6a608dabc33104f3ec7e6ddba3ce0292f9e
 
 ---
