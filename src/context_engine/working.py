@@ -1860,6 +1860,9 @@ class Engine:
         due = self.rerank_due()
         if due:
             sections.append(Part("Rerank due: tell the owner", "\n".join(f"- {d}" for d in due) + "\n" + RERANK_HOW, RERANK_REST, rank=1))
+        plans = self.plans_to_freeze()
+        if plans:  # CE-97
+            sections.append(Part("Plans to freeze: their items are closed", "\n".join(plans), "`context-engine lint` (G-D4)", rank=1))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
@@ -1951,6 +1954,23 @@ class Engine:
         if path is not None and path.is_file() and (last := G.last_rerank(path.read_text(encoding="utf-8"))):
             line += f" (last rerank: {last})"
         return [line]
+
+    def plans_to_freeze(self) -> list[str]:
+        """Each ACTIVE-PLAN doc G-D4 reads whose named board items are all closed, with how to
+        freeze it (CE-97): `task close` refuses to close a plan's last item, but a close by hand
+        or before CE-27 leaves the plan unfrozen, and lint says so only when the gate runs; orient
+        says it at session start. Off with G-D4.
+
+        Not checked: a plan that names no board item at all (G-D4 reports it)."""
+        if "G-D4" in self.store.config.guards.off:
+            return []
+        given, _ = G.given(self)
+        out = []
+        for rel, named in G.active_plans(self):
+            if named and not any(named.values()):
+                how = f"set its `[guards] liveness_given` entry ({given[rel][1]}) to FROZEN in {CONFIG_NAME}" if rel in given else f"`context-engine doc freeze {rel}`"
+                out.append(f"- {rel}: ACTIVE-PLAN, but {_one(sorted(named, key=key_order))} {'is' if len(named) == 1 else 'are all'} closed; freeze it: {how}")
+        return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
         """The open batons and pauses, ``session``'s own first, then pauses (work in flight, on a

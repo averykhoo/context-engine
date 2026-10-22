@@ -149,6 +149,31 @@ def test_close_refuses_the_last_open_item_an_active_plan_names_until_it_is_froze
     off.close(v.id, "done", **W)
 
 
+@pytest.mark.criterion("AC-90")
+def test_orient_names_an_active_plan_whose_items_were_all_closed_outside_the_engine(tmp_path):
+    """CE-97: a close by hand skips `task close`'s plan check; orient says so at session start."""
+    heading = "## Plans to freeze: their items are closed\n"
+    e = target(tmp_path, {**DOCS, "guards": {**DOCS["guards"], "liveness_given": {"docs/given.md": "ACTIVE-PLAN"}}})
+    t, u = e.new("task", "build it", **W), e.new("task", "and this", **W)
+    write(tmp_path, PLAN, f"# Plan\n\nACTIVE-PLAN for {t.id} and {u.id}.\n")
+    write(tmp_path, "docs/given.md", f"# Given\n\nKept by another tool while {t.id} is open.\n")
+    assert heading not in e.orient(KEY)
+    p = t.path
+    p.write_text(p.read_text(encoding="utf-8").replace("state: open", "state: closed\nstatus: deprecated"), encoding="utf-8")  # closed by hand
+    section = e.orient(KEY).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert section.splitlines() == [
+        f"- docs/given.md: ACTIVE-PLAN, but {t.id} is closed; freeze it: set its `[guards] liveness_given` entry (docs/given.md) to FROZEN in context.toml"], section
+    p = u.path
+    p.write_text(p.read_text(encoding="utf-8").replace("state: open", "state: closed\nstatus: deprecated"), encoding="utf-8")
+    section = e.orient(KEY).split(heading, 1)[1].split("\n## ", 1)[0]
+    assert f"- {PLAN}: ACTIVE-PLAN, but {t.id}, {u.id} are all closed; freeze it: `context-engine doc freeze {PLAN}`" in section.splitlines(), section
+    e.doc_freeze(PLAN, **W)
+    assert PLAN not in e.orient(KEY)
+    off = target(tmp_path / "off", {**DOCS, "guards": {**DOCS["guards"], "off": ["G-D9", "G-D4"], "liveness_given": {"docs/given.md": "ACTIVE-PLAN"}}})
+    write(tmp_path / "off", "docs/given.md", "# Given\n\nKept by another tool while CE-9 is open.\n")
+    assert heading not in off.orient(KEY)
+
+
 @pytest.mark.criterion("AC-82")
 def test_ask_answer_refuses_the_last_open_item_an_active_plan_names_until_it_is_frozen(tmp_path):
     """CE-95 (1): an answer closes its question, so it checks the plans as task close does."""
