@@ -69,6 +69,10 @@ def build() -> argparse.ArgumentParser:
     c.add_argument("--read", required=True, help="receipt: what was read to start work")
     c.add_argument("--asked", default="", help="receipt: the owner questions raised in chat; must name each one at NOW or NEXT (default: those `ask raised` recorded)")
     c.add_argument("--owed", action="append", default=[], help="one thing still owed (an answer, a check, a push); repeat for each (default: nothing)")
+    ab = _sub(s, "abandon", "mark another session's stale open stub abandoned, with a baton for what it left in flight (housekeeping: --stale)")
+    ab.add_argument("key", nargs="?", default="", help="the stub's session key, as orient lists it")
+    ab.add_argument("--stale", action="store_true", help="every other stub with 3 or more closes or pauses since its last activity")
+    ab.add_argument("--force", action="store_true", help="abandon a stub short of that window, on the owner's word")
     p = _sub(s, "pause", "pause: write a pause entry over this session's stub instead of a clean close")
     p.add_argument("--rows", required=True, help="the items this session touched")
     p.add_argument("--deferred", required=True, help="the steps skipped (the gate, the commit, ...)")
@@ -272,6 +276,7 @@ CLI_OPS = {
     ("session", "start"): "session_start",
     ("session", "close"): "session_close",
     ("session", "pause"): "session_pause",
+    ("session", "abandon"): "session_abandon",
     ("orient", None): "orient",
     ("routes", None): "routes",
     ("lint", None): "lint",

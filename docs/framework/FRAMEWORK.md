@@ -907,7 +907,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    - **a hand-off:** a baton (`baton.add`) or a pause (`pause.open`), which the next session
      must find whatever happens to this one;
    - **the session's end:** `session.close` or `session.pause`, and `banner.set`, which a
-     clean close writes after its ledger entry (§6.3), so nothing of the close is left uncommitted.
+     clean close writes after its ledger entry (§6.3), so nothing of the close is left uncommitted;
+     and another session's end, `session.abandon` (§7.1).
 
    Every other write (a task's new, set, comment, touch, section, dep, promote and reopen; a
    question's new, raised and later; baton done, pause resume; decision set, link, relink and
@@ -1689,10 +1690,12 @@ cite for each item.
 
 - **One entry per session, without exception:** `kind: open` (the stub `session.start` writes,
   §5.5), then `close` or `pause`; `abandoned` for a stub that housekeeping found was never closed; and
-  `foreign` for reconciled human commits (§6.10), which the session writes by hand from the runbook. *Not built
-  yet (CE-6): housekeeping does not write `abandoned`; until it does, a stale stub is marked by
-  hand (the runbook's housekeeping step).*
-- **Written by the engine:** `session.start`, `session.close`, `session.pause`. The receipts
+  `foreign` for reconciled human commits (§6.10), which the session writes by hand from the runbook.
+  `session.abandon` writes `abandoned` (CE-124): start-of-session housekeeping runs it, as
+  `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
+  its last activity (the owner's window), and files a baton for the op lines it left
+  uncommitted; a stub short of the window is abandoned only on the owner's word (`--force`).
+- **Written by the engine:** `session.start`, `session.close`, `session.pause`, `session.abandon`. The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
 - Append-only, newest first, **in its own file**, keyed by session key: **one file under the
   engine lock**, not one file per entry, until a trial shows append collisions.
@@ -1914,7 +1917,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 
 | Group | Tools |
 |---|---|
-| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)` |
+| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1) |
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
@@ -2117,8 +2120,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
   from the stub's last activity (an owner judgement); the trial measures it (§8.0.3) and gives it
-  provenance (G-D9). *Not built yet (CE-6): until then a stale stub is marked
-  `abandoned` by hand (the runbook's housekeeping step).*
+  provenance (G-D9). *The guard is not built yet (CE-6); `session abandon --stale` (CE-124) is
+  what housekeeping runs to keep it green.*
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.

@@ -126,6 +126,12 @@ def session_pause(e: Engine, c: Caller, rows: str, deferred: str) -> tuple[int, 
     return 0, e.session_pause(c.session, actor=c.actor, rows=rows, deferred=deferred)
 
 
+@op(write=True)
+def session_abandon(e: Engine, c: Caller, key: str = "", force: bool = False, stale: bool = False) -> tuple[int, str]:
+    """Mark another session's stale `kind: open` stub `kind: abandoned`, keep its lines, add the `abandoned:` line and file a baton for what it left uncommitted. `stale`: every stub with 3 or more closes or pauses since its last activity (start-of-session housekeeping; list what it did in the close digest). A single `key` short of that is refused unless `force`, on the owner's word; the session's own key always is."""
+    return 0, e.session_abandon(key, session=c.session, actor=c.actor, force=force, stale=stale)
+
+
 # -- reads ------------------------------------------------------------------------------
 
 

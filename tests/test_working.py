@@ -1372,3 +1372,84 @@ def test_a_value_of_the_wrong_declared_type_is_refused(eng):
         eng.store.set(rec.id, {"created": "2026-10-08"}, **kw(key))  # a quoted string, not a date
     with pytest.raises(Refusal, match="not a key"):
         eng.store.set(rec.id, {"moved": "yesterday"}, **kw(key))
+
+
+# -- abandoning a stale stub (CE-124, DEC-69 amending DEC-29) ------------------------------------
+
+
+def _closes(eng, n):
+    """``n`` sessions that open and close cleanly, after whatever came before."""
+    for _ in range(n):
+        k = started(eng)
+        eng.session_close(k, actor=ACTOR, rows="none", summary=["nothing"], receipts=receipts())
+
+
+@pytest.mark.criterion("AC-52")
+def test_session_abandon_marks_a_stale_stub_and_files_a_baton_for_what_it_left(eng):
+    dead = started(eng)
+    task(eng, dead, "Half done")  # its uncommitted write: what it left in flight
+    _closes(eng, 3)
+    me = started(eng)
+    assert [k for k, *_ in eng.stale_stubs(me)] == [dead]
+    out = eng.session_abandon(stale=True, **kw(me))
+    assert out.startswith(f"{dead}: abandoned (3 closes or pauses since its last activity") and "BTN-1 filed" in out, out
+    entry = eng.read_ledger().get(dead)
+    assert entry.kind == "abandoned" and f"## {dead} · kind: abandoned" in entry.text
+    assert entry.field("opened") and entry.field("abandoned").startswith(f"{me}: never closed or paused")  # its lines kept
+    baton = next(eng.store.records("baton"))
+    assert baton.doc.get("session") == me and f"Settle what {dead} left in flight: 1 uncommitted op line naming tasks/CE-1-" in baton.doc.body, baton.doc.body
+    assert eng.session_abandon(stale=True, **kw(me)).startswith("no stale stubs")
+    section = eng.orient(me).split("## Other open sessions: show the owner, one line each\n", 1)[1].split("\n## ", 1)[0]
+    assert dead not in section
+
+
+def test_a_stub_short_of_the_window_or_ones_own_is_refused(eng):
+    live = started(eng)
+    _closes(eng, 2)
+    me = started(eng)
+    with pytest.raises(Refusal, match=rf"{live} is not stale: .* 2 closes or pauses came after \(the window is 3"):
+        eng.session_abandon(live, **kw(me))
+    with pytest.raises(Refusal, match="this session's own key"):
+        eng.session_abandon(me, force=True, **kw(me))
+    assert eng.session_abandon(stale=True, **kw(me)).startswith("no stale stubs")
+    out = eng.session_abandon(live, force=True, **kw(me))  # the owner's word
+    assert out.startswith(f"{live}: abandoned") and "nothing uncommitted" in out, out
+    assert "on the owner's word" in eng.read_ledger().get(live).field("abandoned")
+    with pytest.raises(Refusal, match="has no open stub"):
+        eng.session_abandon(live, force=True, **kw(me))
+
+
+def test_activity_resets_the_window(eng):
+    """DEC-29: a live session resets the count by doing anything."""
+    busy = started(eng)
+    _closes(eng, 2)
+    task(eng, busy, "Still working")  # newer than both closes
+    _closes(eng, 2)
+    me = started(eng)
+    assert eng.stale_stubs(me) == []
+    _closes(eng, 1)
+    assert [k for k, *_ in eng.stale_stubs(me)] == [busy]
+
+
+def test_a_commit_newer_than_the_closes_resets_the_window(eng, monkeypatch):
+    """A session whose newest activity is a commit (no op line) is live since that commit."""
+    quiet = started(eng)
+    _closes(eng, 3)
+    me = started(eng)
+    assert [k for k, *_ in eng.stale_stubs(me)] == [quiet]
+    monkeypatch.setattr(eng, "last_active", lambda keys: {k: ("2031-01-01T00:00:00+08:00", "commit abc1234") for k in keys})
+    assert eng.stale_stubs(me) == []
+
+
+def test_a_stub_with_no_op_line_counts_from_when_it_opened(eng):
+    """A stub written by hand without its op line is not stale for closes that came before it."""
+    _closes(eng, 3)
+    me = started(eng)
+    path = eng.root / "ledger.md"
+    led = L.parse_ledger(path.read_text(encoding="utf-8"))
+    led.entries.insert(0, L.Entry("2026-10-09a", "open", L.render_open("2026-10-09a", "2031-01-01T00:00:00+08:00", ACTOR)))
+    path.write_text(led.render(), encoding="utf-8")
+    assert eng.staleness(["2026-10-09a"])["2026-10-09a"][0] == 0
+    assert eng.stale_stubs(me) == []
+    with pytest.raises(Refusal, match="--force with --stale"):
+        eng.session_abandon(stale=True, force=True, **kw(me))

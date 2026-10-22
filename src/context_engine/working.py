@@ -8,8 +8,8 @@ lock and logged with the session key and the actor. Every write returns one line
 Which kinds play which part is configured in ``[working]`` of ``context.toml``; an operation
 whose part is not configured refuses and says so.
 
-Deliberately not handled here: marking a dead session's stub ``abandoned`` and its window
-(G-W11; housekeeping, CE-6), rotating the ledger, and the `hk_` operations other than baton
+Deliberately not handled here: the G-W11 guard itself (a stale stub is abandoned by
+``session_abandon``, CE-124, which housekeeping runs), rotating the ledger, and the `hk_` operations other than baton
 expiry and regenerating the decision index (CE-6).
 """
 
@@ -103,7 +103,8 @@ def _milestone(fn):
     policy its end commits its writes, with every op log line HEAD lacks and the files they
     name. Milestones are what must reach HEAD at once: a task's close, owner words (a story or
     decision recorded, amended, retired or superseded; a story confirmed; a question answered), a hand-off to the
-    next session (a baton, a pause), the session's own close or pause, and the banner, which a
+    next session (a baton, a pause), the session's own close or pause, another session's stub
+    abandoned, and the banner, which a
     clean close writes after the session's close. Every other write stays uncommitted and goes
     into the next commit."""
 
@@ -291,6 +292,120 @@ class Engine:
 
         self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD)), "session.close", check)
         return f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
+
+    def staleness(self, keys: list[str]) -> dict[str, tuple[int, str]]:
+        """For each key, how many other sessions closed or paused after its last activity, and when
+        that was (``last_active``): DEC-29's window (CE-124). The op log is read in order, so a
+        close counts only when its line comes after the key's newest line, and, when the key's
+        newest activity is a commit, only when it is no older than that commit. A live session
+        resets the count by doing anything. A stub with neither (written by hand without its op
+        line) counts from its `opened` time.
+
+        Not checked: a commit whose committer date is wrong (a skewed clock, or a rebase that
+        rewrote it) moves the floor with it."""
+        seen = self.last_active(keys)
+        want = set(keys)
+        last: dict[str, int] = {}
+        closes: list[tuple[int, str, str]] = []
+        log = self.root / self.store.config.oplog
+        lines = log.read_bytes().decode("utf-8", errors="replace").splitlines() if log.is_file() else []
+        for n, ln in enumerate(lines):
+            try:
+                o = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(o, dict):
+                continue
+            if o.get("session") in want:
+                last[str(o["session"])] = n
+            if o.get("op") in ("session.close", "session.pause"):
+                closes.append((n, str(o.get("session")), str(o.get("at") or "")))
+
+        def when(at: str) -> dt.datetime | None:
+            try:
+                t = dt.datetime.fromisoformat(at.strip())
+            except ValueError:
+                return None
+            return t if t.tzinfo else t.astimezone()
+
+        led = self.read_ledger()
+        out: dict[str, tuple[int, str]] = {}
+        for k in keys:
+            at, what = seen.get(k, ("", ""))
+            if not at and led.get(k) is not None:  # no op line and no commit: count from its stub's `opened`
+                at, what = (led.get(k).field("opened") or "").split(" by ")[0], "commit"
+            floor = when(at) if what.startswith("commit") else None
+            n = sum(1 for i, s, a in closes if i > last.get(k, -1) and s != k and (floor is None or ((w := when(a)) is not None and w >= floor)))
+            out[k] = (n, at or "never")
+        return out
+
+    def stale_stubs(self, session: str | None = None) -> list[tuple[str, int, str]]:
+        """(key, closes or pauses since its last activity, that time) for every other session's
+        open stub past DEC-29's window (``ABANDON_AFTER``)."""
+        others = [e.key for e in self.read_ledger().entries if e.kind == "open" and e.key != session]
+        st = self.staleness(others)
+        return [(k, *st[k]) for k in others if k in st and st[k][0] >= ABANDON_AFTER]
+
+    @_milestone
+    def session_abandon(self, key: str = "", *, session: str, actor: str, force: bool = False, stale: bool = False) -> str:
+        """Mark another session's stale stub `kind: abandoned` (CE-124, DEC-69 amending DEC-29):
+        its lines kept, an `abandoned:` line added, and a baton filed for what it left in flight
+        (its op log lines HEAD lacks). ``stale`` does it for every stub past the window, which
+        start-of-session housekeeping runs without the owner's word: by then the stub was shown to
+        the owner at every one of those sessions. A single ``key`` short of the window is refused
+        unless ``force`` (the owner's word); the session's own key is always refused."""
+        self._check(session, actor)
+        if bool(key) == bool(stale):
+            raise Refusal("name one stub to abandon, or pass --stale for every stale one", "`session abandon <key>`, or `session abandon --stale` (housekeeping)")
+        if stale and force:
+            raise Refusal("--force with --stale", "--stale takes only stubs past the window; to abandon one short of it on the owner's word, name it: `session abandon <key> --force`")
+        if stale:
+            done = [self._abandon(k, n, last, session=session, actor=actor, forced=False) for k, n, last in self.stale_stubs(session)]
+            return "\n".join(done) if done else f"no stale stubs (none has {ABANDON_AFTER} or more closes or pauses since its last activity)"
+        if key == session:
+            raise Refusal(f"{key} is this session's own key", "close or pause this session instead (`session close`, `session pause`)")
+        entry = self.read_ledger().get(key)
+        if entry is None or entry.kind != "open":
+            raise Refusal(f"{key} has no open stub in {self.w.ledger}" + (f" (it is `kind: {entry.kind}`)" if entry else ""), "name another session's `kind: open` stub, as orient lists them")
+        n, last = self.staleness([key]).get(key, (0, "?"))
+        if n < ABANDON_AFTER and not force:
+            raise Refusal(f"{key} is not stale: it last did anything at {last}, and {n} closes or pauses came after (the window is {ABANDON_AFTER}, DEC-29)",
+                          "show it to the owner; abandon it now only on the owner's word, with --force")
+        return self._abandon(key, n, last, session=session, actor=actor, forced=n < ABANDON_AFTER)
+
+    def _abandon(self, key: str, n: int, last: str, *, session: str, actor: str, forced: bool) -> str:
+        path = self._path("ledger")
+        oplog = self.store.config.oplog
+        with self.store.batch():
+            with self.store.lock():
+                led = self.read_ledger()
+                entry = led.get(key)
+                if entry is None or entry.kind != "open":
+                    raise Refusal(f"{key} is no longer an open stub", "re-read the ledger; another session closed or abandoned it")
+                why = f"{session}: never closed or paused; last active {last}, {n} closes or pauses since" + ("; on the owner's word (--force)" if forced else "")
+                entry.text = entry.text.replace(f"## {key} · kind: open", f"## {key} · kind: abandoned", 1).rstrip("\n") + "\n" + L.bullet("abandoned", why)
+                entry.kind = "abandoned"
+                self.store.write_text(path, led.render())
+                self.store.log("session.abandon", key, path, session, actor, ["kind"])
+            head = L._git(self.root, "show", f"HEAD:./{oplog}") or ""
+            log = self.root / oplog
+            fresh = C.new_lines(log.read_bytes().decode("utf-8", errors="replace"), head) if log.is_file() else []
+            left = []
+            for ln in fresh:
+                try:
+                    o = json.loads(ln)
+                except ValueError:
+                    continue
+                if isinstance(o, dict) and o.get("session") == key and o.get("path") != self.w.ledger:  # this commit carries the ledger's
+                    left.append(str(o.get("path") or "?"))
+            baton = ""
+            if left and self.w.baton:
+                files = list(dict.fromkeys(left))
+                step = (f"Settle what {key} left in flight: {len(left)} uncommitted op line{'s' if len(left) != 1 else ''} naming "
+                        f"{', '.join(files[:5])}{' (+' + str(len(files) - 5) + ' more)' if len(files) > 5 else ''}: review them, then commit them "
+                        f"with `context-engine commit --sweep`, or undo them by hand")
+                baton = "; " + self.baton_add(step, f"session {key} was abandoned by {session} (never closed or paused)", session=session, actor=actor).split(":")[0] + " filed for what it left in flight"
+        return f"{key}: abandoned ({n} closes or pauses since its last activity, {last}){baton or '; it left nothing uncommitted'}"
 
     @_milestone
     def session_pause(self, key: str, *, actor: str, rows: str, deferred: str) -> str:
@@ -1946,6 +2061,11 @@ class Engine:
                     out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, remedy))
             out += self.lint_review()
         return out
+
+
+# DEC-29 (owner, 2026-10-13a), amended by DEC-69: a stub is stale after this many closes or pauses
+# since its last activity. Provenance: JUDGEMENT, the owner's; wrong if a live session idles that long.
+ABANDON_AFTER = 3
 
 
 class Part(NamedTuple):

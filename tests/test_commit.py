@@ -495,7 +495,7 @@ MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions
 # session's own close or pause; and the banner, which a clean close writes after the session's
 # close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
 MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "record_confirm", "decision_supersede",
-              "baton_add", "pause_open", "session_close", "session_pause", "banner_set"}
+              "baton_add", "pause_open", "session_close", "session_pause", "session_abandon", "banner_set"}
 OWNER = {"actor": "owner", "story_status": "live"}
 
 
@@ -531,7 +531,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
         assert lines() > logged, (op, "wrote nothing, so the walk cannot place it")
         if count(mrepo) != before:
             committed.add(op)
-            assert line.endswith(f"; committed {head(mrepo)}"), (op, line)
+            assert re.search(rf"; committed {head(mrepo)}( \(including op lines that \S+ left uncommitted\))?$", line), (op, line)
             left = [ln for ln in git(mrepo, "status", "--porcelain").splitlines() if ln[3:] not in ("a.py", "b.py", "log.md")]
             assert left == [], (op, "a milestone carries every write before it")
         else:
@@ -587,6 +587,10 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     w("session_start")
     w("session_pause", rows="none", deferred="everything")
+    dead = ops.Caller(actor=ACTOR)
+    run(mrepo, "session_start", dead)
+    w("session_start")
+    w("session_abandon", key=dead.session, force=True)
     (mrepo / "log.md").write_text("### DEC-91 -- Old *(owner, 2026-01-01)*\n\nwords\n", encoding="utf-8")
     w("decision_import", path="log.md")
     hand = "---\ntype: Decision\nid: DEC-90\ntitle: By hand\nactor: owner\ndecided: 2026-10-08\nsession: 2026-10-08a\ndecision_status: BUILT\n---\n\nwords\n"

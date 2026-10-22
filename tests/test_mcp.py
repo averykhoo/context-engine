@@ -26,6 +26,7 @@ CALLS = {
     "session_start": ([], {}),
     "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--owed", "o"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "owed": ["o"]}),
     "session_pause": (["--rows", "r", "--deferred", "d"], {"rows": "r", "deferred": "d"}),
+    "session_abandon": (["2026-10-01a", "--force"], {"key": "2026-10-01a", "force": True}),
     "orient": ([], {}),
     "routes": ([], {}),
     "lint": (["--working"], {"working": True}),
@@ -200,8 +201,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs)
-    assert untested == {"session_pause", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive"}
+    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs)
+    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive"}
 
 
 @pytest.mark.criterion("AC-19")
