@@ -293,6 +293,26 @@ def test_task_new_through_the_cli_takes_goals_and_refuses_none(chain):
 # -- G-T1 ----------------------------------------------------------------------------------
 
 
+@pytest.mark.criterion("AC-92")
+def test_orient_names_the_items_g_t1_counts_for_each_unspecified_story(chain):
+    """CE-48 (CE-25's review): lint prints only failures, so a passing mention that keeps G-T1
+    green shows only in orient, where the session reads it at intake."""
+    heading = "## Unspecified stories and the items G-T1 counts\n"
+    story(chain, "US-3", status="unspecified")
+    story(chain, "US-4", status="unspecified")
+    task(chain, "CE-1", "Mentions US-3 in passing.")
+    task(chain, "CE-2", "Specify US-3 with the owner.")
+    task(chain, "CE-3", "Specify US-4.", state="closed")  # closed: not counted
+    task(chain, "CE-4", "Mentions US-40 and XUS-4 only.")
+    e = make(chain, {"ledger": "ledger.md", "handoff": "HANDOFF.md"})
+    section = e.orient("2026-10-13a").split(heading, 1)[1].split("\n## ", 1)[0]
+    assert section.splitlines() == [
+        "- US-3: named by CE-1, CE-2; G-T1 counts them: check one is the task to specify US-3",
+        "- US-4: no open board item names it (G-T1 is red): `task new` the work to specify it",
+    ], section
+    assert heading not in make(chain, {"ledger": "ledger.md", "handoff": "HANDOFF.md"}, stories="").orient("2026-10-13a")  # off while `stories` is unset
+
+
 @pytest.mark.criterion("AC-67")
 def test_g_t1_a_live_story_has_a_criterion_and_an_unspecified_one_a_board_item(chain):
     story(chain, "US-3")

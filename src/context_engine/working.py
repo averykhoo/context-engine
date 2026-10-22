@@ -1866,6 +1866,9 @@ class Engine:
         plans = self.plans_to_freeze()
         if plans:  # CE-97
             sections.append(Part("Plans to freeze: their items are closed", "\n".join(plans), "`context-engine lint` (G-D4)", rank=1))
+        stories = self.unspecified_stories()
+        if stories:  # CE-48
+            sections.append(Part("Unspecified stories and the items G-T1 counts", "\n".join(stories), "`context-engine lint` (G-T1)", rank=2))
 
         pending, overdue = self._pending_asks(led)
         qs = {q.id: q for q in self._questions()}
@@ -2000,6 +2003,26 @@ class Engine:
             if why:
                 where = f"{rec.doc.get('pri')}" + (", named next in the banner" if rid in named_next else "")
                 out.append(f"- {rid} ({where}) waits on {'; '.join(why)}: drop the dep, promote it, or re-rank {rid}")
+        return out
+
+    def unspecified_stories(self) -> list[str]:
+        """Each `unspecified` story with the open board items that name it, the ones G-T1 counts
+        (CE-48, from CE-25's review): lint prints only failures, so a passing mention that keeps
+        G-T1 green is visible only here, where the session reads it at intake. Off while `[guards]
+        stories` is unset.
+
+        Not checked: whether the item is the task to specify the story (the session's judgement)."""
+        if not self.store.config.guards.stories:
+            return []
+        board = [(r.id, r.path.read_bytes().decode("utf-8", errors="replace")) for r in self._open_board()]
+        out = []
+        for rid, _rel, doc in G._stories(self):
+            if doc.get("story_status") != "unspecified":
+                continue
+            pat = re.compile(rf"(?<![\w-]){re.escape(rid)}(?![\w-])")
+            by = [i for i, text in board if pat.search(text)]
+            out.append(f"- {rid}: named by {_one(by)}; G-T1 counts {'it' if len(by) == 1 else 'them'}: check one is the task to specify {rid}" if by
+                       else f"- {rid}: no open board item names it (G-T1 is red): `task new` the work to specify it")
         return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:
