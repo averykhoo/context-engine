@@ -64,7 +64,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + supersede_links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -525,6 +525,83 @@ def key_order_id(rid: str) -> tuple[str, int]:
     """An id's sort key: its series, then its number (`DEC-9` before `DEC-10`)."""
     prefix, _, num = rid.rpartition("-")
     return (prefix, int(num) if num.isdigit() else 0)
+
+
+SECTION_REF_RE = re.compile(r"(?<![\w-])(?P<id>[A-Z]+-[0-9]+)\s*§\s*(?P<rest>.+)")  # `DEC-5 § The method to try`
+QUOTED_HEAD_RE = re.compile(r"""^(?:"([^"\n]+)"|'([^'\n]+)'|“([^”\n]+)”|‘([^’\n]+)’)""")
+LOG_HEAD_RE = re.compile(r"^##\s+Log\s*$")
+
+
+def _plain(heading: str) -> str:
+    return re.sub(r"[*_`]", "", heading).strip().lower()
+
+
+def _headings(text: str) -> list[str]:
+    return [_plain(m.group(2)) for _, line in prose(text) if (m := HEADING_RE.match(line))]
+
+
+def _cites_heading(rest: str, heads: list[str]) -> bool:
+    """Whether the text after `§` names one of ``heads``: a quoted name equals one, an unquoted one
+    starts with one (where the heading ends is not marked), or its number opens one (`§ 2` for
+    `2. The components`)."""
+    q = QUOTED_HEAD_RE.match(rest.strip())
+    if q:
+        return _plain(next(g for g in q.groups() if g)) in heads
+    flat = _plain(rest)
+    num = re.match(r"\d+(?:\.\d+)*", flat)
+    return any(h and flat.startswith(h) for h in heads) or bool(num and any(re.match(rf"{re.escape(num.group())}(?:\.|\s|$)", h) for h in heads))
+
+
+def record_refs(e: Engine) -> list[Failure]:
+    """G-D3 on what a current record's body cites of other records (CE-105): every id in a
+    configured series names a record (or an alias of one), so an id cited before it was allocated, or
+    mistyped, is red; and a `<id> § <heading>` citation names a heading that record has (a quoted
+    heading exactly; an unquoted one by the heading it starts with, or by its number).
+
+    Not checked: records no longer current (`status: deprecated`: history), a task's `## Log`
+    (dated comments that quote other repos' ids), inline code, fenced code, blockquotes and
+    `*HISTORY —*` lines, frontmatter (the link fields are the operations' to check), ids of series
+    this repo does not configure, and whether a cited id is the record the writer meant (an id
+    that exists passes: entry 31's misnumbered batch needs an id reserve, which is not built)."""
+    st = e.store
+    known: dict[str, Path] = {}
+    for kind in st.config.kinds.values():
+        for path in st._files(kind):
+            rid = st._id_of(kind, path)
+            if rid:
+                known.setdefault(rid, path)
+    if not known:
+        return []
+    aliases = st.alias_map()
+    series = re.compile(rf"(?<![\w-])(?:{'|'.join(re.escape(k.prefix) for k in st.config.kinds.values())})-[0-9]+(?![\w-])")
+    heads: dict[str, list[str]] = {}
+    out: list[Failure] = []
+    for rid, path in sorted(known.items()):
+        text = _text(path)
+        if _deprecated(text):
+            continue
+        rel = st._rel(path)
+        bad: list[str] = []
+        log = False
+        for n, line in prose(text, history=True):
+            if line.startswith("## "):
+                log = bool(LOG_HEAD_RE.match(line))
+            if log:
+                continue
+            bare = SPAN_RE.sub("", line)
+            for cited in dict.fromkeys(series.findall(bare)):
+                if cited not in known and cited not in aliases:
+                    bad.append(f"line {n}: names {cited}, which is no record (cited before it was allocated, or mistyped)")
+            for m in SECTION_REF_RE.finditer(bare):
+                target = known.get(m["id"])
+                if target is None:
+                    continue  # reported above as an id that is no record
+                if m["id"] not in heads:
+                    heads[m["id"]] = _headings(_text(target))
+                if not _cites_heading(m["rest"], heads[m["id"]]):
+                    bad.append(f"line {n}: `{m['id']} § {m['rest'].strip()[:40]}` names no heading of {m['id']}")
+        out += [Failure("G-D3", rel, b, "cite the id and heading that exist (`task show` / `decision show` the record first), or drop the citation") for b in bad]
+    return out
 
 
 # -- G-T3 existence in normative text ----------------------------------------------------

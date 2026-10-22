@@ -222,6 +222,31 @@ def test_g_d3_supersedes_links_are_mirrored_never_self_and_never_a_cycle_for_bot
     assert reds(e, "G-D3") == ["decisions/DEC-1-x.md: supersedes links form a cycle: DEC-1 -> DEC-2 -> DEC-3 -> DEC-1 (each is superseded by the next)"]
 
 
+def test_g_d3_a_record_cites_only_ids_that_exist_and_headings_its_target_has(tmp_path):
+    e = linked(tmp_path)
+    write(tmp_path, "decisions/DEC-1-x.md", "---\nid: DEC-1\ntitle: x\n---\n\n## Why the detectors miss them\n\n## 2. The method to try\n\n```\n## Not a heading\n```\n")
+    aliased = "---\nid: DEC-2\ntitle: y\naliases: [D-7]\n---\n\nbody\n"
+    write(tmp_path, "decisions/DEC-2-y.md", aliased)
+    good = ["See DEC-1 § Why the detectors miss them, then the rest.", "And DEC-1 § \"2. The method to try\", and DEC-1 § 2.",
+            "DEC-2 and US-1 stand.", "`DEC-99` in code is a command, not a citation.", "> DEC-98 (history)",
+            "## Log", "", "- 2026-10-21c: adhoc's DEC-75 landed.", "## Next", "fine"]
+    write(tmp_path, "stories/US-1-s.md", "---\nid: US-1\ntitle: s\n---\n\n" + "\n".join(good) + "\n")
+    write(tmp_path, "stories/US-2-s.md", "---\nid: US-2\ntitle: s\nstatus: deprecated\n---\n\nUS-9 was never written.\n")  # history
+    assert reds(e, "G-D3") == []
+    write(tmp_path, "stories/US-1-s.md", "---\nid: US-1\ntitle: s\n---\n\n" + "\n".join([
+        "Per DEC-1 § Where this leaves the signature.", "Per DEC-1 § \"Why the detectors\".", "The voice tier (DEC-3) and US-12.",
+        "DEC-1 § Not a heading", "D-7 is DEC-2's old id.", "## Log", "- US-77 quoted from another repo."]) + "\n")
+    assert reds(e, "G-D3") == [
+        "stories/US-1-s.md: line 6: `DEC-1 § Where this leaves the signature.` names no heading of DEC-1",
+        "stories/US-1-s.md: line 7: `DEC-1 § \"Why the detectors\".` names no heading of DEC-1",
+        "stories/US-1-s.md: line 8: names DEC-3, which is no record (cited before it was allocated, or mistyped)",
+        "stories/US-1-s.md: line 8: names US-12, which is no record (cited before it was allocated, or mistyped)",
+        "stories/US-1-s.md: line 9: `DEC-1 § Not a heading` names no heading of DEC-1",
+    ]
+    [red, *_] = [f for f in e.lint() if f.guard == "G-D3"]
+    assert red.remedy.startswith("cite the id and heading that exist")
+
+
 # -- G-T3 ----------------------------------------------------------------------------------
 
 CRITERIA = """# Criteria
