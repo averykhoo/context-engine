@@ -728,3 +728,37 @@ def test_a_note_still_over_its_cap_may_shrink(tmp_path):
     (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n" + "".join(f"- fact {i}\n" for i in range(6)), encoding="utf-8")
     assert reds(e, "G-D1")
     assert _set(e, "- fact 1\n- fact 2\n- fact 3\n- fact 4").startswith("banner replaced") and reds(e, "G-D1")
+
+
+# -- the shared prose reader (CE-61, INV-61) ---------------------------------------------------
+
+
+def _lines(text: str) -> list[str]:
+    return [line for _, line in G.prose(text)]
+
+
+def test_prose_reads_frontmatter_only_when_it_is_yaml_key_lines_that_close():
+    assert _lines("---\ntitle: x\ndeps: []\n  - wrapped\n# a comment\n\n---\nbody\n") == ["body", ""]
+    # a thematic break, then prose, then another break: all of it is prose
+    assert _lines("---\nThe 23 components are listed here.\n---\nbody\n") == ["---", "The 23 components are listed here.", "---", "body", ""]
+    # a key line followed by prose is not frontmatter either, nor a block with no key line, nor one never closed
+    assert "a sentence" in _lines("---\nnote: x\na sentence\n---\n")
+    assert _lines("---\n\n---\nbody") == ["---", "", "---", "body"]
+    assert _lines("---\ntitle: x\nbody") == ["---", "title: x", "body"]
+
+
+def test_prose_a_fence_closes_only_on_its_own_marker_at_least_as_long():
+    assert _lines("```\n~~~\nhidden\n```\nshown") == ["shown"]
+    assert _lines("~~~\n```\nhidden\n~~~\nshown") == ["shown"]
+    assert _lines("````\n```\nhidden\n````\nshown") == ["shown"]
+    # a fence line with an info string does not close; an inline ``` run with a backtick after it opens nothing
+    assert _lines("```py\n```py\nhidden\n```\nshown") == ["shown"]
+    assert _lines("``` a `b` c\nshown") == ["``` a `b` c", "shown"]
+
+
+def test_a_doc_opening_with_a_thematic_break_is_still_read_by_its_guards(tmp_path):
+    e = make(tmp_path, numbers=["docs"])
+    write(tmp_path, "docs/a.md", "---\nThe 23 components.\n---\nLIVING.\n")
+    assert reds(e, "G-D5") == ["docs/a.md: line 2: `23 components` is a hand-typed count of things in the tree"]
+    write(tmp_path, "docs/a.md", "LIVING.\n\n```\n~~~\n```\nThe 23 components.\n")
+    assert reds(e, "G-D5") == ["docs/a.md: line 6: `23 components` is a hand-typed count of things in the tree"]

@@ -40,7 +40,10 @@ from .store import ALIASES, Failure, key_order
 if TYPE_CHECKING:
     from .working import Engine
 
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
+FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")  # a fence line: its marker run, then the info string (CE-61)
+# a frontmatter line (CE-61): a `key:` line, a list item, an indented continuation, a comment, or blank
+FM_KEY_RE = re.compile(r"^[A-Za-z_][\w.-]*\s*:(?:\s|$)")
+FM_LINE_RE = re.compile(r"^(?:[A-Za-z_][\w.-]*\s*:(?:\s|$)|\s*-(?:\s|$)|\s+\S|\s*#|\s*$)")
 SPAN_RE = re.compile(r"`([^`\n]+)`")
 LINK_RE = re.compile(r"!?\[[^\]\n]*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 REF_DEF_RE = re.compile(r"^\s{0,3}\[[^\]\n]+\]:\s*<?(\S+?)>?(?:\s|$)")
@@ -92,22 +95,42 @@ def docs(root: Path, paths: tuple[str, ...]) -> Iterator[tuple[str, Path | None]
             yield rel, None
 
 
+def frontmatter_end(lines: list[str]) -> int | None:
+    """The index of the `---` that closes a frontmatter block opening ``lines``, or None when
+    there is none (CE-61): the block opens on line one, closes on a later `---`, holds at least one
+    `key:` line and nothing but YAML key lines, list items, indented continuations, comments and
+    blank lines. A doc opening with a thematic break (`---`, then prose) has no frontmatter."""
+    if not lines or lines[0] != "---":
+        return None
+    end = next((j for j in range(1, len(lines)) if lines[j] == "---"), None)
+    if end is None:
+        return None
+    block = lines[1:end]
+    if not any(FM_KEY_RE.match(ln) for ln in block) or not all(FM_LINE_RE.match(ln) for ln in block):
+        return None
+    return end
+
+
 def prose(text: str, history: bool = False) -> Iterator[tuple[int, str]]:
     """(line number, line) outside fenced code and frontmatter, with inline code kept. With
-    ``history``, blockquotes and lines carrying a ``*HISTORY —*`` note are skipped too."""
+    ``history``, blockquotes and lines carrying a ``*HISTORY —*`` note are skipped too.
+
+    A fence closes only on a run of its own marker (backtick or tilde) at least as long as the one
+    that opened it, with nothing after it (CommonMark), so a `~~~` inside a backtick fence is code
+    (CE-61); frontmatter is read by ``frontmatter_end``. An unclosed fence runs to the end."""
     lines = text.split("\n")
-    i = 0
-    if lines and lines[0] == "---":
-        end = next((j for j in range(1, len(lines)) if lines[j] == "---"), None)
-        if end is not None:
-            i = end + 1
-    fence = False
+    end = frontmatter_end(lines)
+    i = 0 if end is None else end + 1
+    fence: str | None = None  # the opening marker run while inside a fence
     for n in range(i, len(lines)):
         line = lines[n]
-        if FENCE_RE.match(line):
-            fence = not fence
+        m = FENCE_RE.match(line)
+        if fence is None and m and not (m.group(1)[0] == "`" and "`" in m.group(2)):
+            fence = m.group(1)
             continue
-        if fence:
+        if fence is not None:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not m.group(2).strip():
+                fence = None
             continue
         if history and (line.lstrip().startswith(">") or HISTORY_MARK in line):
             continue
