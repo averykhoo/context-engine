@@ -1604,7 +1604,8 @@ class Engine:
         sections.append(Part("Batons and pauses: do these first", "\n".join(self.carried_lines(session)) or "none", "`context-engine baton list`", rank=0))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
-        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
+        seen = self.last_active([e.key for e in others])
+        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" + (f"; last active {seen[e.key][0]} ({seen[e.key][1]})" if e.key in seen else "") for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
 
         top = [ln for ln in self.list(pri="NOW")]
         sections.append(Part("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`", rank=1))
@@ -1638,6 +1639,53 @@ class Engine:
             sections.insert(0, Part("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`", rank=0))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
+
+    def last_active(self, keys: list[str]) -> dict[str, tuple[str, str]]:
+        """When each session in ``keys`` last did anything, and what (CE-104; adhoc AAR entry 1,
+        docs/evidence/adhoc-feedback-2026-10-21.md): the newest of its op log lines, committed or
+        not (``op <op>``), and of the commits whose ``Session:`` trailer names it (``commit
+        <sha>``), so a session that died without a close shows how long it has been quiet. Its
+        stub's own `session.start` line counts, so only a key with no line and no commit at all
+        is left out. One read of the op log and one ``git log``, bounded to commits since the
+        oldest key's day.
+
+        Not checked: work a session did outside the engine and git (an edit not yet committed,
+        a test run); a commit made without the trailer (a foreign commit, CE-101); a committer
+        clock so skewed that `git log --since` stops before an older commit."""
+        want = set(keys)
+        if not want:
+            return {}
+        best: dict[str, tuple[dt.datetime, str, str]] = {}
+
+        def note(key: str, at: str, what: str) -> None:
+            try:
+                when = dt.datetime.fromisoformat(at.strip())
+            except ValueError:
+                return
+            if when.tzinfo is None:
+                when = when.astimezone()
+            if key not in best or when > best[key][0]:
+                best[key] = (when, at.strip(), what)
+
+        log = self.root / self.store.config.oplog
+        if log.is_file():
+            for ln in log.read_bytes().decode("utf-8", errors="replace").splitlines():
+                if not any(k in ln for k in want):
+                    continue  # a cheap skip before the parse
+                try:
+                    o = json.loads(ln)
+                except ValueError:
+                    continue
+                if isinstance(o, dict) and o.get("session") in want and o.get("at"):
+                    note(str(o["session"]), str(o["at"]), f"op {o.get('op')}")
+        since = min(keys, key=key_order)[:10]
+        out = L._git(self.root, "log", f"--since={since}T00:00:00", "--format=%h%x09%cI%x09%(trailers:key=Session,valueonly,separator=%x2C)")
+        for row in (out or "").splitlines():
+            sha, at, who = (row.split("\t") + ["", ""])[:3]
+            for k in (x.strip() for x in who.split(",")):
+                if k in want:
+                    note(k, at, f"commit {sha}")
+        return {k: (at, what) for k, (_, at, what) in best.items()}
 
     def rerank_due(self) -> list[str]:
         """Why a full rerank of the board is due (procedures § Rerank; FRAMEWORK §5.2; CE-99,

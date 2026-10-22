@@ -1052,6 +1052,8 @@ letter suffix); none is renumbered.
    in chat now,** one line each (§5.3), together with any tier-2 flags from the background
    pass. **Show the owner the other open sessions too,** one line each, or say there are none:
    only the owner knows whether one is live in another window or died, and what to stop.
+   Orient gives each one's last activity (its newest op log line or `Session:`-trailered commit)
+   beside when it opened, so a dead session does not look as live as a working one (CE-104).
    The session stops or closes none of them on its own.
 4. `show` the top item, or the one the owner assigned.
 5. Read that item's `## Read first` list.

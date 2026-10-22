@@ -3,6 +3,8 @@ the banner, orient() and the working-state guards (CE-2, AC-10 to AC-17)."""
 
 import copy
 import datetime as dt
+import json
+import os
 import re
 import shlex
 import subprocess
@@ -760,6 +762,41 @@ def test_orient_tells_the_session_to_show_the_owner_every_other_open_session(eng
     section = eng.orient(alone).split(heading, 1)[1].split("\n## ", 1)[0]
     assert f"- {other}, opened " in section
     assert f"- {alone}," not in section  # not the session's own stub
+
+
+@pytest.mark.criterion("AC-52")
+def test_orient_says_when_each_other_open_session_last_did_anything(eng):
+    """CE-104 (adhoc AAR entry 1): a dead session must not look as live as a working one, so
+    each other open session's line carries its newest op log line or `Session:`-trailered
+    commit, whichever is later, not only when it opened."""
+    heading = "## Other open sessions: show the owner, one line each\n"
+    root = eng.root
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+    alone, other = started(eng), started(eng)
+
+    def line():
+        section = eng.orient(alone).split(heading, 1)[1].split("\n## ", 1)[0]
+        return next(ln for ln in section.splitlines() if ln.startswith(f"- {other},"))
+
+    assert "; last active " in line() and line().endswith("(op session.start)"), line()
+    log = root / "ops.jsonl"
+    with open(log, "a", encoding="utf-8", newline="\n") as f:  # a later write of `other`'s, by its clock
+        f.write(json.dumps({"at": "2030-01-01T23:59:00+08:00", "session": other, "actor": ACTOR, "op": "comment", "id": "CE-9", "path": "tasks/x.md", "fields": []}) + "\n")
+        f.write(json.dumps({"at": "2030-01-02T00:00:00+08:00", "session": alone, "actor": ACTOR, "op": "comment", "id": "CE-9", "path": "tasks/x.md", "fields": []}) + "\n")
+        # written after it but older: the newest instant wins, not the last line or the larger string
+        f.write(json.dumps({"at": "2030-01-01T23:59:30+09:00", "session": other, "actor": ACTOR, "op": "touch", "id": "CE-9", "path": "tasks/x.md", "fields": []}) + "\n")
+        f.write(json.dumps({"at": "2029-01-01T00:00:00", "session": other, "actor": ACTOR, "op": "touch", "id": "CE-9", "path": "tasks/x.md", "fields": []}) + "\n")  # naive: read as local
+    assert line().endswith("; last active 2030-01-01T23:59:00+08:00 (op comment)"), line()  # its own line, not alone's newer one
+    (root / "wip.txt").write_text("x\n", encoding="utf-8")
+    _git(root, "add", "wip.txt")
+    env = {**os.environ, "GIT_COMMITTER_DATE": "2031-01-01T00:00:00+08:00"}
+    subprocess.run(["git", "commit", "-q", "-m", f"by hand\n\nSession: {alone}\nSession: {other}"], cwd=root, check=True, env=env)
+    sha = _git(root, "rev-parse", "--short", "HEAD").strip()
+    assert line().endswith(f"; last active 2031-01-01T00:00:00+08:00 (commit {sha})"), line()
 
 
 @pytest.mark.criterion("AC-17")

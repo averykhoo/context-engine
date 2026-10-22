@@ -264,7 +264,10 @@ ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`
 2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, then
    pauses before batons, each pause with its resume step and branch;
 3. other sessions with an open stub in the ledger, which the session then shows the owner, one
-   line each (`procedures.md` § Session start); say `none` when there are none;
+   line each (`procedures.md` § Session start): the key, its `opened` value, and `; last active
+   <time> (<what>)`, the newest of its op log lines (`op <op>`, by its `at`) and of the commits
+   whose `Session:` trailer names it (`commit <sha>`, by committer date), so a session that died
+   without a close shows how long it has been quiet; say `none` when there are none;
 4. board items at NOW and NEXT (as `context-engine task list`);
    then, only when a re-rank is due (§ The last rerank), a `Rerank due: tell the owner` part:
    one line per reason, then where the re-rank is (`procedures.md` § Rerank);
