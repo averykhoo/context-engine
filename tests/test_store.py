@@ -264,3 +264,25 @@ def test_two_processes_writing_the_same_record_lose_nothing(repo, workers):
     assert repo.get(rec.id).doc.get("note_c") == 14
     assert repo.lint() == []
     assert len(oplog(repo)) == 1 + 45
+
+
+# -- CE-88: allocation reads ids without parsing YAML ------------------------------------
+
+
+def test_ids_in_use_reads_id_keys_from_the_frontmatter_without_parsing_yaml(repo, monkeypatch):
+    tasks = repo.root / "tasks"
+    tasks.mkdir(parents=True, exist_ok=True)
+    (tasks / "stray.md").write_text("---\ntype: Task\nid: CE-12\ntitle: misnamed\n---\n", encoding="utf-8")
+    (tasks / "quoted.md").write_text("---\ntype: Task\nid: \"CE-14\"  # a comment\ntitle: q\n---\n", encoding="utf-8")
+    (tasks / "crlf.md").write_bytes(b"---\r\ntype: Task\r\nid: 'CE-15'\r\n---\r\n")
+    (tasks / "broken.md").write_text("---\nid: CE-16\ntitle: [unclosed\n---\n", encoding="utf-8")
+    (tasks / "nested.md").write_text("---\ntype: Task\nmeta:\n  id: CE-40\n---\n", encoding="utf-8")
+    (tasks / "inbody.md").write_text("---\ntype: Task\ntitle: b\n---\nid: CE-41\n", encoding="utf-8")
+    (tasks / "nofm.md").write_text("id: CE-42\n", encoding="utf-8")
+
+    def no_yaml(*a, **k):
+        raise AssertionError("ids_in_use parsed YAML under the lock (CE-88)")
+
+    monkeypatch.setattr(okf, "_load", no_yaml)
+    kind = repo.config.kind("task")
+    assert repo.ids_in_use(kind) == {12, 14, 15, 16}

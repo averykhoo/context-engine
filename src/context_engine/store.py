@@ -120,6 +120,29 @@ def _wrong_type(want: str, value: Any) -> bool:
     return False
 
 
+_ID_LINE = re.compile(r"""^id:[ \t]*(?:"([^"]*)"|'([^']*)'|([^\s#'"][^\s#]*))[ \t]*(?:#.*)?$""")
+
+
+def head_id(path: Path) -> str | None:
+    """The value of a record's top-level `id:` key, read line by line from its frontmatter and
+    never past its closing fence, with no YAML parse (CE-88); None when it has no frontmatter,
+    no such line, a value this simple reading does not take, or cannot be read."""
+    try:
+        with open(path, "rb") as f:
+            if f.readline().rstrip(b"\r\n") != b"---":
+                return None
+            for raw in f:
+                line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+                if line == "---":
+                    return None
+                m = _ID_LINE.match(line)
+                if m:
+                    return next(g for g in m.groups() if g is not None)
+    except OSError:
+        return None
+    return None
+
+
 def _now() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -296,17 +319,17 @@ class Store:
         return out
 
     def ids_in_use(self, kind: Kind) -> set[int]:
-        """Every number in the series, open and closed, from file names and from `id:` keys (G-D2)."""
+        """Every number in the series, open and closed, from file names and from `id:` keys (G-D2).
+
+        It runs under the engine lock on every allocation, so it reads each file only up to its
+        frontmatter's top-level `id:` line and parses no YAML (CE-88: the YAML parse was 89% of
+        `new`). Lint parses every record and reports a broken or odd `id:`."""
         used = set()
         for path in self._files(kind):
             rid = self._id_of(kind, path)
             if rid:
                 used.add(int(rid.split("-")[-1]))
-            try:
-                fid = self.read(path).get("id")
-            except Refusal:
-                continue  # a broken neighbour must not block allocation; lint reports it
-            m = kind.id_re.match(str(fid)) if fid else None
+            m = kind.id_re.match(head_id(path) or "")
             if m:
                 used.add(int(m.group(1)))
         return used
