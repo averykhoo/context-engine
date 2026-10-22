@@ -4,13 +4,15 @@ id: CE-104
 title: orient shows when each open session last did anything, not only when it opened
 brief: 'A dead session must not look live in orient: show last activity per open stub'
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-22b
+updated: 2026-10-22b
+status: deprecated
+closed: 2026-10-22b
 ---
 
 orient shows when each open session last did anything, not only when it opened
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 1, docs/evidence/adhoc-feedback-2026-10-21.md) 
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-22b (claude-code/claude-opus-5-5): closed: done in 70e3450
