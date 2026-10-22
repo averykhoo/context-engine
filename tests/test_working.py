@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import subprocess
+import time
 
 import pytest
 
@@ -1427,6 +1428,7 @@ def test_orient_compares_head_with_upstream_and_flags_a_push_made_outside_a_sess
     dead, other = started(eng), started(eng)
     eng.session_abandon(dead, force=True, **kw(other))  # an abandoned stub's window ends there
     eng.session_close(other, actor=ACTOR, rows="none", summary=["abandoned one"], receipts=receipts())
+    time.sleep(1.1)  # the reflog keeps whole seconds and a window includes its close: push after the close's second
     _git(root, "push", "-q")
     assert "came while no session was open" in _section(eng.orient(None), "Upstream")
 
