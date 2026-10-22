@@ -387,9 +387,9 @@ def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> t
 
 
 @op(write=True)
-def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None) -> tuple[int, str]:
-    """Commit `paths` by path (`git commit -o`) with every op log line HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` trailer. It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
-    return 0, e.commit(paths or [], message, **c.kw)
+def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None, sweep: bool = False) -> tuple[int, str]:
+    """Commit `paths` by path (`git commit -o`) with this session's op log lines HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` trailer. Another session's lines stay uncommitted unless they name a file the commit carries, and the reply says whose and how many were left; `sweep` takes every line (for a session known dead). It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
+    return 0, e.commit(paths or [], message, sweep=sweep, **c.kw)
 
 
 # -- the scoped gate (FRAMEWORK §8.5 G-V1, CE-78) ---------------------------------------------

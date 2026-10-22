@@ -842,11 +842,13 @@ class Engine:
         self._end(rid, "baton", "done", {"done": session, "evidence": evidence.strip()}, session=session, actor=actor, op="baton.done")
         return f"{rid}: done ({evidence.strip()[:80]})"
 
-    def commit(self, paths: list[str], message: str, *, session: str, actor: str) -> str:
-        """The session's own commit (FRAMEWORK §5.5 rule 4): ``paths`` by path, with every op log
-        line HEAD lacks and the files they name, so a record is never committed without its op
-        line, nor a line without its record. Whatever the policy. It runs no gate: the session
-        runs the gate first, as before any commit."""
+    def commit(self, paths: list[str], message: str, *, session: str, actor: str, sweep: bool = False) -> str:
+        """The session's own commit (FRAMEWORK §5.5 rule 4): ``paths`` by path, with this
+        session's op log lines HEAD lacks and the files they name, so a record is never committed
+        without its op line, nor a line without its record; another session's lines stay out
+        unless they name a file the commit carries, and the reply names them (CE-125); ``sweep``
+        takes every line, for a session known dead. Whatever the policy. It runs no gate: the
+        session runs the gate first, as before any commit."""
         self._check(session, actor)
         if not message.strip():
             raise Refusal("a commit with no message", "give one (`-m` on the CLI) whose title leads with the task id (FRAMEWORK §6.10); the engine adds the `Session:` trailer")
@@ -855,15 +857,19 @@ class Engine:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
         rels = [self._commit_path(x) for x in paths]
         GATE.check_commit(self.root, self.store.config.gate, rels)  # a code path needs a green gate run on its scope (CE-78)
-        out = self.store.commit_paths(message, rels, session)
+        out = self.store.commit_paths(message, rels, session, sweep=sweep)
         if not out.sha:
-            raise Refusal(f"not committed: {out.note or 'git made no commit'}",
+            raise Refusal(f"not committed: {out.note or 'git made no commit'}",  # the note names any lines left behind
                           "fix what it names and run it again; by hand: manual-mode.md § context-engine commit")
         extra = []
         if out.carried:
             extra.append(f"including op lines that {', '.join(out.carried)} left uncommitted")
         if out.left_out:
             extra.append(f"left out as gitignored: {', '.join(out.left_out)}")
+        if out.left:
+            extra.append(C.left_behind(out.left))
+        if out.warn:
+            extra.append(f"WARNING: {out.warn}")
         n = len(out.paths)
         return f"committed {out.sha}: {n} path{'s' if n != 1 else ''}" + (f" ({'; '.join(extra)})" if extra else "")
 
@@ -901,7 +907,7 @@ class Engine:
         dirty = []
         # the pause's own commit carries the op log's uncommitted lines and the files they name,
         # so they are not left uncommitted (INV-45); the list holds what stays so
-        carried = C.pending(self.root, self.store.config.oplog)
+        carried = C.pending(self.root, self.store.config.oplog, session, self.store.derived())
         # -z: a path as it is on disk, never quoted, so it matches the carried set (CE-66)
         for path in status_paths(self._git("status", "--porcelain=v1", "-z", "--untracked-files=all")):
             if path not in carried:

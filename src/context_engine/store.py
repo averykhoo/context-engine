@@ -377,6 +377,13 @@ class Store:
 
     # -- the generated decision index (G-D6) --------------------------------------------
 
+    def derived(self) -> dict[str, tuple[str, ...]]:
+        """Each file the engine generates from records, with the directories of its sources (the
+        decision index, from the decisions): a commit that carries one carries their lines too
+        (``commit.select``, CE-125)."""
+        ik = self._index_kind()
+        return {self.config.working.decision_index: (ik.dir,)} if ik is not None else {}
+
     def _index_kind(self) -> Kind | None:
         w = self.config.working
         return self.config.kind(w.decision) if w.decision_index and w.decision else None
@@ -595,19 +602,20 @@ class Store:
             self.last_commit = commit_mod.Outcome()
             return
         try:
-            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
+            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), derived=self.derived())
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
             self._missed = self.last_commit
 
-    def commit_paths(self, text: str, paths: list[str], session: str) -> commit_mod.Outcome:
-        """The session's own commit (`context-engine commit`): ``paths`` by path, with every op
-        log line HEAD lacks and the files they name, under the lock, whatever the policy. It
-        runs no gate: the session runs it first."""
+    def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False) -> commit_mod.Outcome:
+        """The session's own commit (`context-engine commit`): ``paths`` by path, with the op
+        log lines HEAD lacks that this session's commit takes (``commit.select``; every line with
+        ``sweep``) and the files they name, under the lock, whatever the policy. It runs no gate:
+        the session runs it first."""
         with self._lock():
             try:
-                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths))
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, derived=self.derived())
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 

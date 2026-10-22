@@ -227,7 +227,8 @@ def build() -> argparse.ArgumentParser:
     di.add_argument("path", help="the single-file log, e.g. docs/decisions.md (on a branch first)")
     di.add_argument("--dry-run", action="store_true", help="write nothing; print the summary and the id map, a doc to save as evidence before the import")
 
-    co = _sub(groups, "commit", "commit the given paths, plus every op-log line not yet in HEAD and the files those lines name; runs no gate (run it first)")
+    co = _sub(groups, "commit", "commit the given paths, plus this session's op-log lines not yet in HEAD and the files those lines name (another session's stay out, and are named); runs no gate (run it first)")
+    co.add_argument("--sweep", action="store_true", help="take every uncommitted op-log line, whoever wrote it: for a session known dead")
     co.add_argument("paths", nargs="*", help="files or directories, relative to the root; none: only the op log's uncommitted lines and the files they name")
     msg = co.add_mutually_exclusive_group(required=True)
     msg.add_argument("-m", "--message", action="append", help="a paragraph of the message, as `git commit -m`; repeat for each")

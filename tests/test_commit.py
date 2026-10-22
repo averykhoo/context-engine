@@ -1,8 +1,9 @@
 """The engine commits its writes by path (FRAMEWORK §5.5 rule 4, CE-45): every op log line HEAD
-lacks, with the files those lines name, so a clean checkout of any commit passes lint on its
-own, and nothing another session staged or left untracked goes into the commit. When it commits is the
+lacks, with the files those lines name (only the committing session's lines by default, CE-125;
+`sweep` takes all), so a clean checkout of any commit passes lint on its own, and nothing
+another session staged or left untracked goes into the commit. When it commits is the
 `[engine] commit` policy (DEC-36, CE-55): at milestones by default, after every write, or only a
-pause. The session's own commits sweep the same way (`context-engine commit`).
+pause. The session's own commits take lines the same way (`context-engine commit`).
 
 The sweep's own tests run under `every-write`, where each write commits, so each pins one case;
 the policy's tests below them run under the default."""
@@ -193,23 +194,6 @@ def test_the_session_ledger_is_committed_at_start_and_close(repo):
     assert git(repo, "status", "--porcelain").strip() == ""
 
 
-def test_another_sessions_leftover_lines_ride_along_with_the_files_they_name(repo):
-    """A session whose commit never happened (an older engine, a by-hand op, a crash) leaves
-    op lines and records in the tree; the next engine commit carries them, and says whose."""
-    c = start(repo)
-    other = eng(repo, commit="off")  # the leftover: written, never committed
-    key = other.session_start(actor=ACTOR)
-    other.new("task", "Left behind", session=key, actor=ACTOR)
-    assert "tasks/" in git(repo, "status", "--porcelain")
-    run(repo, "task_new", c, title="Mine")
-    names = files_at(repo)
-    assert any(n.startswith("tasks/CE-1") for n in names) and any(n.startswith("tasks/CE-2") for n in names)
-    assert "ledger.md" in names and "ops.jsonl" in names
-    msg = git(repo, "log", "-1", "--format=%B")
-    assert f"left uncommitted by session {key}" in msg and msg.rstrip().endswith(f"Session: {c.session}")
-    assert git(repo, "status", "--porcelain").strip() == ""
-
-
 def test_the_mcp_tool_commits_as_the_cli_does(repo):
     state = ops.Caller(actor=ACTOR)
     mcp.make_tool(ops.OPS["session_start"], repo, state)()
@@ -322,10 +306,10 @@ def test_a_detached_head_skips_the_commit(repo):
     assert "not committed: HEAD is detached" in run(repo, "task_new", c, title="Detached")[1]
 
 
-def _hook(repo, body: str) -> None:
+def _hook(repo, body: str, name: str = "pre-commit") -> None:
     hooks = Path(git(repo, "rev-parse", "--absolute-git-dir").strip()) / "hooks"
     hooks.mkdir(exist_ok=True)
-    path = hooks / "pre-commit"
+    path = hooks / name
     path.write_bytes(("#!/bin/sh\n" + body + "\n").encode())
     path.chmod(0o755)
 
@@ -449,9 +433,9 @@ def test_thousands_of_named_paths_fit_no_command_line(repo):
             rel = f"tasks/leftover-{n:04d}-with-a-name-long-enough-to-matter.md"
             (repo / rel).write_text("x\n", encoding="utf-8")
             f.write(json.dumps({"session": "2026-10-01a", "op": "set", "id": f"X-{n}", "path": rel, "fields": []}) + "\n")
-    _, line = run(repo, "task_new", c, title="After many")
-    assert "; committed" in line and "including op lines that 2026-10-01a left uncommitted" in line, line
-    assert len(files_at(repo)) == 702
+    _, line = run(repo, "commit", c, message="Adopt a dead session's lines", sweep=True)
+    assert line.startswith("committed ") and "including op lines that 2026-10-01a left uncommitted" in line, line
+    assert len(files_at(repo)) == 701
 
 
 def test_a_pause_that_cannot_be_committed_refuses_and_keeps_its_record(repo):
@@ -895,3 +879,163 @@ def test_a_new_repo_commits_its_kit_through_the_session_commit(tmp_path):
     _, line = run(root, "commit", c, paths=["context.toml", "CLAUDE.md", "HANDOFF.md"], message="Adopt the framework")
     assert line.startswith("committed "), line
     assert files_at(root) == ["CLAUDE.md", "HANDOFF.md", "context.toml", "ledger.md", "ops.jsonl"]
+
+
+# -- whose op lines a commit takes (CE-125) ---------------------------------------------------
+
+
+def _two(root):
+    """Session A through the ops, and B as a library engine that commits nothing on its own:
+    B's lines stay uncommitted, as a live session's between its milestones or a dead one's."""
+    a = start(root)
+    b = eng(root, commit="off")
+    key = b.session_start(actor=ACTOR)
+    rec = b.new("task", "B's half-done work", session=key, actor=ACTOR)
+    return a, b, key, rec.path.relative_to(root).as_posix()
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_commit_leaves_another_sessions_lines_out_and_names_them(repo, tmp_path):
+    """Adhoc AAR entry 22: a dead or concurrent session's op lines rode into the next session's
+    commit. Now they stay in the tree, uncommitted, and the reply says whose and how many."""
+    a, b, key, theirs = _two(repo)
+    working_before = (repo / "ops.jsonl").read_bytes()
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert line.startswith(f"committed {head(repo)}"), line
+    assert f"left uncommitted: 2 op lines of {key}" in line and "--sweep" in line, line  # its session.start and its new
+    assert theirs not in files_at(repo) and "ledger.md" not in files_at(repo)
+    at_head = git(repo, "show", "HEAD:ops.jsonl")
+    assert key not in at_head and f'"session": "{a.session}"' in at_head
+    assert (repo / "ops.jsonl").read_bytes() == working_before  # the working op log is never rewritten
+    status = git(repo, "status", "--porcelain", "--untracked-files=all").splitlines()
+    assert sorted(status) == sorted([" M ops.jsonl", " M ledger.md", f"?? {theirs}"]), status  # a.py's index entry is HEAD's: nothing staged
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(repo), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
+    # B commits its own later: nothing is left behind, so the op log goes in whole and converges
+    _, line = run(repo, "commit", ops.Caller(actor=ACTOR, session=key), message="CE-9: B's")
+    assert "left uncommitted" not in line and theirs in files_at(repo), line
+    assert git(repo, "show", "HEAD:ops.jsonl").encode() == (repo / "ops.jsonl").read_bytes()
+    assert git(repo, "status", "--porcelain").strip() == ""
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_line_of_another_session_on_a_file_the_commit_carries_goes_in_with_it(repo, tmp_path):
+    """The file holds that write, so its line must go too, or G-W7 fails on a clean checkout."""
+    a, b, key, theirs = _two(repo)
+    rid = theirs.split("/")[1].split("-")[0] + "-" + theirs.split("/")[1].split("-")[1]
+    _, line = run(repo, "task_comment", a, id=rid, text="A comments on B's item")  # A's line names B's file; it commits (every-write)
+    assert f"; committed {head(repo)}" in line and theirs in files_at(repo) and f"including op lines that {key} left uncommitted" in line, line
+    assert f"left uncommitted: 1 op line of {key}" in line, line  # its session.start, on the ledger
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(repo), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
+
+
+@pytest.mark.criterion("AC-78")
+def test_sweep_takes_every_line_as_ce_45_did(repo):
+    a, b, key, theirs = _two(repo)
+    _, line = run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)
+    assert theirs in files_at(repo) and "ledger.md" in files_at(repo) and "left uncommitted:" not in line, line
+    assert f"left uncommitted by session {key}" in git(repo, "log", "-1", "--format=%B")
+    assert git(repo, "status", "--porcelain").strip() == ""
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_commit_with_only_another_sessions_lines_and_no_path_says_so(repo):
+    a, b, key, theirs = _two(repo)
+    before = count(repo)
+    with pytest.raises(Refusal, match=rf"every uncommitted line in ops.jsonl is another session's.*2 op lines of {key}"):
+        run(repo, "commit", a, message="nothing of mine")
+    assert count(repo) == before
+
+
+def test_a_milestone_leaves_another_sessions_lines_out_too(repo):
+    """The adhoc case was an engine commit (`a24d18d`), not the session's own: the default is the same."""
+    a, b, key, theirs = _two(repo)
+    _, line = run(repo, "task_new", a, title="Mine")
+    assert f"; committed {head(repo)}" in line and f"left uncommitted: 2 op lines of {key}" in line, line
+    assert theirs not in files_at(repo)
+    at_head = git(repo, "show", "HEAD:ops.jsonl")
+    assert key not in at_head and '"op": "new", "id": "CE-2"' in at_head  # a partial op log: A's line, not B's
+
+
+def test_a_failed_partial_commit_leaves_the_index_and_the_op_log_as_they_were(repo):
+    a, b, key, theirs = _two(repo)
+    _hook(repo, 'echo "hook says no" >&2\nexit 1')
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    before = ((repo / "ops.jsonl").read_bytes(), git(repo, "status", "--porcelain"), head(repo))
+    with pytest.raises(Refusal, match=r"`git commit` failed \(hook says no\)"):
+        run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert ((repo / "ops.jsonl").read_bytes(), git(repo, "status", "--porcelain"), head(repo)) == before
+    _hook(repo, 'touch hook-ran\nexit 0')
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert "left uncommitted" in line and (repo / "hook-ran").exists(), line  # the partial commit runs hooks too
+
+
+def test_select_takes_own_lines_lines_on_carried_paths_and_unreadable_ones():
+    mine = json.dumps({"session": "2026-10-22b", "op": "new", "id": "CE-1", "path": "tasks/CE-1.md"})
+    shared = json.dumps({"session": "2026-10-22a", "op": "comment", "id": "CE-1", "path": "tasks/CE-1.md"})
+    under = json.dumps({"session": "2026-10-22a", "op": "set", "id": "CE-2", "path": "src/x.md"})
+    elsewhere = json.dumps({"session": "2026-10-22a", "op": "set", "id": "CE-3", "path": "tasks/CE-3.md"})
+    lines = [shared, mine, "not json", under, elsewhere]
+    assert C.select(lines, "2026-10-22b", given=("src",)) == ([shared, mine, "not json", under], [elsewhere])
+    assert C.select(lines, "2026-10-22b") == ([shared, mine, "not json"], [under, elsewhere])
+    assert C.select(lines, "2026-10-22b", sweep=True) == (lines, [])
+
+
+def test_a_pause_lists_another_sessions_paths_as_uncommitted(repo):
+    """Its own commit leaves another session's lines out, so the files they name stay
+    uncommitted, and the pause record says so (INV-45's list, with `pending(session)`)."""
+    a, b, key, theirs = _two(repo)
+    run(repo, "pause_open", a, in_flight="half done", resume="finish it")
+    rec = next(Engine(repo, today=lambda: TODAY).store.records("pause"))
+    assert theirs in rec.doc.get("uncommitted") and "ledger.md" in rec.doc.get("uncommitted"), rec.doc.get("uncommitted")
+    assert theirs not in files_at(repo)
+
+
+def test_a_partial_commit_in_a_root_below_the_top_of_the_work_tree(tmp_path):
+    """The partial op log's index entry is a path from the top of the work tree."""
+    top = tmp_path / "mono"
+    _write_target(top / "svc")
+    _init(top)
+    a, b, key, theirs = _two(top / "svc")
+    _, line = run(top / "svc", "task_new", a, title="Mine, in a subdirectory")
+    assert "; committed" in line and "left uncommitted" in line, line
+    names = files_at(top)
+    assert "svc/ops.jsonl" in names and "ops.jsonl" not in names and f"svc/{theirs}" not in names, names
+    assert key not in git(top, "show", "HEAD:svc/ops.jsonl")
+    assert git(top, "status", "--porcelain", "--", "ops.jsonl").strip() == ""
+
+
+def test_a_carried_decision_index_brings_every_decision_line_it_reflects(tmp_path):
+    """The index is generated from every decision on disk, so a commit carrying it carries the
+    decision lines it reflects, another session's too, or G-D6 fails at HEAD (CE-125 review)."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["decision_index"] = "decisions/index.md"
+    root = tmp_path / "r"
+    _write_target(root, cfg)
+    _init(root)
+    a = start(root)
+    for title in ("One", "Two"):
+        run(root, "record_new", a, kind="decision", title=title, body="x", fields={"actor": "owner", "decision_status": "PROVISIONAL"})
+    b = eng(root, commit="off")
+    key = b.session_start(actor=ACTOR)
+    b.decision_set("DEC-1", {"decision_status": "BUILT"}, session=key, actor=ACTOR)
+    run(root, "decision_set", a, id="DEC-2", fields={"decision_status": "BUILT"})
+    _, line = run(root, "commit", a, message="CE-1: mine")
+    assert f"including op lines that {key} left uncommitted" in line and "left uncommitted: 1 op line" in line, line  # only its session.start stays
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(root), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard in ("G-D6", "G-W7")] == []
+
+
+def test_a_partial_commit_whose_index_update_fails_says_so(repo):
+    """Committed, but a post-commit hook holds git's index lock, so the real index keeps the old
+    entries and a plain commit would undo the work: the reply warns and names the command."""
+    a, b, key, theirs = _two(repo)
+    _hook(repo, 'touch "$(git rev-parse --git-common-dir)/index.lock"\nexit 0', name="post-commit")
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert line.startswith(f"committed {head(repo)}") and "WARNING: the index was not updated" in line and "git reset -q HEAD -- ops.jsonl a.py" in line, line

@@ -6,15 +6,24 @@ never but a pause. A write that is not a milestone stays uncommitted and goes in
 commit, which carries it whole. The session's own commits go through ``commit`` too
 (``context-engine commit <paths> -m ...``), so they never split a record from its op line.
 
-A commit carries **every op log line the working tree has and HEAD lacks, every file those lines
+A commit carries **the committing session's op log lines that HEAD lacks, every file those lines
 name, and the op log itself**. So the op log at HEAD never runs ahead of, or behind, the records
-it names, and a clean checkout of any commit passes G-W7 on its own. Lines another session left
-uncommitted (they were not yet committed, its commit failed, it died, or it ran by hand or on an
-older engine) go in too, with the files they name: that is the commit its own milestone would
-have made. The message and the operation's reply both say whose they were.
+it names, and a clean checkout of any commit passes G-W7 on its own. Another session's
+uncommitted lines (it is still working, its commit failed, it died, or it ran by hand or on an
+older engine) stay out by default (CE-125, superseding CE-45's sweep for the default; adhoc AAR
+entry 22): with two live sessions on one tree, a sweep commits one session's half-done work
+under the other's name. Two kinds go in anyway: another session's line naming a file this
+commit carries (the file holds that write, so its line goes with it, or G-W7 fails at HEAD),
+and a line that does not parse (it names no session). The reply names the lines left behind,
+whose and how many; ``sweep`` takes every line, for a session known dead. When lines are left
+behind, the op log at HEAD is HEAD's own lines plus the taken ones, in working order, built in
+a temporary index; the working file is never rewritten, and once nothing is left behind a commit
+carries it whole again, so the two converge. Before the first commit every line goes in (there
+is no HEAD op log to build on). The message and the reply say whose lines went in.
 
 It runs while the engine lock is held, so no engine operation is half-written in the tree when
-it reads. It runs ``git commit --only`` on those paths, after a ``git add`` only for paths git
+it reads. With no line left behind it runs ``git commit --only`` on those paths (with lines left, a
+temporary index, below), after a ``git add`` only for paths git
 has never seen (undone if the commit fails). What another session staged on other paths stays
 staged; nothing is unstaged, reset or stashed; hooks run.
 
@@ -42,6 +51,7 @@ half-edit that breaks the frontmatter stops the commit instead (INV-42).
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import re
@@ -91,6 +101,8 @@ class Outcome:
     paths: tuple[str, ...] = field(default_factory=tuple)
     left_out: tuple[str, ...] = field(default_factory=tuple)
     carried: tuple[str, ...] = field(default_factory=tuple)
+    left: tuple[tuple[str, int], ...] = field(default_factory=tuple)  # (session, op lines) left uncommitted (CE-125)
+    warn: str = ""  # committed, but something after it failed and needs a hand step
 
     def line(self) -> str:
         """The suffix for the operation's one-line reply."""
@@ -100,10 +112,67 @@ class Outcome:
                 extra.append(f"including op lines that {', '.join(self.carried)} left uncommitted")
             if self.left_out:
                 extra.append(f"left out as gitignored: {', '.join(self.left_out)}")
+            if self.left:
+                extra.append(left_behind(self.left))
+            if self.warn:
+                extra.append(f"WARNING: {self.warn}")
             return f"; committed {self.sha}" + (f" ({'; '.join(extra)})" if extra else "")
         if self.note:
             return f"; not committed: {self.note}"
         return ""
+
+
+def left_behind(left: tuple[tuple[str, int], ...]) -> str:
+    """What a reply says of the lines a commit left out: whose, how many, and how to take them."""
+    each = ", ".join(f"{n} op line{'s' if n != 1 else ''} of {k}" for k, n in left)
+    return (f"left uncommitted: {each}, with the files they name; that session commits them, "
+            f"or once it is known dead, `context-engine commit --sweep` takes them")
+
+
+def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False,
+           derived: dict[str, tuple[str, ...]] | None = None) -> tuple[list[str], list[str]]:
+    """Split uncommitted op lines into those a commit by ``session`` takes and those it leaves
+    (CE-125): it takes its own lines; another session's line naming a path the commit carries
+    (one of its own lines' paths, a ``given`` path or a file under a given directory), since
+    that file holds the write; and a line that does not parse. With ``sweep``, every line.
+
+    ``derived`` maps a file generated from others (the decision index) to the directories of its
+    sources: when the commit carries it, it holds every source's state on disk, so every line
+    naming a file under those directories goes in too, or the file at HEAD would not be what its
+    sources there generate (G-D6). Then a line taken for its path adds no new path, so the
+    passes end."""
+    if sweep:
+        return list(lines), []
+    derived = derived or {}
+    parsed = []
+    for ln in lines:
+        try:
+            o = json.loads(ln)
+        except ValueError:
+            o = None
+        parsed.append(o if isinstance(o, dict) else None)
+
+    def own(o: dict | None) -> bool:
+        return o is None or o.get("session") == session
+
+    paths = {str(o["path"]) for o in parsed if o is not None and own(o) and o.get("path")} | set(given)
+    under = tuple(g.rstrip("/") + "/" for g in given)
+    at = [str(o.get("path") or "") if o is not None else "" for o in parsed]
+    carried = lambda p: bool(p) and (p in paths or p.startswith(under))
+    for gen, dirs in derived.items():  # a carried generated file brings its sources' lines
+        if any(own(o) or carried(p) for o, p in zip(parsed, at) if p == gen) or gen in paths:
+            under += tuple(d.rstrip("/") + "/" for d in dirs)
+            paths.add(gen)
+    taken, left = [], []
+    for ln, o, p in zip(lines, parsed, at):
+        (taken if own(o) or carried(p) else left).append(ln)
+    return taken, left
+
+
+def _whose(lines: list[str]) -> tuple[tuple[str, int], ...]:
+    """(session, count) for each session with a line in ``lines``, by key."""
+    c: Counter = Counter(str(json.loads(ln).get("session")) for ln in lines)  # select left only lines that parse
+    return tuple(sorted(c.items()))
 
 
 def _in_git_tree(root: Path) -> bool:
@@ -269,8 +338,10 @@ def _others(lines: list[dict], session: str) -> tuple[str, ...]:
 
 
 def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
-           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = ()) -> Outcome:
-    """Commit the op log's uncommitted lines with the files they name. Call it holding the lock.
+           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False,
+           derived: dict[str, tuple[str, ...]] | None = None) -> Outcome:
+    """Commit ``session``'s uncommitted op lines (``select``; with ``sweep``, every line) with
+    the files they name. Call it holding the lock.
 
     An engine commit's message is built from ``title``, ``lead``, ``body`` and ``trailers``
     (``message``). The session's own commit passes its message as ``text`` and its own
@@ -307,7 +378,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
             how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
-            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths))
+            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep, derived)
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
             left = f"; it left {lock} behind: remove it once no git command is running" if lock.exists() and lock.stat().st_mtime >= started - 1 else ""
@@ -320,9 +391,10 @@ def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
     return str(f)
 
 
-def pending(root: Path, oplog: str) -> set[str]:
+def pending(root: Path, oplog: str, session: str | None = None, derived: dict[str, tuple[str, ...]] | None = None) -> set[str]:
     """The paths, from the top of the work tree as `git status` gives them, that the next
-    commit carries: the op log and every path its lines HEAD lacks name. Empty when
+    commit carries: the op log and every path its lines HEAD lacks name (with ``session``, only
+    the lines that session's commit takes, ``select``). Empty when
     there is no git, or nothing is uncommitted. A pause reads it to leave those paths out of its
     own list of uncommitted paths, since its commit carries them (INV-45)."""
     log = root / oplog
@@ -338,6 +410,8 @@ def pending(root: Path, oplog: str) -> set[str]:
         return set()
     prefix = top.stdout.strip()
     fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head.stdout if head.returncode == 0 else "")
+    if session is not None and head.returncode == 0:
+        fresh = select(fresh, session, derived=derived)[0]
     if not fresh:
         return set()
     out = {prefix + oplog}
@@ -364,9 +438,11 @@ def _detached(git: _Git, gitdir: Path) -> bool:
 
 
 def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: Path, remedy: str, how: dict,
-            text: str | None, given: tuple[str, ...]) -> Outcome:
+            text: str | None, given: tuple[str, ...], sweep: bool = False, derived: dict[str, tuple[str, ...]] | None = None) -> Outcome:
     log = root / oplog
     fresh: list[str] = []
+    left: list[str] = []
+    head_text = ""
     if log.exists():
         head = git.run("show", f"HEAD:./{oplog}")
         head_text = head.stdout if head.returncode == 0 else ""
@@ -376,8 +452,15 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             return Outcome(note=(f"{oplog} lacks {len(lost)} line{'s' if len(lost) != 1 else ''} HEAD has, so a commit would "
                                  f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
         fresh = new_lines(working, head_text)
+        if head.returncode == 0:  # before the first commit every line goes in: no HEAD op log to build a partial one on
+            fresh, left = select(fresh, session, given, sweep, derived)
+    whose = _whose(left)
     if not fresh and not given:
-        return Outcome(note=f"nothing to commit: {oplog} has no line HEAD lacks, and no path was given") if text is not None else Outcome()
+        if text is None:
+            return Outcome(left=whose)
+        if left:
+            return Outcome(note=f"nothing to commit: every uncommitted line in {oplog} is another session's, and no path was given ({left_behind(whose)})", left=whose)
+        return Outcome(note=f"nothing to commit: {oplog} has no line HEAD lacks, and no path was given")
     ops: list[dict] = []
     for ln in fresh:
         try:
@@ -435,28 +518,71 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             under = prefix + rel + "/"
             untracked += [k[len(prefix):] for k, v in codes.items() if v == "??" and k.startswith(under)]
     untracked = list(dict.fromkeys(untracked))
-    if untracked:
-        a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
-        if a.returncode != 0:
-            return Outcome(note=f"`git add` failed ({_first_error(a)}); {remedy}")
     msg = tmp / "message"
     msg.write_bytes((session_message(text, ops, session) if text is not None else message(ops, session, **how)).encode("utf-8"))
-    try:
-        c = git.write("commit", "--only", "-F", str(msg), f"--pathspec-from-file={_pathspec(tmp, 'commit', paths)}", "--pathspec-file-nul")
-    except subprocess.TimeoutExpired:
-        _unstage(git, tmp, untracked)
-        raise
+    if left:  # another session's lines stay out: commit a partial op log from a temporary index
+        c = _commit_partial(git, tmp, prefix, oplog, head_text, fresh, paths, msg)
+        if isinstance(c, Outcome):
+            return dataclasses.replace(c, note=f"{c.note}; {remedy}", left=whose)
+    else:
+        if untracked:
+            a = git.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', untracked)}", "--pathspec-file-nul")
+            if a.returncode != 0:
+                return Outcome(note=f"`git add` failed ({_first_error(a)}); {remedy}")
+        try:
+            c = git.write("commit", "--only", "-F", str(msg), f"--pathspec-from-file={_pathspec(tmp, 'commit', paths)}", "--pathspec-file-nul")
+        except subprocess.TimeoutExpired:
+            _unstage(git, tmp, untracked)
+            raise
     if c.returncode != 0:
-        _unstage(git, tmp, untracked)
+        if not left:
+            _unstage(git, tmp, untracked)
         if any(n in c.stdout for n in NOTHING):
-            return Outcome(note="nothing to commit: no path given has a change", paths=tuple(paths))
-        return Outcome(note=f"`git commit` failed ({_first_error(c)}); {remedy}", paths=tuple(paths))
+            return Outcome(note="nothing to commit: no path given has a change", paths=tuple(paths), left=whose)
+        return Outcome(note=f"`git commit` failed ({_first_error(c)}); {remedy}", paths=tuple(paths), left=whose)
     m = SHA_RE.search(c.stdout)
     sha = m.group(1) if m else git.run("rev-parse", "--short", "HEAD").stdout.strip()
+    warn = c.stderr if c.args == "reset-failed" else ""
     if text is not None:  # the session's own commit reports what git committed, not what it was given
         shown = git.run("show", "--name-only", "-z", "--format=", "HEAD").stdout
         paths = [x.strip("\n") for x in shown.split("\0") if x.strip("\n")]
-    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session))
+    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session), left=whose, warn=warn)
+
+
+def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: str, taken: list[str], paths: list[str], msg: Path):
+    """The commit when another session's lines stay out (CE-125). In a temporary index made from
+    HEAD: ``paths`` as they are in the tree, and the op log as HEAD's lines plus ``taken``. Then
+    ``git commit`` of that index, so hooks run, and the real index's entries for those paths are
+    set to what was committed, as ``git commit --only`` leaves them. The working op log is never
+    touched, and the real index not until the commit has landed, so a failure leaves nothing to
+    undo. Returns git's commit process, or an Outcome naming the step that failed."""
+    alt = _Git(git.root)
+    alt.env = {**git.env, "GIT_INDEX_FILE": str(tmp / "index")}
+    r = alt.run("read-tree", "HEAD")
+    if r.returncode != 0:
+        return Outcome(note=f"`git read-tree HEAD` failed ({_first_error(r)})")
+    rest = [p for p in paths if p != oplog]
+    if rest:
+        a = alt.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', rest)}", "--pathspec-file-nul")
+        if a.returncode != 0:
+            return Outcome(note=f"`git add` failed ({_first_error(a)})")
+    blob = tmp / "oplog"
+    base = head_text if not head_text or head_text.endswith("\n") else head_text + "\n"
+    blob.write_bytes((base + "".join(ln + "\n" for ln in taken)).encode("utf-8"))
+    h = alt.run("hash-object", "-w", "--no-filters", str(blob))
+    if h.returncode != 0:
+        return Outcome(note=f"`git hash-object` failed ({_first_error(h)})")
+    u = alt.run("update-index", "--add", "--cacheinfo", f"100644,{h.stdout.strip()},{prefix}{oplog}")  # from the top of the work tree
+    if u.returncode != 0:
+        return Outcome(note=f"`git update-index` failed ({_first_error(u)})")
+    c = alt.write("commit", "-F", str(msg))
+    if c.returncode == 0:
+        r = git.write("reset", "-q", "HEAD", f"--pathspec-from-file={_pathspec(tmp, 'reset', [oplog, *rest])}", "--pathspec-file-nul")
+        if r.returncode != 0:  # committed, but the real index still holds the old entries: a plain commit would undo it
+            c.stderr = (f"the index was not updated ({_first_error(r)}): before any other commit, run "
+                        f"`git reset -q HEAD -- {' '.join([prefix + oplog, *(prefix + p for p in rest)])}`")
+            c.args = "reset-failed"
+    return c
 
 
 def _unstage(git: _Git, tmp: Path, untracked: list[str]) -> None:

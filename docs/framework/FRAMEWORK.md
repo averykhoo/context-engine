@@ -910,9 +910,10 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    question's new, raised and later; baton done, pause resume; decision set, link, relink and
    import; record stamp and correct; session start; housekeeping) **is still uncommitted and
    goes into the next commit**: it stays in the working tree until then. That commit is made
-   while the engine lock is held, and carries **every op log line the working tree has and HEAD
-   lacks, every file those lines name, and the op log itself**, so it takes every write still
-   uncommitted before it, this session's or another's. (`init` writes the kit's files, not records:
+   while the engine lock is held, and carries **the committing session's op log lines that HEAD
+   lacks, every file those lines name, and the op log itself**, so it takes every write of that
+   session still uncommitted before it; another session's lines stay out unless they name a
+   file it carries (below). (`init` writes the kit's files, not records:
    it logs nothing and commits nothing, and the session commits what it wrote.)
    - **Why milestones, not every write:** a commit per write grew history by a commit per board
      edit and cost every write a git process under the lock (about half a second on Windows,
@@ -926,9 +927,9 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      keeping its record: a pause left uncommitted in a shared tree can be lost to another
      session's close. The older spelling still reads: `true` is `"milestones"`, `false` is
      `"off"`.
-   - **The session's own commits take the uncommitted op lines too:** `context-engine commit
+   - **The session's own commits take its uncommitted op lines too:** `context-engine commit
      <paths> -m <message>` commits those paths by path (`git commit --only`) together with the
-     uncommitted op lines and the records they name, under the same lock, whatever the policy,
+     session's uncommitted op lines and the records they name, under the same lock, whatever the policy,
      and adds the `Session:` trailer. A plain `git commit -o` naming a record whose op line is still
      uncommitted commits the record without its line, which fails G-W7 on a clean checkout of
      that commit; `commit` never makes one. It runs no gate:
@@ -941,14 +942,30 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      passes. An op line committed without its record claims a write that the commit does not
      contain, and no guard sees it
      (G-W7 walks the records that exist), so the engine never makes one.
-   - **Why every uncommitted line, not only this operation's:** the commit is derived from the
-     op log against HEAD, not from what this process remembers. So a write that was still
-     uncommitted, or a line left by a session that died, an older engine or a by-hand write, goes
-     in with the files it names, in the next commit. That is the commit its owner's milestone
-     would have made. The message names
-     whose lines they were, and so does the operation's reply (`including op lines that <key>
-     left uncommitted`). Committing only this operation's lines would need a partial op log, whose order
-     on disk and at HEAD would then differ.
+   - **Why the session's lines, not every uncommitted line (this supersedes the earlier sweep
+     for the default; CE-125):** the commit is derived from the op log against HEAD, not from what this
+     process remembers, so every write of this session still uncommitted goes in. The earlier
+     design took every other session's lines too (CE-45), as the commit their owner's milestone would have made. With
+     two live sessions on one tree that commits one session's half-done work under the other's
+     name, and a dead session's lines went into the next session's first commit unasked (adhoc
+     AAR entry 22). So by default another session's lines stay in the tree, uncommitted, and the
+     reply names them: `left uncommitted: <n> op lines of <key>`. Two kinds go in anyway, and
+     the message and reply name whose they were (`including op lines that <key> left
+     uncommitted`): another session's line naming a file the commit carries, since that file
+     holds its write and G-W7 fails at HEAD without the line (a generated file, the decision
+     index, holds every decision's state, so carrying it carries every decision's line, or G-D6
+     fails); and a line that does not parse,
+     which names no session. `context-engine commit --sweep` takes every line, the earlier way, for a
+     session the owner or housekeeping knows is dead (it may also fit a repo run by one session
+     at a time).
+   - **The partial op log:** when lines stay out, the op log at HEAD is HEAD's own lines plus the
+     lines taken, in working order. The commit builds it in a temporary index (`GIT_INDEX_FILE`:
+     HEAD's tree, the paths as they are in the tree, that op log as a blob), runs `git commit` on
+     that index, so hooks run, then sets the real index's entries for those paths to what was
+     committed, as `git commit --only` does. The working op log is never rewritten. The order on
+     disk and at HEAD can differ while lines stay out; once none does, a commit carries the
+     working file whole and the two converge. Before the first commit every line goes in: there
+     is no op log at HEAD to build on.
    - **Why by path and under the lock:** `git commit --only` on those paths leaves what another
      session staged or left untracked exactly as it was: nothing is unstaged, reset or stashed,
      and a `git add` of a new file is taken back if the commit fails. The lock is held from an
