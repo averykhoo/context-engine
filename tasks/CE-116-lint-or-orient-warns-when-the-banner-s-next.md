@@ -4,13 +4,15 @@ id: CE-116
 title: Lint or orient warns when the banner's next task depends on a SOMEDAY task
 brief: Banner 'next' that is blocked by a SOMEDAY dependency must be flagged, not silent
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-23a
+updated: 2026-10-23a
+status: deprecated
+closed: 2026-10-23a
 ---
 
 Lint or orient warns when the banner's next task depends on a SOMEDAY task
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 28, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): closed: done in c6aeebd (sweep 2026-10-23a; verified by an independent agent, gate green on main)
