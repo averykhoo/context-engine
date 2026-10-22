@@ -64,7 +64,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + links(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -924,6 +924,39 @@ def tool_owned(e: Engine) -> list[Failure]:
             elif first is None or not re.fullmatch(KEY_RE, v) or key_order(v) >= key_order(first):
                 out.append(Failure("G-W7", rel, f"`{k}: {v}`, but no logged operation wrote it", f"restore `{k}` from git, or redo the change with the operation that owns it"))
     return out
+
+
+def op_records(e: Engine) -> list[Failure]:
+    """G-W7 on the op log's records (CE-54, INV-44): every op line that wrote a record of a
+    configured kind (its `id` in a kind's series) names, in `path`, a file that is in the tree. The
+    engine commits an op line with the files it names, but a by-hand commit can carry the op log
+    alone, and then a clean checkout holds a write whose record is not there. One failure per
+    missing path, naming its first line.
+
+    Not checked: op lines of what is not a record (the banner, the ledger, an index, the register:
+    their files are routes, G-R1's), a `doc.archive` line (it names the path it moved away from),
+    whether the file at the path is the record the line names (ids are in file names, G-D2), and a
+    record committed later than its op line (a commit's own state: `context-engine commit` takes
+    them together)."""
+    st = e.store
+    seen: dict[str, tuple[int, dict, int]] = {}
+    for n, op in _ops(e):
+        if not isinstance(op, dict) or op.get("op") == "doc.archive":
+            continue
+        rel, rid = op.get("path"), str(op.get("id") or "")
+        if not isinstance(rel, str) or not rel or not any(k.id_re.match(rid) for k in st.config.kinds.values()):
+            continue
+        if rel in seen:
+            first, line, count = seen[rel]
+            seen[rel] = (first, line, count + 1)
+        elif not (e.root / rel).is_file():
+            seen[rel] = (n, op, 1)
+    return [
+        Failure("G-W7", st.config.oplog,
+                f"line {n} ({op.get('op')} {op.get('id')}, session {op.get('session')})" + (f" and {count - 1} more name" if count > 1 else " names") + f" {rel}, which is not in the tree: the op line was committed without the record it wrote",
+                f"restore {rel} from the working copy or commit that has it and commit it by path with its op line (manual-mode.md § context-engine commit); never delete an op line")
+        for rel, (n, op, count) in seen.items()
+    ]
 
 
 # -- G-D12 framework coverage ------------------------------------------------------------

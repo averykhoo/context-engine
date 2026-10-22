@@ -283,6 +283,29 @@ def test_g_w7_session_keyed_owned_keys_match_the_op_log(tmp_path):
     assert [f.guard for f in e.lint(working=True) if f.guard == "G-W7"] == ["G-W7"]  # `lint --working` runs it
 
 
+def test_g_w7_an_op_line_whose_record_is_not_in_the_tree_is_red(tmp_path):
+    e = make(tmp_path)
+    rec = e.new("task", "a task", **W)
+    e.touch(rec.id, session=S2, actor=ACTOR)
+    other = e.new("task", "another task", **W)
+    assert reds(e, "G-W7") == []
+    rel = rec.path.relative_to(tmp_path).as_posix()
+    rec.path.unlink()  # a by-hand commit carried the op log without the record
+    assert reds(e, "G-W7") == [f"ops.jsonl: line 1 (new {rec.id}, session {S1}) and 1 more name {rel}, which is not in the tree: the op line was committed without the record it wrote"]
+    orel = other.path.relative_to(tmp_path).as_posix()
+    other.path.unlink()
+    assert f"ops.jsonl: line 3 (new {other.id}, session {S1}) names {orel}, which is not in the tree: the op line was committed without the record it wrote" in reds(e, "G-W7")
+    [red, *_] = [f for f in e.lint() if f.guard == "G-W7"]
+    assert red.remedy.startswith(f"restore {rel} from the working copy or commit") and "never delete an op line" in red.remedy
+    # what is not a record, and an archive's moved-away path, are not this check's
+    log = tmp_path / "ops.jsonl"
+    lines = [{"op": "banner.set", "id": "banner", "path": "gone.md", "session": S1},
+             {"op": "doc.archive", "id": "docs/x.md", "path": "docs/x.md", "session": S1},
+             {"op": "doc.archive", "id": "CE-9", "path": "tasks/CE-9-x.md", "session": S1}]
+    log.write_text("".join(json.dumps(op) + "\n" for op in lines), encoding="utf-8")
+    assert reds(e, "G-W7") == []
+
+
 # -- G-D12 framework coverage ----------------------------------------------------------------
 
 LETTERS = "ABCDEFGHIJKLMNOPQRSTU"  # 21 components, over the floor of 20
