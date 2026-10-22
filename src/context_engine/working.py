@@ -2224,6 +2224,30 @@ class Engine:
         block = K.kit_block(text)
         if block and block[0] == want:  # a block of another version is red above
             out += self._bootloader(rel, path, want, block[1])
+            out += self._kit_runbooks()
+        return out
+
+    def _kit_runbooks(self) -> list[Failure]:
+        """G-D0's runbook half (CE-50, closing INV-36's gap): every runbook the installed kit ships
+        (``bootstrap.FILES`` under `docs/runbooks/`) is in the repo and a `[[routes]]` entry covers
+        it (its own path, or a directory above it). `init` never edits an existing context.toml,
+        so a repo upgraded to a kit with a new runbook got neither, while its contract names it.
+        Run only for a repo with a kit block of this engine's version and at least one route.
+
+        Not checked: that the repo's copy matches the kit's (a repo may merge its own edits); a
+        repo with no `[[routes]]` at all, which has left G-R1 nothing to check either."""
+        if not self.store.config.routes:
+            return []
+        routes = [r.path.strip("/") for r in self.store.config.routes]
+        fix = "copy its `[[routes]]` entry from the engine's kit/context.toml.template into context.toml, then run `context-engine init`, which writes a missing runbook (kit README § 4, step 2)"
+        out = []
+        for dst in K.FILES.values():
+            if not dst.startswith("docs/runbooks/"):
+                continue
+            if not any(dst == r or dst.startswith(r + "/") for r in routes):
+                out.append(Failure("G-D0", CONFIG_NAME, f"no [[routes]] entry covers {dst}, a runbook the installed kit ships", fix))
+            if not (self.root / dst).is_file():
+                out.append(Failure("G-D0", dst, "does not exist, but the installed kit ships it and the contract names it", fix))
         return out
 
     def _bootloader(self, rel: str, path: Path, want: str, body: str | None) -> list[Failure]:

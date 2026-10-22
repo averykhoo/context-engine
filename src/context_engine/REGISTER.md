@@ -260,7 +260,7 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every repo the kit deploys to, since init copies the four method runbooks and the template routes them; every later session here, which reads gate.md, sabotage.md, fan-out.md and release.md as method; the owner, whose global CLAUDE.md rules (CI watcher, install trial, delegation) the runbooks distil
 - **why not eliminated:** init does not rewrite an owner's config (DEC-1, DEC-32)
-- **control:** individual: kit README § 4 upgrade step; a lint check that every runbook the kit ships is routed is the follow-up
+- **control:** collective: G-D0 (CE-50) fails, in a repo with this engine's kit block, each runbook the installed kit ships that is missing from the repo or that no route covers; individual: kit README § 4 upgrade step, which merges a runbook the repo edited
 - **from:** CE-26, session 2026-10-13c
 
 ## INV-37: a repo's own file under a method runbook's name takes the framework runbook's place (init skips it, it gains the route's caps and the contract's pointer)

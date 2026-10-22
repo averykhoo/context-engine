@@ -771,6 +771,35 @@ def test_orient_asks_for_the_charter_and_criteria_while_they_are_the_kits_templa
     assert _cli(tmp_path, "lint") == "lint: clean"  # orient's to ask, not lint's to fail
 
 
+@pytest.mark.criterion("AC-97")
+def test_g_d0_fails_a_kit_runbook_that_is_missing_or_unrouted(tmp_path):
+    """CE-50 (INV-36): init never edits an existing context.toml, so a repo upgraded to a kit with
+    a new runbook got no route and no copy while its contract named it, and lint stayed clean."""
+    from context_engine.cli import run
+
+    def lint() -> list[str]:
+        return [ln.split(". Remedy:")[0] for ln in run(["--root", str(tmp_path), "lint"])[1].splitlines() if ln.startswith("G-D0")]
+
+    B.init(tmp_path)
+    _fill_gate(tmp_path)
+    assert lint() == []
+    (tmp_path / "docs/runbooks/release.md").unlink()
+    assert lint() == ["G-D0 docs/runbooks/release.md: does not exist, but the installed kit ships it and the contract names it"], lint()
+    cfg = tmp_path / "context.toml"
+    chunks = cfg.read_text(encoding="utf-8").split("\n[[routes]]")
+    kept = [c for c in chunks if 'path = "docs/runbooks/release.md"' not in c and 'path = "docs/runbooks"\n' not in c]
+    assert len(kept) == len(chunks) - 2
+    cfg.write_text("\n[[routes]]".join(kept), encoding="utf-8")
+    assert "G-D0 context.toml: no [[routes]] entry covers docs/runbooks/release.md, a runbook the installed kit ships" in lint(), lint()
+    # the directory's route covered manual-mode and procedures too; the method runbooks keep their own
+    assert sorted(f.split("covers ")[1].split(",")[0] for f in lint() if "covers" in f) == [
+        "docs/runbooks/manual-mode.md", "docs/runbooks/procedures.md", "docs/runbooks/release.md"], lint()
+    assert run(["--root", str(tmp_path), "lint"])[1].count("kit README § 4, step 2") == 4
+    contract = tmp_path / "CLAUDE.md"  # a contract with no kit block (like the engine repo's own): not checked
+    contract.write_text(f"# contract\n\nframework: {B.BEGIN.split()[3]}\n", encoding="utf-8")
+    assert [f for f in lint() if "runbook" in f] == []
+
+
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
     assert _cli(tmp_path, "init").startswith("init: created 23")
