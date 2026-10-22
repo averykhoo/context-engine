@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-21b
-updated: 2026-10-21b
+updated: 2026-10-23a
 ---
 
 Lint cited record headings and ids; a way to reserve ids before a batch of linked tasks
@@ -24,3 +24,5 @@ What went wrong (adhoc AAR entry 2 and 31, docs/evidence/adhoc-feedback-2026-10-
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): Lint half landed 20b9c03 (G-D3 record_refs). Id-reserve / batch task new op not built: needs kit runbook steps, held by the kit freeze until the adhoc re-pin commits.

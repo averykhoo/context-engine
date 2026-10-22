@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-21b
-updated: 2026-10-21b
+updated: 2026-10-23a
 ---
 
 Refuse literal DEC-<NEW> placeholders in committed records: id reserve op or lint
@@ -24,3 +24,5 @@ What went wrong (adhoc AAR entry 32, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): Lint half landed 537be65 (G-D2 placeholders). Reserve op shares CE-105's design; held by the kit freeze.

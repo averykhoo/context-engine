@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-21b
-updated: 2026-10-21b
+updated: 2026-10-23a
 ---
 
 A guards receipt without a gate pass count is refused
@@ -24,3 +24,5 @@ What went wrong (adhoc AAR entry 36, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): Built and sabotaged in sweep 2026-10-23a, not committed: needs gate_receipt in kit/context.toml.template (frozen). Plan: template key, config.py Working.gate_receipt with re.compile, refusal in session_close; this repo's value '(?i)\d+ passed|passed \d+|gate not run|gate status'.

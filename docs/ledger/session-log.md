@@ -7,9 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-23a · kind: open
+## 2026-10-23a · kind: close
 
-- **opened:** 2026-10-23T02:31:42+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-48, CE-50, CE-54, CE-57, CE-59, CE-61, CE-71, CE-80, CE-88, CE-95, CE-97, CE-100,
+  CE-101, CE-103, CE-114, CE-115, CE-116, CE-121, CE-122, CE-127, CE-128, CE-129, CE-130, CE-131
+  (closed); CE-105, CE-119 (partial, lint half); CE-123 (blocked, kit freeze); CE-126 (owner design
+  call); CE-133 (new)
+- **receipts:**
+  - guards: context-engine gate run on main at 22f489a: 1067 passed in 283.14s (2026-10-23);
+    per-lane landing gates green
+  - read: orient; task list; task show for each swept task; workflow reports
+- **summary** (the owner digest):
+  - Ultracode sweep of unblocked board items: 24 tasks closed; gate green on main, 1067 passed
+    (2026-10-23).
+  - Partial, lint halves only: CE-105, CE-119 (id-reserve op held by the kit freeze). CE-123 needs a
+    kit template key, not committed.
+  - CE-126 left for the owner: design call on per-subagent session keys. New CE-133 (taken_lines
+    with no op log at HEAD).
+  - PROVISIONAL agent calls: CE-122 warns, not normalises; CE-131 claimed = updated/moved names the
+    session; CE-80 flags in dry run; CE-59 store-wide put-back; CE-88 line scan.
+  - AAR: worktree builders' gates were partly false greens (subprocess tests ran the main tree's
+    editable install); trust only gates run on main. CRLF slipped into one worktree commit.
+- **Still owed:**
+  - Owner: confirm the kit freeze holds until the adhoc re-pin commits (recommended yes)
+  - Owner: push approval; local commits unpushed; run tools/linux_gate.py first
 - **start head:** 11df45d003216676fd8a9a90acf1a103bcebc57d
 
 ---
