@@ -1078,9 +1078,24 @@ class Engine:
         with lint red). A failure on any other path is not this commit's, and lint in the gate
         still reports it. Read without the lock: a write landing meanwhile is checked by the next
         commit, or the gate."""
-        carried = C.carried_paths(self.root, self.store.config.oplog, session, tuple(rels), sweep, self.store.derived())
+        oplog = self.store.config.oplog
+        carried = C.carried_paths(self.root, oplog, session, tuple(rels), sweep, self.store.derived())
         dirs = tuple(r.rstrip("/") + "/" for r in rels)
         bad = [f for f in self.lint() if f.path in carried or f.path.startswith(dirs)]
+        if any(_unparseable_oplog(f, oplog) for f in bad):
+            # G-W7's parse failure is for the working op log; the commit leaves out another
+            # session's broken line, so refuse only for one it would take, and name it (CE-128)
+            taken = C.unparseable(C.taken_lines(self.root, oplog, session, tuple(rels), sweep, self.store.derived()))
+            named = []
+            if taken:
+                lines = (self.root / oplog).read_bytes().decode("utf-8", errors="replace").splitlines()
+                n = next((i for i, ln in enumerate(lines, 1) if ln.strip() == taken[0].strip()), 0)
+                k = len(taken)
+                named = [Failure("G-W7", oplog,
+                                 f"{k} op line{'s' if k != 1 else ''} this commit would take {'do' if k != 1 else 'does'} not parse as JSON "
+                                 f"(line {n}: {taken[0].strip()[:120]})",
+                                 "repair the line by hand, or redo the operation that wrote it and delete the line; the op log is written only by the engine")]
+            bad = named + [f for f in bad if not _unparseable_oplog(f, oplog)]
         if bad:
             f = bad[0]
             more = f" (and {len(bad) - 1} more: `context-engine lint`)" if len(bad) > 1 else ""
@@ -2366,6 +2381,11 @@ class Part(NamedTuple):
 
 
 TOML_STRING_RE = re.compile(r'"((?:[^"\\]|\\.)*)"|\'([^\']*)\'')  # a basic or a literal TOML string
+
+
+def _unparseable_oplog(f: Failure, oplog: str) -> bool:
+    """``f`` is G-W7's failure for op log lines that do not parse (guards.py::tool_owned)."""
+    return f.guard == "G-W7" and f.path == oplog and G.UNPARSEABLE in f.message
 
 
 def _names_path(cfg: str, rel: str) -> bool:

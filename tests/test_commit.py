@@ -1156,3 +1156,31 @@ def test_the_session_commit_lints_the_records_its_op_lines_name(mrepo):
     with pytest.raises(Refusal, match=rf"lint fails on what this commit carries: G-W7 {re.escape(rec.relative_to(mrepo).as_posix())}"):
         run(mrepo, "commit", c, message="Board: file CE-1")
     assert count(mrepo) == before
+
+
+@pytest.mark.criterion("AC-78")
+def test_the_session_commit_is_not_refused_for_another_sessions_unparseable_op_line(mrepo):
+    """CE-128: another session's broken op line stays out of the commit, so the op log at HEAD
+    parses; the lint before `context-engine commit` refused on G-W7's parse failure for the
+    working op log all the same. Now it refuses only for a broken line the commit would take,
+    and names it."""
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Mine")
+    run(mrepo, "commit", c, message="Board: file CE-1")  # the op log is at HEAD
+    run(mrepo, "task_new", c, title="Mine too")
+    broken = '{"at": "2026-10-07T10:00:00+08:00", "session": "2026-10-07z", "op": "new", "id": "CE-40", "pa'
+    log = mrepo / "ops.jsonl"
+    with open(log, "a", encoding="utf-8", newline="\n") as f:
+        f.write(broken + "\n")
+    assert any(f.guard == "G-W7" and "do not parse as JSON" in f.message for f in eng(mrepo).lint())  # lint in the gate still reports it
+    _, line = run(mrepo, "commit", c, message="Board: file CE-2")
+    assert line.startswith(f"committed {head(mrepo)}") and "left uncommitted: 1 op line of 2026-10-07z" in line, line
+    assert broken not in git(mrepo, "show", "HEAD:ops.jsonl") and broken in log.read_text(encoding="utf-8")
+    run(mrepo, "task_new", c, title="Mine three")
+    mine = broken.replace("2026-10-07z", c.session)
+    with open(log, "a", encoding="utf-8", newline="\n") as f:
+        f.write(mine + "\n")
+    before = count(mrepo)
+    with pytest.raises(Refusal, match=rf"lint fails on what this commit carries: G-W7 ops\.jsonl: 1 op line this commit would take does not parse as JSON \(line \d+: [^)]*{re.escape(c.session)}"):
+        run(mrepo, "commit", c, message="Board: file CE-3")
+    assert count(mrepo) == before

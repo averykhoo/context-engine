@@ -1140,6 +1140,7 @@ def provenance(e: Engine) -> list[Failure]:
 # -- G-W7 tool-owned frontmatter ---------------------------------------------------------
 
 SESSION_OWNED = ("moved", "updated", "closed", "last_asked")
+UNPARSEABLE = "do not parse as JSON"  # G-W7's op log parse failure; working.py::_unparseable_oplog matches it
 
 
 def tool_owned(e: Engine) -> list[Failure]:
@@ -1157,7 +1158,9 @@ def tool_owned(e: Engine) -> list[Failure]:
     log_rel = e.store.config.oplog
     bad = [n for n, op in ops if not isinstance(op, dict)]
     if bad:
-        out.append(Failure("G-W7", log_rel, f"{len(bad)} lines do not parse as JSON (the first: line {bad[0]})", "restore them from git; the op log is written only by the engine"))
+        out.append(Failure("G-W7", log_rel, f"{len(bad)} lines {UNPARSEABLE} (the first: line {bad[0]})",
+                           "a line HEAD has: restore it from git; a line HEAD lacks (a write cut short, a hand edit): repair it "
+                           "by hand, or redo the operation that wrote it and delete the line; the op log is written only by the engine"))
     good = [op for _, op in ops if isinstance(op, dict)]
     first = min((str(op.get("session")) for op in good if op.get("session")), key=key_order, default=None)
     newest: dict[tuple[str, str], dict] = {}
