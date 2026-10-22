@@ -149,6 +149,34 @@ def test_close_refuses_the_last_open_item_an_active_plan_names_until_it_is_froze
     off.close(v.id, "done", **W)
 
 
+@pytest.mark.criterion("AC-82")
+def test_ask_answer_refuses_the_last_open_item_an_active_plan_names_until_it_is_frozen(tmp_path):
+    """CE-95 (1): an answer closes its question, so it checks the plans as task close does."""
+    e = target(tmp_path)
+    q = e.ask_new("Which way?", **W)
+    write(tmp_path, PLAN, f"# Plan\n\nACTIVE-PLAN until {q.id} is answered.\n")
+    before = snapshot(tmp_path)
+    with pytest.raises(Refusal) as r:
+        e.ask_answer(q.id, "this way", title="This way", **W)
+    assert r.value.message.startswith(f"{q.id} is the last open item that ACTIVE-PLAN doc {PLAN} names") and f"`doc freeze {PLAN}`" in r.value.remedy
+    assert snapshot(tmp_path) == before  # no decision written, the question still open
+    e.doc_freeze(PLAN, **W)
+    assert e.ask_answer(q.id, "this way", title="This way", **W).startswith(f"{q.id}: answered as DEC-1, closed")
+    assert reds(e) == []
+
+
+@pytest.mark.criterion("AC-82")
+def test_close_names_the_config_entry_for_a_plan_whose_liveness_config_gives(tmp_path):
+    """CE-95 (3): `doc freeze` refuses a `liveness_given` doc, so the close's remedy names the entry."""
+    e = target(tmp_path, {**DOCS, "guards": {**DOCS["guards"], "liveness_given": {"docs/given.md": "ACTIVE-PLAN"}}})
+    t = e.new("task", "build it", **W)
+    write(tmp_path, "docs/given.md", f"# Given\n\nKept by another tool while {t.id} is open.\n")
+    with pytest.raises(Refusal) as r:
+        e.close(t.id, "done", **W)
+    assert r.value.remedy.startswith(f"freeze it first: set its `[guards] liveness_given` entry (docs/given.md) to FROZEN in context.toml for docs/given.md; then close {t.id} again"), r.value.remedy
+    assert "doc freeze docs/given.md" not in r.value.remedy
+
+
 # -- doc archive ------------------------------------------------------------------------------
 
 
@@ -240,6 +268,25 @@ def test_archive_names_a_config_entry_left_pointing_at_the_old_path(tmp_path):
     out = archive(root, "docs/old.md")
     assert "; context.toml still names docs/old.md: point it at docs/archive/old.md or drop it, or lint is red (G-R1, G-D4)" in out
     assert reds(Engine(root)) == ["context.toml: [guards] liveness names docs/old.md, which does not exist"]
+
+
+@pytest.mark.criterion("AC-83")
+@pytest.mark.parametrize("spelled", ["'docs/old.md'", '"./docs/old.md"', '"docs\\\\old.md"', "'docs\\old.md'"])
+def test_archive_names_a_config_entry_however_the_old_path_is_quoted(tmp_path, spelled):
+    """CE-95 (2): single quotes, a `./` and Windows separators name the path as well."""
+    from context_engine.working import _names_path
+
+    assert _names_path(f"liveness = [{spelled}]\n", "docs/old.md")
+    assert not _names_path(f"# liveness = [{spelled}]\n", "docs/old.md")  # a comment names nothing
+    assert not _names_path('liveness = ["docs/old.mdx", "xdocs/old.md"]\n', "docs/old.md")
+    root = tmp_path / "repo"
+    target(root)
+    cfg = root / "context.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace('"liveness" = ["docs"]', f'"liveness" = ["docs", {spelled}]').replace('liveness = ["docs"]', f'liveness = ["docs", {spelled}]'), encoding="utf-8")
+    assert spelled in cfg.read_text(encoding="utf-8")
+    write(root, "docs/old.md", OLD)
+    _init(root)
+    assert "; context.toml still names docs/old.md" in archive(root, "docs/old.md")
 
 
 def test_the_redirect_table_takes_a_row_in_a_readme_written_by_hand_keeping_its_bytes():

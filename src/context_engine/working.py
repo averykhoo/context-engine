@@ -692,9 +692,11 @@ class Engine:
         left = [rel for rel, named in G.active_plans(self) if rid in named and not any(o for i, o in named.items() if i != rid)]
         if left:
             docs = ", ".join(left)
+            given, _ = G.given(self)  # CE-95: `doc freeze` refuses a doc whose liveness config gives
+            steps = [f"set its `[guards] liveness_given` entry ({given[d][1]}) to FROZEN in {CONFIG_NAME} for {d}" if d in given else f"`doc freeze {d}`" for d in left]
             raise Refusal(
                 f"{rid} is the last open item that ACTIVE-PLAN {'doc' if len(left) == 1 else 'docs'} {docs} {'names' if len(left) == 1 else 'name'}, so closing it would turn G-D4 red (FRAMEWORK §6.7: a plan freezes when its item closes)",
-                f"freeze {'it' if len(left) == 1 else 'each'} first: {'; '.join(f'`doc freeze {d}`' for d in left)}; then close {rid} again (its commit carries the freeze)",
+                f"freeze {'it' if len(left) == 1 else 'each'} first: {'; '.join(steps)}; then close {rid} again (its commit carries the freeze)",
             )
 
     def _now_left(self, was: list[str]) -> str:
@@ -993,6 +995,7 @@ class Engine:
             # decisions answer one question and hide the G-W4 failure.
             raise Refusal(f"{rid} was already answered by the owner ({_answered_by(q.doc.get('answered'))}), so it takes no second answer (FRAMEWORK §5.3)",
                           f"restore `state: closed` and `status: deprecated` from git; {self._answered_remedy(rid, q.doc.get('answered'))}")
+        self._plans_frozen(rid)  # CE-95: the answer closes the question, so a plan naming it freezes first
         fields = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
         body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
@@ -1768,7 +1771,7 @@ class Engine:
             self.store.log("doc.archive", rel, dest, session, actor, ["archived"])
             self.store.log("doc.archive", rel, table, session, actor, ["redirect"])
         cfg = (self.root / CONFIG_NAME).read_text(encoding="utf-8") if (self.root / CONFIG_NAME).exists() else ""
-        warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if f'"{rel}"' in cfg else ""
+        warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if _names_path(cfg, rel) else ""
         return f"{rel}: archived as {name} (first line ARCHIVED {today}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
 
     # -- write-time prose checks (CE-63, INV-60) --------------------------------------------
@@ -2154,6 +2157,25 @@ class Part(NamedTuple):
     body: str
     rest: str
     rank: int = 0
+
+
+TOML_STRING_RE = re.compile(r'"((?:[^"\\]|\\.)*)"|\'([^\']*)\'')  # a basic or a literal TOML string
+
+
+def _names_path(cfg: str, rel: str) -> bool:
+    """Whether a TOML string in ``cfg`` names the repo-relative path ``rel`` (CE-95): in either
+    kind of quotes, with a leading `./`, a trailing space or Windows separators. Whole-line
+    comments are skipped. Not checked: a path spelled with a TOML escape (`\\u002f`); a glob that
+    matched it (lint says if it now matches nothing); a quoted path in a trailing comment counts,
+    so the warning can be one too many."""
+    for line in cfg.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        for m in TOML_STRING_RE.finditer(line):
+            s = m.group(1).replace("\\\\", "\\") if m.group(1) is not None else m.group(2)
+            if s.strip().replace("\\", "/").removeprefix("./") == rel:
+                return True
+    return False
 
 
 def _size(s: str) -> int:
