@@ -4,13 +4,15 @@ id: CE-125
 title: context-engine commit takes only the calling session's op lines
 brief: Never sweep another session's op lines into a commit silently; name what is left behind
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-22b
+updated: 2026-10-22b
+status: deprecated
+closed: 2026-10-22b
 ---
 
 context-engine commit takes only the calling session's op lines
@@ -23,3 +25,5 @@ context-engine commit takes only the calling session's op lines
 - docs/evidence/adhoc-feedback-2026-10-21.md (entry 22)
 
 ## Log
+
+- 2026-10-22b (claude-code/claude-opus-5-5): closed: done in 86274c0
