@@ -739,6 +739,13 @@ def _cli(root: Path, *argv: str, key: str = "") -> str:
 
 
 ACTOR, KEY = "claude-code/test", "2026-10-12a"
+PLACEHOLDER = "<this repo's own test command>"
+
+
+def _fill_gate(root: Path) -> None:
+    """Kit README § 2a step 2: the repo's own test command replaces the Gate stub's placeholder."""
+    p = root / "CLAUDE.md"
+    p.write_text(p.read_text(encoding="utf-8").replace(PLACEHOLDER, "python -m pytest -q"), encoding="utf-8")
 
 
 @pytest.mark.criterion("AC-96")
