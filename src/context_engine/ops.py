@@ -110,7 +110,13 @@ def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: b
 def session_start(e: Engine, c: Caller) -> tuple[int, str]:
     """Open a framework session: mint its key and write the ledger stub. Call it first, every session."""
     c.session = e.session_start(actor=c.actor)
-    return 0, f"session {c.session} opened (stub written to {e.w.ledger}); pass --session {c.session} or set CE_SESSION={c.session}"
+    out = f"session {c.session} opened (stub written to {e.w.ledger}); pass --session {c.session} or set CE_SESSION={c.session}"
+    other = e.actor_spellings(c.actor or "")
+    if other:  # CE-122: one agent keeps one spelling, so a query for it finds all its lines
+        known = ", ".join(f"`{a}` ({n} op line{'s' if n != 1 else ''})" for a, n in other[:3])
+        out += (f"\nwarning: the op log already signs this agent as {known}, not `{c.actor}`; unless this is another model, "
+                f"set CE_ACTOR={other[0][0]} (or pass --actor) for this session's writes")
+    return 0, out
 
 
 @op(write=True)

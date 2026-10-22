@@ -73,6 +73,28 @@ DECISION_OWNED = {
 }
 
 
+def actor_model(actor: str) -> tuple[str, str] | None:
+    """An agent actor's (harness, model) in one spelling (CE-122): lowercase, `.` and `_` read as
+    `-`, a leading `claude-` dropped from the model, so `claude-code/claude-opus-5-5`,
+    `claude-code/Opus-5.5` and `claude-code/opus-5_5` are one agent. None for a `human:` or
+    `process:` actor, which is the owner's or a tool's own spelling."""
+    if actor.startswith(("human:", "process:")) or "/" not in actor:
+        return None
+    harness, model = actor.split("/", 1)
+    model = re.sub(r"[._]", "-", model.lower())
+    return harness.lower(), model.removeprefix("claude-")
+
+
+def same_agent(a: str, b: str) -> bool:
+    """Two actor spellings that name one agent (CE-122): the same harness and model in
+    ``actor_model``'s spelling, or one model a dash-prefix of the other (`opus` and `opus-5-5`,
+    a bare tier and a versioned id)."""
+    x, y = actor_model(a), actor_model(b)
+    if not x or not y or x[0] != y[0]:
+        return False
+    return x[1] == y[1] or x[1].startswith(y[1] + "-") or y[1].startswith(x[1] + "-")
+
+
 def _resolved(alias: str | None, rid: str) -> str:
     """The line that says an alias was looked up, so a reader knows which record answered."""
     return f"{alias} is an alias of {rid}\n" if alias else ""
@@ -242,6 +264,27 @@ class Engine:
             self.store.write_text(path, led.render())
             self.store.log("session.start", key, path, key, actor, ["kind"])
         return key
+
+    def actor_spellings(self, actor: str) -> list[tuple[str, int]]:
+        """The other spellings of ``actor`` the op log already signs with (``same_agent``), each
+        with its line count, most used first (CE-122; adhoc AAR entry 35: one agent signed under
+        three spellings, so a query for one missed the rest). `session start` warns with them.
+
+        Not checked: two spellings of one agent that share no model prefix (`opus` and
+        `claude-4-opus`); an agent that differs only in a suffix the other lacks is read as one."""
+        log = self.root / self.store.config.oplog
+        if actor_model(actor) is None or not log.is_file():
+            return []
+        counts: dict[str, int] = {}
+        for ln in log.read_bytes().decode("utf-8", errors="replace").splitlines():
+            try:
+                o = json.loads(ln)
+            except ValueError:
+                continue
+            a = o.get("actor") if isinstance(o, dict) else None
+            if isinstance(a, str) and a != actor:
+                counts[a] = counts.get(a, 0) + 1
+        return sorted(((a, n) for a, n in counts.items() if same_agent(a, actor)), key=lambda x: (-x[1], x[0]))
 
     def _finalise(self, key: str, actor: str, render: Callable[[L.Entry], str], op: str, check: Callable[[L.Ledger, L.Entry], None] | None = None) -> None:
         path = self._path("ledger")

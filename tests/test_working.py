@@ -1374,6 +1374,34 @@ def test_a_value_of_the_wrong_declared_type_is_refused(eng):
         eng.store.set(rec.id, {"moved": "yesterday"}, **kw(key))
 
 
+# -- one agent, one actor spelling (CE-122) -------------------------------------------------------
+
+
+@pytest.mark.criterion("AC-89")
+def test_session_start_warns_when_the_op_log_signs_this_agent_another_way(eng):
+    """Adhoc AAR entry 35: one agent signed under three spellings, so a query for one missed the
+    rest. `session start` names the spelling the op log already uses."""
+    from context_engine import ops
+    from context_engine.working import same_agent
+
+    o = ops.OPS["session_start"]
+
+    def start(actor):
+        return o.call(eng, ops.Caller(None, actor))[1]
+
+    assert "warning" not in start("claude-code/claude-opus-5-5")  # the first spelling
+    assert "warning" not in start("claude-code/claude-opus-5-5")  # the same spelling again
+    for other in ("claude-code/opus-5.5", "claude-code/Opus", "claude-code/opus_5_5"):
+        out = start(other)
+        assert "\nwarning: the op log already signs this agent as `claude-code/claude-opus-5-5` (2 op lines)" in out, out  # most used first
+        assert f"not `{other}`; unless this is another model, set CE_ACTOR=claude-code/claude-opus-5-5" in out, out
+    for unrelated in ("claude-code/claude-sonnet-5", "other-harness/claude-opus-5-5", "human:avery"):
+        assert "warning" not in start(unrelated), unrelated
+    assert same_agent("claude-code/opus", "claude-code/claude-opus-5-5") and not same_agent("claude-code/opus", "claude-code/opus2")
+    assert not same_agent("claude-code/opus-55", "claude-code/opus-5-5")
+    assert eng.actor_spellings("claude-code/opus-5.5")[0] == ("claude-code/claude-opus-5-5", 2)  # most used first
+
+
 # -- abandoning a stale stub (CE-124, DEC-69 amending DEC-29) ------------------------------------
 
 
