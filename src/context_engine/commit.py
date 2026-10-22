@@ -14,7 +14,8 @@ older engine) stay out by default (CE-125, superseding CE-45's sweep for the def
 entry 22): with two live sessions on one tree, a sweep commits one session's half-done work
 under the other's name. Two kinds go in anyway: another session's line naming a file this
 commit carries (the file holds that write, so its line goes with it, or G-W7 fails at HEAD),
-and a line that does not parse (it names no session). The reply names the lines left behind,
+and a line that does not parse unless its text names another session (``session_of``; then it
+stays out with that session's lines, CE-128). The reply names the lines left behind,
 whose and how many; ``sweep`` takes every line, for a session known dead. When lines are left
 behind, the op log at HEAD is HEAD's own lines plus the taken ones, in working order, built in
 a temporary index; the working file is never rewritten, and once nothing is left behind a commit
@@ -134,7 +135,8 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
     """Split uncommitted op lines into those a commit by ``session`` takes and those it leaves
     (CE-125): it takes its own lines; another session's line naming a path the commit carries
     (one of its own lines' paths, a ``given`` path or a file under a given directory), since
-    that file holds the write; and a line that does not parse. With ``sweep``, every line.
+    that file holds the write; and a line that does not parse, unless its text names another
+    session (``session_of``), whose line it is then (CE-128). With ``sweep``, every line.
 
     ``derived`` maps a file generated from others (the decision index) to the directories of its
     sources: when the commit carries it, it holds every source's state on disk, so every line
@@ -152,8 +154,10 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
             o = None
         parsed.append(o if isinstance(o, dict) else None)
 
-    def own(o: dict | None) -> bool:
-        return o is None or o.get("session") == session
+    keys = [o.get("session") if o is not None else session_of(ln) for ln, o in zip(lines, parsed)]
+
+    def own(o: dict | None, key: object = None) -> bool:
+        return o.get("session") == session if o is not None else key in (None, session)
 
     paths = {str(o["path"]) for o in parsed if o is not None and own(o) and o.get("path")} | set(given)
     under = tuple(g.rstrip("/") + "/" for g in given)
@@ -164,14 +168,42 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
             under += tuple(d.rstrip("/") + "/" for d in dirs)
             paths.add(gen)
     taken, left = [], []
-    for ln, o, p in zip(lines, parsed, at):
-        (taken if own(o) or carried(p) else left).append(ln)
+    for ln, o, p, k in zip(lines, parsed, at, keys):
+        (taken if own(o, k) or carried(p) else left).append(ln)
     return taken, left
 
 
+SESSION_FIELD = re.compile(r'"session"\s*:\s*"([^"\\]+)"')
+
+
+def session_of(line: str) -> str | None:
+    """The session an op log line names: its ``session`` field, read from the text when the line
+    does not parse as JSON (a write cut short, a hand edit), or None when it names none (CE-128)."""
+    try:
+        o = json.loads(line)
+    except ValueError:
+        m = SESSION_FIELD.search(line)
+        return m.group(1) if m else None
+    return str(o.get("session")) if isinstance(o, dict) and o.get("session") is not None else None
+
+
+def unparseable(lines: list[str]) -> list[str]:
+    """The lines of ``lines`` that do not parse as an op log entry (a JSON object)."""
+    out = []
+    for ln in lines:
+        try:
+            ok = isinstance(json.loads(ln), dict)
+        except ValueError:
+            ok = False
+        if not ok:
+            out.append(ln)
+    return out
+
+
 def _whose(lines: list[str]) -> tuple[tuple[str, int], ...]:
-    """(session, count) for each session with a line in ``lines``, by key."""
-    c: Counter = Counter(str(json.loads(ln).get("session")) for ln in lines)  # select left only lines that parse
+    """(session, count) for each session with a line in ``lines``, by key; a line ``select``
+    left names one, parsed or not."""
+    c: Counter = Counter(str(session_of(ln)) for ln in lines)
     return tuple(sorted(c.items()))
 
 
@@ -431,19 +463,7 @@ def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] =
     and when it takes any op line, the op log and the paths its taken lines name (``select``).
     Read without git's help when there is no git or no HEAD (then every line counts)."""
     out = set(given)
-    log = root / oplog
-    if not log.exists():
-        return out
-    head = ""
-    if _in_git_tree(root):
-        try:
-            p = _Git(root).run("show", f"HEAD:./{oplog}")
-            head = p.stdout if p.returncode == 0 else ""
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head)
-    if head:
-        fresh = select(fresh, session, given, sweep, derived)[0]
+    fresh = taken_lines(root, oplog, session, given, sweep, derived)
     if fresh:
         out.add(oplog)
     for ln in fresh:
@@ -454,6 +474,29 @@ def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] =
         if isinstance(o, dict) and o.get("path"):
             out.add(str(o["path"]))
     return out
+
+
+def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
+                derived: dict[str, tuple[str, ...]] | None = None) -> list[str]:
+    """The uncommitted op log lines a commit by ``session`` of ``given`` would take (``select``).
+    Read without git's help when there is no git or no HEAD (then every line counts).
+
+    ``unparseable(taken_lines(...))`` empty means the op log this commit puts at HEAD parses,
+    though the working file may not: a line that does not parse and names another session is
+    left in the tree with that session's lines (CE-128), so the lint before a commit
+    (``working.Engine._lint_carried``) need not refuse for it."""
+    log = root / oplog
+    if not log.exists():
+        return []
+    head = ""
+    if _in_git_tree(root):
+        try:
+            p = _Git(root).run("show", f"HEAD:./{oplog}")
+            head = p.stdout if p.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head)
+    return select(fresh, session, given, sweep, derived)[0] if head else fresh
 
 
 def _detached(git: _Git, gitdir: Path) -> bool:

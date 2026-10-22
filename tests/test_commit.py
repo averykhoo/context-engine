@@ -989,6 +989,38 @@ def test_select_takes_own_lines_lines_on_carried_paths_and_unreadable_ones():
     assert C.select(lines, "2026-10-22b", sweep=True) == (lines, [])
 
 
+def test_select_leaves_an_unparseable_line_that_names_another_session_with_it():
+    """CE-128: a line cut short or hand-broken still names its session in its text; it is that
+    session's, so it stays out with its lines. One naming this session, or none, goes in."""
+    theirs = '{"at": "2026-10-22T10:00:00+08:00", "session": "2026-10-22a", "op": "new", "id": "CE-4", "pa'
+    mine = '{"session": "2026-10-22b", "op": "set", "id": "CE-5"'
+    lines = [theirs, mine, "not json"]
+    assert C.select(lines, "2026-10-22b") == ([mine, "not json"], [theirs])
+    assert C.select(lines, "2026-10-22b", sweep=True) == (lines, [])
+    assert [C.session_of(x) for x in lines] == ["2026-10-22a", "2026-10-22b", None]
+    assert C._whose([theirs]) == (("2026-10-22a", 1),)
+    assert C.unparseable([theirs, json.dumps({"session": "x"}), "[1]"]) == [theirs, "[1]"]
+
+
+@pytest.mark.criterion("AC-78")
+def test_another_sessions_unparseable_line_stays_out_of_the_commit(repo, tmp_path):
+    """CE-128: another session's broken op line rode into every commit, so the op log at HEAD
+    failed G-W7 and the CE-63 lint before `context-engine commit` refused every commit that took
+    an op line. Now it stays in the tree, named as that session's, and HEAD's op log parses."""
+    a = start(repo)
+    broken = '{"at": "2026-10-07T10:00:00+08:00", "session": "2026-10-07z", "op": "new", "id": "CE-40", "pa'
+    with open(repo / "ops.jsonl", "a", encoding="utf-8", newline="\n") as f:
+        f.write(broken + "\n")
+    assert C.unparseable(C.taken_lines(repo, "ops.jsonl", a.session)) == []  # what the commit lint can rely on
+    assert C.unparseable(C.taken_lines(repo, "ops.jsonl", a.session, sweep=True)) == [broken]
+    _, line = run(repo, "task_new", a, title="Mine")
+    assert f"; committed {head(repo)}" in line and "left uncommitted: 1 op line of 2026-10-07z" in line, line
+    assert broken not in git(repo, "show", "HEAD:ops.jsonl") and broken in (repo / "ops.jsonl").read_text(encoding="utf-8")
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(repo), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
+
+
 def test_a_pause_lists_another_sessions_paths_as_uncommitted(repo):
     """Its own commit leaves another session's lines out, so the files they name stay
     uncommitted, and the pause record says so (INV-45's list, with `pending(session)`)."""
