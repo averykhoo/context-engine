@@ -283,6 +283,33 @@ def test_g_d8_one_banner_no_session_layers_and_dated_facts_are_fine(tmp_path):
     assert reds(e, "G-D8") == ["HANDOFF.md: 1 banner lines start with a session key (the first: '- **2026-10-07b:** did a thing'): a stacked banner"]
 
 
+def test_g_d8_the_rest_of_the_note_naming_a_closed_task_as_next_or_an_answered_question_as_open_is_red(tmp_path):
+    cfg = config()
+    cfg["kinds"]["question"] = {"type": "Question", "prefix": "ASK", "dir": "tasks", "mode": "replaced", "required": ["title", "state"], "enums": {"state": ["open", "closed"]}}
+    cfg["working"].update(board=["task", "question"], question="question")
+    cfg["routes"][0].update(max_lines=60, max_bytes=4000, max_width=200)
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    write(tmp_path, "tasks/CE-1-a.md", "---\nid: CE-1\ntitle: a\npri: LATER\nstate: closed\ncreated: 2026-10-08\n---\n")
+    write(tmp_path, "tasks/CE-2-b.md", "---\nid: CE-2\ntitle: b\npri: LATER\nstate: open\ncreated: 2026-10-08\n---\n")
+    write(tmp_path, "tasks/ASK-1-q.md", "---\nid: ASK-1\ntitle: q\nstate: closed\n---\n")
+    write(tmp_path, "tasks/ASK-2-q.md", "---\nid: ASK-2\ntitle: q\nstate: open\n---\n")
+    banner = "# Note\n\n## Banner (2026-10-08a)\n\n- Next: CE-1; raise ASK-1\n\n## Now\n\n"
+    fine = ["- Next: CE-2.", "- CE-1 closed; CE-2 next.", "- ASK-1 was answered (DEC-3); raise ASK-2.",
+            "- CE-1 shipped the reader.", "> Next: CE-1 (history)", "- the NEXT tier (for CE-1)"]
+    (tmp_path / "HANDOFF.md").write_text(banner + "\n".join(fine) + "\n", encoding="utf-8")
+    e = Engine(tmp_path)
+    assert reds(e, "G-D8") == []  # the banner is rewritten at every close: only the rest is read
+    stale = ["- **Next session (owner): CE-2, then CE-1.**", "- CE-1 is next", "- Raise **ASK-1** at session start", "- CE-2 waits on ASK-1 and ASK-2"]
+    (tmp_path / "HANDOFF.md").write_text(banner + "\n".join(fine + stale) + "\n", encoding="utf-8")
+    assert reds(e, "G-D8") == [
+        "HANDOFF.md: line 15: names CE-1 as next, but CE-1 is closed",
+        "HANDOFF.md: line 16: names CE-1 as next, but CE-1 is closed",
+        "HANDOFF.md: line 17: names ASK-1 as open, but ASK-1 was answered",
+        "HANDOFF.md: line 18: names ASK-1 as open, but ASK-1 was answered",
+    ]
+    assert reds(Engine(tmp_path), "G-D8") and [f for f in Engine(tmp_path).lint() if f.guard == "G-D8"][0].remedy.startswith("rewrite the line as what is true now")
+
+
 # -- G-D9 ----------------------------------------------------------------------------------
 
 

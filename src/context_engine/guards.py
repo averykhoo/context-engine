@@ -904,7 +904,8 @@ def note_layers(e: Engine) -> list[Failure]:
     path = e.root / rel if rel else None
     if path is None or not path.is_file():
         return []
-    return layer_failures(rel, _text(path))
+    text = _text(path)
+    return layer_failures(rel, text) + stale_rest(e, rel, text)
 
 
 def layer_failures(rel: str, text: str) -> list[Failure]:
@@ -923,6 +924,49 @@ def layer_failures(rel: str, text: str) -> list[Failure]:
         stacked = [ln for ln in b.text.split("\n") if lead.match(ln)]
         if stacked:
             out.append(Failure("G-D8", rel, f"{len(stacked)} banner lines start with a session key (the first: {stacked[0].strip()[:60]!r}): a stacked banner", "rewrite the banner as what is true now, under its one key; history goes in the ledger"))
+    return out
+
+
+_NOTE_ID = r"[A-Z]+-[0-9]+"
+# a closed item named as next (CE-115): `Next: CE-5`, `Next session (owner): CE-5, then CE-6`, `CE-5 next`, `CE-5 is next`
+NEXT_LIST_RE = re.compile(rf"\bnext\b(?:\s+[a-z]+)?(?:\s*\([^)]*\))?\s*[:—–-]\s*(?P<ids>{_NOTE_ID}(?:\s*(?:,|\band\b|\bthen\b)\s*(?:\bthen\b\s*)?{_NOTE_ID})*)", re.IGNORECASE)
+NEXT_AFTER_RE = re.compile(rf"(?<![\w-])(?P<id>{_NOTE_ID})\s+(?:is\s+)?\(?next\b", re.IGNORECASE)
+# an answered question named as open: the line says it is still to be raised, answered or waited on
+OPEN_WORDS_RE = re.compile(r"\b(?:open|raise[sd]?|unanswered|pending|awaiting|waits?\s+(?:on|for)|outstanding)\b", re.IGNORECASE)
+ANSWERED_RE = re.compile(r"\banswered\b", re.IGNORECASE)
+
+
+def stale_rest(e: Engine, rel: str, text: str) -> list[Failure]:
+    """G-D8 on the orientation note outside its banner (CE-115): `banner set` replaces the banner
+    and nothing rewrites the rest, so the rest goes stale. A line there that names a closed task
+    as next (`Next: CE-5`, `Next session (owner): CE-5, then CE-6`, `CE-5 next`) or an answered
+    owner question as still open (the line says open, raise, unanswered, pending, awaiting, waits on
+    or outstanding, and not `answered`) is red.
+
+    Not checked: the banner (rewritten at every close, from the board), other wordings of "next"
+    or "open" (the wording is free text: this is a tripwire, not a parser), blockquotes and
+    `*HISTORY —*` lines (history), and ids of kinds off the board."""
+    task, question = e.w.task, e.w.question
+    closed = {r.id: r.kind.name for r in e.board_heads() if r.doc.get("state") == "closed" and r.kind.name in (task, question)}
+    if not closed:
+        return []
+    banner = L.find_banner(text)
+    span = (text[: banner.start].count("\n") + 1, text[: banner.end].count("\n")) if banner else (0, -1)
+    out: list[Failure] = []
+    for n, line in prose(text, history=True):
+        if span[0] <= n <= span[1]:
+            continue
+        flat = line.replace("*", "").replace("`", "")
+        named = {i for m in NEXT_LIST_RE.finditer(flat) for i in re.findall(_NOTE_ID, m["ids"])}
+        named |= {m["id"] for m in NEXT_AFTER_RE.finditer(flat)}
+        for rid in sorted(named, key=key_order_id):
+            if closed.get(rid) == task:
+                out.append(Failure("G-D8", rel, f"line {n}: names {rid} as next, but {rid} is closed",
+                                   "rewrite the line as what is true now (the board is `task list`), or drop it: the orientation note is replaced, not kept"))
+        if OPEN_WORDS_RE.search(flat) and not ANSWERED_RE.search(flat):
+            for rid in sorted({m for m in re.findall(rf"(?<![\w-]){_NOTE_ID}(?![\w-])", flat) if closed.get(m) == question}, key=key_order_id):
+                out.append(Failure("G-D8", rel, f"line {n}: names {rid} as open, but {rid} was answered",
+                                   f"rewrite the line as what is true now (`task show {rid}` gives the answer and its decision), or drop it"))
     return out
 
 
