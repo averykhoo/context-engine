@@ -187,6 +187,55 @@ def test_relaxes_writes_the_narrowed_by_backlink(eng):
         eng.link(b, a, **W)  # a decision target needs --rel
 
 
+# -- CE-59: a multi-record write is all or nothing, so a retry completes it ------------------------
+
+
+def _files(root):
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file() and ".context" not in p.parts}
+
+
+def _fail_on(monkeypatch, prefix):
+    """Make every write of a record file whose name starts with ``prefix`` fail, as Windows does
+    when a reader holds the file; returns the function that lets writes through again."""
+    from context_engine.store import Store
+
+    real = Store._write
+
+    def failing(self, path, d):
+        if path.name.startswith(prefix):
+            raise Refusal(f"could not replace {path.name}", "close whatever has the file open, then retry")
+        return real(self, path, d)
+
+    monkeypatch.setattr(Store, "_write", failing)
+    return lambda: monkeypatch.setattr(Store, "_write", real)
+
+
+@pytest.mark.parametrize("op", ["supersede", "relaxes", "import"])
+def test_a_multi_record_write_whose_second_write_fails_changes_nothing_and_a_retry_completes_it(eng, monkeypatch, op):
+    if op == "import":
+        path = write_log(eng)
+        run = lambda: eng.import_log(path, **W)  # noqa: E731
+        second = "D-3-"  # D-4 is written first, in log order
+    else:
+        a, b = dec(eng, "Old way"), dec(eng, "New way")
+        run = (lambda: eng.supersede(a, b, **W)) if op == "supersede" else (lambda: eng.link(b, a, "relaxes", **W))  # noqa: E731
+        second = f"{b}-" if op == "supersede" else f"{a}-"
+    before = _files(eng.root)
+    restore = _fail_on(monkeypatch, second)
+    with pytest.raises(Refusal, match="could not replace"):
+        run()
+    assert _files(eng.root) == before  # the first record's write is put back, and no op log line names it
+    restore()
+    run()  # the retry
+    if op == "import":
+        assert len(list((eng.root / "decisions").glob("D-*.md"))) == 6
+    elif op == "supersede":
+        assert eng.store.get(a).doc.get("superseded_by") == [b] and eng.store.get(b).doc.get("supersedes") == [a]
+    else:
+        assert eng.store.get(b).doc.get("relaxes") == [a] and eng.store.get(a).doc.get("narrowed_by") == [b]
+    assert eng.store.lint() == []
+
+
 # -- decision set: a decision's own frontmatter (CE-32) ------------------------------------------
 
 

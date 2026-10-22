@@ -667,6 +667,48 @@ class Store:
         tmp.unlink(missing_ok=True)
         raise Refusal(f"could not replace {self._rel(path)}", "close whatever has the file open, then retry")
 
+    def _replace(self, path: Path, data: bytes | None) -> None:
+        """Put back what a file held before a write: its bytes, or no file at all (``None``)."""
+        if data is None:
+            path.unlink(missing_ok=True)
+            return
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.undo.tmp")
+        tmp.write_bytes(data)
+        for attempt in range(50):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                time.sleep(0.02 * (attempt + 1))
+        tmp.unlink(missing_ok=True)
+        raise OSError(f"could not restore {self._rel(path)}")
+
+    def _write_all(self, recs: list[Record], log: Callable[[Record], None]) -> None:
+        """Write several records as one: if a write fails, every record this call already wrote
+        is put back as it was (CE-59), so nothing is half done and a retry of the operation
+        does all of it. ``log`` logs one record, once every write landed. If a write fails and a
+        record cannot be put back, it stays written and is logged, so the op log never lags a file,
+        and the failure is raised: the operation's own write order (the idempotent half first,
+        as `record retire` writes it) then lets a retry complete it."""
+        before = {r.path: (r.path.read_bytes() if r.path.exists() else None) for r in recs}
+        done: list[Record] = []
+        try:
+            for r in recs:
+                self._write(r.path, r.doc)
+                done.append(r)
+        except BaseException:
+            stuck = []
+            for r in reversed(done):
+                try:
+                    self._replace(r.path, before[r.path])
+                except OSError:
+                    stuck.append(r)
+            for r in reversed(stuck):  # what could not be put back is on disk: the op log says so
+                log(r)
+            raise
+        for r in done:
+            log(r)
+
     def _log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool) -> None:
         entry = {
             "at": _now(),
@@ -849,10 +891,9 @@ class Store:
                 if owned:
                     raise Refusal(f"`{owned[0]}` is owned by the engine", "ids, types and body_sha never change this way")
                 self._validate(r.kind, r.doc, r.path)
-            for i, r in recs.items():
-                if changed.get(i) or i in amend:
-                    self._write(r.path, r.doc)
-                    self._log(op, i, r.path, session, actor, list(changed.get(i) or ()) + (["body"] if i in amend else []), False)
+            todo = [(i, r) for i, r in recs.items() if changed.get(i) or i in amend]
+            fields = {i: list(changed.get(i) or ()) + (["body"] if i in amend else []) for i, _ in todo}
+            self._write_all([r for _, r in todo], lambda r: self._log(op, r.id, r.path, session, actor, fields[r.id], False))
             for kind in {r.kind.name: r.kind for r in recs.values()}.values():
                 self._reindex(kind, session, actor)
         return recs
@@ -893,8 +934,7 @@ class Store:
                 raise Refusal("two of the records share an id or a file name", "give each its own id and title")
             for r in out:
                 r.path.parent.mkdir(parents=True, exist_ok=True)
-                self._write(r.path, r.doc)
-                self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False)
+            self._write_all(out, lambda r: self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False))
             self._reindex(kind, session, actor)
         return out
 

@@ -138,11 +138,38 @@ def test_a_retire_whose_second_write_fails_is_completed_by_a_retry(chain, monkey
         return real(self, path, d)
 
     monkeypatch.setattr(Store, "_write", fails_on_us1)
+    before, lines = snapshot(chain), len(oplog(chain))
+    with pytest.raises(Refusal, match="could not replace"):
+        e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)
+    assert snapshot(chain) == before and len(oplog(chain)) == lines  # CE-59: the successor's write is put back, nothing logged
+    monkeypatch.setattr(Store, "_write", real)
+    e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)  # the retry the remedy asks for
+    assert "supersedes: [US-1]\n" in doc(chain, "US-3") and "superseded_by: [US-3]" in doc(chain, "US-1")
+    assert reds(e, "G-I2") == []
+
+
+@pytest.mark.criterion("AC-72")
+def test_a_retire_whose_successor_cannot_be_put_back_is_logged_and_completed_by_a_retry(chain, monkeypatch):
+    e = make(chain)
+    e.record_new("story", "Again", "words", OK, **W)  # US-3
+    real = Store._write
+
+    def fails_on_us1(self, path, d):
+        if path.name.startswith("US-1-"):
+            raise Refusal("could not replace docs/stories/US-1-words.md", "close whatever has the file open, then retry")
+        return real(self, path, d)
+
+    def cannot_restore(self, path, data):
+        raise OSError(f"could not restore {path.name}")
+
+    monkeypatch.setattr(Store, "_write", fails_on_us1)
+    monkeypatch.setattr(Store, "_replace", cannot_restore)
     with pytest.raises(Refusal, match="could not replace"):
         e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)
     assert "supersedes: [US-1]" in doc(chain, "US-3") and "story_status: live" in doc(chain, "US-1")  # half done: the successor only
+    assert [(o["op"], o["id"]) for o in oplog(chain)][-1] == ("retire", "US-3")  # and the op log says so
     monkeypatch.setattr(Store, "_write", real)
-    e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)  # the retry the remedy asks for
+    e.retire("US-1", "recorded again", by="agent", superseded_by="US-3", **W)  # the successor first: the retry completes it
     assert "supersedes: [US-1]\n" in doc(chain, "US-3") and "superseded_by: [US-3]" in doc(chain, "US-1")
     assert reds(e, "G-I2") == []
 
