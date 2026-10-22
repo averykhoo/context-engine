@@ -4,13 +4,15 @@ id: CE-115
 title: Lint flags a HANDOFF rest that cites a closed next item or an answered ASK
 brief: HANDOFF.md rest goes stale after banner set/close; lint must catch a closed next or answered ASK
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-23a
+updated: 2026-10-23a
+status: deprecated
+closed: 2026-10-23a
 ---
 
 Lint flags a HANDOFF rest that cites a closed next item or an answered ASK
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 27, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23a (claude-code/claude-opus-5-5): closed: done in 635c0a7 (sweep 2026-10-23a; verified by an independent agent, gate green on main)
