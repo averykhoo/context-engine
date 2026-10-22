@@ -2240,6 +2240,9 @@ class Engine:
         if block and block[0] == want:  # a block of another version is red above
             out += self._bootloader(rel, path, want, block[1])
             out += self._kit_runbooks()
+        for ph in K.gate_placeholders():  # CE-71 (audit 2026-10-14a N1): the Gate stub left unfilled
+            if ph in text:
+                out.append(Failure("G-D0", rel, f"still holds the kit's placeholder `{ph}`, so its gate names no command to run", f"replace it with the repo's own test command, keeping `&& context-engine lint` after it (kit README § 2a, step 2)"))
         return out
 
     def _kit_runbooks(self) -> list[Failure]:

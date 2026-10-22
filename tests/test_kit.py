@@ -211,6 +211,7 @@ def test_the_hook_command_runs_orient_through_a_shell(tmp_path):
     import subprocess
 
     B.init(tmp_path)
+    _fill_gate(tmp_path)  # else orient opens with a Contract section for the Gate stub (CE-71)
     env = {k: v for k, v in os.environ.items() if not k.startswith("CE_")}
     r = subprocess.run(_hook_command(tmp_path), shell=True, capture_output=True, text=True, encoding="utf-8", cwd=tmp_path.parent, env=env, timeout=120)
     assert r.returncode == 0, r.stderr
@@ -807,9 +808,25 @@ def test_g_d0_fails_a_kit_runbook_that_is_missing_or_unrouted(tmp_path):
     assert [f for f in lint() if "runbook" in f] == []
 
 
+@pytest.mark.criterion("AC-95")
+def test_g_d0_fails_a_contract_that_keeps_the_gate_stubs_placeholder(tmp_path):
+    """CE-71 (audit 2026-10-14a N1): a repo could keep `<this repo's own test command>` with a
+    clean lint, so its gate named nothing to run."""
+    from context_engine.cli import run
+
+    assert B.gate_placeholders() == [PLACEHOLDER]  # read from the kit's bootloader, after its end marker
+    B.init(tmp_path)
+    out = run(["--root", str(tmp_path), "lint"])[1]
+    assert f"G-D0 CLAUDE.md: still holds the kit's placeholder `{PLACEHOLDER}`, so its gate names no command to run" in out, out
+    assert "kit README § 2a, step 2" in out
+    _fill_gate(tmp_path)
+    assert run(["--root", str(tmp_path), "lint"])[1] == "lint: clean"
+
+
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
     assert _cli(tmp_path, "init").startswith("init: created 23")
+    _fill_gate(tmp_path)
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)
@@ -922,6 +939,7 @@ def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_p
         return run(["--root", str(tmp_path), "lint"])[1]
 
     B.init(tmp_path)
+    _fill_gate(tmp_path)
     key = _cli(tmp_path, "session", "start").split()[1]
     assert lint() == "lint: clean"  # no close yet: nothing is owed
     _cli(tmp_path, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g", "--read", "r", key=key)

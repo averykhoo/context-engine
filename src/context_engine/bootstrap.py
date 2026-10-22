@@ -107,6 +107,17 @@ def bootloader_body() -> str:
     return block[1]
 
 
+PLACEHOLDER_RE = re.compile(r"<[^<>!\n]+>")  # `<this repo's own test command>`; never an HTML comment
+
+
+def gate_placeholders() -> list[str]:
+    """The `<...>` placeholders in the bootloader's Gate stub, after its end marker (CE-71): text
+    a repo must replace, so G-D0 fails a contract that still holds one."""
+    text = (KIT / BOOTLOADER).read_text(encoding="utf-8").replace("\r\n", "\n")
+    tail = text.split(END, 1)[1] if END in text else ""
+    return list(dict.fromkeys(PLACEHOLDER_RE.findall(tail)))
+
+
 def hook_settings(root: Path) -> str:
     """``.claude/settings.local.json`` holding one ``SessionStart`` hook that runs ``orient`` on
     every source (startup, resume, clear, compact). The interpreter is the one running init, which

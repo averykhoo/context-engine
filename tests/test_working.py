@@ -1143,6 +1143,9 @@ def test_a_malformed_route_is_refused_at_load(tmp_path, route, says):
 # -- G-D0: the contract's framework: pin against the installed engine (DEC-23) ---------------
 
 
+GATE_STUB = "<this repo's own test command>"  # the kit's Gate placeholder, which G-D0 fails (CE-71)
+
+
 def pinned(eng, text, version="0.5.0.dev0", name="CLAUDE.md"):
     (eng.root / name).write_text(text, encoding="utf-8", newline="")
     return [(f.path, f.message, f.remedy) for f in eng.lint_contract(version)]
@@ -1186,7 +1189,7 @@ def test_every_pin_and_the_kit_block_marker_must_match(eng):
     got = pinned(eng, stale)
     assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 block, but the installed engine is framework 0.5"]
     assert "kit/bootloader.md" in got[1][2]
-    current = "framework: 0.5\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8")
+    current = "framework: 0.5\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8").replace(GATE_STUB, "make test")
     copy_contract(eng)
     assert pinned(eng, current) == []
     assert [m for _, m, _ in pinned(eng, current.replace("0.5", "0.4"))] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)"] * 2 + ["holds the kit 0.4 block, but the installed engine is framework 0.5"]
@@ -1203,7 +1206,7 @@ def copy_contract(eng, text=None):
 
 
 def booted(crlf=False):
-    text = "# Ours\n\nour own rule\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8")
+    text = "# Ours\n\nour own rule\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8").replace(GATE_STUB, "make test")  # its Gate filled in (CE-71)
     return text.replace("\n", "\r\n") if crlf else text
 
 
