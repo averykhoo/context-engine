@@ -738,6 +738,23 @@ def test_an_entry_shaped_heading_in_a_fence_or_comment_or_without_an_attribution
     assert "#### D-7 is a sub-heading" in body and "#### D-8 -- in a fence" in body and "## D-9 -- in a comment" in body
 
 
+def test_the_dry_run_names_every_superseded_status_a_heading_note_set_before_it_is_final(deng):
+    # CE-80: adhoc's D-27 note said SUPERSEDED where the owner meant narrowed; after the import no
+    # operation undoes that, so the dry run names each one, by the note's entry, before the import
+    text = LOG.replace("-- **relaxes D-2**", "-- **relaxes D-2; supersedes D-1**")
+    dry = deng.import_log(write_log(deng, text), dry_run=True, **W)
+    first = dry.splitlines()[0]
+    assert "2 set SUPERSEDED from heading notes: D-3 (by D-4), D-1 (by D-4); no operation undoes that after the import" in first, first
+    assert "reword that note in the copy (`narrowed by <id>`) before the import" in first
+    assert "| D-3 | DEC-3 | SUPERSEDED (from a heading note: review before importing) |" in dry
+    assert "| D-1 | DEC-1 | SUPERSEDED (from a heading note: review before importing) |" in dry
+    assert "| D-2 | DEC-2 | BUILT | scope is narrow |" in dry  # narrowed, not replaced: not flagged
+    # reworded in the copy as the note says, nothing is superseded and nothing is flagged
+    calm = text.replace("**SUPERSEDED by D-4 (for X); the rest stands**", "**narrowed by D-4 (for X); the rest stands**").replace("; supersedes D-1**", "**")
+    dry = deng.import_log(write_log(deng, calm), dry_run=True, **W)
+    assert "SUPERSEDED" not in dry
+
+
 @pytest.mark.criterion("AC-42")
 def test_import_writes_nothing_when_a_later_record_breaks_the_schema(tmp_path):
     kinds = {**CONFIG["kinds"], "decision": {**CONFIG["kinds"]["decision"], "enums": {"decision_status": ["BUILT", "SUPERSEDED"]}}}
@@ -928,7 +945,7 @@ def test_import_renames_a_foreign_prefix_keeping_each_number_and_the_old_id_as_a
     path = write_log(deng)
     dry = deng.import_log(path, dry_run=True, **W)
     assert not (deng.root / "decisions").exists()
-    assert "| D-3 | DEC-3 | SUPERSEDED | the gate is X |" in dry and "| D-1 | DEC-1 | BUILT | the first |" in dry
+    assert "| D-3 | DEC-3 | SUPERSEDED (from a heading note: review before importing) | the gate is X |" in dry and "| D-1 | DEC-1 | BUILT | the first |" in dry
     assert "| (rejected table row 1) | DEC-5 | REJECTED |" in dry  # no id in the log: a new number, no alias
     doc = dry.split("Save everything below this line as the id map's evidence doc, then import:\n\n")[1]
     assert doc.startswith("# Decision id map: decisions-copy.md into decisions\n\nFROZEN. ")  # a doc ready to save: a title and its liveness

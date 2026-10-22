@@ -557,6 +557,14 @@ def plan_import(
         notes.append(f"{len(parsed.inner)} `#`/`## ` headings kept inside {len({i for _, i, _ in parsed.inner})} entries")
     if parsed.excluded:
         notes.append("not imported: " + excluded_line(parsed.excluded))
+    gone = [e for e in entries if e.fields["decision_status"] == "SUPERSEDED"]
+    if gone:  # CE-80: after the import nothing undoes it, so the dry run names each for review
+        each = ", ".join(f"{e.old} (by {', '.join(by_new[i].old for i in e.links['superseded_by'])})" for e in gone)
+        notes.append(
+            f"{len(gone)} set SUPERSEDED from heading notes: {each}; no operation undoes that after the import "
+            "(`decision set` never sets or clears SUPERSEDED, and no operation removes a link), so if a note means "
+            "narrowed or relaxed rather than replaced, reword that note in the copy (`narrowed by <id>`) before the import"
+        )
     built = [e for e in entries if e.fields["decision_status"] == "BUILT"]
     if built:
         notes.append(f"{len(built)} set BUILT by default, as the log gives no status: review each and `decision set <id> --set decision_status=<status>` any that was parked, deferred or not built")
@@ -590,7 +598,8 @@ def id_map(planned: list[Entry]) -> str:
         return str(t).replace("|", "\\|")
 
     out = ["| id in the log | record | status | title |", "|---|---|---|---|"]
-    out += [f"| {cell(e.old)} | {e.id} | {e.fields['decision_status']} | {cell(e.fields['title'])} |" for e in planned]
+    status = lambda e: e.fields["decision_status"] + (" (from a heading note: review before importing)" if e.links.get("superseded_by") else "")  # noqa: E731 (CE-80)
+    out += [f"| {cell(e.old)} | {e.id} | {status(e)} | {cell(e.fields['title'])} |" for e in planned]
     return "\n".join(out) + "\n"
 
 
