@@ -1869,6 +1869,9 @@ class Engine:
         stories = self.unspecified_stories()
         if stories:  # CE-48
             sections.append(Part("Unspecified stories and the items G-T1 counts", "\n".join(stories), "`context-engine lint` (G-T1)", rank=2))
+        foreign = self.foreign_lines(session)
+        if foreign:  # CE-101
+            sections.append(Part("Foreign commits to reconcile", "\n".join(foreign), "procedures.md § Reconciling foreign commits", rank=2))
         upstream = self.upstream_lines()
         if upstream:  # CE-114
             sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))
@@ -2083,6 +2086,26 @@ class Engine:
             if not any(s <= at and (e is None or at <= e) for s, e in self._session_windows()):
                 out.append(f"- the last push to {up}, at {m.group(1)}, came while no session was open: tell the owner, and record it in this session's close (what was pushed, and whether the gate ran first)")
             break  # the newest push only
+        return out
+
+    def foreign_lines(self, session: str | None, limit: int = 8) -> list[str]:
+        """The foreign commits this session reconciles (``ledger.foreign_commits``: its range,
+        less those a `kind: foreign` entry names), and those of the newest abandoned sessions'
+        ranges, which no one else will (CE-101; FRAMEWORK §6.10), at most ``limit`` lines each.
+
+        Not checked: the ranges of sessions abandoned before the newest five."""
+        led = self.read_ledger()
+        out = []
+        keys = ([session] if session else []) + [e.key for e in led.entries if e.kind == "abandoned"][:5]
+        for k in keys:
+            found = L.foreign_commits(self.root, led, k, self.w.ledger)
+            if not found:
+                continue
+            whose = "this session's range" if k == session else f"abandoned {k}'s range"
+            for sha, author, subject in found[:limit]:
+                out.append(f"- {sha[:7]} {_short(subject, 70)} ({author}; {whose})")
+            if len(found) > limit:
+                out.append(f"- (+{len(found) - limit} more in {whose})")
         return out
 
     def carried_lines(self, session: str | None = None, why: bool = False) -> list[str]:

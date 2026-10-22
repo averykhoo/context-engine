@@ -1431,6 +1431,30 @@ def test_orient_compares_head_with_upstream_and_flags_a_push_made_outside_a_sess
     assert "came while no session was open" in _section(eng.orient(None), "Upstream")
 
 
+@pytest.mark.criterion("AC-94")
+def test_orient_lists_the_foreign_commits_this_session_and_abandoned_ones_reconcile(eng):
+    """CE-101: `ledger.foreign_commits` was built (CE-65) but only the by-hand recipe used it."""
+    root = eng.root
+    _repo(root)
+
+    def by_hand(name):
+        (root / name).write_text("x\n", encoding="utf-8")
+        _git(root, "add", name)
+        _git(root, "commit", "-q", "-m", f"{name} made outside the engine")
+        return _git(root, "rev-parse", "--short=7", "HEAD").strip()
+
+    started(eng)
+    one = by_hand("one.txt")
+    first = started(eng)  # reconciles `one`
+    two = by_hand("two.txt")
+    me = started(eng)  # reconciles `two`
+    assert _section(eng.orient(me), "Foreign commits to reconcile").splitlines() == [f"- {two} two.txt made outside the engine (t; this session's range)"]
+    assert _section(eng.orient(first), "Foreign commits to reconcile").splitlines() == [f"- {one} one.txt made outside the engine (t; this session's range)"]
+    eng.session_abandon(first, force=True, **kw(me))  # no one else will reconcile `one`
+    assert _section(eng.orient(me), "Foreign commits to reconcile").splitlines() == [
+        f"- {two} two.txt made outside the engine (t; this session's range)", f"- {one} one.txt made outside the engine (t; abandoned {first}'s range)"]
+
+
 # -- one agent, one actor spelling (CE-122) -------------------------------------------------------
 
 
