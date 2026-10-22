@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-21c)
+## Banner (2026-10-22b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -12,10 +12,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
   CE-104..CE-125; fix first: CE-124, CE-104, CE-63, CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin.
   adhoc start-cost cleanup done 2026-10-21c (HANDOFF banner-only; adhoc 09ae685, local).
-- **CE-43 is NOW (DEC-51): audio-workspace migrated, merged into its LOCAL main and set up (2026-10-20a); gate green there.**
-  DEC-61: nothing is pushed to audio-workspace during its demo hold. Owed: the owner restarts Claude Code there; remove the
-  ce-cutover worktree and branch on the owner's word; push after the hold lifts. 2026-10-17c's prep drafts are in
-  `.scratch/ce-17c/` and beside the audio-workspace backup outside this repo (private content: never commit them here).
+- **CE-43 closed 2026-10-22a:** audio-workspace pushed by the owner 2026-10-22 (origin/main a139fde5); ce-cutover worktree and
+  branch removed 2026-10-22b. **CE-79 is NOW (2026-10-22b):** fix-first CE-104, CE-125, CE-63 being built; CE-124 waits on ASK-18;
+  then re-pin adhoc. INV-31 probes need the owner.
 - **CE-93 moved to NEXT (2026-10-17b, for CE-43); DEC-50 still holds it until the trial's feedback.** CE-95..CE-97 from CE-27.
 - **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
   by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and

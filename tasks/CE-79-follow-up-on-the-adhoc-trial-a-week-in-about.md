@@ -3,13 +3,13 @@ type: Task
 id: CE-79
 title: Follow up on the adhoc trial a week in (about 2026-10-21)
 brief: "Due about 2026-10-21: score adhoc's sessions under the engine against CE-4, list engine errors, report keep/fix/stop"
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-14d
 created: 2026-10-14
-moved: 2026-10-14d
-updated: 2026-10-21c
+moved: 2026-10-22b
+updated: 2026-10-22b
 goals: [G-6]
 ---
 
