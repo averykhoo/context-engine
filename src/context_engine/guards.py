@@ -243,23 +243,60 @@ def caps(e: Engine) -> list[Failure]:
         for rel, path in docs(e.root, (r.path,)):
             if path is None:
                 continue  # G-R1 reports a missing routed path
-            raw = path.read_bytes()
-            text = raw.decode("utf-8", errors="replace").replace("\r\n", "\n")
-            lines = text.split("\n")
-            if text.endswith("\n"):
-                lines = lines[:-1]
-            remedy = f"move what has gone stale out (archive, the ledger, a decision or an evidence doc); raise the cap in [[routes]] {r.component!r} only with a new provenance note"
-            if r.max_lines and len(lines) > r.max_lines:
-                out.append(Failure("G-D1", rel, f"{len(lines)} lines, over the {r.component} cap of {r.max_lines}", remedy))
-            size = len(text.encode("utf-8"))
-            if r.max_bytes and size > r.max_bytes:
-                out.append(Failure("G-D1", rel, f"{size} bytes, over the {r.component} cap of {r.max_bytes}", remedy))
-            if r.max_width:
-                wide = [(n, len(ln)) for n, ln in enumerate(lines, 1) if len(ln) > r.max_width and not ln.lstrip().startswith("|")]
-                if wide:
-                    n, w = wide[0]
-                    out.append(Failure("G-D1", rel, f"{len(wide)} lines wider than {r.max_width} characters (the first: line {n}, {w})", "wrap them; tables are exempt"))
+            out += cap_failures(r, rel, _text(path))
     return out
+
+
+def cap_failures(r, rel: str, text: str) -> list[Failure]:
+    """G-D1 on one doc's text, under route ``r``'s caps: lint's check, and a write's (CE-63)."""
+    out: list[Failure] = []
+    lines = text.split("\n")
+    if text.endswith("\n"):
+        lines = lines[:-1]
+    remedy = f"move what has gone stale out (archive, the ledger, a decision or an evidence doc); raise the cap in [[routes]] {r.component!r} only with a new provenance note"
+    if r.max_lines and len(lines) > r.max_lines:
+        out.append(Failure("G-D1", rel, f"{len(lines)} lines, over the {r.component} cap of {r.max_lines}", remedy))
+    size = len(text.encode("utf-8"))
+    if r.max_bytes and size > r.max_bytes:
+        out.append(Failure("G-D1", rel, f"{size} bytes, over the {r.component} cap of {r.max_bytes}", remedy))
+    if r.max_width:
+        wide = [(n, len(ln)) for n, ln in enumerate(lines, 1) if len(ln) > r.max_width and not ln.lstrip().startswith("|")]
+        if wide:
+            n, w = wide[0]
+            out.append(Failure("G-D1", rel, f"{len(wide)} lines wider than {r.max_width} characters (the first: line {n}, {w})", "wrap them; tables are exempt"))
+    return out
+
+
+def _listed(rel: str, paths: tuple[str, ...]) -> bool:
+    """``rel`` is one of ``paths``, or a ``.md`` under one that is a directory: what ``docs``
+    yields for them, for a file not written yet."""
+    for p in paths:
+        p = p.rstrip("/")
+        if rel == p or (rel.endswith(".md") and rel.startswith(p + "/") and not SKIP_DIRS.intersection(rel.split("/"))):
+            return True
+    return False
+
+
+def prose_failures(e: Engine, rel: str, text: str) -> list[Failure]:
+    """The guards lint runs on one prose doc, run on ``text`` (what a write is about to store at
+    ``rel``) instead of the stored file (CE-63): G-D1 under each route that caps it, G-D5 when
+    `[guards] numbers` lists it and it is neither FROZEN nor ACTIVE-PLAN, and G-D8 when it is the
+    orientation note; less those `[guards] off` names. The same functions lint calls, so a write
+    refuses only what lint would fail.
+
+    Not checked: the doc-set failures (a listed path missing, a `numbers` list that checks
+    nothing), and every other guard (lint, in the gate)."""
+    out: list[Failure] = []
+    for r in e.store.config.routes:
+        if (r.max_lines or r.max_bytes or r.max_width) and _listed(rel, (r.path,)):
+            out += cap_failures(r, rel, text)
+    g = e.store.config.guards
+    if g.numbers and _listed(rel, g.numbers) and liveness_of(e, rel, text, given(e)[0]) not in ("FROZEN", "ACTIVE-PLAN"):
+        out += count_failures(rel, text, g.count_nouns)
+    if e.w.handoff and rel == e.w.handoff:
+        out += layer_failures(rel, text)
+    off = set(g.off)
+    return [f for f in out if f.guard not in off]
 
 
 # -- G-D2 ids ----------------------------------------------------------------------------
@@ -700,11 +737,16 @@ def numbers(e: Engine) -> list[Failure]:
         if liveness_of(e, rel, text, table) in ("FROZEN", "ACTIVE-PLAN"):
             continue
         scanned += 1
-        for n, count in typed_counts(text, g.count_nouns):
-            out.append(Failure("G-D5", rel, f"line {n}: `{count}` is a hand-typed count of things in the tree", "delete the number and point at its home (the command, table or file that counts it; P5); a measurement keeps its YYYY-MM-DD on the line; a quoted figure, a rule's value or a label (`Step 3 checks`) goes in backticks"))
+        out += count_failures(rel, text, g.count_nouns)
     if scanned == 0 and not out:
         out.append(Failure("G-D5", CONFIG_NAME, f"[guards] numbers ({', '.join(g.numbers)}) holds no doc that is not FROZEN or ACTIVE-PLAN, so G-D5 checks nothing", "list the LIVING docs, or empty the list to switch G-D5 off"))
     return out
+
+
+def count_failures(rel: str, text: str, nouns: tuple[str, ...]) -> list[Failure]:
+    """G-D5 on one doc's text: lint's check, and a write's (CE-63)."""
+    return [Failure("G-D5", rel, f"line {n}: `{count}` is a hand-typed count of things in the tree", "delete the number and point at its home (the command, table or file that counts it; P5); a measurement keeps its YYYY-MM-DD on the line; a quoted figure, a rule's value or a label (`Step 3 checks`) goes in backticks")
+            for n, count in typed_counts(text, nouns)]
 
 
 # -- G-D7 signal budgets -----------------------------------------------------------------
@@ -750,7 +792,11 @@ def note_layers(e: Engine) -> list[Failure]:
     path = e.root / rel if rel else None
     if path is None or not path.is_file():
         return []
-    text = _text(path)
+    return layer_failures(rel, _text(path))
+
+
+def layer_failures(rel: str, text: str) -> list[Failure]:
+    """G-D8 on the orientation note's text: lint's check, and a write's (CE-63)."""
     out: list[Failure] = []
     banners = L.BANNER_RE.findall(text)
     if len(banners) > 1:

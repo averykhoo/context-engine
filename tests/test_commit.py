@@ -427,10 +427,10 @@ def test_an_operation_holds_the_lock_from_its_first_write_to_its_commit(repo):
 def test_thousands_of_named_paths_fit_no_command_line(repo):
     """Paths go to git through a file: Windows caps a command line at 32k characters."""
     c = start(repo)
-    (repo / "tasks").mkdir(exist_ok=True)
+    (repo / "notes").mkdir(exist_ok=True)  # not a record directory: the commit lints none of them
     with open(repo / "ops.jsonl", "a", encoding="utf-8", newline="\n") as f:
-        for n in range(700):  # 700 paths of 56 characters: 39k, over the cap
-            rel = f"tasks/leftover-{n:04d}-with-a-name-long-enough-to-matter.md"
+        for n in range(700):  # 700 paths of 57 characters: 39k, over the cap
+            rel = f"notes/leftover-{n:04d}-with-a-name-long-enough-to-matter.txt"
             (repo / rel).write_text("x\n", encoding="utf-8")
             f.write(json.dumps({"session": "2026-10-01a", "op": "set", "id": f"X-{n}", "path": rel, "fields": []}) + "\n")
     _, line = run(repo, "commit", c, message="Adopt a dead session's lines", sweep=True)
@@ -1039,3 +1039,35 @@ def test_a_partial_commit_whose_index_update_fails_says_so(repo):
     (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
     _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
     assert line.startswith(f"committed {head(repo)}") and "WARNING: the index was not updated" in line and "git reset -q HEAD -- ops.jsonl a.py" in line, line
+
+
+# -- the session commit lints what it carries (CE-63) ------------------------------------------
+
+
+@pytest.mark.criterion("AC-78")
+def test_the_session_commit_refuses_a_path_lint_fails_and_commits_the_rest(mrepo):
+    """Adhoc AAR entry 18: a close-docs commit went in with lint red, since `commit` ran no
+    check. It now runs lint and refuses when a failure sits on a path it would carry, a given
+    path or one its op lines name; a failure elsewhere is not this commit's."""
+    c = start(mrepo)
+    note = mrepo / "HANDOFF.md"
+    note.write_text(note.read_text(encoding="utf-8") + "\n## Banner (2026-10-07a)\n\n- stacked\n", encoding="utf-8")  # G-D8
+    before = count(mrepo)
+    with pytest.raises(Refusal, match=r"lint fails on what this commit carries: G-D8 HANDOFF\.md: 2 banner headings.*keep the newest"):
+        run(mrepo, "commit", c, paths=["HANDOFF.md"], message="Note: by hand")
+    assert count(mrepo) == before
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a")  # HANDOFF.md is not carried
+    assert line.startswith(f"committed {head(mrepo)}"), line
+
+
+@pytest.mark.criterion("AC-78")
+def test_the_session_commit_lints_the_records_its_op_lines_name(mrepo):
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Hand-edited")
+    rec = next((mrepo / "tasks").glob("CE-1-*.md"))
+    rec.write_text(rec.read_text(encoding="utf-8").replace(f"moved: {c.session}", "moved: 2026-10-07a"), encoding="utf-8")  # G-W7
+    before = count(mrepo)
+    with pytest.raises(Refusal, match=rf"lint fails on what this commit carries: G-W7 {re.escape(rec.relative_to(mrepo).as_posix())}"):
+        run(mrepo, "commit", c, message="Board: file CE-1")
+    assert count(mrepo) == before

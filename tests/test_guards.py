@@ -642,3 +642,89 @@ def test_g_d5_a_frozen_or_active_plan_doc_is_provenance_and_a_list_of_only_those
     assert reds(e, "G-D5") == ["docs/live.md: line 5: `23 components` is a hand-typed count of things in the tree"]
     assert "context.toml: [guards] numbers names gone.md, which does not exist" in reds(make(tmp_path, numbers=["docs", "gone.md"], liveness_given={"docs/v0.*.md": "FROZEN"}), "G-D5")
     assert reds(make(tmp_path), "G-D5") == [] and reds(make(tmp_path, numbers=["docs"], off=["G-D5"]), "G-D5") == []
+
+
+# -- write-time prose checks (CE-63, INV-60) ---------------------------------------------------
+
+
+def _set(e, text):
+    return e.banner_set(text, e.banner().sha, session=S2, actor=ACTOR)
+
+
+@pytest.mark.parametrize("text, guard", [
+    ("- 2026-10-07b: what I did", "G-D8"),                    # a stacked banner line
+    ("- the board holds 12 open tasks", "G-D5"),              # a hand-typed count
+    ("- " + "a very long line " * 4, "G-D1"),                 # over the route's 40-character width
+])
+def test_banner_set_refuses_text_lint_would_fail_and_writes_nothing(tmp_path, text, guard):
+    """Adhoc AAR entry 18: `banner set` stored a banner lint then rejected, and it took three
+    more rounds to fix. The write now runs lint's own G-D1, G-D5 and G-D8 checks on the note it
+    would store, and refuses, naming the guard and its remedy."""
+    e = make(tmp_path, numbers=["HANDOFF.md"])
+    before = (tmp_path / "HANDOFF.md").read_bytes()
+    with pytest.raises(Refusal, match=rf"would make HANDOFF.md fail {guard}: .*nothing was written"):
+        _set(e, text)
+    assert (tmp_path / "HANDOFF.md").read_bytes() == before
+    assert reds(e, guard) == []  # and lint agrees the stored note is clean
+
+
+def test_banner_set_passes_a_clean_banner_and_ignores_failures_it_did_not_add(tmp_path):
+    e = make(tmp_path, numbers=["HANDOFF.md"])
+    out = _set(e, "- true now, again")
+    assert out.startswith("banner replaced"), out
+    note = tmp_path / "HANDOFF.md"
+    note.write_text(note.read_text(encoding="utf-8") + "\n## 2026-10-07b old notes\n", encoding="utf-8")  # a hand edit lint reds
+    assert reds(e, "G-D8")
+    assert _set(e, "- still true").startswith("banner replaced")  # not this write's failure: lint reports it
+
+
+def test_the_write_check_calls_lints_own_functions(tmp_path, monkeypatch):
+    """One check, two callers: a change to the guard changes the refusal with it."""
+    e = make(tmp_path)
+    monkeypatch.setattr(G, "layer_failures", lambda rel, text: [G.Failure("G-D8", rel, "planted", "remedy")] if "planted" in text else [])
+    assert reds(e, "G-D8") == []
+    with pytest.raises(Refusal, match="fail G-D8: planted"):
+        _set(e, "- planted")
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n- planted\n", encoding="utf-8")
+    assert reds(e, "G-D8") == ["HANDOFF.md: planted"]  # lint reads the same function
+
+
+def test_guards_off_switches_the_write_check_off_too(tmp_path):
+    e = make(tmp_path, off=["G-D8"])
+    assert _set(e, "- 2026-10-07b: what I did").startswith("banner replaced")
+
+
+def test_session_close_refuses_a_digest_line_lint_would_fail(tmp_path):
+    e = make(tmp_path)
+    cfg = config()
+    cfg["routes"].append({"component": "Ledger", "path": "ledger.md", "mode": "append-only", "max_width": 70})
+    cfg["working"]["ledger"] = "ledger.md"
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    e = Engine(tmp_path)
+    key = e.session_start(actor=ACTOR)
+    before = (tmp_path / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="would make ledger.md fail G-D1"):
+        e.session_close(key, actor=ACTOR, rows="none", summary=["x" * 80], receipts={"guards": "green", "read": "board"})
+    assert (tmp_path / "ledger.md").read_bytes() == before
+
+
+def test_the_write_check_matches_failures_with_their_numbers_blanked_as_a_multiset(tmp_path):
+    """A failure already there passes though its line number moves; one more of the same kind
+    is refused; a FROZEN note is not counted, as lint does not count it."""
+    e = make(tmp_path, numbers=["HANDOFF.md"])
+    note = tmp_path / "HANDOFF.md"
+    note.write_text("# Note\n\n## Banner (2026-10-08a)\n\n- true now\n\n## Board\n\n12 tasks\n", encoding="utf-8")  # G-D5 already red
+    assert reds(e, "G-D5")
+    assert _set(e, "- true now\n- and this").startswith("banner replaced")  # the old count's line moved: not new
+    with pytest.raises(Refusal, match=r"fail G-D5: line \d+: `\d+ tasks`"):
+        _set(e, "- 3 tasks are left")  # a second count of the same noun: one more than there was
+    note.write_text("# Note\n\nFROZEN 2026-10-01: kept as it was.\n\n## Banner (2026-10-08a)\n\n- true now\n", encoding="utf-8")
+    assert _set(e, "- 3 tasks are left").startswith("banner replaced") and not [r for r in reds(e, "G-D5") if r.startswith("HANDOFF.md")]
+
+
+def test_a_note_still_over_its_cap_may_shrink(tmp_path):
+    """The stored note is over its line cap already; a banner that shortens it is no new failure."""
+    e = make(tmp_path)
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n" + "".join(f"- fact {i}\n" for i in range(6)), encoding="utf-8")
+    assert reds(e, "G-D1")
+    assert _set(e, "- fact 1\n- fact 2\n- fact 3\n- fact 4").startswith("banner replaced") and reds(e, "G-D1")

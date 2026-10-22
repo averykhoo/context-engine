@@ -425,6 +425,37 @@ def pending(root: Path, oplog: str, session: str | None = None, derived: dict[st
     return out
 
 
+def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
+                  derived: dict[str, tuple[str, ...]] | None = None) -> set[str]:
+    """The paths, relative to ``root``, a commit by ``session`` of ``given`` would carry: those,
+    and when it takes any op line, the op log and the paths its taken lines name (``select``).
+    Read without git's help when there is no git or no HEAD (then every line counts)."""
+    out = set(given)
+    log = root / oplog
+    if not log.exists():
+        return out
+    head = ""
+    if _in_git_tree(root):
+        try:
+            p = _Git(root).run("show", f"HEAD:./{oplog}")
+            head = p.stdout if p.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head)
+    if head:
+        fresh = select(fresh, session, given, sweep, derived)[0]
+    if fresh:
+        out.add(oplog)
+    for ln in fresh:
+        try:
+            o = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(o, dict) and o.get("path"):
+            out.add(str(o["path"]))
+    return out
+
+
 def _detached(git: _Git, gitdir: Path) -> bool:
     """HEAD names no branch. Read from the worktree's own HEAD file, which saves a git process
     on every write; the reftable backend's placeholder HEAD file is asked of git instead."""

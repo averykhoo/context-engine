@@ -889,7 +889,10 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      to it (§6.10 item 2).
 2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen)`
    refuses when the banner's hash differs from the one this session last saw; re-read, merge
-   and retry.
+   and retry. **And only if lint would pass it:** before writing, it runs lint's own G-D1, G-D5
+   and G-D8 functions on the note as it would be, and refuses a failure the stored note does not
+   already have, naming the guard's remedy (CE-63); a session close or pause checks its ledger
+   entry the same way. A failure already in the file is lint's to report, not the write's.
 3. **Baton and pause records are keyed by session.** Any session closes a baton by
    `baton.done` with evidence of the step done; a pause is closed by `pause.resume`;
    housekeeping expires them.
@@ -933,7 +936,9 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      and adds the `Session:` trailer. A plain `git commit -o` naming a record whose op line is still
      uncommitted commits the record without its line, which fails G-W7 on a clean checkout of
      that commit; `commit` never makes one. It runs no gate:
-     the session runs the gate before it, as before every commit of its own (§6.3 item 7). Where
+     the session runs the gate before it, as before every commit of its own (§6.3 item 7). It
+     does run lint, and refuses when a failure sits on a path it would carry, since a close's
+     docs once went in with lint red because nothing checked them (CE-63). Where
      `[gate] require` names a scope, it refuses a path in that scope that no green gate run
      covers (§8.5 G-V1).
    - **Why the op log goes with every record:** lint reads the two together. G-W7 checks a
@@ -1920,7 +1925,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
 | Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why)`: a whole doc into an archive directory with its redirect row (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
-| Commits | `commit(paths, message)`: the session's own commit by path, with the op log lines HEAD lacks and the files they name; runs no gate (§5.5 rule 4) |
+| Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
 | **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11; not built yet, CE-6) |
 

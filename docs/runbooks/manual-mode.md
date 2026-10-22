@@ -195,7 +195,9 @@ head is where this session's reconciling of foreign commits ends and the next se
 
 ### context-engine session close
 
-1. Your stub must exist and still say `kind: open`. A session closes or pauses only once.
+1. Your stub must exist and still say `kind: open`. A session closes or pauses only once. The
+   entry you write must add no G-D1, G-D5 or G-D8 failure to the ledger (as § context-engine
+   banner set, in its step 4, does for the banner).
 2. You need: `rows` (the items you touched, not empty); a summary of 1 to 7 lines (the owner
    digest); a `guards` receipt (gate and lint results, verbatim); a `read` receipt (what you read
    to start work). `asked` and `Still owed` are optional; an empty `Still owed` is written as
@@ -956,12 +958,20 @@ orientation note), the hash is `none`.
 3. **The first banner** (the hash you saw was `none`): insert the same block just before the
    orientation note's first `## ` heading, so that heading still ends the banner; with no `## `
    heading, append it after a blank line. Create the orientation note if it does not exist.
-4. Say how many lines the old banner had and the new one has. When the old one had 10 or more and
+4. Before writing, run lint's own G-D1 (the caps of every route that covers the file), G-D5
+   (when `[guards] numbers` lists it and it is neither FROZEN nor ACTIVE-PLAN) and G-D8 (the
+   orientation note) on the orientation note as it would be. If the new text adds a failure the stored note does not
+   already have (match them by guard and message, numbers aside), stop: write nothing, and fix the
+   text as the failure's remedy says. A failure already there is lint's to report, not this
+   write's.
+5. Say how many lines the old banner had and the new one has. When the old one had 10 or more and
    the new one has fewer than half as many, warn: the lost lines may hold durable facts, which
    belong in a tracked doc. When orient would cut the new banner at its cap, say so.
 
 **Why:** the banner carries exactly one session key, and a later close must not silently erase
-another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a long one.
+another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a long one. The
+check before writing is the same one lint runs, so a banner is never stored only for lint to
+reject it, a round of fixes later.
 
 ## Append-only records (decisions and stories)
 
@@ -1361,6 +1371,12 @@ counted. By hand: check that first, then:
    added. With lines left behind, never `--only` on the op log (it would carry their lines
    without their files): use the temporary-index steps of § What every write does, **Commit the
    write**, and write the op log blob's file from Git Bash (PowerShell's `>` writes UTF-16).
+
+Before committing it runs lint and refuses when a failure sits on a path the commit would
+carry (a given path, a file under a given directory, the op log, a path a taken op line names),
+naming the failure and its remedy; a failure on any other path is not this commit's, and the
+gate still reports it. By hand: run `context-engine lint` and check no failure names one of your
+paths.
 
 It writes no op line: it changes no record. It commits whatever `[engine] commit` says, and
 refuses (exit 2) whenever it commits nothing, naming why (among them: nothing changed among

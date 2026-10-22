@@ -427,8 +427,8 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 ## INV-60: banner set and other writes can store text G-D5 reds, and the engine commits it
 
 - **affects:** every session in a repo whose context.toml lists docs for G-D4 or G-D5 (this repo; G-D4 in every fresh kit init); an adopting repo whose existing docs G-D4 now reads; the owner and plain-git humans who write docs by hand; the session that freezes, archives or copies a doc
-- **why not eliminated:** no write-time check for G-D5 (G-D8 has the same gap)
-- **control:** individual: lint in the gate before the next commit
+- **why not eliminated:** reduced, not eliminated, by CE-63 (session 2026-10-22b): `banner set`, `session close` and `session pause` refuse text that adds a G-D1, G-D5 or G-D8 failure, by calling lint's own functions before writing, and `context-engine commit` refuses a path lint fails. What stays: a hand edit (no write to check); the engine's other writes (a task body or comment, `doc freeze`, a baton or pause record, the session-start stub), which are not checked and may commit at a milestone, which runs no lint; and a write that makes an existing failure worse without adding one (a second wide line, a longer over-cap note)
+- **control:** reduce at source: the write-time refusal (guards.py::prose_failures, via working.py::Engine._refuse_prose) and the commit's lint (working.py::Engine._lint_carried); collective: lint in the gate before the next commit
 - **from:** CE-33, session 2026-10-13c
 
 ## INV-61: the shared prose() reads a leading `---` break as frontmatter and lets `~~~` close a ``` fence, hiding lines from G-D5 (and G-D3, G-D7)

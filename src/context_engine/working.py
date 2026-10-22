@@ -16,6 +16,7 @@ expiry and regenerating the decision index (CE-6).
 from __future__ import annotations
 
 import datetime as dt
+import collections
 import functools
 import json
 import re
@@ -254,6 +255,7 @@ class Engine:
                 check(led, entry)
             entry.text = render(entry)
             entry.kind = op.split(".")[1]
+            self._refuse_prose(path, led.render(), f"this {op.replace('.', ' ')}")  # CE-63: a digest line lint would fail
             self.store.write_text(path, led.render())
             self.store.log(op, key, path, key, actor, ["kind"])
 
@@ -857,6 +859,7 @@ class Engine:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
         rels = [self._commit_path(x) for x in paths]
         GATE.check_commit(self.root, self.store.config.gate, rels)  # a code path needs a green gate run on its scope (CE-78)
+        self._lint_carried(rels, session, sweep)
         out = self.store.commit_paths(message, rels, session, sweep=sweep)
         if not out.sha:
             raise Refusal(f"not committed: {out.note or 'git made no commit'}",  # the note names any lines left behind
@@ -872,6 +875,20 @@ class Engine:
             extra.append(f"WARNING: {out.warn}")
         n = len(out.paths)
         return f"committed {out.sha}: {n} path{'s' if n != 1 else ''}" + (f" ({'; '.join(extra)})" if extra else "")
+
+    def _lint_carried(self, rels: list[str], session: str, sweep: bool) -> None:
+        """Refuse a commit when lint fails on a path it would carry: a given path, a file under a
+        given directory, or a path its op lines name (CE-63; adhoc AAR entry 18: a commit went in
+        with lint red). A failure on any other path is not this commit's, and lint in the gate
+        still reports it. Read without the lock: a write landing meanwhile is checked by the next
+        commit, or the gate."""
+        carried = C.carried_paths(self.root, self.store.config.oplog, session, tuple(rels), sweep, self.store.derived())
+        dirs = tuple(r.rstrip("/") + "/" for r in rels)
+        bad = [f for f in self.lint() if f.path in carried or f.path.startswith(dirs)]
+        if bad:
+            f = bad[0]
+            more = f" (and {len(bad) - 1} more: `context-engine lint`)" if len(bad) > 1 else ""
+            raise Refusal(f"lint fails on what this commit carries: {f.guard} {f.path}: {f.message}{more}", f"{f.remedy}; then commit again (nothing was committed)")
 
     def _commit_path(self, given: str) -> str:
         """A path for ``commit``, relative to the root with forward slashes. The whole root and
@@ -1561,6 +1578,33 @@ class Engine:
         warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if f'"{rel}"' in cfg else ""
         return f"{rel}: archived as {name} (first line ARCHIVED {today}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
 
+    # -- write-time prose checks (CE-63, INV-60) --------------------------------------------
+
+    def _refuse_prose(self, path: Path, text: str, what: str) -> None:
+        """Refuse to store ``text`` at ``path`` when it would add a failure that lint's G-D1, G-D5
+        or G-D8 does not already report on the stored file (CE-63, closing INV-60; adhoc AAR
+        entry 18): the same functions lint calls (``guards.prose_failures``), run on the text
+        before it is written, so a write never stores what lint then rejects. A failure the file
+        has already (a hand edit, a cap crossed before) is lint's to report, not this write's:
+        failures are matched by guard and message with their numbers blanked, as a multiset.
+
+        Not checked: what the other guards would say (lint, in the gate); a failure this write
+        makes worse without adding one (a long note growing longer)."""
+        rel = path.relative_to(self.root).as_posix()
+        now = path.read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n") if path.is_file() else None
+        key = lambda f: (f.guard, re.sub(r"\d+", "#", f.message))
+        had = collections.Counter(key(f) for f in G.prose_failures(self, rel, now)) if now is not None else collections.Counter()
+        new = []
+        for f in G.prose_failures(self, rel, text.replace("\r\n", "\n")):
+            if had[key(f)]:
+                had[key(f)] -= 1
+            else:
+                new.append(f)
+        if new:
+            f = new[0]
+            more = f" (and {len(new) - 1} more)" if len(new) > 1 else ""
+            raise Refusal(f"{what} would make {rel} fail {f.guard}: {f.message}{more}", f"{f.remedy}; nothing was written, so fix the text and run it again")
+
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 
     @_milestone
@@ -1576,8 +1620,10 @@ class Engine:
             if (now.sha if now else L.NO_BANNER) != seen_hash:
                 where = f"now {now.sha}, key {now.key}" if now else f"there is no banner yet, so pass --seen {L.NO_BANNER}"
                 raise Refusal(f"the banner changed since you read it ({where})", "re-read it with `banner show`, merge, and pass the new hash")
+            new_note = L.replace_banner(note, session, text)
+            self._refuse_prose(path, new_note, "this banner")  # CE-63: refuse what lint would fail, before writing
             path.parent.mkdir(parents=True, exist_ok=True)
-            self.store.write_text(path, L.replace_banner(note, session, text))
+            self.store.write_text(path, new_note)
             self.store.log("banner.set", session, path, session, actor, ["banner"])
         new = self.banner()
         was, has = (len(now.text.splitlines()) if now else 0), len(new.text.splitlines())
