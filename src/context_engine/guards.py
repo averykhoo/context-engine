@@ -64,7 +64,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -365,6 +365,51 @@ def ids(e: Engine) -> list[Failure]:
             if rid in created:
                 out.append(Failure("G-D2", e.store.config.oplog, f"{rid} was created twice (sessions {created[rid]} and {op.get('session')}, op log line {n}): an id was reused", "renumber the newer record by hand to the next free id; ids are never reused"))
             created[rid] = str(op.get("session"))
+    return out
+
+
+PLACEHOLDER_RE = re.compile(r"(?<![\w-])[A-Z]+-<[^<>\n]*\bnew\b[^<>\n]*>", re.IGNORECASE)  # `DEC-<NEW>`, `CE-<new id>`
+
+
+def placeholders(e: Engine) -> list[Failure]:
+    """G-D2 on ids not yet allocated (CE-119): no current record of any kind, and no doc
+    `[guards] links` lists, holds a literal id placeholder such as `DEC-<NEW>` (a draft written
+    before its id was handed out). Inline and fenced code are mentions, not uses, and pass; so does
+    a record's first body line when it repeats its `title` (the line `task new` writes).
+
+    Not checked: frontmatter (a title may name the placeholder it is about), records no longer
+    current (`status: deprecated`: history), other placeholder forms (`DEC-n`, `<id>`: templates
+    use them), and whether an id that replaced a placeholder is the right one (a guessed id passes;
+    an id reserve op is not built)."""
+    st = e.store
+    seen: set[Path] = set()
+    out: list[Failure] = []
+
+    def scan(rel: str, path: Path) -> None:
+        if path in seen:
+            return
+        seen.add(path)
+        text = _text(path)
+        if _deprecated(text):
+            return
+        title = re.search(r"^title:\s*(.*?)\s*$", text.split("\n---", 1)[0], re.MULTILINE) if text.startswith("---") else None
+        echo = title.group(1).strip("'\"") if title else None
+        for n, line in prose(text):
+            if echo and line.strip() == echo:
+                continue
+            for m in PLACEHOLDER_RE.finditer(SPAN_RE.sub("", line)):
+                out.append(Failure("G-D2", rel, f"line {n}: `{m.group()}` is an id placeholder, not an id",
+                                   "write the record first and cite the id it was given (`record new` / `task new` print it), or drop the citation; never guess the next number"))
+
+    for kind in st.config.kinds.values():
+        for path in st._files(kind):
+            scan(st._rel(path), path)
+    listed = [*docs(e.root, st.config.guards.links)]
+    if e.w.handoff and (e.root / e.w.handoff).is_file():
+        listed.append((e.w.handoff, e.root / e.w.handoff))
+    for rel, path in listed:
+        if path is not None:
+            scan(rel, path)
     return out
 
 

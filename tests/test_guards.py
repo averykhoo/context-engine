@@ -112,6 +112,25 @@ def test_g_d2_two_files_with_one_id_and_an_id_created_twice_are_red(tmp_path):
     assert reds(e, "G-D2") == [f"ops.jsonl: CE-1 was created twice (sessions {S1} and {S2}, op log line 2): an id was reused"]
 
 
+def test_g_d2_a_literal_id_placeholder_in_a_record_or_a_listed_doc_is_red(tmp_path):
+    e = make(tmp_path, links=["CLAUDE.md"])
+    write(tmp_path, "CLAUDE.md", "One voice per talker is opt-in (AD-7, `DEC-<NEW>` in code is a mention).\n")
+    title = "Refuse literal DEC-<NEW> placeholders"
+    write(tmp_path, "tasks/CE-1-a.md", f"---\nid: CE-1\ntitle: '{title}'\npri: LATER\nstate: open\ncreated: 2026-10-08\n---\n\n{title}\n\n```\nDEC-<NEW>\n```\n")
+    write(tmp_path, "tasks/CE-2-b.md", "---\nid: CE-2\ntitle: b\npri: LATER\nstate: closed\nstatus: deprecated\ncreated: 2026-10-08\n---\n\nSee DEC-<NEW>.\n")  # history
+    assert reds(e, "G-D2") == []
+    write(tmp_path, "CLAUDE.md", "One voice per talker is opt-in (AD-7, DEC-<NEW>, 2026-10-19).\n")
+    write(tmp_path, "tasks/CE-1-a.md", f"---\nid: CE-1\ntitle: '{title}'\npri: LATER\nstate: open\ncreated: 2026-10-08\n---\n\n{title}\n\nThe voice tier (CE-<new id>) waits.\n")
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n- per DEC-<NEW>\n", encoding="utf-8")
+    assert reds(e, "G-D2") == [
+        "tasks/CE-1-a.md: line 11: `CE-<new id>` is an id placeholder, not an id",
+        "CLAUDE.md: line 1: `DEC-<NEW>` is an id placeholder, not an id",
+        "HANDOFF.md: line 5: `DEC-<NEW>` is an id placeholder, not an id",
+    ]
+    [red, *_] = [f for f in e.lint() if f.guard == "G-D2"]
+    assert red.remedy.startswith("write the record first and cite the id it was given")
+
+
 # -- G-D3 ----------------------------------------------------------------------------------
 
 DOC = """# Top heading
