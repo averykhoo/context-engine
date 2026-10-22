@@ -4,13 +4,15 @@ id: CE-103
 title: 'Rerank edge cases: goals check on task reopen, lenient Last rerank line, same-session owner records'
 brief: From CE-99 verification 2026-10-20e; none blocks use
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-20e
 created: 2026-10-20
-moved: 2026-10-20e
-updated: 2026-10-20f
+moved: 2026-10-23a
+updated: 2026-10-23a
+status: deprecated
+closed: 2026-10-23a
 ---
 
 Rerank edge cases: goals check on task reopen, lenient Last rerank line, same-session owner records
@@ -28,3 +30,4 @@ From CE-99's verifier (2026-10-20e, .scratch/ce-99/verify.md):
 ## Log
 
 - 2026-10-20f (claude-code/claude-opus-5-5): 2026-10-20f: items 2 and 3 are moot since 393e9e4 (Last rerank is quoted, never a trigger; newer_than removed). Only item 1, the goals check on task reopen, remains.
+- 2026-10-23a (claude-code/claude-opus-5-5): closed: done in c752231 (sweep 2026-10-23a; verified by an independent agent, gate green on main)
