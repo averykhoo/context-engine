@@ -1872,6 +1872,9 @@ class Engine:
         foreign = self.foreign_lines(session)
         if foreign:  # CE-101
             sections.append(Part("Foreign commits to reconcile", "\n".join(foreign), "procedures.md § Reconciling foreign commits", rank=2))
+        templates = self.unfilled_templates()
+        if templates:  # CE-121
+            sections.append(Part("Templates still unfilled: ask the owner", "\n".join(templates), "kit README § 2a", rank=2))
         upstream = self.upstream_lines()
         if upstream:  # CE-114
             sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))
@@ -2029,6 +2032,29 @@ class Engine:
             by = [i for i, text in board if pat.search(text)]
             out.append(f"- {rid}: named by {_one(by)}; G-T1 counts {'it' if len(by) == 1 else 'them'}: check one is the task to specify {rid}" if by
                        else f"- {rid}: no open board item names it (G-T1 is red): `task new` the work to specify it")
+        return out
+
+    def unfilled_templates(self) -> list[str]:
+        """The charter (`[guards] charter`, else the kit's `docs/charter.md`) and criteria file
+        (`[working] criteria`, else `docs/criteria.md`) when still
+        the kit's template, or still holding one of its `*(...)*` placeholders (CE-121; adhoc AAR
+        entry 34: both were the templates a week after the cutover, with lint clean). Orient asks
+        at every session start until they are filled; lint does not fail them, since every repo
+        starts from the templates (kit README § 2a: init, then fill the charter).
+
+        Not checked: a template filled with words that say nothing."""
+        out = []
+        for rel, kit in ((self.store.config.guards.charter or "docs/charter.md", "docs/charter.md"), (self.w.criteria or "docs/criteria.md", "docs/criteria.md")):
+            p = self.root / rel if rel else None
+            if p is None or not p.is_file() or not (K.KIT / kit).is_file():
+                continue
+            have = p.read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n").strip()
+            tmpl = (K.KIT / kit).read_text(encoding="utf-8").replace("\r\n", "\n").strip()
+            left = [ph for ph in dict.fromkeys(re.findall(r"\*\([^()\n]*\)\*", tmpl)) if ph in have]
+            if have == tmpl:
+                out.append(f"- {rel} is still the kit's template: fill it with the owner (kit README § 2a, step 1)")
+            elif left:
+                out.append(f"- {rel} still holds the template's {_one([f'`{x}`' for x in left])}: replace {'it' if len(left) == 1 else 'them'} with the owner's words")
         return out
 
     def _session_windows(self) -> list[tuple[dt.datetime, dt.datetime | None]]:

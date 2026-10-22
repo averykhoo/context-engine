@@ -741,6 +741,36 @@ def _cli(root: Path, *argv: str, key: str = "") -> str:
 ACTOR, KEY = "claude-code/test", "2026-10-12a"
 
 
+@pytest.mark.criterion("AC-96")
+def test_orient_asks_for_the_charter_and_criteria_while_they_are_the_kits_templates(tmp_path):
+    """CE-121 (adhoc AAR entry 34): both were still the templates a week after the cutover, with
+    lint clean; orient asks at every session start until they are filled."""
+    heading = "## Templates still unfilled: ask the owner\n"
+    B.init(tmp_path)
+    _fill_gate(tmp_path)
+    key = _cli(tmp_path, "session", "start").split()[1]
+
+    def section():
+        out = _cli(tmp_path, "orient", key=key)
+        return out.split(heading, 1)[1].split("\n## ", 1)[0].splitlines() if heading in out else None
+
+    assert section() == [
+        "- docs/charter.md is still the kit's template: fill it with the owner (kit README § 2a, step 1)",
+        "- docs/criteria.md is still the kit's template: fill it with the owner (kit README § 2a, step 1)",
+    ]
+    charter = tmp_path / "docs/charter.md"
+    charter.write_text(charter.read_text(encoding="utf-8").replace("*(the owner's words)*", "Ship the tool"), encoding="utf-8")
+    assert section()[0] == ("- docs/charter.md still holds the template's `*(what this repo must never become)*`, "
+                            "`*(the owner's standing rules, each with where it is recorded)*`: replace them with the owner's words"), section()
+    charter.write_text(charter.read_text(encoding="utf-8").replace("*(what this repo must never become)*", "a service")
+                       .replace("*(the owner's standing rules, each with where it is recorded)*", "none yet"), encoding="utf-8")
+    criteria = tmp_path / "docs/criteria.md"
+    assert section() == ["- docs/criteria.md is still the kit's template: fill it with the owner (kit README § 2a, step 1)"]
+    criteria.write_text(criteria.read_text(encoding="utf-8") + "| AC-1 | it ships | US-1 | planned | |\n", encoding="utf-8")
+    assert section() is None
+    assert _cli(tmp_path, "lint") == "lint: clean"  # orient's to ask, not lint's to fail
+
+
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
     assert _cli(tmp_path, "init").startswith("init: created 23")
