@@ -149,6 +149,10 @@ def build() -> argparse.ArgumentParser:
     aa.add_argument("words", nargs="?", help="the owner's words, verbatim (or --file)")
     aa.add_argument("--file", type=Path, help="read the owner's words from a file (they keep their line breaks)")
     aa.add_argument("--title", required=True, help="the decision's title")
+    aa.add_argument("--ruled-by", default="", help="the owner delegated the ruling: who made it (an agent's actor, never owner); needs --ruling, and the words are then the owner's delegating words")
+    ru = aa.add_mutually_exclusive_group()
+    ru.add_argument("--ruling", default="", help="the ruling made on the owner's delegation (needs --ruled-by); recorded under ## Ruling, apart from the owner's words")
+    ru.add_argument("--ruling-file", type=Path, help="read --ruling from a file")
 
     b = _sub(groups, "baton", "batons: skipped steps handed to the next session (FRAMEWORK §5.4)").add_subparsers(dest="op", required=True)
     ba = _sub(b, "add", "hand a skipped step to the next session")
@@ -334,6 +338,8 @@ def _params(args: argparse.Namespace) -> dict:
         a["message"] = _read(a["message_file"]) if a.get("message_file") else "\n\n".join(a["message"])
     if a.get("body_file") is not None:
         a["body"] = _read(a["body_file"])
+    if a.get("ruling_file") is not None:
+        a["ruling"] = _read(a["ruling_file"])
     words = WORDS.get((args.group, a.get("op")))
     if words and (a[words] is None) == (a.get("file") is None):  # CE-73: the words come one way, exactly
         raise Refusal(f"`{args.group} {a['op']}` got its {words} {'both as an argument and with --file' if a[words] is not None else 'neither as an argument nor with --file'}", f"give the {words} one way: as the argument, or written to a file and passed with --file")

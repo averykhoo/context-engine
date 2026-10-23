@@ -63,7 +63,7 @@ _FIXED = "it is fixed when the record is created (provenance of the decision); n
 DECISION_OWNED = {
     "status": "use `decision supersede <id> <new>`: OKF status is derived from SUPERSEDED",
     "answers": "it is written by `ask answer` and never changes",
-    **{k: _FIXED for k in ("actor", "decided", "session", "attribution", "imported_from", "generated")},
+    **{k: _FIXED for k in ("actor", "decided", "session", "attribution", "imported_from", "generated", "ruled_by")},
     "verified": "an owner's endorsement must be the owner's own words, which no operation can supply: record them with `record amend <id> \"<the owner's words>\"`",
     **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
     "narrowed_by": "it is the backlink `relaxes` writes: run `decision link <other> <id> --rel relaxes` on the decision that narrows this one",
@@ -980,13 +980,21 @@ class Engine:
         return f"{rid}: deferred by the owner, last_asked {session}, still open"
 
     @_milestone
-    def ask_answer(self, rid: str, words: str, *, title: str, session: str, actor: str) -> str:
+    def ask_answer(self, rid: str, words: str, *, title: str, ruling: str = "", ruled_by: str = "", session: str, actor: str) -> str:
         """Record the owner's words verbatim as a decision (`actor: owner`), close the question,
-        and report what it unblocked."""
+        and report what it unblocked. When the owner delegated the ruling (CE-113), ``words`` are
+        the owner's delegating words, ``ruling`` the ruling and ``ruled_by`` who made it: the
+        decision is `actor: owner asked` with `ruled_by`, the owner's words quoted above a `##
+        Ruling` section holding the ruling, so the ruling never reads as the owner's own."""
         self._check(session, actor)
         self._is_question(rid)
+        ruling, ruled_by = ruling.strip("\n"), ruled_by.strip()
         if not words.strip():
-            raise Refusal("no owner words", "pass the owner's answer verbatim")
+            raise Refusal("no owner words", "pass the owner's answer verbatim" + ("; for a delegated ruling, the words in which the owner delegated it" if ruling.strip() else ""))
+        if bool(ruling.strip()) != bool(ruled_by):
+            given, missing = ("a ruling", "`ruled_by`") if ruling.strip() else ("`ruled_by`", "a ruling")
+            raise Refusal(f"{given} without {missing}: a ruling made on the owner's delegation is recorded with both (FRAMEWORK §5.3)",
+                          f"pass the ruling (`--ruling` or `--ruling-file`) and who made it (`--ruled-by`: the agent that ruled, or your own actor `{actor}` if you did), with the owner's delegating words as the words; for the owner's own answer, pass neither")
         q = self.store.get(rid)
         if q.doc.get("state") != "open":
             raise Refusal(f"{rid} is already closed", "record a new decision instead")
@@ -998,18 +1006,27 @@ class Engine:
         self._plans_frozen(rid)  # CE-95: the answer closes the question, so a plan naming it freezes first
         fields = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
         body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
+        if ruled_by:
+            fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
+            body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
+                    f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
+        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
+            raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
+                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`); the owner's words hold no `## Ruling` heading")
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
-        answered = {"on": self.today(), "session": session, "decision": dec.id}
+        answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
         was: list[str] = []
 
         def check(rec: Record) -> None:
             was.append(str(rec.doc.get("pri")))
 
-        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "answered": answered}, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"answered by the owner: {dec.id}"), op="ask.answer")
+        how = f"answered on the owner's delegation, ruled by {ruled_by}" if ruled_by else "answered by the owner"
+        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "answered": answered}, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"{how}: {dec.id}"), op="ask.answer")
         closed = {r.id for r in self.board_heads() if r.doc.get("state") == "closed"}
         freed = [r.id for r in self._open_board() if rid in (r.doc.get("deps") or []) and all(str(d) in closed for d in r.doc.get("deps"))]
         freed += [str(b) for b in (q.doc.get("blocks") or []) if str(b) not in freed]
-        return f"{rid}: answered as {dec.id}, closed; unblocked {_one(freed)}{self._now_left(was)}"
+        whose = f" (ruled by {ruled_by} on the owner's delegation; actor: {G.DELEGATED_ACTOR})" if ruled_by else ""
+        return f"{rid}: answered as {dec.id}{whose}, closed; unblocked {_one(freed)}{self._now_left(was)}"
 
     # -- batons and pauses (FRAMEWORK §5.4) ---------------------------------------------
 
@@ -1204,6 +1221,9 @@ class Engine:
                 fields[key] = session
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
+        if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
+            raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
+                          f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`")
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
 
     def _story_checks(self, fields: dict[str, Any]) -> None:

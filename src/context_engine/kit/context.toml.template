@@ -45,7 +45,7 @@ dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
 enums = { decision_status = ["BUILT", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"] }  # FRAMEWORK §6.5
-types = { aliases = "list", decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list" }  # link fields: FRAMEWORK §6.5
+types = { aliases = "list", decided = "date", session = "key", tags = "list", supersedes = "list", superseded_by = "list", relaxes = "list", narrowed_by = "list", creates = "list", amends = "list", retires = "list", tasks = "list", code = "list", refs = "list", ruled_by = "str" }  # link fields: FRAMEWORK §6.5; ruled_by: who ruled on the owner's delegation (§6.5, G-I3)
 extra_dirs = []
 
 [kinds.story]

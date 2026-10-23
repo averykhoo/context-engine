@@ -254,9 +254,9 @@ def ask_later(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 
 @op(write=True)
-def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str) -> tuple[int, str]:
-    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. Answering a question at NOW while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
-    return 0, e.ask_answer(id, words, title=title, **c.kw)
+def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str, ruling: str = "", ruled_by: str = "") -> tuple[int, str]:
+    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. If the owner delegated the ruling, `words` are their delegating words, `ruling` the ruling and `ruled_by` who made it (both or neither): the decision is `actor: owner asked` with `ruled_by`, and the ruling sits under `## Ruling`, apart from the owner's words. Answering a question at NOW while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
+    return 0, e.ask_answer(id, words, title=title, ruling=ruling, ruled_by=ruled_by, **c.kw)
 
 
 # -- batons and pauses (FRAMEWORK §5.4) --------------------------------------------------
@@ -303,7 +303,7 @@ def pause_resume(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 @op(write=True)
 def record_new(e: Engine, c: Caller, kind: str, title: str, body: str, fields: dict[str, str] | None = None) -> tuple[int, str]:
-    """A new decision or story, stamped when it is created. Owner words go in `body` verbatim; set actor=owner in `fields`."""
+    """A new decision or story, stamped when it is created. Owner words go in `body` verbatim; set actor=owner in `fields`. A ruling made on the owner's delegation: `ruled_by` (who ruled) and an actor that is not the owner alone (`owner asked`) in `fields`, and a body of the owner's delegating words verbatim, then a `## Ruling` section holding the ruling."""
     rec = e.record_new(kind, title, body, fields or {}, **c.kw)
     return 0, f"{rec.id}: created and stamped ({_rel(e, rec.path)})"
 
@@ -349,7 +349,7 @@ def decision_supersede(e: Engine, c: Caller, old: str, new: str) -> tuple[int, s
 
 @op(write=True)
 def decision_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None, unset: list[str] | None = None) -> tuple[int, str]:
-    """Set or unset a decision's own frontmatter: decision_status (not SUPERSEDED: decision_supersede), reopen_if (REJECTED only), tags, title, description. Links, provenance (actor, decided, session, attribution, imported_from, generated, verified) and answers are refused."""
+    """Set or unset a decision's own frontmatter: decision_status (not SUPERSEDED: decision_supersede), reopen_if (REJECTED only), tags, title, description. Links, provenance (actor, decided, session, attribution, imported_from, generated, ruled_by, verified) and answers are refused."""
     return 0, e.decision_set(id, fields or {}, unset=tuple(unset or ()), **c.kw)
 
 

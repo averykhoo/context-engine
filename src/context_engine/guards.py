@@ -15,6 +15,8 @@ The correctness chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] cha
 ``tests`` and ``claim`` with ``[working] criteria``: a guard is off while a source it needs is unset,
 and red when a set path is missing or a source yields nothing (no goal row, no criterion row, no
 claim), so a reworded table or a pattern that does not fit cannot pass by finding nothing.
+G-I3 (CE-113) reads the ``[working] decision`` kind's current records: a ruling made on the owner's
+delegation names who ruled (`ruled_by`) and keeps the owner's words apart from it.
 
 Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
 G-V3 (the run ledger).
@@ -32,6 +34,7 @@ from typing import TYPE_CHECKING, Iterator
 from . import decisions as D
 from . import gate as GATE
 from . import ledger as L
+from . import okf
 from .bootstrap import ENGINE_DIR
 from .config import CONFIG_NAME, LIVENESS
 from .errors import Refusal
@@ -1403,6 +1406,11 @@ RETIRE_BY_RE = re.compile(r"owner|human:\S+|agent")  # whose call a `record reti
 RETIRE_KEYS = ("supersedes", "superseded_by")  # a story's links: only `record retire` writes them
 CONFIRM_BY_RE = re.compile(r"owner|human:\S+")  # whose words a `record confirm` records: never an agent's (FRAMEWORK §3.2)
 CONFIRMED = ("live", "unspecified")  # what `record confirm` makes an agent's reconstruction (FRAMEWORK §3.2)
+# G-I3 (CE-113): a ruling made on the owner's delegation, told apart from the owner's own words
+RULED_BY = "ruled_by"  # the decision key naming who ruled on the owner's delegation (FRAMEWORK §6.5)
+RULING_RE = re.compile(r"^## Ruling[ \t]*$", re.MULTILINE)  # the heading the ruling sits under, below the owner's words
+LONE_HUMAN_RE = re.compile(r"owner|human:\S+")  # an actor that says the words and the call are one human's own
+DELEGATED_ACTOR = "owner asked"  # FRAMEWORK §6.5: the owner asked, another made the call
 SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
 INTENT_OFF = "unset it in [guards] to switch the guard off"
 
@@ -1717,6 +1725,68 @@ def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[t
     return out
 
 
+def delegation_problems(data, body: str) -> list[str]:
+    """G-I3 on one decision (CE-113): a ruling made on the owner's delegation names who ruled and
+    keeps the owner's words apart from it. With `ruled_by`: it names someone other than the owner;
+    the `actor` is not a lone `owner` or `human:<id>` (the ruling is not that human's own words or
+    call: `owner asked`, FRAMEWORK §6.5); and the text above `## Amendments` is the owner's
+    delegating words, then a `## Ruling` section holding the ruling. Without `ruled_by`: no `##
+    Ruling` section, which would be a ruling with nobody named as having made it. ``data`` is the
+    frontmatter (a mapping: a `ruled_by` key that is present but blank counts); ``body`` the text.
+    `record new` and `ask answer` call it too, on what they are about to write."""
+    text = body.replace("\r\n", "\n")
+    m = okf.AMENDMENTS_HEADING.search(text)
+    text = text[: m.start()] if m else text
+    ruling = RULING_RE.search(text)
+    if RULED_BY not in data:
+        return [] if ruling is None else ["has a `## Ruling` section but no `ruled_by`, so nothing says who made the ruling, and it reads as the owner's"]
+    out = []
+    who = str(data.get(RULED_BY) or "").strip()
+    actor = str(data.get("actor") or "").strip()
+    if not who:
+        out.append("has a blank `ruled_by`, so nothing says who made the ruling")
+    elif who == "owner":
+        out.append("says `ruled_by: owner`, but a ruling is delegated only to someone else; the owner's own call is a decision with `actor: owner` and no `ruled_by`")
+    if LONE_HUMAN_RE.fullmatch(actor):
+        out.append(f"is a ruling by {who or 'someone'} on the owner's delegation, but is stamped `actor: {actor}`, so the ruling reads as the owner's own words and call")
+    if ruling is None:
+        out.append("names `ruled_by` but has no `## Ruling` section, so the ruling cannot be told from the owner's words")
+    else:
+        if not text[: ruling.start()].strip():
+            out.append("has nothing above `## Ruling`: the owner's delegating words, verbatim, go there")
+        if not text[ruling.end():].strip():
+            out.append("has an empty `## Ruling` section")
+    return out
+
+
+def delegated_rulings(e: Engine) -> list[Failure]:
+    """G-I3 (CE-113): every current decision (`[working] decision`; a `status: deprecated` one is
+    history) passes `delegation_problems`, so a ruling made on the owner's delegation is never
+    stamped as the owner's own, and its text never sits inside the owner's words. Off while
+    `[working] decision` is unset.
+
+    Not checked: a delegated ruling recorded with no `ruled_by` and no `## Ruling` section (it
+    reads as the owner's own decision, and only the transcript can tell: FRAMEWORK §6.5 makes
+    that the recorder's duty at the write), whether the words above `## Ruling` are the owner's
+    (G-D10 pins them as typed), and whether `ruled_by` names who really ruled."""
+    if not e.w.decision:
+        return []
+    st = e.store
+    out = []
+    for path in st._files(st.config.kind(e.w.decision)):
+        try:
+            doc = st.read(path)
+        except Exception:
+            continue  # the schema check reports an unreadable record
+        if doc.get("status") == "deprecated":
+            continue
+        rid = doc.get("id")
+        for p in delegation_problems(doc.data, doc.body):
+            out.append(Failure("G-I3", st._rel(path), f"{rid} {p}",
+                               f"a decision's provenance is fixed when it is created: record the ruling again with `record new decision` (`--set ruled_by=<who ruled> --set \"actor={DELEGATED_ACTOR}\"`, the owner's delegating words verbatim above a `## Ruling` section holding the ruling), then `decision supersede {rid} <new>`"))
+    return out
+
+
 def story_fields(e: Engine) -> list[Failure]:
     """G-I2: every story (`[guards] stories`) that is not retired has an actor from the
     vocabulary (`owner`, `human:<id>`, `agent (reconstructed from ...)`), a date and a
@@ -1863,4 +1933,4 @@ def sources(e: Engine) -> list[Failure]:
 
 
 def intent(e: Engine) -> list[Failure]:
-    return goals(e) + story_fields(e) + specified(e) + claims(e) + sources(e)
+    return goals(e) + story_fields(e) + delegated_rulings(e) + specified(e) + claims(e) + sources(e)

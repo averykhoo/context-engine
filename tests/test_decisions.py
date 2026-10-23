@@ -274,6 +274,7 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
         ("attribution", "fixed when the record is created"),
         ("imported_from", "fixed when the record is created"),
         ("generated", "fixed when the record is created"),
+        ("ruled_by", "fixed when the record is created"),  # CE-113: who ruled on the owner's delegation
         ("verified", "record amend"),
         ("supersedes", "decision supersede"),
         ("superseded_by", "decision supersede"),
@@ -1159,3 +1160,153 @@ def test_decision_find_takes_its_text_as_a_positional_argument(eng, capsys):
     capsys.readouterr()
     assert main([*root, "decision", "find", "monday", "--text", "tuesday"]) == 2
     assert "two search texts" in capsys.readouterr().err
+
+
+# -- rulings made on the owner's delegation (CE-113, G-I3) ---------------------------------------
+
+OWNER_DELEGATES = "You decide which index layout; I trust your call."
+RULING = "Layout B: one line per decision, grouped by status.\n\nThe coordinator records it after verification.\n"
+
+
+def delegated(e, body=None, **fields):
+    """A ruling made on the owner's delegation, recorded through `record new`."""
+    text = body if body is not None else f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{RULING}'
+    return e.record_new("decision", "Layout B", text, {"actor": "owner asked", "decision_status": "PROVISIONAL", "ruled_by": "claude-code/fable", **fields}, **W).id
+
+
+def g_i3(e):
+    return [f for f in e.lint() if f.guard == "G-I3"]
+
+
+@pytest.mark.criterion("AC-98")
+def test_ask_answer_records_a_delegated_ruling_apart_from_the_owners_words(eng, capsys, tmp_path):
+    """CE-113: with `ruling` and `ruled_by`, `ask answer` quotes only the owner's delegating words, puts
+    the ruling under `## Ruling` outside the quote, stamps `actor: owner asked` with `ruled_by`, and says
+    so on the question and in the index; lint stays green."""
+    q = eng.ask_new("Which index layout?", **W)
+    out = eng.ask_answer(q.id, OWNER_DELEGATES, title="Layout B", ruling=RULING, ruled_by="claude-code/fable", **W)
+    assert out.startswith(f"{q.id}: answered as D-1 (ruled by claude-code/fable on the owner's delegation; actor: owner asked), closed")
+    d = eng.store.get("D-1").doc
+    assert (d.get("actor"), d.get("ruled_by"), d.get("answers")) == ("owner asked", "claude-code/fable", q.id)
+    quote, ruling = d.body.split("\n## Ruling\n", 1)
+    assert quote.lstrip("\n") == f'Owner, answering {q.id} by delegating the ruling to claude-code/fable: *"{OWNER_DELEGATES}"*\n'
+    assert "Layout B: one line" not in quote and "Layout B: one line per decision" in ruling and '*"' not in ruling
+    assert "on the owner's delegation; only the quote above is the owner's words" in ruling
+    qd = eng.store.get(q.id).doc
+    assert dict(qd.get("answered"))["ruled_by"] == "claude-code/fable" and qd.get("state") == "closed"
+    assert "answered on the owner's delegation, ruled by claude-code/fable: D-1" in qd.body
+    assert "*(owner asked, ruled by claude-code/fable, 2026-10-12)*" in (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+    assert eng.store.lint() == [] and g_i3(eng) == []
+    # the owner's own answer is unchanged: `actor: owner`, no `ruled_by`, no `## Ruling`
+    q2 = eng.ask_new("Red or blue?", **W)
+    eng.ask_answer(q2.id, "blue", title="Blue", **W)
+    d2 = eng.store.get("D-2").doc
+    assert (d2.get("actor"), "ruled_by" in d2.data, "## Ruling" in d2.body) == ("owner", False, False)
+    # the CLI: --ruling-file and --ruled-by
+    (tmp_path / "words.md").write_text("Pick one yourself.\n", encoding="utf-8")
+    (tmp_path / "ruling.md").write_text("Green.\n", encoding="utf-8")
+    q3 = eng.ask_new("Which shade?", **W)
+    root = ["--root", str(eng.root), "--session", S, "--actor", ACTOR]
+    assert main([*root, "ask", "answer", q3.id, "--file", str(tmp_path / "words.md"), "--title", "Green", "--ruling-file", str(tmp_path / "ruling.md"), "--ruled-by", "claude-code/opus"]) == 0, capsys.readouterr().err
+    d3 = eng.store.get("D-3").doc
+    assert (d3.get("actor"), d3.get("ruled_by")) == ("owner asked", "claude-code/opus") and d3.body.endswith("\n\nGreen.\n") and '*"Pick one yourself."*' in d3.body
+
+
+@pytest.mark.criterion("AC-98")
+@pytest.mark.parametrize(
+    "words, kw, match",
+    [
+        (OWNER_DELEGATES, {"ruling": RULING}, "a ruling without `ruled_by`"),
+        (OWNER_DELEGATES, {"ruled_by": "claude-code/fable"}, "`ruled_by` without a ruling"),
+        (OWNER_DELEGATES, {"ruling": RULING, "ruled_by": "owner"}, "`ruled_by: owner`"),
+        (f"I said so.\n\n## Ruling\n\n{RULING}", {}, "has a `## Ruling` section but no `ruled_by`"),
+    ],
+    ids=["ruling-alone", "ruled_by-alone", "ruled_by-owner", "heading-in-words"],
+)
+def test_ask_answer_refuses_a_ruling_it_cannot_tell_apart_from_the_owners_words(eng, words, kw, match):
+    q = eng.ask_new("Which index layout?", **W)
+    before = eng.store.get(q.id).path.read_bytes()
+    with pytest.raises(Refusal, match=re.escape(match)):
+        eng.ask_answer(q.id, words, title="Layout B", **kw, **W)
+    assert eng.store.get(q.id).path.read_bytes() == before and not list(eng.store.records("decision"))
+
+
+@pytest.mark.criterion("AC-99")
+@pytest.mark.parametrize(
+    "body, fields, match",
+    [
+        (None, {"actor": "owner"}, "stamped `actor: owner`"),
+        (None, {"actor": "human:avery"}, "stamped `actor: human:avery`"),
+        (None, {"ruled_by": "owner"}, "`ruled_by: owner`"),
+        (None, {"ruled_by": ""}, "a blank `ruled_by`"),
+        (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n{RULING}', {}, "no `## Ruling` section"),
+        (f"## Ruling\n\n{RULING}", {}, "nothing above `## Ruling`"),
+        (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n', {}, "an empty `## Ruling` section"),
+    ],
+    ids=["actor-owner", "actor-human", "ruled_by-owner", "ruled_by-blank", "no-ruling-section", "nothing-above", "empty-ruling"],
+)
+def test_record_new_refuses_a_delegated_ruling_stamped_as_the_owners_or_mixed_into_their_words(eng, body, fields, match):
+    with pytest.raises(Refusal, match=re.escape(match)) as got:
+        delegated(eng, body=body, **fields)
+    assert "ruled_by=<who ruled>" in got.value.remedy and "## Ruling" in got.value.remedy
+    assert not list(eng.store.records("decision"))
+
+
+@pytest.mark.criterion("AC-99")
+def test_record_new_refuses_a_ruling_section_with_no_ruled_by_and_takes_a_well_formed_delegated_ruling(eng):
+    with pytest.raises(Refusal, match=re.escape("has a `## Ruling` section but no `ruled_by`")):
+        dec(eng, body=f'Owner: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{RULING}')
+    assert not list(eng.store.records("decision"))
+    rid = delegated(eng)
+    d = eng.store.get(rid).doc
+    assert (d.get("actor"), d.get("ruled_by")) == ("owner asked", "claude-code/fable") and d.get("body_sha")
+    eng.amend(rid, "a line that says ## Ruling under Amendments is not read", **W)  # only the text above ## Amendments counts
+    own = dec(eng)  # the owner's own decision: a `## Ruling` heading under its Amendments is not its text
+    eng.amend(own, "the owner added a note", **W)
+    path = eng.store.get(own).path
+    path.write_bytes(path.read_bytes() + b"\n## Ruling\n\nquoted in an amendment, not read\n")
+    assert eng.store.lint() == [] and g_i3(eng) == []
+
+
+@pytest.mark.criterion("AC-100")
+def test_lint_g_i3_fails_a_hand_edited_delegated_ruling_and_its_remedy_clears_it(eng):
+    """G-I3: the frontmatter is not covered by body_sha, so a hand edit that stamps a delegated
+    ruling as the owner's, blanks or drops its `ruled_by`, or names `ruled_by` on a decision with no
+    `## Ruling`, is lint's to catch; a superseded decision is history and is not read."""
+    rid = delegated(eng)
+    path = eng.store.get(rid).path
+    good = path.read_text(encoding="utf-8")
+    for old, new, says in (("actor: owner asked", "actor: owner", "stamped `actor: owner`"),
+                           ("ruled_by: claude-code/fable", "ruled_by: ''", "a blank `ruled_by`"),
+                           ("ruled_by: claude-code/fable\n", "", "a `## Ruling` section but no `ruled_by`")):
+        assert old in good
+        path.write_text(good.replace(old, new), encoding="utf-8")
+        got = g_i3(eng)
+        assert [f.path for f in got] == [eng.store._rel(path)] and says in got[0].message, got
+        assert f"decision supersede {rid} <new>" in got[0].remedy
+    path.write_text(good, encoding="utf-8")
+    assert g_i3(eng) == []
+    own = dec(eng)  # the owner's own decision, then hand-marked as a delegated ruling
+    p2 = eng.store.get(own).path
+    mine = p2.read_text(encoding="utf-8")
+    p2.write_text(mine.replace("actor: owner\n", "actor: owner asked\nruled_by: claude-code/fable\n"), encoding="utf-8")
+    assert [f.message for f in g_i3(eng)] == [f"{own} names `ruled_by` but has no `## Ruling` section, so the ruling cannot be told from the owner's words"]
+    p2.write_text(mine, encoding="utf-8")
+    path.write_text(good.replace("actor: owner asked", "actor: owner"), encoding="utf-8")
+    assert len(g_i3(eng)) == 1
+    new = delegated(eng)  # the remedy: record it again, well formed, and supersede the broken one
+    eng.supersede(rid, new, **W)
+    assert g_i3(eng) == []
+
+
+@pytest.mark.criterion("AC-100")
+def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path):
+    """G-I3 is a guard `[guards] off` may name (config.py::LINT_IDS), and naming it switches off the
+    lint and the refusals of `record new` and `ask answer` alike."""
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": ["G-I3"]}}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    rid = delegated(e, actor="owner")
+    assert e.store.get(rid).doc.get("actor") == "owner" and g_i3(e) == []
+    q = e.ask_new("Which layout?", **W)
+    e.ask_answer(q.id, "I said so.\n\n## Ruling\n\nmine", title="Mine", **W)
+    assert g_i3(e) == []

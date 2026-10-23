@@ -44,7 +44,7 @@ CALLS = {
     "ask_new": (["Q", "--pri", "LATER", "--brief", "b", "--blocks", "CE-1", "--body", "x", "--id", "ASK-8"], {"title": "Q", "pri": "LATER", "brief": "b", "blocks": ["CE-1"], "body": "x", "id": "ASK-8"}),
     "ask_raised": (["ASK-1", "ASK-2,ASK-3"], {"ids": ["ASK-1", "ASK-2", "ASK-3"]}),
     "ask_later": (["ASK-1"], {"id": "ASK-1"}),
-    "ask_answer": (["ASK-1", "the words", "--title", "T"], {"id": "ASK-1", "words": "the words", "title": "T"}),
+    "ask_answer": (["ASK-1", "the words", "--title", "T", "--ruling", "r", "--ruled-by", "claude-code/fable"], {"id": "ASK-1", "words": "the words", "title": "T", "ruling": "r", "ruled_by": "claude-code/fable"}),
     "baton_list": ([], {}),
     "baton_add": (["step", "--why", "w"], {"step": "step", "why": "w"}),
     "baton_done": (["BTN-1", "e"], {"id": "BTN-1", "evidence": "e"}),

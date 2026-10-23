@@ -101,8 +101,13 @@ The owner gives intent. Record it before acting on it.
 | 6 | On a design change, run a criteria census (each criterion in scope: KEEP, rewrite or retire, with the work assigned) and keep it as an evidence doc | — | write the evidence doc | criteria made stale by a design change are found together, not one failure at a time |
 
 An agent's own decision of consequence is recorded the same way, with its own actor from the
-FRAMEWORK §6.5 vocabulary (`agent (<model-id>)`, `owner asked`, ...). Never `actor: owner` on the
-agent's own call.
+FRAMEWORK §6.5 vocabulary (`agent (<model-id>)`, `owner asked`, ...). A ruling the owner delegated
+("you decide") is recorded the same way, with `ruled_by` naming who made it and the owner's
+delegating words apart from the ruling: `context-engine ask answer <id> --file <words.md> --title
+"<title>" --ruling-file <ruling.md> --ruled-by <who ruled>` for a question, or `record new decision
+... --set "actor=owner asked" --set ruled_by=<who ruled>` with the owner's words above a `## Ruling`
+section ([§ ask answer](manual-mode.md#context-engine-ask-answer); lint G-I3). Never `actor:
+owner` on the agent's own call.
 
 ## Clean close (§6.3)
 

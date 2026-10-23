@@ -81,7 +81,8 @@ def as_list(value: Any) -> list[str]:
 
 def index_line(r: Row) -> str:
     text = r.get("description") or r.get("title") or ""
-    who = ", ".join(str(x) for x in (r.get("actor"), r.get("decided")) if x)
+    ruled = f"ruled by {r.get('ruled_by')}" if r.get("ruled_by") else None  # CE-113: a ruling on the owner's delegation
+    who = ", ".join(str(x) for x in (r.get("actor"), ruled, r.get("decided")) if x)
     line = f"- [{r.id}]({r.link}): {text}" + (f" *({who})*" if who else "")
     later = as_list(r.get("superseded_by"))
     if later:

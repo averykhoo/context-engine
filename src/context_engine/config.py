@@ -21,7 +21,7 @@ CONFIG_NAME = "context.toml"
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
     "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D4", "G-D5", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
-    "G-I1", "G-I2", "G-T1", "G-T2", "G-T3", "G-T6",
+    "G-I1", "G-I2", "G-I3", "G-T1", "G-T2", "G-T3", "G-T6",
     "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W12", "G-W13",
 )
 

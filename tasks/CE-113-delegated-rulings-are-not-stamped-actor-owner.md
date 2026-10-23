@@ -26,3 +26,4 @@ What went wrong (adhoc AAR entry 24, docs/evidence/adhoc-feedback-2026-10-21.md)
 ## Log
 
 - 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): freeze lifted; work CE-113, then CE-93.
+- 2026-10-23f (claude-code/claude-opus-5-5): Built (uncommitted, for verification): `ruled_by` on decisions, `ask answer --ruling/--ruling-file --ruled-by`, the `## Ruling` section, and lint guard G-I3 (delegated rulings), with record new's and ask answer's write-time twins; FRAMEWORK §5.3, §6.2, §6.5, §8.1 and the kit runbooks updated; AC-98 to AC-100. Report: .scratch/ce-113/build.md

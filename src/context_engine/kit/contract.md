@@ -107,7 +107,8 @@ this role for every request, one task or several, and by default whenever the bo
   agent's, recorded PROVISIONAL with its own actor and flagged in the close digest, not raised as
   a question. A local commit or a record write is cheap to undo; a push, a release, a published
   tag, deleting untracked files, owner words and anything outside the repo are not, and stay the
-  owner's.
+  owner's. A call the owner delegates ("you decide") is still the one who made it: recorded with
+  `ruled_by`, apart from the owner's words, never as `actor: owner` (FRAMEWORK §6.5).
 - **Do not use `fable` subagents unless the owner asks for them or they are really necessary.**
   Never fan out with fable: it wastes tokens.
 - Commit by path, through `context-engine commit <paths> -m "<message>"`, which takes the op

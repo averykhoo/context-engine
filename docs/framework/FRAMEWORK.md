@@ -838,7 +838,10 @@ into the flat directory once the schema carries `state` (§11.4).
 - **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
   receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, words, title)` records
   the words verbatim as a decision with `actor: owner` under the given title, closes the question, and reports which
-  tasks it unblocked.
+  tasks it unblocked. **An answer that delegates the ruling** ("you decide") is the owner's answer
+  too, but the ruling is not their words: `ask.answer(id, words, title, ruling, ruled_by)` quotes
+  only the delegating words, puts the ruling under `## Ruling`, and records `actor: owner asked`
+  with `ruled_by` (§6.5); `ruling` and `ruled_by` come both or neither.
 - **The agent never answers its own question.** If the agent can decide, it was not an owner
   question.
 - **A reversible recommendation is the agent's decision, not a question.** Where the
@@ -1135,7 +1138,8 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 
 1. **Record it verbatim, now.** Behaviour-shaped intent goes into a story (a new story, an
    amendment, or a PRD section). Choice-shaped intent goes into a decision with
-   `actor: owner`, or a charter edit. Tell the owner, in one line, which it became. Engine
+   `actor: owner`, or a charter edit. A ruling the owner delegates is recorded apart from
+   the owner's words, with `ruled_by` (§6.5). Tell the owner, in one line, which it became. Engine
    operations: `record new story` / `record amend`, or `record new decision` (or `ask answer`
    for an answer to an `ASK-n`), with `actor: owner`.
 2. Link it to the charter goal(s). If none fits, ask: it may be a new goal.
@@ -1252,6 +1256,15 @@ reported a problem and the agent decided the fix).
   their own id; conflicts go to the owner. The "who decides" test (P8) routes a question to the
   right human. A single-owner repo may keep the bare word `owner`.
 - The model id matters: "survives model changes" is otherwise untestable.
+- **A ruling made on the owner's delegation** (the owner said "you decide", and an agent or
+  another human made the call) is not the owner's decision. It is `actor: owner asked`, and
+  `ruled_by:` names who ruled (never `owner`). Its text holds the owner's delegating words,
+  verbatim, then a `## Ruling` section with the ruling, so the ruling never sits inside an owner
+  quote. Both parts are stamped: the owner's words because they are the owner's, the ruling because
+  it is provenance. A decision without `ruled_by` has no `## Ruling` section. `ask.answer` writes
+  this shape when given a ruling and who made it; `record.new` refuses a decision that breaks it,
+  and so does lint (G-I3, §8.1). A delegated ruling stamped `actor: owner`, or quoted as the
+  owner's words, becomes frozen owner intent that no amendment can take back (CE-113).
 
 **Decisions are records: one OKF file per decision**, `docs/decisions/<prefix>-n-<slug>.md`
 (`DEC-n` here), written only through the engine. "Why is X like this?" is answered by one small
@@ -1276,6 +1289,7 @@ creates: [S-4]                    # amends: / retires: likewise
 tasks: [T-96]
 tags: [working-state]
 answers: ASK-12                   # set by `ask answer` when the decision answers a question
+ruled_by: agent (<model-id>)      # only on a ruling made on the owner's delegation (above)
 reopen_if:                        # REJECTED only: what would justify reopening it
 generated: { by: claude-code/<model-id>, at: 2026-10-08T14:02:00Z }
 verified: ...                     # optional: the owner explicitly endorsed it; shape not settled (§9.3)
@@ -1297,7 +1311,7 @@ directions under one lock and derives OKF `status`), `decision.set(id, fields, u
 decision's own keys: `decision_status`, `reopen_if`, `tags`, `title`, `description`; it refuses
 `SUPERSEDED`, any status change on a superseded decision, `reopen_if` on a decision that is not
 REJECTED, the link fields, `status`, `answers`, the provenance `actor`, `decided`, `session`,
-`attribution`, `imported_from` and `generated`, and `verified` (an endorsement is owner words), so
+`attribution`, `imported_from`, `ruled_by` and `generated`, and `verified` (an endorsement is owner words), so
 it never writes half a link or re-attributes a decision), `decision.link(id, target, rel)` (a task,
 story, criterion, decision or `file::symbol`, checked to exist when linked; `relaxes` writes its
 backlink too), `decision.relink(id, old, new)` (moves one `code:` link of a current decision when
@@ -1969,6 +1983,15 @@ Decisions as records follow once the core holds.
   rewritten by hand, a retired story's
   frontmatter after the retirement (history), that the retirement's or a confirmation's amendment is still there, that `supersedes` mirrors
   `superseded_by`, and an op log line written by hand (trusted as written, as G-W7 trusts it).
+- **G-I3:** a ruling made on the owner's delegation is not stamped as the owner's (CE-113). Every
+  current decision with `ruled_by` names someone other than `owner`, has an `actor` that is not
+  `owner` or `human:<id>` alone, and holds the owner's delegating words above a `## Ruling` section
+  that holds the ruling, neither part empty; a decision without `ruled_by` has no `## Ruling`
+  section. `record.new` and `ask.answer` refuse what G-I3 would fail, by the same check. Not
+  checked: a delegated ruling recorded with neither `ruled_by` nor `## Ruling` (it reads as the
+  owner's own; only the transcript can tell, so it is the recorder's duty at the write, §6.5),
+  whether the words above `## Ruling` are the owner's, whether `ruled_by` names who really ruled,
+  and a superseded decision (history). Off while `[working] decision` is unset.
 
 The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,

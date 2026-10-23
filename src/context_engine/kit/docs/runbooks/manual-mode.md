@@ -451,6 +451,15 @@ Check every record, then the working state. `--working` does only the second hal
   its source's). *Why: the chain from goal to test is what makes correctness checkable; a link that
   points at nothing looks traced and is not, and a criterion marked tested whose test was deleted
   keeps reading as tested.*
+- **G-I3**, delegated rulings (only when `[working] decision` is set). Every decision that is not
+  `status: deprecated` and has a `ruled_by` key: `ruled_by` is not blank and not `owner`; `actor`
+  is not `owner` or `human:<id>` alone (a ruling made on the owner's delegation is `owner asked`);
+  and the text above `## Amendments` has the owner's delegating words, then a `## Ruling` heading
+  with the ruling under it, neither part empty. A decision without `ruled_by` has no `## Ruling`
+  heading. Not read: a delegated ruling recorded with neither (only the transcript can tell),
+  whether the words above `## Ruling` are the owner's, and whether `ruled_by` names who ruled. *Why:
+  a ruling stamped `actor: owner`, or quoted as the owner's words, becomes frozen owner intent that
+  nobody can amend away (FRAMEWORK §6.5).*
 - **G-D12** (only when `[guards]` sets `coverage_spec` or `coverage_maps`; red if only one is
   set, if the spec is missing, or if the `coverage_maps` glob is absolute or has a `..`, matches
   no file, or matches a file with no `YYYY-MM-DD` in its name): outside fenced code in the spec,
@@ -797,16 +806,27 @@ or demoted to LATER.
 2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
    `decision_status: PROVISIONAL`, `answers: ASK-n`. Body:
    `Owner, answering ASK-n: *"<words>"*`. Stamp its `body_sha` at once.
+   **If the owner delegated the ruling** ("you decide", and an agent or another human made the
+   call; the engine takes the ruling with `--ruling` or `--ruling-file` and who made it with
+   `--ruled-by`, both or neither): the words are only the owner's delegating words, `actor: owner
+   asked`, add `ruled_by: <who ruled>` (never `owner`), and the body is
+   `Owner, answering ASK-n by delegating the ruling to <who ruled>: *"<words>"*`, a blank line,
+   `## Ruling`, a blank line, `Ruled by <who ruled> on the owner's delegation; only the quote above
+   is the owner's words.`, a blank line, then the ruling. Stop if the words hold a `## Ruling`
+   heading of their own (G-I3).
 3. On the question, set `state: closed`, `status: deprecated`, `closed: <key>`,
-   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` and `updated`.
-   Append `- <key> (<actor>): answered by the owner: D-n`.
+   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` (with
+   `ruled_by: <who ruled>` added for a delegated ruling) and `updated`.
+   Append `- <key> (<actor>): answered by the owner: D-n` (for a delegated ruling,
+   `- <key> (<actor>): answered on the owner's delegation, ruled by <who ruled>: D-n`).
 4. Report what it unblocks: open items whose deps include it and whose deps are now all closed,
    plus everything in its `blocks`.
 5. If the question was at NOW, check NOW as in § task close and tell the owner.
 
 **Why:** an answer is a decision in the owner's own words. It is stamped so the words cannot
 drift, and closing the question points to the decision rather than burying the answer in a log
-line (FRAMEWORK §6.2).
+line (FRAMEWORK §6.2). A ruling made on the owner's delegation is not the owner's words: inside the
+owner's quote, or under `actor: owner`, it would be frozen as owner intent (FRAMEWORK §6.5).
 
 ## Batons and pauses
 
@@ -1016,13 +1036,18 @@ reject it, a round of fixes later.
    `superseded_by` (§ context-engine record retire writes those), and `goals` names at least one
    goal of the charter, each written `G-n`. A record carried over from a repo's own log (an entry
    added after its import) gets `aliases: [<old id>]` here, under G-D2's alias rule; a decision's
-   aliases are fixed from then on (`decision set` refuses them).
+   aliases are fixed from then on (`decision set` refuses them). For a decision, stop unless it
+   passes G-I3 of § context-engine lint: a ruling made on the owner's delegation (the owner said
+   "you decide", and an agent or another human made the call) has `ruled_by: <who ruled>` (never
+   `owner`) and an `actor` that is not the owner alone (`owner asked`), and its body is the owner's
+   delegating words verbatim, then a `## Ruling` heading with the ruling under it; any other
+   decision has no `## Ruling` heading.
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
 **Why:** owner intent is recorded verbatim, now (§6.2), and a record stamped when it is created can
 never be quietly rewritten. Who decided is never guessed: an `actor: owner` on the agent's own call is
-the worst error this file can hold.
+the worst error this file can hold, and a call the owner delegated is still the agent's (`ruled_by`).
 
 ### context-engine record stamp
 
@@ -1174,9 +1199,9 @@ operation owns. Values take the kind's declared types, as in § context-engine t
 - the key is `narrowed_by`: it is the backlink `relaxes` writes, so run `decision link <other>
   <id> --rel relaxes` on the decision that narrows this one;
 - the key is `answers` (written once by `ask answer`), or provenance: `actor`, `decided`,
-  `session`, `attribution`, `imported_from`, `generated` or `aliases` (who decided, when, in which
-  session, from what source and under which earlier ids are fixed when the record is created; note
-  a correction with `record amend`);
+  `session`, `attribution`, `imported_from`, `generated`, `ruled_by` or `aliases` (who decided, who
+  ruled on the owner's delegation, when, in which session, from what source and under which earlier
+  ids are fixed when the record is created; note a correction with `record amend`);
 - the key is `verified` (the owner endorsed it): an endorsement is the owner's words, so record
   them with `record amend <id> "<the owner's words>"`;
 - the key is `reopen_if` and the decision would not be REJECTED after the change, or the change
