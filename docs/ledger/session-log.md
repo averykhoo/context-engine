@@ -7,9 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-23b · kind: open
+## 2026-10-23b · kind: close
 
-- **opened:** 2026-10-23T11:23:22+08:00 by claude-code/claude-opus-5-5
+- **rows:** none (push session)
+- **receipts:**
+  - guards: gate run: 1068 passed in 316.49s; linux gate: 1068 passed on 384936e; CI gate run
+    39895959606 success
+  - read: orient; gate log; banner show
+- **summary** (the owner digest):
+  - Pushed 384936e to origin/main (ac03e76..384936e, the 2026-10-23a sweep), owner approved.
+  - CI gate run 39895959606: success. Windows gate 1068 passed; tools/linux_gate.py 1068 passed
+    (2026-10-23).
+  - Fixed a red lint before the push: 2026-10-23a's close skipped banner set; banner now
+    2026-10-23b.
+  - AAR: session close does not remind about banner set, so the next gate went red; worth a guard at
+    close.
+- **Still owed:**
+  - Owner: confirm the kit freeze holds until the adhoc re-pin commits (recommended yes)
 - **start head:** 4bb6c22555209310bec8c15939eda9c57093d8ce
 
 ---
