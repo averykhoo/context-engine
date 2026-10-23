@@ -7,9 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-23e · kind: open
+## 2026-10-23e · kind: close
 
-- **opened:** 2026-10-23T13:25:23+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-79 commented; CE-133 closed; CE-134 filed
+- **receipts:**
+  - guards: pytest: 1070 passed (8291569); lint: clean
+  - read: CE-79, CE-133, CE-111, CE-120, DEC-71, adhoc CLAUDE.md
+- **summary** (the owner digest):
+  - Abandoned 2026-10-22b on the owner's word; its baton BTN-5 settled (nothing was in flight).
+  - CE-79: DEC-71 step done in adhoc: owner's 2026-10-17 words are adhoc DEC-95, coordinator section
+    dropped (9cdaaf9); adhoc gate 826 passed; verified by a second agent.
+  - CE-133 fixed (8291569) and closed (292541d): commit.py::_head_oplog; a HEAD without an op log no
+    longer takes other sessions' lines. Gate 1070 passed; verifier reproduced the sabotage and
+    approved the CE-55 test rewrite.
+  - Filed CE-134 (test the sweep path's frontmatter refusal), from the CE-133 verifier.
+  - Owed to the owner: push here (3 commits + close) and in adhoc (unpushed DEC-95 commits); INV-31
+    probes in adhoc; the word on lifting the kit freeze (CE-111, CE-120 and 8 more wait on it).
+  - Restart Claude Code before the next session here: the MCP server runs pre-CE-133 code.
+- **Still owed:**
+  - push this repo and adhoc (owner's approval)
+  - INV-31 probes in adhoc (owner)
+  - owner's word on lifting the kit freeze
 - **start head:** 036c5f2b7ef8e65b0cd9cccd16dc0bdcadf26ca0
 
 ---
