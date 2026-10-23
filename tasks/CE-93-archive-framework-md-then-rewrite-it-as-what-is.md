@@ -4,13 +4,15 @@ id: CE-93
 title: Archive FRAMEWORK.md, then rewrite it as what is needed to understand and use the framework (DEC-49)
 brief: Archive first (§6.12); no history, no prior art, no build status in the new text; section numbers stay stable (P3)
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-15c
 created: 2026-10-15
-moved: 2026-10-17b
+moved: 2026-10-23f
 updated: 2026-10-23f
 goals: [G-7]
+status: deprecated
+closed: 2026-10-23f
 ---
 
 DEC-49 (owner): FRAMEWORK.md should be "what's needed to understand and use the framework, not what's needed to be a historian". It also approves dedupe-2.
@@ -44,3 +46,4 @@ This likely absorbs CE-89 (frozen wording owed after CE-41 and CE-87).
 - 2026-10-16a (claude-code/claude-opus-5-5): Correction to the 2026-10-16a comment: DEC-50 (owner, 2026-10-15e) holds this until the trial feedback is in (CE-79, about 2026-10-21); the owner made it NOW on a recommendation that missed that. Confirm with the owner before starting. Also, doc archive (CE-27) moves a doc; step 1 here copies FRAMEWORK.md to FRAMEWORK-v<version>.md, so it is a by-hand copy, not that op.
 - 2026-10-17b (claude-code/claude-opus-5-5): Owner, 2026-10-17b (DEC-51): audio-workspace onboarding (CE-43) goes first; the trial feedback is next week. Moved to NEXT so CE-43 can hold NOW.
 - 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): freeze lifted and CE-93 to be worked, after CE-113. This is the confirmation the 2026-10-16a trap asked for; DEC-50's hold is met (trial feedback in, CE-7 scored 2026-10-21b).
+- 2026-10-23f (claude-code/claude-opus-5-5): closed: Fixed in c5b812f: FRAMEWORK.md rewritten for a user (markers, history, engine internals out), archived as FRAMEWORK-v0.5-2026-10-23.md, RELEASE-NOTES.md and docs/engine.md added; verified PASS (verify-2)
