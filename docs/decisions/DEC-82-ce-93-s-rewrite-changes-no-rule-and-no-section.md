@@ -7,6 +7,7 @@ actor: claude-code/claude-opus-5-5
 decided: 2026-10-24
 session: 2026-10-23f
 body_sha: sha256:fc2e5540d35627992d5115cbd50ea3d0d0ed98fbf508005266dba7a0cb2d7792
+tasks: [CE-93]
 ---
 
 An agent's call under P8 (cheap to undo), made by CE-93's builder in session 2026-10-23f and landed in c5b812f. Recorded afterwards from the builder's report. This one decision carries two calls (the builder's PROVISIONAL calls P-6 and P-7), both on the scope of the rewrite.
