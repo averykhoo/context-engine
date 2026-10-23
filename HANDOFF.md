@@ -3,17 +3,19 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-23d)
+## Banner (2026-10-23e)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **CE-7 (adhoc trial) scored and closed 2026-10-21b: fix first, then keep; re-pin adhoc once, after the fixes.** 12 sessions
   (9 closed, 3 abandoned by hand); start cost -23.7% (missed the -25% bar), close cost -48% (met); C = 0
   (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
-  CE-104..CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin.
-- **CE-79 is NOW (2026-10-23d):** the adhoc re-pin to 9f0e8ca is done (adhoc e939727, gate green, verified; pushed 2026-10-23d with
-  the owner's approval). Left: record the owner's 2026-10-17 coordinator words as an adhoc decision, then drop adhoc CLAUDE.md's
-  coordinator section (DEC-71); INV-31 probes need the owner; adhoc ASK-14, ASK-16 raised 2026-10-23c.
+  CE-104..CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc).
+- **CE-79 is NOW:** re-pin done and pushed (2026-10-23d); DEC-71 step done 2026-10-23e (adhoc DEC-95, coordinator section
+  dropped in adhoc 9cdaaf9; adhoc commits local, NOT pushed; the owner's own adhoc session is live). Left: INV-31 probes and
+  the adhoc push, both the owner's. ASK-16 answered in adhoc (DEC-96).
+- **Unpushed here:** CE-133 fixed (8291569, commit.py::_head_oplog; gate 1070 passed), closed 292541d; CE-134 filed. The MCP
+  server runs pre-CE-133 code until Claude Code restarts.
 - **Every clean close sets the banner** (G-W1): 2026-10-23b in adhoc and 2026-10-23c here closed without it and turned lint red.
 - **Sweep 2026-10-23a (ultracode):** 24 unblocked LATER tasks closed (CE-48..CE-131, list in the ledger); gate 1067 passed.
   CE-105, CE-119 lint halves only; CE-123 built, not committed; all three wait on the kit freeze. CE-126 needs an owner design
@@ -29,12 +31,12 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
   In the rule text since CE-83 (17470c8, 2026-10-20b): contract § Rules, FRAMEWORK §6.6 "The coordinator".
-- **Push of the 2026-10-23a sweep approved by the owner 2026-10-23b.** Every push: gate, then `tools/linux_gate.py`, then a
-  CI watcher. 78cbe4e fixed a Linux-only red: test_foreign's commit helper set no user.name (CE-67 trap).
-- **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c); still held 2026-10-23
-  pending the owner's word on keeping it until the adhoc re-pin commits. Lifted for CE-77, CE-78, CE-81 (DEC-43), CE-92
+- **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.** 78cbe4e fixed a Linux-only red: test_foreign's commit
+  helper set no user.name (CE-67 trap).
+- **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). The adhoc re-pin has now
+  committed and pushed; lifting the freeze is the owner's word, not yet given. Lifted for CE-77, CE-78, CE-81 (DEC-43), CE-92
   (DEC-50), CE-27, CE-43 (DEC-51), CE-98 (DEC-52), CE-60, CE-58, CE-65, CE-83, CE-91 (DEC-63), CE-99 (DEC-65). CE-84, CE-85,
-  CE-89, CE-93, CE-102, CE-105, CE-119 and CE-123 wait on it.
+  CE-89, CE-93, CE-102, CE-105, CE-111, CE-119, CE-120 and CE-123 wait on it.
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
