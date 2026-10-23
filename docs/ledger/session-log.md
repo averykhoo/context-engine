@@ -7,11 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-23f · kind: open
+## 2026-10-23f · kind: close
 
-- **opened:** 2026-10-23T22:40:16+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-113 (closed 6871040); CE-93 (closed 66c9a19); CE-89 (closed f7534f4); CE-79 (INV-31
+  probed a42a66d, open: /compact and adhoc push, owner); CE-126 (ASK-21); CE-138 (NEXT);
+  CE-135..CE-144 (filed); DEC-72..DEC-83 (new)
+- **receipts:**
+  - guards: gate PASSED (1091 passed, all run 2026-10-24T00:30:31, CE-93 land); readers PASSED 272
+    on g1/code+readers:b723ec6186516e6b; lint: clean; linux gate green on a0b9db6; CI gate run
+    39973814687 success
+  - read: orient; CE-79, CE-113, CE-93, CE-126, CE-134 task show; procedures.md Clean close
+  - asked: ASK-21
+- **summary** (the owner digest):
+  - Owner lifted the kit-edit freeze and approved the push (DEC-72); pushed a0b9db6, CI green.
+  - CE-113: delegated rulings record ruled_by and a ## Ruling section, lint G-I3 (21a88d9), verified
+    by a second agent.
+  - CE-93: FRAMEWORK.md rewritten for users; archive FRAMEWORK-v0.5-2026-10-23.md, docs/engine.md,
+    RELEASE-NOTES.md (c5b812f), verified.
+  - CE-79: INV-31 seen at startup, resume, /clear in adhoc; compaction untested (a42a66d). Adhoc
+    push ready, held.
+  - PROVISIONAL (agent calls): DEC-73..DEC-83; CE-89 closed as covered; CE-138 promoted to NEXT;
+    follow-ups CE-138..CE-144.
+  - AAR: CE-126 bites in practice; sequencing CE-113 then CE-93 in one workflow and a separate
+    follow-up agent kept op lines unmixed.
+- **Still owed:**
+  - Push of everything after a0b9db6 (owner's word; linux gate + CI watcher)
+  - Adhoc push (owner's word)
+  - One manual /compact in adhoc for INV-31 (owner)
+  - ASK-21 answer (CE-126 design)
+  - Restart Claude Code: the MCP server runs pre-CE-113 code
 - **start head:** e003db836497a091ce65411e1104458372140e80
-- **asked:** ASK-21
 
 ---
 
