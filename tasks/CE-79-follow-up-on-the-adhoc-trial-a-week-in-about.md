@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-22b
-updated: 2026-10-22b
+updated: 2026-10-23c
 goals: [G-6]
 ---
 
@@ -32,3 +32,5 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 - 2026-10-21b (claude-code/claude-opus-5-5): 2026-10-21b: CE-7 closed (scored, f022af4). Left here: the INV-31 live probes (resume, /clear, compaction) in adhoc, which need the owner; the re-pin off 38ed38e after CE-124, CE-104, CE-63, CE-125; adhoc's 3 dropped owed items (INV-31 probes, 19a .scratch inventory, 16b AD-17 -187 dB outlier) belong on adhoc's board.
 - 2026-10-21c (claude-code/claude-opus-5-5): 2026-10-21c: adhoc start-cost cleanup done (owner-approved), adhoc commits ebfdbe9, f3898c5, 09ae685, 273b183 (local, not pushed): CLAUDE.md no longer says read HANDOFF in full; HANDOFF banner-only (7,847 -> 1,254 B), banner 4.2 KB -> 884 B, orient 5,402 -> 2,095 B; durable content moved to adhoc docs/facts.md and docs/methods.md; AD-28 (-187 dB outlier), AD-29 (.scratch inventory, 32 GB) filed. Verified line by line by a second agent: nothing lost. Still for the re-pin: drop adhoc CLAUDE.md's coordinator section (917 B), now in the kit contract. Open in adhoc: DEC-75 pyannote SpeechSeparation check (AD-2) has no row; .scratch 32 GB sweep is AD-29.
 - 2026-10-22b (claude-code/claude-opus-5-5): 2026-10-22b: fix-first CE-104/125/63/124 done (fec65a7). Re-pin of adhoc-microphone-array STOPPED half-done: env reinstalled in place to 9f0e8ca (package only), kit contract + 6 runbooks still 38ed38e's, nothing committed, tree clean; stopped because an idle adhoc Claude Code conversation (since 2026-10-21) still runs an MCP server from that env. Waits on ASK-19 (finish vs roll back) and ASK-20 (coordinator line). Checklist: .scratch/ce-79-repin/repin.md.
+- 2026-10-23c (claude-code/claude-opus-5-5): 2026-10-23c: re-pin still blocked after the owner paused adhoc: python PID 22024 (adhoc .context-engine/env, context_engine.mcp, started 2026-10-21) still runs under claude.exe PID 1744 (remote session cse_01TkdBP39oNY5iDa4fja5ERj); pausing did not stop it. Env confirmed at 9f0e8ca. ASK-20 answered by DEC-71: drop coordinator section after recording the owner's 2026-10-17 words as an adhoc decision. Report: .scratch/ce-79-repin/finish-2026-10-23c.md
+- 2026-10-23c (claude-code/claude-opus-5-5): 2026-10-23c: adhoc re-pin to 9f0e8ca DONE after the owner killed PID 22024: adhoc e939727 (5 kit runbooks; contract.md already current via e78beac), 687a7ad (banner set, cured G-W1 left by adhoc 2026-10-23b), e9f67cb (adhoc session close); adhoc gate green (pytest 826 passed, lint clean); verified by a second agent (byte-equal, LF, env at 9f0e8ca). Local only, not pushed. Left: push (owner); record the owner's 2026-10-17 coordinator words as an adhoc decision, then drop adhoc CLAUDE.md's coordinator section (DEC-71); INV-31 probes (owner).

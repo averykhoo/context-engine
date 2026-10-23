@@ -7,6 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-23c · kind: close
+
+- **rows:** CE-79 (re-pin done; task stays open)
+- **receipts:**
+  - guards: no code changed in context-engine; adhoc gate: pytest 826 passed, 10 warnings in
+    433.37s; lint: clean
+  - read: orient; CE-79; .scratch/ce-79-repin/repin.md
+- **summary** (the owner digest):
+  - CE-79: adhoc re-pin to 9f0e8ca finished and committed locally in adhoc (e939727, 687a7ad,
+    e9f67cb); adhoc gate green, verified by a second agent.
+  - Agent's call (PROVISIONAL): banner set in adhoc to cure a G-W1 red left by adhoc session
+    2026-10-23b.
+  - Raised in chat: adhoc ASK-14 and ASK-16.
+  - This window's MCP server runs stale engine code (refuses on [guards] task_goals): restart Claude
+    Code; CLI used meanwhile.
+  - Session 2026-10-22b still listed open, last active 2026-10-22; looks abandoned.
+- **Still owed:**
+  - owner: approve pushing adhoc 687a7ad..e9f67cb
+  - owner: answer adhoc ASK-14, ASK-16
+  - record owner 2026-10-17 coordinator words as an adhoc decision, then drop the section (DEC-71)
+  - owner: INV-31 live probes in adhoc
+- **start head:** 6aa317e20c744c8844134a5c04f460b1b6a99adc
+
+---
+
 ## 2026-10-23b · kind: close
 
 - **rows:** none (push session)
