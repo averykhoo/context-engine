@@ -124,6 +124,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-73](DEC-73-a-delegated-ruling-keeps-the-owner-s-words.md): A delegated ruling keeps the owner's words above a ## Ruling section and names who ruled in ruled_by *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-74](DEC-74-a-delegated-ruling-s-actor-is-owner-asked-lint.md): A delegated ruling's actor is 'owner asked'; lint refuses only a lone owner or human actor *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-75](DEC-75-g-i3-is-a-new-guard-for-delegated-rulings-not-a.md): G-I3 is a new guard for delegated rulings, not a clause of G-I2, and skips superseded decisions *(claude-code/claude-opus-5-5, 2026-10-24)*
+- [DEC-76](DEC-76-where-ruled-by-shows-the-question-s-answered.md): Where ruled_by shows: the question's answered mapping, the log line, the decision index, the kit contract and the schema *(claude-code/claude-opus-5-5, 2026-10-24)*
 
 ## REJECTED
 
