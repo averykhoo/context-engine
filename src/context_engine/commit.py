@@ -20,7 +20,7 @@ whose and how many; ``sweep`` takes every line, for a session known dead. When l
 behind, the op log at HEAD is HEAD's own lines plus the taken ones, in working order, built in
 a temporary index; the working file is never rewritten, and once nothing is left behind a commit
 carries it whole again, so the two converge. Before the first commit every line goes in (there
-is no HEAD op log to build on). The message and the reply say whose lines went in.
+is no HEAD to build on); a HEAD that lacks the op log is built on, as an empty one (CE-133). The message and the reply say whose lines went in.
 
 It runs while the engine lock is held, so no engine operation is half-written in the tree when
 it reads. With no line left behind it runs ``git commit --only`` on those paths (with lines left, a
@@ -423,6 +423,16 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
             return Outcome(note=f"git took over {GIT_TIMEOUT}s (a hook?){left}; {remedy}")
 
 
+def _head_oplog(git: _Git, oplog: str) -> str | None:
+    """The op log's text at HEAD: empty when HEAD lacks it, None only when there is no HEAD (no
+    commit yet). Only then does a commit take every line, having no HEAD to build a partial op
+    log on; a HEAD whose op log is missing or empty is built on like any other (CE-133)."""
+    p = git.run("show", f"HEAD:./{oplog}")
+    if p.returncode == 0:
+        return p.stdout
+    return "" if _rev(git, "HEAD") else None
+
+
 def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
     f = tmp / name
     f.write_bytes(b"\0".join(p.encode("utf-8") for p in paths))
@@ -441,14 +451,14 @@ def pending(root: Path, oplog: str, session: str | None = None, derived: dict[st
     git = _Git(root)
     try:
         top = git.run("rev-parse", "--show-prefix")
-        head = git.run("show", f"HEAD:./{oplog}")
+        head = _head_oplog(git, oplog) if top.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
         return set()
     if top.returncode != 0:
         return set()
     prefix = top.stdout.strip()
-    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head.stdout if head.returncode == 0 else "")
-    if session is not None and head.returncode == 0:
+    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
+    if session is not None and head is not None:
         fresh = select(fresh, session, derived=derived)[0]
     if not fresh:
         return set()
@@ -494,15 +504,14 @@ def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (
     log = root / oplog
     if not log.exists():
         return []
-    head = ""
+    head = None
     if _in_git_tree(root):
         try:
-            p = _Git(root).run("show", f"HEAD:./{oplog}")
-            head = p.stdout if p.returncode == 0 else ""
+            head = _head_oplog(_Git(root), oplog)
         except (OSError, subprocess.TimeoutExpired):
             pass
-    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head)
-    return select(fresh, session, given, sweep, derived)[0] if head else fresh
+    fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
+    return select(fresh, session, given, sweep, derived)[0] if head is not None else fresh
 
 
 def _detached(git: _Git, gitdir: Path) -> bool:
@@ -524,15 +533,15 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     left: list[str] = []
     head_text = ""
     if log.exists():
-        head = git.run("show", f"HEAD:./{oplog}")
-        head_text = head.stdout if head.returncode == 0 else ""
+        head = _head_oplog(git, oplog)
+        head_text = head or ""
         working = log.read_bytes().decode("utf-8", errors="replace")
         lost = new_lines(head_text, working)
         if lost:
             return Outcome(note=(f"{oplog} lacks {len(lost)} line{'s' if len(lost) != 1 else ''} HEAD has, so a commit would "
                                  f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
         fresh = new_lines(working, head_text)
-        if head.returncode == 0:  # before the first commit every line goes in: no HEAD op log to build a partial one on
+        if head is not None:  # before the first commit every line goes in: no HEAD to build a partial op log on (CE-133)
             fresh, left = select(fresh, session, given, sweep, derived)
     whose = _whose(left)
     if not fresh and not given:

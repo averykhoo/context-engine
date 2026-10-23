@@ -841,20 +841,24 @@ def test_the_session_commit_sweeps_whatever_the_policy(tmp_path, policy):
 
 @pytest.mark.criterion("AC-76")
 def test_a_milestone_never_commits_a_record_whose_frontmatter_does_not_parse(mrepo, tmp_path):
-    """Another session's half-done hand edit to a record riding along: the next milestone, made
-    by any session, would carry it as it stands and its clean checkout would not lint. It stops
-    instead, naming the file; the edit finished, the next milestone carries it."""
+    """A half-done hand edit to a record riding along: the next milestone that takes its op line
+    would carry it as it stands and its clean checkout would not lint. It stops instead, naming
+    the file; the edit finished, the next milestone carries it. Another session's milestone
+    leaves the record out with its line (CE-125; CE-133: here HEAD has no op log yet)."""
     a = start(mrepo)
     run(mrepo, "task_new", a, title="Being edited")
     task = next((mrepo / "tasks").glob("CE-1-*.md"))
     good = task.read_bytes()
     task.write_bytes(good.replace(b"pri: LATER", b"pri: LATER\nlabels: [half"))  # mid-edit, by hand
     b = start(mrepo)
+    _, line = run(mrepo, "baton_add", b, step="b's step", why="no time")
+    assert "; committed" in line and f"left uncommitted: 1 op line of {a.session}" in line, line
+    assert f"tasks/{task.name}" not in files_at(mrepo)
     before = count(mrepo)
-    _, line = run(mrepo, "baton_add", b, step="a step", why="no time")
+    _, line = run(mrepo, "baton_add", a, step="a step", why="no time")
     assert count(mrepo) == before and f"not committed: tasks/{task.name} does not parse" in line, line
     task.write_bytes(good)  # the edit is finished (here: undone)
-    _, line = run(mrepo, "baton_add", b, step="another", why="no time")
+    _, line = run(mrepo, "baton_add", a, step="another", why="no time")
     assert "; committed" in line and f"tasks/{task.name}" in files_at(mrepo), line
 
 
@@ -1065,6 +1069,35 @@ def test_another_sessions_unparseable_line_stays_out_of_the_commit(repo, tmp_pat
     _, line = run(repo, "task_new", a, title="Mine")
     assert f"; committed {head(repo)}" in line and "left uncommitted: 1 op line of 2026-10-07z" in line, line
     assert broken not in git(repo, "show", "HEAD:ops.jsonl") and broken in (repo / "ops.jsonl").read_text(encoding="utf-8")
+    clone = tmp_path / "clone"
+    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(repo), str(clone))
+    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
+
+
+@pytest.mark.criterion("AC-78")
+@pytest.mark.parametrize("at_head", ["absent", "empty"])
+def test_a_head_without_op_lines_still_leaves_another_sessions_lines_out(repo, tmp_path, at_head):
+    """CE-133: only a repo with no commit yet takes every line, since a partial op log is built on
+    HEAD. A HEAD whose op log is missing (a repo adopting the kit, its start commit refused) or
+    empty is built on as well: taken_lines, pending and the commit itself take the same lines."""
+    if at_head == "empty":
+        (repo / "ops.jsonl").write_bytes(b"")
+        git(repo, "add", "ops.jsonl")
+        git(repo, "commit", "-q", "-m", "an empty op log")
+    a, b = eng(repo, commit="off"), eng(repo, commit="off")
+    mine = a.session_start(actor=ACTOR)
+    a.new("task", "A's work", session=mine, actor=ACTOR)
+    theirs = b.session_start(actor=ACTOR)
+    rec = b.new("task", "B's half-done work", session=theirs, actor=ACTOR)
+    their_file = rec.path.relative_to(repo).as_posix()
+    taken = C.taken_lines(repo, "ops.jsonl", mine)
+    assert taken and not [ln for ln in taken if their_file in ln], taken
+    assert their_file not in C.carried_paths(repo, "ops.jsonl", mine)
+    assert their_file not in C.pending(repo, "ops.jsonl", mine)
+    assert their_file in C.taken_lines(repo, "ops.jsonl", mine, sweep=True)[-1]
+    _, line = run(repo, "commit", ops.Caller(actor=ACTOR, session=mine), message="CE-9: A's")
+    assert line.startswith(f"committed {head(repo)}") and f"left uncommitted: 1 op line of {theirs}" in line, line
+    assert their_file not in files_at(repo) and their_file not in git(repo, "show", "HEAD:ops.jsonl")
     clone = tmp_path / "clone"
     git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(repo), str(clone))
     assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard == "G-W7"] == []
