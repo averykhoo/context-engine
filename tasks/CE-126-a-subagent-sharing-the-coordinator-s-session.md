@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-22b
 created: 2026-10-22
 moved: 2026-10-22b
-updated: 2026-10-22b
+updated: 2026-10-23f
 ---
 
 A subagent sharing the coordinator's session key defeats CE-125's per-session op-line split.
@@ -24,3 +24,5 @@ A subagent sharing the coordinator's session key defeats CE-125's per-session op
 - none yet
 
 ## Log
+
+- 2026-10-23f (claude-code/claude-opus-5-5): 2026-10-23f: design brief walked through with the owner; options A-D and recommendation B in the new ASK.

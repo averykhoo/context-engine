@@ -3,47 +3,35 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-23e)
+## Banner (2026-10-23f)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **CE-7 (adhoc trial) scored and closed 2026-10-21b: fix first, then keep; re-pin adhoc once, after the fixes.** 12 sessions
-  (9 closed, 3 abandoned by hand); start cost -23.7% (missed the -25% bar), close cost -48% (met); C = 0
-  (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
-  CE-104..CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc).
-- **CE-79 is NOW:** re-pin done and pushed (2026-10-23d); DEC-71 step done 2026-10-23e (adhoc DEC-95, coordinator section
-  dropped in adhoc 9cdaaf9; adhoc commits local, NOT pushed; the owner's own adhoc session is live). Left: INV-31 probes and
-  the adhoc push, both the owner's. ASK-16 answered in adhoc (DEC-96).
-- **Unpushed here:** CE-133 fixed (8291569, commit.py::_head_oplog; gate 1070 passed), closed 292541d; CE-134 filed. The MCP
-  server runs pre-CE-133 code until Claude Code restarts.
-- **Every clean close sets the banner** (G-W1): 2026-10-23b in adhoc and 2026-10-23c here closed without it and turned lint red.
-- **Sweep 2026-10-23a (ultracode):** 24 unblocked LATER tasks closed (CE-48..CE-131, list in the ledger); gate 1067 passed.
-  CE-105, CE-119 lint halves only; CE-123 built, not committed; all three wait on the kit freeze. CE-126 needs an owner design
-  call. Lesson: a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
-- **CE-93 moved to NEXT (2026-10-17b, for CE-43); DEC-50 still holds it until the trial's feedback.**
-- **New owner direction (2026-10-15c, management-theory review):** DEC-47 rules cite their incident (CE-94); DEC-48 who decides
-  by reversibility (CE-91); DEC-49 FRAMEWORK.md is for using the framework, not history (CE-93 archive + rewrite); AAR and
-  periodic review, owner-triggered (CE-90, US-12). DEC-48 is in the rule text since CE-91 (2026-10-20b).
-- **CE-99 closed 2026-10-20f (rerank, FRAMEWORK §6.14):** tasks carry charter `goals` (G-I1); orient says "rerank due" only
-  when NEXT holds no task (owner, DEC-64 amendment); NEXT stays full for a few days, by the owner's choice.
-- **DEC-50 (2026-10-15e):** a trap lives where its lifetime matches: task `## Traps`, a hazard board row, or a register INV-n;
-  never the banner (CE-29, spec text still held).
+- **Kit-edit freeze LIFTED (owner, DEC-72, 2026-10-23f).** CE-84, CE-85, CE-102, CE-105, CE-111, CE-119, CE-120 and CE-123
+  (built 2026-10-23a, not committed) were waiting on it and are now workable.
+- **Just landed:** CE-113 done (21a88d9: delegated rulings carry `ruled_by` and a `## Ruling` section, lint G-I3); CE-93 done
+  (c5b812f: FRAMEWORK.md rewritten for users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`,
+  `RELEASE-NOTES.md`); CE-89 closed; builders' calls DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144.
+  The MCP server runs pre-CE-113 code until Claude Code restarts.
+- **Unpushed here:** everything after a0b9db6 (pushed 2026-10-23f, CI green). Push needs the owner's word.
+- **CE-79 is NOW:** INV-31 probe done (a42a66d, `docs/evidence/inv31-adhoc-probe-2026-10-23.md`): startup, resume, /clear seen;
+  compaction never happened in adhoc. Left, both the owner's: one manual `/compact` in adhoc; the adhoc push (10 commits
+  ready, no CI there; it would publish the owner's live adhoc session's commits too).
+- **ASK-21 (CE-126):** subagents share the session key, so op lines mis-file across tasks (seen 2026-10-23e); recommended B,
+  an op-line lane field, kept at LATER.
+- **Every clean close sets the banner** (G-W1).
+- **Lesson (2026-10-23a):** a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
+- **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment); NEXT stays full by the
+  owner's choice.
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
-  In the rule text since CE-83 (17470c8, 2026-10-20b): contract § Rules, FRAMEWORK §6.6 "The coordinator".
-- **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.** 78cbe4e fixed a Linux-only red: test_foreign's commit
-  helper set no user.name (CE-67 trap).
-- **No other framework or kit edits while CE-7's trial waits**, except as the owner asks (2026-10-14c). The adhoc re-pin has now
-  committed and pushed; lifting the freeze is the owner's word, not yet given. Lifted for CE-77, CE-78, CE-81 (DEC-43), CE-92
-  (DEC-50), CE-27, CE-43 (DEC-51), CE-98 (DEC-52), CE-60, CE-58, CE-65, CE-83, CE-91 (DEC-63), CE-99 (DEC-65). CE-84, CE-85,
-  CE-89, CE-93, CE-102, CE-105, CE-111, CE-119, CE-120 and CE-123 wait on it.
+- **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.**
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
-  close a task after its work is committed (`task close` carries `Closes:`). Each commit takes every uncommitted op line.
+  close a task after its work is committed (`task close` carries `Closes:`).
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
-- **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal
-  (`.gitattributes` pins them LF since CE-46's repo half; init's half waits for CE-43).
-- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push (from a
-  worktree too since CE-86). The MCP server runs stale code after an engine change: restart Claude Code.
+- **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
+- **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push. The MCP server runs stale code
+  after an engine change: restart Claude Code.
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
 

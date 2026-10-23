@@ -3,7 +3,7 @@ type: Task
 id: CE-138
 title: "G-I3 edge cases from CE-113's review: a capitalised Owner passes, a ruling may hold ## Amendments, AC-53 omits ruled_by"
 brief: Each gap gets a refusal seen to fail (DEC-11) or a Not checked line in 8.1; AC-53's text must name ruled_by
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-2]
@@ -35,3 +35,5 @@ For 2 and 3: refuse it (one check shared by `record new`, `ask answer` and G-I3;
 - DEC-73 to DEC-77 (CE-113's design calls)
 
 ## Log
+
+- 2026-10-23f (claude-code/claude-opus-5-5): 2026-10-23f: promoted to NEXT (light reorder at close): a capitalised Owner slips past the guard CE-113 just built; NEXT was empty after CE-93 and CE-113 closed.
