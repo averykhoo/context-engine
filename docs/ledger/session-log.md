@@ -7,9 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-23d · kind: open
+## 2026-10-23d · kind: close
 
-- **opened:** 2026-10-23T13:04:16+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-79 (banner updated; task stays open)
+- **receipts:**
+  - guards: lint: clean (after banner set); full gate and linux gate re-run on the final HEAD before
+    push
+  - read: orient; CE-79; gate logs .scratch/push-2026-10-23d/
+- **summary** (the owner digest):
+  - Push of context-engine and adhoc-microphone-array approved by the owner 2026-10-23d; both pushed
+    after this close, on green gates.
+  - Banner set (022b980): 2026-10-23c closed without it and turned G-W1 red; first pre-push gate was
+    red on that alone.
+- **Still owed:**
+  - CE-79: owner's 2026-10-17 coordinator words to an adhoc decision, then drop the section (DEC-71)
+  - owner: INV-31 probes; adhoc ASK-14, ASK-16
 - **start head:** c717a894a6607d3a24b22b87ce2cff31d9af93c7
 
 ---
