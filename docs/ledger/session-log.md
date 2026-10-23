@@ -7,6 +7,13 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-23e · kind: open
+
+- **opened:** 2026-10-23T13:25:23+08:00 by claude-code/claude-opus-5-5
+- **start head:** 036c5f2b7ef8e65b0cd9cccd16dc0bdcadf26ca0
+
+---
+
 ## 2026-10-23d · kind: close
 
 - **rows:** CE-79 (banner updated; task stays open)
@@ -100,11 +107,13 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-22b · kind: open
+## 2026-10-22b · kind: abandoned
 
 - **opened:** 2026-10-22T08:27:28+08:00 by claude-code/claude-opus-5-5
 - **start head:** 5872a4fb95e5419e758ab4e2bce724e0b0d1f98a
 - **asked:** ASK-18, ASK-19, ASK-20
+- **abandoned:** 2026-10-23e: never closed or paused; last active 2026-10-22T15:21:13+08:00, 4
+  closes or pauses since
 
 ---
 
