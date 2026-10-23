@@ -123,6 +123,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-72](DEC-72-lift-the-ce-7-kit-edit-freeze-push-finish-ce-79.md): Lift the CE-7 kit-edit freeze; push, finish CE-79, and work CE-113 and CE-93 *(owner, 2026-10-23)*
 - [DEC-73](DEC-73-a-delegated-ruling-keeps-the-owner-s-words.md): A delegated ruling keeps the owner's words above a ## Ruling section and names who ruled in ruled_by *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-74](DEC-74-a-delegated-ruling-s-actor-is-owner-asked-lint.md): A delegated ruling's actor is 'owner asked'; lint refuses only a lone owner or human actor *(claude-code/claude-opus-5-5, 2026-10-24)*
+- [DEC-75](DEC-75-g-i3-is-a-new-guard-for-delegated-rulings-not-a.md): G-I3 is a new guard for delegated rulings, not a clause of G-I2, and skips superseded decisions *(claude-code/claude-opus-5-5, 2026-10-24)*
 
 ## REJECTED
 
