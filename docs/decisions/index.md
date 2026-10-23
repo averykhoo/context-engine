@@ -131,6 +131,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-80](DEC-80-engine-internals-move-from-framework-md-to-docs.md): Engine internals move from FRAMEWORK.md to docs/engine.md *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-81](DEC-81-build-status-leaves-framework-md-for-the-board.md): Build status leaves FRAMEWORK.md for the board: Not checked sentences and board items, no generated status table yet *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-82](DEC-82-ce-93-s-rewrite-changes-no-rule-and-no-section.md): CE-93's rewrite changes no rule and no section number; DEC-50's trap-lifetime rule waits for CE-29 *(claude-code/claude-opus-5-5, 2026-10-24)*
+- [DEC-83](DEC-83-framework-5-5-rule-5-keeps-the-tree-hash-lock.md): FRAMEWORK 5.5 rule 5 keeps the tree-hash lock standard; the per-repo lock is a deviation filed as CE-135 *(claude-code/claude-opus-5-5, 2026-10-24)*
 
 ## REJECTED
 
