@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-22b
-updated: 2026-10-23e
+updated: 2026-10-23f
 goals: [G-6]
 ---
 
@@ -35,3 +35,4 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 - 2026-10-23c (claude-code/claude-opus-5-5): 2026-10-23c: re-pin still blocked after the owner paused adhoc: python PID 22024 (adhoc .context-engine/env, context_engine.mcp, started 2026-10-21) still runs under claude.exe PID 1744 (remote session cse_01TkdBP39oNY5iDa4fja5ERj); pausing did not stop it. Env confirmed at 9f0e8ca. ASK-20 answered by DEC-71: drop coordinator section after recording the owner's 2026-10-17 words as an adhoc decision. Report: .scratch/ce-79-repin/finish-2026-10-23c.md
 - 2026-10-23c (claude-code/claude-opus-5-5): 2026-10-23c: adhoc re-pin to 9f0e8ca DONE after the owner killed PID 22024: adhoc e939727 (5 kit runbooks; contract.md already current via e78beac), 687a7ad (banner set, cured G-W1 left by adhoc 2026-10-23b), e9f67cb (adhoc session close); adhoc gate green (pytest 826 passed, lint clean); verified by a second agent (byte-equal, LF, env at 9f0e8ca). Local only, not pushed. Left: push (owner); record the owner's 2026-10-17 coordinator words as an adhoc decision, then drop adhoc CLAUDE.md's coordinator section (DEC-71); INV-31 probes (owner).
 - 2026-10-23e (claude-code/claude-opus-5-5): 2026-10-23e: DEC-71 step done in adhoc: owner's 2026-10-17 coordinator words recorded as adhoc DEC-95 (byte-identical quote), coordinator section dropped from adhoc CLAUDE.md (9cdaaf9; contract covers both halves), adhoc pytest 826 passed, lint clean; commits 4831738, c310fef, 9cdaaf9, a35613a local, not pushed. Verified by a second agent (.scratch/ce-79-dec71/verifier.md). Owner answered ASK-16 in a live adhoc session (adhoc DEC-96, e98d25c). Left: INV-31 live probes (owner); adhoc push (owner).
+- 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): finish CE-79 through ultracode in the background. Workflow wf_1c58e4ae-336 running: INV-31 probe from adhoc transcripts + independent verify, adhoc push readiness (.scratch/ce-79-final/). Adhoc push itself asked of the owner.

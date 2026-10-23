@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-21b
-updated: 2026-10-21b
+updated: 2026-10-23f
 ---
 
 Delegated rulings are not stamped actor: owner; separate owner words from a ruling made on delegation
@@ -24,3 +24,5 @@ What went wrong (adhoc AAR entry 24, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): freeze lifted; work CE-113, then CE-93.

@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-15c
 created: 2026-10-15
 moved: 2026-10-17b
-updated: 2026-10-20e
+updated: 2026-10-23f
 goals: [G-7]
 ---
 
@@ -43,3 +43,4 @@ This likely absorbs CE-89 (frozen wording owed after CE-41 and CE-87).
 - 2026-10-16a (claude-code/claude-opus-5-5): Owner (2026-10-16a) picked it as NOW after CE-27 closed; that lifts the CE-7 kit-edit hold for it. CE-27's doc archive op can do the archive step.
 - 2026-10-16a (claude-code/claude-opus-5-5): Correction to the 2026-10-16a comment: DEC-50 (owner, 2026-10-15e) holds this until the trial feedback is in (CE-79, about 2026-10-21); the owner made it NOW on a recommendation that missed that. Confirm with the owner before starting. Also, doc archive (CE-27) moves a doc; step 1 here copies FRAMEWORK.md to FRAMEWORK-v<version>.md, so it is a by-hand copy, not that op.
 - 2026-10-17b (claude-code/claude-opus-5-5): Owner, 2026-10-17b (DEC-51): audio-workspace onboarding (CE-43) goes first; the trial feedback is next week. Moved to NEXT so CE-43 can hold NOW.
+- 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): freeze lifted and CE-93 to be worked, after CE-113. This is the confirmation the 2026-10-16a trap asked for; DEC-50's hold is met (trial feedback in, CE-7 scored 2026-10-21b).
