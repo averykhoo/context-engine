@@ -127,6 +127,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-76](DEC-76-where-ruled-by-shows-the-question-s-answered.md): Where ruled_by shows: the question's answered mapping, the log line, the decision index, the kit contract and the schema *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-77](DEC-77-delegated-ruling-provenance-applies-going.md): Delegated-ruling provenance applies going forward; a frozen record is fixed by recording again and superseding *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-78](DEC-78-framework-md-s-pre-rewrite-archive-is-named.md): FRAMEWORK.md's pre-rewrite archive is named FRAMEWORK-v0.5-2026-10-23.md *(claude-code/claude-opus-5-5, 2026-10-24)*
+- [DEC-79](DEC-79-release-notes-and-pointers-for-cut-text-live.md): Release notes and pointers for cut text live outside FRAMEWORK.md, since AC-33 keeps ids out of it *(claude-code/claude-opus-5-5, 2026-10-24)*
 
 ## REJECTED
 
