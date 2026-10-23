@@ -966,3 +966,5 @@
 {"at": "2026-10-23T11:57:32+08:00", "session": "2026-10-23c", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-79", "path": "tasks/CE-79-follow-up-on-the-adhoc-trial-a-week-in-about.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-23T12:57:37+08:00", "session": "2026-10-23c", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-79", "path": "tasks/CE-79-follow-up-on-the-adhoc-trial-a-week-in-about.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-10-23T12:57:37+08:00", "session": "2026-10-23c", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-23c", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-23T13:04:16+08:00", "session": "2026-10-23d", "actor": "claude-code/claude-opus-5-5", "op": "session.start", "id": "2026-10-23d", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-10-23T13:11:36+08:00", "session": "2026-10-23d", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-23d", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}

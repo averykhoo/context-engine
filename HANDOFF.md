@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-23b)
+## Banner (2026-10-23d)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -11,9 +11,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   (9 closed, 3 abandoned by hand); start cost -23.7% (missed the -25% bar), close cost -48% (met); C = 0
   (`docs/evidence/adhoc-trial-score-2026-10-21.md`). The AAR (`docs/evidence/adhoc-feedback-2026-10-21.md`) is filed as
   CE-104..CE-125. CE-79 keeps the INV-31 probes (owner, in adhoc) and the re-pin.
-- **CE-79 is NOW (2026-10-23b):** fix-first CE-124, CE-104, CE-63, CE-125 done; the adhoc re-pin to 9f0e8ca stopped half-done
-  (DEC-70: finish it) because an idle adhoc conversation holds the engine env's MCP server; the owner closes it, then an agent
-  finishes the copy, lint, gate and local commit. INV-31 probes need the owner.
+- **CE-79 is NOW (2026-10-23d):** the adhoc re-pin to 9f0e8ca is done (adhoc e939727, gate green, verified; pushed 2026-10-23d with
+  the owner's approval). Left: record the owner's 2026-10-17 coordinator words as an adhoc decision, then drop adhoc CLAUDE.md's
+  coordinator section (DEC-71); INV-31 probes need the owner; adhoc ASK-14, ASK-16 raised 2026-10-23c.
+- **Every clean close sets the banner** (G-W1): 2026-10-23b in adhoc and 2026-10-23c here closed without it and turned lint red.
 - **Sweep 2026-10-23a (ultracode):** 24 unblocked LATER tasks closed (CE-48..CE-131, list in the ledger); gate 1067 passed.
   CE-105, CE-119 lint halves only; CE-123 built, not committed; all three wait on the kit freeze. CE-126 needs an owner design
   call. Lesson: a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
