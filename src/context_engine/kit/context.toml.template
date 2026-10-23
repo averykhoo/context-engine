@@ -20,7 +20,7 @@ oplog = "docs/ledger/ops.jsonl"      # one JSON line per engine write; append-on
 lockfile = ".context/engine.lock"    # .context/ carries its own `.gitignore`; never tracked
 bundles = ["docs/decisions", "docs/stories", "tasks"]   # directories declared OKF bundles (lint G-D11)
 contract = "CLAUDE.md"               # the contract; its `framework: <major.minor>` must equal the engine's (lint G-D0)
-lock_timeout = 30.0                  # seconds to wait for the repo lock; provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
+lock_timeout = 30.0                  # seconds the repo lock may stay with one holder before a waiting write is refused (not how long a write may wait); provenance: JUDGEMENT, engine default; wrong if writes from concurrent sessions time out under normal use
 commit = "milestones"                # when the engine commits its writes by path with its op log lines (FRAMEWORK §5.5 rule 4): "milestones" (a task close, owner words,
                                      # a baton or pause, session close or pause, the banner; every other write stays uncommitted and goes into the next commit), "every-write", or "off" (the engine commits only a pause; the session commits everything else)
 

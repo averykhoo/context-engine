@@ -114,6 +114,16 @@ path = "docs/framework/FRAMEWORK.md"
 mode = "replaced in place; no change log, the why is in decisions and stories (DEC-26)"
 
 [[routes]]
+component = "Release notes"
+path = "docs/framework/RELEASE-NOTES.md"
+mode = "a version's notes are added on top, by decision or task id; earlier notes are never rewritten (FRAMEWORK §6.12, CE-93)"
+
+[[routes]]
+component = "Engine internals"
+path = "docs/engine.md"
+mode = "replaced in place: how the engine carries out FRAMEWORK's rules, moved out of the spec (CE-93, DEC-49)"
+
+[[routes]]
 component = "Contract"
 path = "CLAUDE.md"
 mode = "replaced; durable rules only, promoted from HANDOFF (FRAMEWORK §6.7)"
@@ -287,7 +297,7 @@ optional = true  # absent on a fresh clone
 # what its guard reads; `off` names guards lint does not report (none here).
 [guards]
 off = []
-links = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "src/context_engine/REGISTER.md", "src/context_engine/kit", "tasks"]  # G-D3; closed tasks are skipped (status: deprecated)
+links = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/framework/FRAMEWORK.md", "docs/framework/RELEASE-NOTES.md", "docs/engine.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "src/context_engine/REGISTER.md", "src/context_engine/kit", "tasks"]  # G-D3; closed tasks are skipped (status: deprecated)
 existence = ["docs/criteria.md", "src/context_engine/REGISTER.md"]  # G-T3: the normative docs (§11.2 "traps accumulate"); stories are owner words that cite other repos' files, so they are not listed
 signals = ["CLAUDE.md", "HANDOFF.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md"]  # G-D7
 warn_max = 3       # G-D7; provenance: JUDGEMENT, engine default (the global contract keeps about this many per section); wrong if a real trap goes unmarked to stay under it
@@ -299,7 +309,7 @@ charter = "docs/charter.md"   # G-I1 (CE-25): its goal table's `G-n` rows are th
 stories = "story"             # G-I1, G-I2, G-T1, G-T6: the kind holding the stories
 task_goals = "task"           # G-I1 (CE-99, DEC-64): every open task names, in `goals`, the charter goals it serves
 tests = ["tests"]             # G-T2: where tests claim criteria, as `@pytest.mark.criterion("AC-n")` (the default `claim` pattern)
-liveness = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework", "docs/ledger/session-log.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D4 (CE-33): every tracked doc that is not a record
+liveness = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/engine.md", "docs/criteria.md", "docs/framework", "docs/ledger/session-log.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D4 (CE-33): every tracked doc that is not a record
 history = ["docs/evidence", "spike"]  # G-D4: provenance directories, FROZEN (or ACTIVE-PLAN while the item is open)
 liveness_lines = 10  # G-D4: the window; provenance: MEASURED 2026-10-13c, every declaration in this repo sits on line 3 or line 7 (docs/evidence/ce33-false-reds-2026-10-13.md), and the window the prior art measured is 10; wrong if the title block of a doc legitimately pushes its declaration further down
 numbers = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/charter.md", "docs/criteria.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "src/context_engine/REGISTER.md", "src/context_engine/kit"]  # G-D5 (CE-33, §11.2 "the repo measures things"): the LIVING docs
