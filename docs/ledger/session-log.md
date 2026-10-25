@@ -7,9 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-26a · kind: open
+## 2026-10-26a · kind: close
 
-- **opened:** 2026-10-26T04:35:47+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-79 (compaction hook seen; open: adhoc push, owner); ASK-21 (raised again)
+- **receipts:**
+  - guards: gate PASSED 1110 on g1/code:b86ecb4a067e7873 (2026-10-26T04:36); linux gate green on
+    0f4b9aa6a033; CI 40231896718 success; lint: clean
+  - read: orient (banner 2026-10-23f); adhoc transcript 64c998d9 L658-676
+  - asked: ASK-21
+- **summary** (the owner digest):
+  - Owner, 2026-10-26a: "I just ran compact in adhoc, what's supposed to happen? And okay to push".
+  - INV-31 compaction: SessionStart:compact fired in adhoc after the owner's /compact, exit 0,
+    orient injected; agent's next turn not yet seen.
+  - Pushed a0b9db6..0f4b9aa after local gate 1110 passed and Linux gate 1110 passed; CI gate run
+    40231896718 green.
+  - Read 'okay to push' as this repo only; adhoc push asked again (it would publish the live adhoc
+    session's commits).
+- **Still owed:**
+  - Adhoc push (owner's word), then close CE-79
+  - ASK-21 answer (CE-126 design)
+  - Restart Claude Code: the MCP server runs pre-CE-113 code
 - **start head:** 0f4b9aa6a03399f27da3ad3d3b86e7ee08641ace
 
 ---
