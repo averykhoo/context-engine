@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-14d
 created: 2026-10-14
 moved: 2026-10-22b
-updated: 2026-10-23f
+updated: 2026-10-26a
 goals: [G-6]
 ---
 
@@ -37,3 +37,4 @@ Due on or about **2026-10-21**, a week after CE-7's cutover started (2026-10-14d
 - 2026-10-23e (claude-code/claude-opus-5-5): 2026-10-23e: DEC-71 step done in adhoc: owner's 2026-10-17 coordinator words recorded as adhoc DEC-95 (byte-identical quote), coordinator section dropped from adhoc CLAUDE.md (9cdaaf9; contract covers both halves), adhoc pytest 826 passed, lint clean; commits 4831738, c310fef, 9cdaaf9, a35613a local, not pushed. Verified by a second agent (.scratch/ce-79-dec71/verifier.md). Owner answered ASK-16 in a live adhoc session (adhoc DEC-96, e98d25c). Left: INV-31 live probes (owner); adhoc push (owner).
 - 2026-10-23f (claude-code/claude-opus-5-5): Owner, 2026-10-23f (DEC-72): finish CE-79 through ultracode in the background. Workflow wf_1c58e4ae-336 running: INV-31 probe from adhoc transcripts + independent verify, adhoc push readiness (.scratch/ce-79-final/). Adhoc push itself asked of the owner.
 - 2026-10-23f (claude-code/claude-opus-5-5): 2026-10-23f: INV-31 probe done and verified (a42a66d, docs/evidence/inv31-adhoc-probe-2026-10-23.md): startup, resume (n=1), /clear SEEN; compaction never occurred (needs a manual /compact in adhoc, owner). Adhoc push READY (10 ahead, gate green with the live session's WIP in tree, no CI); held for the owner's word. Left: /compact probe and adhoc push, both owner's.
+- 2026-10-26a (claude-code/claude-opus-5-5): 2026-10-26a: INV-31 compaction probe: owner ran /compact in adhoc; transcript 64c998d9 L658 compact_boundary 2026-10-23T17:55:13Z, L673 hook_success SessionStart:compact 17:55:14Z, exit 0, empty stderr, 4474 B orient (banner 2026-10-23f) injected. Hook half SEEN. Agent half (keeps its key, no second session start) not yet observable: no turn after the compaction. Left: adhoc push (owner).

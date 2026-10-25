@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-23f)
+## Banner (2026-10-26a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -13,10 +13,11 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   (c5b812f: FRAMEWORK.md rewritten for users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`,
   `RELEASE-NOTES.md`); CE-89 closed; builders' calls DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144.
   The MCP server runs pre-CE-113 code until Claude Code restarts.
-- **Unpushed here:** everything after a0b9db6 (pushed 2026-10-23f, CI green). Push needs the owner's word.
-- **CE-79 is NOW:** INV-31 probe done (a42a66d, `docs/evidence/inv31-adhoc-probe-2026-10-23.md`): startup, resume, /clear seen;
-  compaction never happened in adhoc. Left, both the owner's: one manual `/compact` in adhoc; the adhoc push (10 commits
-  ready, no CI there; it would publish the owner's live adhoc session's commits too).
+- **Pushed through 0f4b9aa** (2026-10-26a; local and Linux gate 1110 passed, CI green).
+- **CE-79 is NOW:** INV-31 hook seen on all four events in adhoc: startup, resume, /clear (a42a66d,
+  `docs/evidence/inv31-adhoc-probe-2026-10-23.md`) and compaction (owner's /compact, CE-79 log 2026-10-26a). Unobserved: the
+  adhoc agent's first turn after compaction keeps its key. Left: the adhoc push (owner's word; no CI there; it would
+  publish the owner's live adhoc session's commits too), then close CE-79.
 - **ASK-21 (CE-126):** subagents share the session key, so op lines mis-file across tasks (seen 2026-10-23e); recommended B,
   an op-line lane field, kept at LATER.
 - **Every clean close sets the banner** (G-W1).
