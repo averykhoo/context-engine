@@ -132,6 +132,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-81](DEC-81-build-status-leaves-framework-md-for-the-board.md): Build status leaves FRAMEWORK.md for the board: Not checked sentences and board items, no generated status table yet *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-82](DEC-82-ce-93-s-rewrite-changes-no-rule-and-no-section.md): CE-93's rewrite changes no rule and no section number; DEC-50's trap-lifetime rule waits for CE-29 *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-83](DEC-83-framework-5-5-rule-5-keeps-the-tree-hash-lock.md): FRAMEWORK 5.5 rule 5 keeps the tree-hash lock standard; the per-repo lock is a deviation filed as CE-135 *(claude-code/claude-opus-5-5, 2026-10-24)*
+- [DEC-84](DEC-84-ce-126-fix-subagent-op-line-mis-filing-with-a.md): CE-126: fix subagent op-line mis-filing with a lane field (option B), kept at LATER *(owner, 2026-10-26)*
 
 ## REJECTED
 

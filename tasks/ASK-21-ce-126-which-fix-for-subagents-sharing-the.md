@@ -4,14 +4,17 @@ id: ASK-21
 title: 'CE-126: which fix for subagents sharing the session key, and when?'
 brief: 'Recommended: B (op-line lane field), kept at LATER'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-10-23f
 created: 2026-10-24
 moved: 2026-10-23f
-updated: 2026-10-26b
-last_asked: 2026-10-26b
+updated: 2026-10-26c
+last_asked: 2026-10-26c
 blocks: [CE-126]
+status: deprecated
+closed: 2026-10-26c
+answered: {on: 2026-10-26, session: 2026-10-26c, decision: DEC-84}
 ---
 
 ## Question
@@ -28,3 +31,7 @@ CE-126: subagents share the coordinator's session key, so CE-125's per-session o
 ## Recommendation
 
 B, kept at LATER for now (harm so far is mis-filed lines, not lost or half-committed work), with a one-line fan-out rule (pass CE_AGENT=<task id>) once B exists. Brief: .scratch/ce-126/brief.md (2026-10-23f), transcribed here.
+
+## Log
+
+- 2026-10-26c (claude-code/claude-opus-5-5): answered by the owner: DEC-84
