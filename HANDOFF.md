@@ -16,7 +16,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Earlier:** CE-113 done (21a88d9: `ruled_by` and `## Ruling`, lint G-I3); CE-93 done (c5b812f: FRAMEWORK.md rewritten for
   users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`, `RELEASE-NOTES.md`); builders' calls
   DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144. The MCP server runs pre-CE-113 code until Claude Code restarts.
-- **Push of main approved by the owner 2026-10-26c** (engine bookkeeping commits); last push confirmed: 0f4b9aa (2026-10-26a, CI green).
+- **Pushed through c1842b4** (2026-10-26c; local and Linux gate 1112 passed, CI green).
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-23a):** a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
 - **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
