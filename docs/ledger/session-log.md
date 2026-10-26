@@ -7,9 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-26c · kind: open
+## 2026-10-26c · kind: close
 
-- **opened:** 2026-10-26T19:05:21+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-21 (answered, DEC-84); CE-79 (closed); CE-145 (new, LATER); CE-138 (promoted NOW)
+- **receipts:**
+  - guards: gate PASSED 1112 passed (g1/code:b86ecb4a067e7873); linux gate green on c1842b431edd;
+    lint clean; CI success run 40315710098
+  - read: orient (SessionStart hook); ASK-21, CE-126, CE-79 via task show; adhoc git state
+- **summary** (the owner digest):
+  - ASK-21 answered by owner MCQ: CE-126 gets option B (op-line lane field), kept at LATER (DEC-84).
+  - CE-79 closed: adhoc trial keep going; adhoc already pushed through 4488738; INV-31 agent half
+    split to CE-145 (LATER).
+  - CE-138 promoted to NOW (owner); NEXT now empty, rerank due after it.
+  - Pushed main through c1842b4: local gate 1112 passed, Linux gate 1112 passed, CI gate run
+    40315710098 success.
+  - Lesson: the 2026-10-26b read-only close left G-W1 red (no banner set); every close must set the
+    banner, even read-only ones.
+- **Still owed:**
+  - Banner/close commits after c1842b4 are local, not pushed (bookkeeping only)
 - **start head:** 3a19e30deaf6d80e7ca66f830501e4b42a2537ef
 
 ---

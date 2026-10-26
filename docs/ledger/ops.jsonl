@@ -1062,3 +1062,4 @@
 {"at": "2026-10-26T19:18:49+08:00", "session": "2026-10-26c", "actor": "claude-code/claude-opus-5-5", "op": "promote", "id": "CE-138", "path": "tasks/CE-138-g-i3-edge-cases-from-ce-113-s-review-a.md", "fields": ["pri", "moved", "updated"], "mechanical": false}
 {"at": "2026-10-26T19:19:33+08:00", "session": "2026-10-26c", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-26c", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
 {"at": "2026-10-26T19:33:47+08:00", "session": "2026-10-26c", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-26c", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-10-26T19:34:09+08:00", "session": "2026-10-26c", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-26c", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
