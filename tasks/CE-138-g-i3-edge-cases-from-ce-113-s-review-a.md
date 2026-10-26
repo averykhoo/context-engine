@@ -3,14 +3,14 @@ type: Task
 id: CE-138
 title: "G-I3 edge cases from CE-113's review: a capitalised Owner passes, a ruling may hold ## Amendments, AC-53 omits ruled_by"
 brief: Each gap gets a refusal seen to fail (DEC-11) or a Not checked line in 8.1; AC-53's text must name ruled_by
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-26c
+updated: 2026-10-26c
 ---
 
 G-I3 edge cases and AC-53's text, from CE-113's review

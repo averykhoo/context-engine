@@ -3,27 +3,23 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-26a)
+## Banner (2026-10-26c)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
+- **CE-138 is NOW** (owner, 2026-10-26c): G-I3 edge cases from CE-113's review. NEXT is empty after it; rerank due then.
 - **Kit-edit freeze LIFTED (owner, DEC-72, 2026-10-23f).** CE-84, CE-85, CE-102, CE-105, CE-111, CE-119, CE-120 and CE-123
   (built 2026-10-23a, not committed) were waiting on it and are now workable.
-- **Just landed:** CE-113 done (21a88d9: delegated rulings carry `ruled_by` and a `## Ruling` section, lint G-I3); CE-93 done
-  (c5b812f: FRAMEWORK.md rewritten for users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`,
-  `RELEASE-NOTES.md`); CE-89 closed; builders' calls DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144.
-  The MCP server runs pre-CE-113 code until Claude Code restarts.
-- **Pushed through 0f4b9aa** (2026-10-26a; local and Linux gate 1110 passed, CI green).
-- **CE-79 is NOW:** INV-31 hook seen on all four events in adhoc: startup, resume, /clear (a42a66d,
-  `docs/evidence/inv31-adhoc-probe-2026-10-23.md`) and compaction (owner's /compact, CE-79 log 2026-10-26a). Unobserved: the
-  adhoc agent's first turn after compaction keeps its key. Left: the adhoc push (owner's word; no CI there; it would
-  publish the owner's live adhoc session's commits too), then close CE-79.
-- **ASK-21 (CE-126):** subagents share the session key, so op lines mis-file across tasks (seen 2026-10-23e); recommended B,
-  an op-line lane field, kept at LATER.
+- **Just landed (2026-10-26c):** CE-79 closed (adhoc trial: keep going; adhoc pushed through 4488738; INV-31 hook seen on all
+  four events); its unobserved agent half (first turn after a compaction keeps its key) is CE-145 at LATER. ASK-21 answered as
+  DEC-84: CE-126 gets option B (an op-line lane field), kept at LATER.
+- **Earlier:** CE-113 done (21a88d9: `ruled_by` and `## Ruling`, lint G-I3); CE-93 done (c5b812f: FRAMEWORK.md rewritten for
+  users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`, `RELEASE-NOTES.md`); builders' calls
+  DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144. The MCP server runs pre-CE-113 code until Claude Code restarts.
+- **Push of main approved by the owner 2026-10-26c** (engine bookkeeping commits); last push confirmed: 0f4b9aa (2026-10-26a, CI green).
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-23a):** a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
-- **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment); NEXT stays full by the
-  owner's choice.
+- **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
 - **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.**
