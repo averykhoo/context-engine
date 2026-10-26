@@ -7,6 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-10-26b · kind: close
+
+- **rows:** none (read-only: owner asked what is open for them)
+- **receipts:**
+  - guards: not run: no code or record change beyond engine ops
+  - read: orient (SessionStart hook)
+  - asked: ASK-21
+- **summary** (the owner digest):
+  - Read-only: listed what is open for the owner from orient; no work done.
+- **Still owed:**
+  - Owner: answer ASK-21 (CE-126 fix for subagents sharing the session key; recommended B, op-line
+    lane field)
+  - Owner: say yes/no to the adhoc push that closes CE-79
+  - Owner: permission to push main (engine-only commits ahead of origin/main)
+- **start head:** 7e9e778ed313b587d47fe5f4fee0d1f5fb7c8ada
+
+---
+
 ## 2026-10-26a · kind: close
 
 - **rows:** CE-79 (compaction hook seen; open: adhoc push, owner); ASK-21 (raised again)
