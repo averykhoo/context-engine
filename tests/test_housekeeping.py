@@ -129,7 +129,8 @@ def test_hk_close_scan_closes_what_a_trailer_names_and_skips_a_reopened_close_an
 
 
 @pytest.mark.criterion("AC-20")
-def test_hk_close_through_the_cli_defaults_its_actor_to_housekeeping(eng, capsys):
+def test_hk_close_through_the_cli_defaults_its_actor_to_housekeeping(eng, capsys, monkeypatch):
+    monkeypatch.delenv("CE_ACTOR", raising=False)  # the --actor default reads it; a session's gate run sets it
     me, a, _ = _board(eng)
     good = _commit(eng.root, f"by hand\n\nCloses: {a.id}\n")
     assert main(["--root", str(eng.root), "--session", me, "hk", "close", a.id, "--commit", good]) == 0
