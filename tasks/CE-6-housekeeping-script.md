@@ -3,13 +3,13 @@ type: Task
 id: CE-6
 title: "Tier-0 housekeeping script and the hk_ operations"
 brief: "No model. Carries out recorded intent only; hk.close needs a verified Closes: trailer"
-pri: LATER
+pri: NOW
 state: open
 deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-08a
-updated: 2026-10-20e
+moved: 2026-10-30a
+updated: 2026-10-30a
 closed:
 goals: [G-3]
 ---
