@@ -173,6 +173,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-123](DEC-123-a-partial-prune-is-doc-archive-lines-a-b-into.md): A partial prune is doc archive --lines A-B, into one <stem>-pruned.md per source with one redirect row per prune *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-124](DEC-124-the-plugin-launcher-judges-a-settings-orient.md): The plugin launcher judges a settings orient hook stale by its program and --root, not by running it *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-125](DEC-125-the-amendments-refusal-at-the-write-covers.md): The ## Amendments refusal at the write covers every append-only kind and is no longer behind G-I3's off switch *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-126](DEC-126-record-new-s-refusal-of-a-preset-status-or.md): record new's refusal of a preset status or SUPERSEDED on a decision is not behind G-W4's off switch *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
