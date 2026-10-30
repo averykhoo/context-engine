@@ -3,7 +3,7 @@ type: Task
 id: CE-156
 title: Runbook and kit README text the 2026-10-30a builds left stale
 brief: 'Both runbooks are kit copies kept byte-equal: fix each line in both'
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-7]
@@ -35,3 +35,5 @@ Source: residuals in the close commits named per line; both runbooks are kit cop
 - docs/runbooks/manual-mode.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-4/G-7, exit criterion 1 (DEC-20 by-hand fallback): eight stale runbook lines, kit copies only, no contract touch.

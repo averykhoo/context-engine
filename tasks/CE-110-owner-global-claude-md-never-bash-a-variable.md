@@ -3,14 +3,14 @@ type: Task
 id: CE-110
 title: 'Owner global CLAUDE.md: never bash a variable path, never background an && chain, set ulimit -u 200'
 brief: Owner/coordinator to add three shell rules to ~/.claude/CLAUDE.md; agents must not edit it
-pri: LATER
+pri: SOMEDAY
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 Owner global CLAUDE.md: never bash a variable path, never background an && chain, set ulimit -u 200
@@ -24,3 +24,5 @@ What went wrong (adhoc AAR entry 13 and 20, docs/evidence/adhoc-feedback-2026-10
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: Serves no G-n (an owner preference for ~/.claude/CLAUDE.md, outside the repo). The drop is not applied; it is an owner question.

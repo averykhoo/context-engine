@@ -3,7 +3,7 @@ type: Task
 id: CE-165
 title: Pin the tests the 2026-10-30a verifiers found loose
 brief: Each pin is sabotaged before it is believed (DEC-11)
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-2]
@@ -37,3 +37,5 @@ Source: verifier residuals in the close commits named per line. Each is a claime
 - docs/runbooks/sabotage.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-2, DEC-11: ten loose tests, several claiming CE-6's just-landed criteria. Can be fanned out per file.

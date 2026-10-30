@@ -57,7 +57,7 @@ milestone change is the owner's call; the rerank (procedures.md § Rerank) never
 2. FRAMEWORK.md is rewritten for its users: what is needed to understand and use the framework
    (CE-93, DEC-49).
 
-Last rerank: never
+Last rerank: 2026-10-30a
 
 The `Last rerank:` line above holds the session key of the last full rerank, or `never`. The
 rerank writes it (procedures.md § Rerank), the one edit to this file that needs no owner. It

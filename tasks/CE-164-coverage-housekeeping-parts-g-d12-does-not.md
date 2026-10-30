@@ -3,7 +3,7 @@ type: Task
 id: CE-164
 title: 'coverage: housekeeping parts G-D12 does not extract, and a frozen map outranking the board'
 brief: CE-141 residuals (c5d96b0)
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-7]
@@ -29,3 +29,5 @@ Source: CE-141's close (c5d96b0), residuals.
 - ops.py::coverage
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: Exit criterion 1 (G-7): the coverage op is the milestone's meter. It misses the hk parts, and a stale 2026-10-12 frozen map outranks the board.

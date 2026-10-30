@@ -3,13 +3,13 @@ type: Task
 id: CE-90
 title: After-action review and periodic review, for each project and for the framework itself, triggered by the owner
 brief: Owner-triggered by hand for now, nothing built; the framework is a project, so the review applies to itself too
-pri: LATER
+pri: SOMEDAY
 state: open
 deps: []
 source: session 2026-10-15c
 created: 2026-10-15
-moved: 2026-10-15c
-updated: 2026-10-20e
+moved: 2026-10-30a
+updated: 2026-10-30a
 goals: [G-7]
 ---
 
@@ -27,3 +27,7 @@ To design: where AAR notes live (a ledger field or a kind of its own); the revie
 ## Read first
 - docs/stories/US-12-sessions-leave-an-after-action-review-so-the.md
 - docs/framework/FRAMEWORK.md §6.12
+
+## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-7: the owner said AAR/review 'does not need them built yet' (US-12). Record it as deferred with a reason in CE-164's new coverage map.

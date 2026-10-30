@@ -3,7 +3,7 @@ type: Task
 id: CE-161
 title: The commit op names an unparseable record and refuses only for records it carries
 brief: CE-134 residual (d6a2fa5); a hand edit is legal and caught by lint, not by a crash
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-5]
@@ -27,3 +27,5 @@ Source: CE-134's close (d6a2fa5), residual. Through the `commit` op the first re
 - commit.py::select
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-5: a legal hand edit crashes every commit without naming the file, and commit refuses even for records it does not carry.
