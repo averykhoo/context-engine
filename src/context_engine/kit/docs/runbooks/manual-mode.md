@@ -298,9 +298,10 @@ can say so.
 `context-engine session tasks <ids>` (over MCP `session_tasks(ids)`), at intake (procedures.md §
 Intake, step 7). By hand:
 
-1. Each id must be an existing item of a board kind (a task or a question); for a request with
-   no item yet, file a task first (§ context-engine task new). Your session must have an open
-   stub.
+1. Each id must be an existing item of a board kind (a task or a question), and of the form
+   capital letters, a hyphen, digits (`T-12`): the `tasks:` line is read back in that form, so
+   an id of another form would drop out of the check unseen. For a request with no item yet, file
+   a task first (§ context-engine task new). Your session must have an open stub.
 2. In your stub, delete any `- **tasks:**` line and add one at the end, with no blank line
    before it: `- **tasks:** <every id named so far this session, first-named first, each once>`.
 3. Log `session.tasks` with your key as the id, the ledger as the path and `["tasks"]` as the
@@ -417,8 +418,11 @@ Check every record, then the working state. `--working` does only the second hal
   what they need to decide; the doc guards and G-I3 skip a deprecated decision as history, so a
   hand-set `status` hides one.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
-- **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt, and its
-  `guards:` text matches `[working] gate_receipt` where that is set.
+- **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt; its
+  `guards:` text matches `[working] gate_receipt` where that is set; and where it has a
+  `- **tasks:**` line, its `rows:` names every id on that line. *Why: the close's refusal of
+  rows that miss a named task (§ context-engine session close) does not cover a close written or
+  edited by hand.*
 - **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
   `task promote`. *Why: the promotion refused it, so a failing review there was edited by hand.*
 - **G-W13**: every `- residual:` line of a closed item carrying `review:` has a register entry

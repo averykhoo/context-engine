@@ -428,6 +428,8 @@ class Engine:
         board = self._board()
         for rid in ids:
             kind = self.store.config.kind_for_id(rid)
+            if not ID_RE.fullmatch(rid):  # the line is read back with ID_RE: another form would drop out of every check unseen
+                raise Refusal(f"{rid} is not read back from a `{L.TASKS}:` line, which reads ids of capital letters, a hyphen and digits", "say in the close's rows how it ended without the check; a board prefix of capital letters only makes it checkable")
             if kind.name not in board:
                 raise Refusal(f"{rid} is a {kind.name}, not a board item", f"name the task the owner asked for; file one first with `task new` if the request has none ({', '.join(board)})")
             self.store.find(rid)

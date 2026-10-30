@@ -85,6 +85,7 @@ When `orient` lists an open pause record of your own session's line of work, or 
 | — | Read the pause record: what was in flight, the resume step, the branch, the uncommitted paths and the deferred steps | `context-engine orient` | [§ orient](manual-mode.md#context-engine-orient); open the record in the pause directory | the record, not memory, is the state to resume from |
 | — | Re-check the tree against it: the branch (`git rev-parse --abbrev-ref HEAD`) and the uncommitted paths (`git status --porcelain=v1 --untracked-files=all`); explain every difference before going on | — | git | another session may have committed, moved or lost those paths since |
 | — | Do the resume step, then the deferred steps (gate, commit of the work, re-ranking, banner, runbook filing) | — | as each step's own section says | a pause defers these; it never drops them (FRAMEWORK §6.4) |
+| — | If the paused session's ledger entry has a `- **tasks:**` line, name those tasks for your session | `context-engine session tasks <its ids>` | [§ session tasks](manual-mode.md#context-engine-session-tasks) | the owner's request outlives the pause; your close is checked against the set only once your stub names it |
 | — | Mark the record resumed | `context-engine pause resume <id>` | [§ pause resume](manual-mode.md#context-engine-pause-resume) | `orient` stops listing it, and the record says who picked it up |
 
 ## Intake (§6.2)

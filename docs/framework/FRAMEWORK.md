@@ -1222,7 +1222,9 @@ replacement, runbook filing.
 **With the engine:** items 2 and 3 are `session.pause(rows, deferred)` plus `pause.open(...)`,
 which captures the branch and uncommitted paths itself. Both are milestones, so each commits
 its writes by path, with any earlier writes still uncommitted (§5.5 rule 4); the pause commits
-whatever the commit policy. The steps in order: `procedures.md` § Pause; picking the work up again: § Resume.
+whatever the commit policy. The pause entry keeps the stub's `tasks:` line (§6.2 item 7), and
+the resuming session names those tasks again with `session.tasks(ids)`, so its own close is
+checked against them. The steps in order: `procedures.md` § Pause; picking the work up again: § Resume.
 
 **Enforcement:**
 - **G-W2:** at most N consecutive `kind: pause` ledger entries without a `kind: close`; N = 2.
@@ -2177,8 +2179,10 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` where it is set (a
-  gate pass count, or a statement that the gate was not run). The engine checks `asked:` when
-  the entry is written; the lint re-checks `guards:`, `read:` and `rows:` in the stored files.
+  gate pass count, or a statement that the gate was not run), and a `rows:` line that names every
+  id of the newest close's `tasks:` line (the tasks the owner asked for, §6.2 item 7). The engine
+  checks `asked:` and the named tasks when the entry is written; the lint re-checks `guards:`,
+  `read:`, `rows:` and the named tasks in the stored files.
 - **G-W7:** every record kind's tool-owned frontmatter is changed only by the tool; `moved` is
   consistent with the session-stamped op log. The lint checks each board item's `moved`,
   `updated`, `closed` and `last_asked` against the session of the newest logged operation that

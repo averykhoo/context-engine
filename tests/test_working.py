@@ -289,6 +289,22 @@ def test_session_tasks_refuses_an_id_that_is_no_board_item_and_writes_nothing(en
 
 
 @pytest.mark.criterion("AC-155")
+def test_session_tasks_refuses_a_board_id_its_line_would_not_read_back(tmp_path):
+    """CE-112 review: the `tasks:` line is parsed with ID_RE (capital letters, hyphen, digits); a
+    board prefix of another form would be written, then silently dropped by the close and G-W6."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["kinds"]["task"]["prefix"] = "Task"
+    e = _engine(tmp_path / "odd", cfg)
+    key = started(e)
+    rid = task(e, key, "One").id
+    assert rid == "Task-1"
+    before = (e.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match=re.escape("Task-1 is not read back from a `tasks:` line")):
+        e.session_tasks([rid], **kw(key))
+    assert (e.root / "ledger.md").read_bytes() == before
+
+
+@pytest.mark.criterion("AC-155")
 def test_session_tasks_refuses_a_session_with_no_open_stub(eng):
     key = started(eng)
     task(eng, key, "One")
