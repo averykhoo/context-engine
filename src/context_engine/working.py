@@ -1442,9 +1442,9 @@ class Engine:
                 fields[key] = session
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
-        if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147)
+        if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147, DEC-125)
             raise Refusal(f"the {kind} {amends}", f"record the {kind}'s text without that line; once it exists, a later note goes in with `record amend <id> \"<text>\"`")
-        if kind == self.w.decision:  # G-W4's write-time twin (CE-149): only `decision supersede` makes a decision history
+        if kind == self.w.decision:  # no guard's twin, so on whatever `[guards] off` says (CE-149, DEC-126): only `decision supersede` makes a decision history
             preset = "`status`" if "status" in fields else "`decision_status: SUPERSEDED`" if str(fields.get(D.STATUS_KEY)) == "SUPERSEDED" else ""
             if preset:
                 raise Refusal(f"the decision would be created with {preset}, which only `decision supersede` writes (a decision not superseded has no `status`; G-W4)",

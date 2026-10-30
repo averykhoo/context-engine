@@ -2144,7 +2144,7 @@ AMENDMENTS_IN_NEW_TEXT = "holds a `## Amendments` line in the text being recorde
 
 def amendments_in_new_text(body: str) -> str:
     """What is wrong with a text about to be recorded as an append-only record's own words, or ""
-    (CE-147, DEC-88): a `## Amendments` line anywhere in it puts the text below that line outside
+    (CE-147, DEC-88, DEC-125): a `## Amendments` line anywhere in it puts the text below that line outside
     `body_sha`, where it reads as a later amendment. `record new` (every append-only kind) and `ask
     answer` refuse it whatever `[guards] off` names: it guards the stamp, not one guard's rule. At
     rest the line is the amendments' own, so lint cannot tell a hand-written one apart."""
