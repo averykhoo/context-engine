@@ -4,13 +4,15 @@ id: CE-147
 title: 'record new story accepts a body holding ## Amendments; the text below falls outside body_sha'
 brief: Refuse it at the write (seen to fail, DEC-11) or name it under Not checked; decisions do this since CE-138 (DEC-88)
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 record new story accepts a body holding ## Amendments
@@ -29,3 +31,5 @@ Options: a general refusal in `store.new` for every append-only kind (DEC-88's o
 - src/context_engine/guards.py::delegation_problems
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 7b5a75e, review fix 917261f (lane wt/2026-10-30a-amend: 9b5f35d, c48112a): record new refuses a ## Amendments line for stories and decisions, and ask answer and ask new --answered refuse one, whatever [guards] off names; AC-140, DEC-125
