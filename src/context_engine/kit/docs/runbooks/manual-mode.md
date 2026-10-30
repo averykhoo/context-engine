@@ -413,7 +413,9 @@ Check every record, then the working state. `--working` does only the second hal
   anywhere in the repo) whose text has each dotted part as a word. In each file `[guards] paths`
   lists, also every backticked file name or path (as G-T3 reads them, history notes skipped)
   names a file or directory that exists case-exact, from the repo root or the doc's directory
-  (a bare name anywhere). *Why: a dead reference sends
+  (a bare name anywhere). A bare name not at the repo root that matches two or more files whose
+  texts differ, line endings aside, is red (`git diff --no-index --ignore-cr-at-eol` tells).
+  *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
 - **G-D4** (only when `[guards]` lists `liveness` or `history` paths): read the first

@@ -187,6 +187,29 @@ class Files:
             hit = self.root / names[0] if names else None
         return hit
 
+    def differing(self, name: str) -> list[str]:
+        """The repo paths a bare file name ``name`` matches when it is not at the repo root, matches
+        more than one file, and their texts differ (line endings ignored); else none (CE-144).
+        Byte-equal copies, such as the kit's runbooks and contract beside this repo's (AC-71), are
+        one text under two paths, so a bare name for them is no ambiguity."""
+        name = name.rstrip("/")
+        if "/" in name or self.case_exact(name) is not None:
+            return []
+        paths = self.named(name)
+        if len(paths) < 2:
+            return []
+        texts = {(self.root / p).read_bytes().replace(b"\r\n", b"\n") for p in paths}
+        return paths if len(texts) > 1 else []
+
+
+AMBIGUOUS_REMEDY = "write the path from the repo root, so it names one file (or make the copies byte-equal, if they are meant to be one text)"
+
+
+def ambiguous_problem(files: Files, name: str) -> str | None:
+    """G-D3 on a bare file name matching files that differ (``Files.differing``), or None."""
+    paths = files.differing(name)
+    return f"`{name}` names {len(paths)} different files ({', '.join(paths)}), so which one is meant is a guess" if paths else None
+
 
 def symbol_missing(path: Path, symbol: str) -> str | None:
     """The first dotted part of ``symbol`` the file does not name as a word, or None."""
@@ -443,8 +466,10 @@ def links(e: Engine) -> list[Failure]:
     and every backticked `file::symbol` resolves, case-exact. A bare file name in a
     `file::symbol` resolves to any file of that name in the repo that git does not ignore (never a
     stale `build/` copy, CE-41); a symbol resolves when each of
-    its dotted parts is a word in the file. Then, in the docs `[guards] paths` lists, every
-    backticked file name or repo path (``path_pointers``, CE-142).
+    its dotted parts is a word in the file. A bare name not at the repo root that matches files
+    whose texts differ is red (``Files.differing``, CE-144): which one is meant is a guess; byte-equal
+    copies (the kit's runbooks beside this repo's, AC-71) pass. Then, in the docs `[guards] paths`
+    lists, every backticked file name or repo path (``path_pointers``, CE-142), by the same rules.
 
     Not checked: URLs (anything with a scheme), fenced code, an anchor into a file that is not
     markdown, which definition a symbol word is (a grep, not an import), and records no longer
@@ -466,6 +491,7 @@ def links(e: Engine) -> list[Failure]:
         if _deprecated(text):
             continue
         bad: list[str] = []
+        unsure: list[str] = []
         for n, line in prose(text):
             code = SPAN_RE.findall(line)
             for span in code:
@@ -474,6 +500,8 @@ def links(e: Engine) -> list[Failure]:
                     p = code_ref_problem(files, m["file"], m["symbol"])
                     if p:
                         bad.append(f"line {n}: {p}")
+                    elif p := ambiguous_problem(files, m["file"]):
+                        unsure.append(f"line {n}: {p}")
             bare = SPAN_RE.sub("", line)
             targets = [m.group(1) for m in LINK_RE.finditer(bare)]
             rd = REF_DEF_RE.match(bare)
@@ -489,6 +517,7 @@ def links(e: Engine) -> list[Failure]:
                 elif frag and hit.is_file() and hit.suffix == ".md" and frag not in anchors_of(hit):
                     bad.append(f"line {n}: link `{t}` names no heading of {hit.name}")
         out += [Failure("G-D3", rel, b, "point it at the path, heading or symbol that exists (grep it first), or drop it") for b in bad]
+        out += [Failure("G-D3", rel, u, AMBIGUOUS_REMEDY) for u in unsure]
     return out + path_pointers(e, files)
 
 
@@ -496,7 +525,8 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
     """G-D3 on prose pointers (CE-142): in each doc `[guards] paths` lists, every backticked span
     shaped like a file name or a repo path (G-T3's shape, `PATH_SPAN_RE`: a name with a text file's
     extension, or a path with a `/`) resolves case-exact, from the repo root or from the doc's own
-    directory; a bare file name resolves to any file of that name that git does not ignore. Listing
+    directory; a bare file name resolves to any file of that name that git does not ignore, and is
+    red when those files differ (``Files.differing``, CE-144). Listing
     a doc says every such span in it is a pointer into this repo, so the list holds docs that cite
     no example paths, other repos' files or files not written yet: syntax cannot tell a pointer
     from an example (`docs/invariants.md`, the kit's default, is an example in a runbook).
@@ -521,6 +551,8 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
                 if files.find(span) is None and files.case_exact(span.rstrip("/"), path.parent) is None:
                     out.append(Failure("G-D3", rel, f"line {n}: `{span}` names no file or directory of this repo (case-exact)",
                                        "point it at the path that exists (grep it first); if the span is an example or another repo's path, write it without backticks, or drop the doc from [guards] paths"))
+                elif p := ambiguous_problem(files, span):
+                    out.append(Failure("G-D3", rel, f"line {n}: {p}", AMBIGUOUS_REMEDY))
     return out
 
 
@@ -701,8 +733,9 @@ def existence(e: Engine) -> list[Failure]:
     notes are exempt: blockquotes, and lines carrying `*HISTORY —*`.
 
     Not checked: names outside backticks, globs and placeholders (`*`, `<`, spaces), paths that
-    start with `/` or `.` (commands, extensions), HTTP routes, and whether a cited symbol is the
-    definition meant (each dotted part is grepped as a word, as G-D3 does)."""
+    start with `/` or `.` (commands, extensions), HTTP routes, a bare name matching files whose
+    texts differ (it resolves to any of them; G-D3 fails that in its docs, CE-144), and whether a
+    cited symbol is the definition meant (each dotted part is grepped as a word, as G-D3 does)."""
     out: list[Failure] = []
     files = Files(e.root)
     for rel, path in docs(e.root, e.store.config.guards.existence):

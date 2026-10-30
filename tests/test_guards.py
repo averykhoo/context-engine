@@ -250,6 +250,33 @@ def test_g_d3_backticked_paths_in_the_docs_paths_lists_resolve_and_examples_else
     assert reds(gone, "G-D3") == ["context.toml: [guards] paths names docs/nowhere.md, which does not exist"]
 
 
+@pytest.mark.criterion("AC-108")
+def test_g_d3_fails_an_ambiguous_bare_name_only_when_the_files_it_matches_differ(tmp_path):
+    """CE-144 (CE-89 item 3, CE-41's brief): a bare file name matching several files resolved to
+    whichever came first. It is red now when their texts differ; byte-equal copies (the kit's
+    runbooks and contract beside this repo's, AC-71), CRLF against LF included, are one text and
+    pass, and so does a name at the repo root, which is the file meant."""
+    write(tmp_path, "docs/a/guide.py", "class Thing: ...\n")
+    write(tmp_path, "docs/b/guide.py", "class Thing: ...\nclass Other: ...\n")
+    (tmp_path / "docs/runbooks").mkdir(parents=True)
+    (tmp_path / "kit/docs/runbooks").mkdir(parents=True)
+    (tmp_path / "docs/runbooks/gate.md").write_bytes(b"# Gate\n\nrun_gate\n")
+    (tmp_path / "kit/docs/runbooks/gate.md").write_bytes(b"# Gate\r\n\r\nrun_gate\r\n")
+    write(tmp_path, "README.md", "root\n")
+    write(tmp_path, "kit/README.md", "the kit's\n")
+    write(tmp_path, "docs/guide.md", "`guide.py::Thing`, `gate.md::run_gate` and `README.md::root`\n")
+    write(tmp_path, "docs/notes.md", "Read `guide.py`, `gate.md` and `README.md`.\n")
+    e = make(tmp_path, links=["docs/guide.md"], paths=["docs/notes.md"])
+    got = [f for f in e.lint() if f.guard == "G-D3"]
+    assert [f"{f.path}: {f.message}" for f in got] == [
+        "docs/guide.md: line 1: `guide.py` names 2 different files (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
+        "docs/notes.md: line 1: `guide.py` names 2 different files (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
+    ]
+    assert all("write the path from the repo root" in f.remedy for f in got)
+    write(tmp_path, "docs/b/guide.py", "class Thing: ...\n")  # the copies agree again: one text
+    assert reds(e, "G-D3") == []
+
+
 def linked(tmp_path) -> Engine:
     cfg = config()
     cfg["kinds"]["decision"] = {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "replaced", "required": ["title"]}
