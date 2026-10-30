@@ -178,6 +178,15 @@ def test_inits_next_line_names_the_bootstrap_steps_in_order_and_the_mcp_server_a
     assert again.startswith("init: created 1 (docs/charter.md)") and "; next: " not in again, "a re-run that only fills a gap is no bootstrap"
 
 
+@pytest.mark.criterion("AC-110")
+def test_the_kit_readme_names_the_mcp_connect_timeout_and_its_remedy():
+    """CE-85: a server that starts past Claude Code's 30 s connect limit shows no tools; the README says why and what to set."""
+    readme = (B.KIT / "README.md").read_text(encoding="utf-8")
+    one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
+    reg = one[one.index("The MCP server is optional") :]
+    assert "MCP_TIMEOUT" in reg and "30 seconds" in reg and "33 to 36 seconds" in reg, "the registration section must name the limit, the measured start and the remedy"
+
+
 def _hook_command(root: Path) -> str:
     import json
 

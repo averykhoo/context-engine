@@ -79,6 +79,12 @@ Restart Claude Code once; from then on it starts the server in every session. Un
 use the CLI: `<engine-python> -m context_engine <group> <verb>`, with `CE_ACTOR` and
 `CE_SESSION` set.
 
+Claude Code gives the server 30 seconds to connect, and under load (a gate running on the same
+machine) it has taken 33 to 36 seconds to start, so its tools never appear. The remedy is
+`MCP_TIMEOUT` (milliseconds) in the environment Claude Code is started from, for example
+`MCP_TIMEOUT=180000`; restart Claude Code after setting it. This applies to the plugin's server
+too.
+
 ## 2a. Bootstrap with the engine
 
 From the repo root:

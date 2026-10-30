@@ -163,6 +163,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | id | criterion | from | status |
 |---|---|---|---|
 | AC-71 | The kit ships the method runbooks FRAMEWORK §7.5 names (`gate.md`, `sabotage.md`, `fan-out.md`, `release.md`), byte-equal to this repo's, and `init` copies them; §7.5 names every runbook the kit ships and the kit ships every runbook §7.5 names; each method runbook declares `mode` and `liveness` (LIVING, ACTIVE-PLAN or FROZEN) in its frontmatter, and has its own `[[routes]]` entry with G-D1 caps both here and in the kit's config template, so an adopted repo that loses one fails lint G-R1 and one that outgrows its cap fails G-D1; and `fan-out.md`'s build rounds are FRAMEWORK §6.6's steps, in its order and with its numbers | US-9, US-15 | tested |
+| AC-110 | The kit README's MCP-registration section names the connect timeout: Claude Code gives the server 30 seconds, it has taken 33 to 36 under load, and `MCP_TIMEOUT` (milliseconds) is the remedy (CE-85) | US-9 | tested |
 
 ## Commits at milestones (CE-55)
 
