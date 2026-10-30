@@ -168,6 +168,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-118](DEC-118-criterion-ids.md): Criterion ids *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-119](DEC-119-a-write-time-twin-is-off-when-its-guard-is-off.md): A write-time twin is off when its guard is off *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-120](DEC-120-okf-profile-framework-9-3-build-the-stale-after.md): OKF profile (FRAMEWORK §9.3): build the stale_after refusal and the charter_status read; cut the generated log.md and generated.by *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-121](DEC-121-doc-archive-names-the-pointers-g-d3-newly.md): doc archive names the pointers G-D3 newly reports after a move and rewrites none of them *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 

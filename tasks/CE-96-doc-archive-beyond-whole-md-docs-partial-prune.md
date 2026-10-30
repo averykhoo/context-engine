@@ -3,13 +3,13 @@ type: Task
 id: CE-96
 title: 'doc archive beyond whole .md docs: partial prune, frontmatter and non-.md material, repointing links'
 brief: CE-27 built whole-doc archive only; the rest is by hand in manual-mode
-pri: LATER
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-16a
 created: 2026-10-16
-moved: 2026-10-16a
-updated: 2026-10-20e
+moved: 2026-10-30a
+updated: 2026-10-30a
 goals: [G-2]
 ---
 
