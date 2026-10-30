@@ -6,10 +6,15 @@ procedure). Each line says what changed, the FRAMEWORK section that now holds th
 decision (`DEC-n`) or, where no decision was recorded, the engine task (`CE-n`) that says why;
 both are in this repo (`context-engine why <id>`, `context-engine task show <id>`). Newest
 first. A version's notes are added on top; an earlier version's notes are not rewritten. Build
-status is not here: it is on the board.
+status is not here: it is on the board, and `context-engine coverage` prints it for each
+component, procedure and guard.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
+- `context-engine coverage` (MCP `coverage`): each component, procedure and guard FRAMEWORK
+  names, with its build status (built, deferred, prose-only, open work, done, map only,
+  unowned), generated on demand from what G-D12 reads, the board and the guards lint reports;
+  never stored, so it cannot go stale (§8.0.2, §8.3 G-D12) — CE-141.
 - G-D3 also checks the backticked file names and repo paths in the docs a new `[guards] paths`
   list names (the kit ships it empty: off), and fails a bare file name that matches several
   files whose texts differ (§8.3) — DEC-113, DEC-114.

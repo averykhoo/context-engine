@@ -337,6 +337,32 @@ Read the `[[routes]]` entries in `context.toml`, in order. Each names a componen
 or only appended to. The table used to sit in `CLAUDE.md`; it lives in config now so the engine
 can check it (G-R1) and every repo can carry its own (FRAMEWORK §2).
 
+### context-engine coverage
+
+Read the files G-D12 reads (`[guards] coverage_spec` and `coverage_maps`; § lint): with
+neither set, or G-D12 red on its config, its spec's extraction or its maps, there is no status
+to give, so stop and say why. Otherwise list each component of the spec's §2 table, each §5.6
+and §6.n procedure heading, and each G-id it names, by class, G-ids in order of their letter and
+number. Give each one the first status that holds:
+
+1. **built**: a G-id `context-engine lint` reports (§ lint lists them);
+2. **deferred**: the newest coverage map's row for it has the class DEFERRED; note the row's
+   reason, which says what un-defers it;
+3. **prose-only**: that row has the class PROSE-ONLY; note the row's home, where the rule lives;
+4. **open work**: the board item the row's class names (`EXISTING <id>`, `NEW <id>`) is open, or
+   an open board item names it as G-D12 reads a mention;
+5. **done**: the items so found are all closed;
+6. **map only**: it has a row but no board item, open or closed, is so found; note the row's class;
+7. **unowned**: nothing at all (G-D12 is red for it).
+
+Beside each, name the row's board item with its state and up to five open items naming it (or,
+with neither, up to five closed ones), and head the list with the totals per status.
+
+**Why:** the spec carries no build marks, since an adopting repo's build is not the spec's, so
+the status is generated from what G-D12 already reads instead of written by hand. It is read on
+demand, never stored: a stored table would go stale with every board close, and a closed item
+or a deferred row is the board's and the map's word, not proof the code exists.
+
 ### context-engine lint
 
 Check every record, then the working state. `--working` does only the second half.

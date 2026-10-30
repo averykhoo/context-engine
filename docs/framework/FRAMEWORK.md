@@ -10,8 +10,10 @@ of truth for what the `context-engine` repo builds.
   `RELEASE-NOTES.md`, beside this file;
 - how the engine carries out a rule: `docs/engine.md`; every operation done by hand:
   `docs/runbooks/manual-mode.md`;
-- what the engine has built so far: its board (`context-engine task list --state all`). This text
-  says what must hold, not how far the build has got;
+- what the engine has built so far: its board (`context-engine task list --state all`), and
+  each component, procedure and guard of this text with its build status, generated from the
+  board and the coverage map (`context-engine coverage`, G-D12). This text says what must hold,
+  not how far the build has got;
 - earlier texts, frozen, beside this file: `FRAMEWORK-v0.1.md`, `FRAMEWORK-v0.4.md`,
   `FRAMEWORK-v0.5.md` (prior art, the owner's answers round by round, the change log from v0.1)
   and `FRAMEWORK-v0.5-2026-10-23.md` (the text before it was cut to what a user needs, with the
@@ -1921,7 +1923,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Group | Tools |
 |---|---|
 | Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1) |
-| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives |
+| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
@@ -2104,7 +2106,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   A class whose extraction yields fewer items than its floor is red, so a reworded heading or
   id format cannot pass by finding nothing; the floors and patterns are the engine's and fit
   this document, so a repo whose spec they do not fit switches G-D12 off. The map is frozen: a
-  failure clears with a new dated map or a board item, never an edit.
+  failure clears with a new dated map or a board item, never an edit. `coverage()` reads the
+  same sources and gives each item one build status: built (a guard lint reports), deferred or
+  prose-only (the newest map's row says so), open work (an open board item owns it), done (only
+  closed ones do), map only, or unowned. It is generated on demand, never stored, so it cannot
+  go stale; a closed item is the board's word that the work is done, not proof of it.
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or
   `deprecated` (§9.3.1).

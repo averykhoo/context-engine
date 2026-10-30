@@ -20,6 +20,7 @@ from typing import Callable
 
 from . import bootstrap
 from . import gate as G
+from . import guards as GD
 from . import ledger as L
 from .commit import Outcome
 from .errors import Refusal
@@ -151,6 +152,12 @@ def orient(e: Engine, c: Caller) -> tuple[int, str]:
 def routes(e: Engine, c: Caller) -> tuple[int, str]:
     """Where each framework component lives and how it may change, one line each."""
     return 0, e.routes()
+
+
+@op(write=False, rest="`context-engine coverage` in a shell")
+def coverage(e: Engine, c: Caller) -> tuple[int, str]:
+    """FRAMEWORK's components, procedures and guards, each with its build status (built, deferred, open work, done, ...), generated on demand from the spec, the newest coverage map, the board and the guards lint reports; never stored."""
+    return 0, GD.render_status(e).rstrip("\n")
 
 
 @op(write=False, rest="`context-engine lint` in a shell")

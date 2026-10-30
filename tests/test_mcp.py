@@ -29,6 +29,7 @@ CALLS = {
     "session_abandon": (["2026-10-01a", "--force"], {"key": "2026-10-01a", "force": True}),
     "orient": ([], {}),
     "routes": ([], {}),
+    "coverage": ([], {}),
     "lint": (["--working"], {"working": True}),
     "task_new": (["T", "--kind", "question", "--pri", "NEXT", "--brief", "b", "--deps", "CE-1, CE-2", "--body", "x", "--id", "ASK-9"], {"title": "T", "kind": "question", "pri": "NEXT", "brief": "b", "deps": ["CE-1", "CE-2"], "body": "x", "id": "ASK-9"}),
     "task_set": (["CE-1", "--set", "brief=b", "--set", "labels=[x]", "--unset", "y", "--mechanical"], {"id": "CE-1", "fields": {"brief": "b", "labels": "[x]"}, "unset": ["y"], "mechanical": True}),

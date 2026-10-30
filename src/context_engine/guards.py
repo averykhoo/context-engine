@@ -18,6 +18,9 @@ claim), so a reworded table or a pattern that does not fit cannot pass by findin
 G-I3 (CE-113) reads the ``[working] decision`` kind's current records: a ruling made on the owner's
 delegation names who ruled (`ruled_by`) and keeps the owner's words apart from it.
 
+``framework_status`` (CE-141) is no guard: it reads what G-D12 reads, the board and the guard ids lint
+reports, and gives each item of the spec one build status, on demand (`context-engine coverage`).
+
 Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
 G-V3 (the run ledger).
 """
@@ -1339,6 +1342,7 @@ class Owned:
     cls: str
     key: str  # a component's name, `§6.4`, or `G-D3`
     label: str
+    name: str = ""  # a procedure's heading text, `Session start`
 
     def names(self) -> tuple[str, ...]:
         """The key, then a component's earlier names (`COMPONENT_ALIASES`)."""
@@ -1377,7 +1381,7 @@ def spec_items(text: str) -> dict[str, list[Owned]]:
             add(Owned("component", name, f"component {name!r} (§2)"))
         m = PROCEDURE_RE.match(line)
         if m:
-            add(Owned("procedure", f"§{m['num']}", f"procedure §{m['num']} {m['name']!r}"))
+            add(Owned("procedure", f"§{m['num']}", f"procedure §{m['num']} {m['name']!r}", m["name"]))
         for gid in GID_RE.findall(line):
             add(Owned("G-id", gid, f"guard {gid}"))
     return out
@@ -1399,7 +1403,13 @@ def map_cells(text: str) -> dict[str, set[str]]:
     """By class, the stripped cells of a coverage map's tables that can own it: in each table
     whose header row has one of the class's marking headers, the cells under its key column
     (`MAP_COLUMNS`)."""
-    out: dict[str, set[str]] = {c: set() for c in MAP_COLUMNS}
+    return {cls: set(rows) for cls, rows in map_rows(text).items()}
+
+
+def map_rows(text: str) -> dict[str, dict[str, dict[str, str]]]:
+    """By class, each row of a coverage map's tables that can own it (`map_cells`), keyed by its
+    cell under the class's key column, as {header: cell}; the first row wins a repeated key."""
+    out: dict[str, dict[str, dict[str, str]]] = {c: {} for c in MAP_COLUMNS}
     header: list[str] | None = None
     last = -2
     for n, line in prose(text):
@@ -1417,7 +1427,7 @@ def map_cells(text: str) -> dict[str, set[str]]:
             continue
         for cls, (marks, column) in MAP_COLUMNS.items():
             if any(m in header for m in marks) and column in header and header.index(column) < len(cells):
-                out[cls].add(cells[header.index(column)])
+                out[cls].setdefault(cells[header.index(column)], dict(zip(header, cells)))
     return out
 
 
@@ -1435,13 +1445,31 @@ def coverage(e: Engine) -> list[Failure]:
     Not checked: whether a board item's mention is ownership or a passing reference (a
     judgement; the map's one-class-per-table layout carries it), whether a map row's class is
     right, the rest of the spec (§3, §7 and §9 are context), and maps other than the newest."""
+    out, items, newest = coverage_sources(e)
+    if out or items is None or newest is None:
+        return out
+    g = e.store.config.guards
+    map_rel = newest.relative_to(e.root).as_posix()
+    cells = map_cells(_text(newest))
+    board = [_text(p) for p in sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})]  # tasks and questions may share a directory
+    for cls in COVERAGE_FLOORS:
+        for item in items[cls]:
+            if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):
+                out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
+    return out
+
+
+def coverage_sources(e: Engine) -> tuple[list[Failure], dict[str, list[Owned]] | None, Path | None]:
+    """G-D12's checks of its own config, spec and maps (`coverage`), then what it reads: (the
+    failures; the spec's items by class and the newest map, both None unless there are no
+    failures). Off (nothing, and no items) while neither key is set."""
     g = e.store.config.guards
     if not (g.coverage_spec or g.coverage_maps):
-        return []
+        return [], None, None
     off = 'or switch G-D12 off (`[guards] off = ["G-D12"]`, or unset both coverage_spec and coverage_maps)'
     if not (g.coverage_spec and g.coverage_maps):
         have, need = ("coverage_spec", "coverage_maps") if g.coverage_spec else ("coverage_maps", "coverage_spec")
-        return [Failure("G-D12", CONFIG_NAME, f"[guards] sets {have} but not {need}", f"set {need} too, {off}")]
+        return [Failure("G-D12", CONFIG_NAME, f"[guards] sets {have} but not {need}", f"set {need} too, {off}")], None, None
     out: list[Failure] = []
     spec = e.root / g.coverage_spec
     if not spec.is_file():
@@ -1449,28 +1477,175 @@ def coverage(e: Engine) -> list[Failure]:
     glob = PureWindowsPath(g.coverage_maps)  # reads `/` and `\` alike: a root or a drive on either OS is an anchor
     if glob.anchor or ".." in glob.parts:
         out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_maps ({g.coverage_maps}) is not a glob relative to the repo root", f"make it repo-relative with no `..` (e.g. docs/evidence/framework-coverage-*.md), {off}"))
-        return out
+        return out, None, None
     maps, undated = coverage_maps(e.root, g.coverage_maps)
     for p in undated:
         out.append(Failure("G-D12", p.relative_to(e.root).as_posix(), "matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the engine cannot tell which map is newest", "rename it with its date, or narrow the coverage_maps glob"))
     if not maps and not undated:
         out.append(Failure("G-D12", CONFIG_NAME, f"[guards] coverage_maps matches no file ({g.coverage_maps})", f"fix the glob, {off}"))
     if out:
-        return out
+        return out, None, None
     items = spec_items(_text(spec))
     for cls, floor in COVERAGE_FLOORS.items():
         if len(items[cls]) < floor:
             out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, PROCEDURE_RE, GID_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
+    return (out, None, None) if out else ([], items, maps[0])
+
+
+
+# -- the framework's build status (CE-141) --------------------------------------------------
+
+# What `framework_status` says of each item G-D12 reads, in the order its rules are tried. Built
+# from G-D12's own sources, so there is no second list to keep in step: the spec's items, the
+# newest coverage map's rows, the board, and the guard ids lint reports (`config.LINT_IDS`). It is
+# printed on demand, never stored, so it cannot go stale.
+STATUS_RULES = (
+    ("built", "a guard `context-engine lint` reports"),
+    ("deferred", "the coverage map's row says DEFERRED; its note is the row's reason, with what un-defers it"),
+    ("prose-only", "the coverage map's row says PROSE-ONLY: a rule, no tool; its note is where the rule lives"),
+    ("open work", "an open board item owns it: the map row's item, or one that names it"),
+    ("done", "the board items that own it are all closed"),
+    ("map only", "the map's row names no item this board holds, and no board item names it; its note is the row's class"),
+    ("unowned", "no map row and no board item (G-D12 is red for it)"),
+)
+STATUS_SHOWN = 5  # open items listed per row before `+n more`; provenance: JUDGEMENT, CE-141; wrong if a row's Board cell is routinely cut
+
+
+@dataclass(frozen=True)
+class ItemStatus:
+    """One spec item's build status (`STATUS_RULES`), the board items behind it and a note."""
+
+    item: Owned
+    status: str
+    board: str
+    note: str
+
+
+def _row_class(row: dict[str, str]) -> str:
+    return row.get("Class", "").strip().upper()
+
+
+def framework_status(e: Engine) -> tuple[str, dict[str, list[ItemStatus]]]:
+    """(the newest coverage map's repo-relative path; by class, each component, procedure and
+    G-id the spec names with its build status). The first of `STATUS_RULES` that holds decides:
+    a G-id lint reports is built; else the newest map's DEFERRED or PROSE-ONLY row says so; else
+    an open board item that owns it (the item the map row's class names, or any naming it as
+    G-D12 reads a mention) makes it open work; else a closed one makes it done; else a map row
+    alone leaves it map only, and nothing at all unowned. Refused while G-D12's own config, spec
+    or maps are off or broken (its failure is the reason).
+
+    Not checked: whether a closed item built what it names (a close is the board's word, as
+    G-D12 takes a mention as ownership), what an open item does with it (a passing mention reads
+    as open work), and whether an old map row's class still holds (a later map replaces it)."""
+    from .config import LINT_IDS
+
+    out, items, newest = coverage_sources(e)
     if out:
-        return out
-    map_rel = maps[0].relative_to(e.root).as_posix()
-    cells = map_cells(_text(maps[0]))
-    board = [_text(p) for p in sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})]  # tasks and questions may share a directory
-    for cls in COVERAGE_FLOORS:
-        for item in items[cls]:
-            if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):
-                out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
-    return out
+        f = out[0]
+        raise Refusal(f"G-D12 cannot read its sources: {f.path}: {f.message}", f.remedy)
+    if items is None or newest is None:
+        raise Refusal("[guards] names no coverage_spec and coverage_maps, so there is no spec or coverage map to read the status from",
+                      'set both in [guards] of context.toml (G-D12), e.g. coverage_spec = "docs/framework/FRAMEWORK.md" and coverage_maps = "docs/evidence/framework-coverage-*.md"')
+    ids = _board_ids(e)
+    board = [(rid, ids[rid], text) for rid, text in _board_texts(e)]
+    rows = map_rows(_text(newest))
+    result: dict[str, list[ItemStatus]] = {}
+    for cls, its in items.items():
+        if cls == "G-id":
+            its = sorted(its, key=lambda i: (i.key[2], int(i.key[3:])))
+        result[cls] = [_item_status(i, rows[cls], board, ids, LINT_IDS) for i in its]
+    return newest.relative_to(e.root).as_posix(), result
+
+
+def _board_texts(e: Engine) -> list[tuple[str, str]]:
+    """(id, text) of every board record, in file order; tasks and questions may share a directory."""
+    st = e.store
+    out = []
+    for k in e.w.board:
+        kind = st.config.kind(k)
+        for p in st._files(kind):
+            rid = st._id_of(kind, p)
+            if rid:
+                out.append((rid, _text(p)))
+    return sorted(set(out), key=lambda t: _id_order(t[0]))
+
+
+def _id_order(rid: str) -> tuple[str, int, str]:
+    """`CE-9` before `CE-10`: the prefix, then the number."""
+    prefix, _, n = rid.rpartition("-")
+    return (prefix, int(n) if n.isdigit() else 0, rid)
+
+
+def _some(ids: list[str]) -> str:
+    """The first `STATUS_SHOWN` ids, then how many more."""
+    more = len(ids) - STATUS_SHOWN
+    return ", ".join(ids[:STATUS_SHOWN]) + (f" +{more} more" if more > 0 else "")
+
+
+def _item_status(item: Owned, rows: dict[str, dict[str, str]], board: list[tuple[str, bool, str]], ids: dict[str, bool], lint_ids: tuple[str, ...]) -> ItemStatus:
+    row = next((r for cell, r in rows.items() if item.in_cell(cell)), None)
+    cls = _row_class(row) if row else ""
+    home = next((m for m in re.findall(ID_FORM, cls) if m in ids), None)
+    naming = [(rid, is_open) for rid, is_open, text in board if item.in_text(text)]
+    open_ids = list(dict.fromkeys(([home] if home and ids[home] else []) + [rid for rid, o in naming if o]))
+    closed_ids = list(dict.fromkeys(([home] if home and not ids[home] else []) + [rid for rid, o in naming if not o]))
+    parts = [f"map: {home} ({'open' if ids[home] else 'closed'})"] if home else []
+    if open_ids:
+        parts.append("open: " + _some(open_ids))
+    elif not home and closed_ids:
+        parts.append("closed: " + _some(closed_ids))
+    board_cell = "; ".join(parts) or "none"
+    if item.cls == "G-id" and item.key in lint_ids:
+        return ItemStatus(item, "built", board_cell, "lint reports it")
+    if cls.startswith("DEFERRED"):
+        return ItemStatus(item, "deferred", board_cell, (row or {}).get("Reason", ""))
+    if cls.startswith("PROSE-ONLY"):
+        return ItemStatus(item, "prose-only", board_cell, (row or {}).get("Home", ""))
+    if open_ids:
+        return ItemStatus(item, "open work", board_cell, "")
+    if closed_ids:
+        return ItemStatus(item, "done", board_cell, "")
+    if row:
+        return ItemStatus(item, "map only", board_cell, (row or {}).get("Class", ""))
+    return ItemStatus(item, "unowned", board_cell, "")
+
+
+
+STATUS_TABLES = (  # class -> (heading, its columns before Status)
+    ("component", "Components (§2)", ("Component",)),
+    ("procedure", "Procedures (§5.6, §6)", ("§", "Procedure")),
+    ("G-id", "Guards (§8)", ("Guard",)),
+)
+
+
+def render_status(e: Engine) -> str:
+    """`framework_status` as text: what it was generated from, the totals, the rules, then one
+    markdown table per class, one row per item."""
+    map_rel, by_cls = framework_status(e)
+    spec = e.store.config.guards.coverage_spec
+    names = [s for s, _ in STATUS_RULES]
+    cell = lambda t: t.replace("|", r"\|")
+    totals = []
+    for cls, heading, _ in STATUS_TABLES:
+        counts = {n: sum(1 for r in by_cls[cls] if r.status == n) for n in names}
+        totals.append(f"{heading.split(' (')[0].lower()} {len(by_cls[cls])}: " + ", ".join(f"{n} {c}" for n, c in counts.items() if c))
+    out = [
+        "# Framework build status",
+        "",
+        f"Generated by `context-engine coverage` from {spec}, the newest coverage map ({map_rel}), the board and the guard ids "
+        "`context-engine lint` reports; printed on demand, never stored, so never stale.",
+        "",
+        "Totals: " + "; ".join(totals) + ".",
+        "",
+        "Each item's status is the first of these that holds:",
+        *(f"- **{n}**: {why}" for n, why in STATUS_RULES),
+    ]
+    for cls, heading, cols in STATUS_TABLES:
+        out += ["", f"## {heading}", "", "| " + " | ".join((*cols, "Status", "Board", "Note")) + " |", "|" + "---|" * (len(cols) + 3)]
+        for r in by_cls[cls]:
+            lead = (r.item.key, r.item.name) if cls == "procedure" else (r.item.key,)
+            out.append("| " + " | ".join(cell(c) for c in (*lead, r.status, r.board, r.note)) + " |")
+    return "\n".join(out) + "\n"
 
 
 # -- the correctness chain: G-I1, G-I2, G-T1, G-T2, G-T6 (CE-25) --------------------------

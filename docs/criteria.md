@@ -211,6 +211,13 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-130 | `id reserve <kind> --count n` (n from 1 to the engine's cap, of a board or append-only kind; else refused before any line) holds the next n ids of the series for the session: above every id a file name or `id:` key holds, every id a `new` or `import` op line created and every id already reserved, under the lock, with one `id.reserve` op line per id naming no path; `task new`, `ask new` and `record new` without `--id` skip every reserved id, and concurrent reserves and writes never share one | US-2 | tested |
 | AC-131 | `task new`, `ask new` and `record new --id <id>` write a record with an id this session reserved (a decision stamped as `record new` stamps it); another session's reserved id is refused before any byte, naming the session that holds it; a batch citing its reserved ids is G-D3 red until every one is written, then lint is green (G-D2, G-D3, G-W7) | US-2 | tested |
 
+## Framework build status (CE-141)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-170 | `coverage` (CLI and MCP, a read that writes nothing) gives every component, procedure and G-id G-D12 extracts from `[guards] coverage_spec` exactly one status, the first that holds: `built` (a G-id lint reports, whatever the map says), `deferred` or `prose-only` (the newest map's row class, its note the row's `Reason` or `Home`), `open work` (the item the row's class names is open, or an open board item names it as G-D12 reads a mention), `done` (only closed such items), `map only` (a row naming no item the board holds, its note the class), `unowned`; each row names the map's item with its state and at most five open items naming it, then `+n more`; G-ids sort by letter then number; the text heads the tables with the totals per status and the rules | DEC-81, US-9 | tested |
+| AC-171 | `coverage` refuses, with a remedy, while `[guards]` sets neither `coverage_spec` nor `coverage_maps`, and while G-D12 fails on its own config, spec, maps or floors (its first such failure the reason, its remedy the remedy) | DEC-81, US-9 | tested |
+
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push
