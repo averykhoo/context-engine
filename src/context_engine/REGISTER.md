@@ -598,3 +598,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the file then looks exactly like an owner decision; only the transcript shows that the owner delegated the call, and the engine never reads the transcript
 - **control:** individual: the contract's "Who decides" rule and FRAMEWORK §6.5 (a delegated call is recorded with `ruled_by`, never as `actor: owner`); G-I3 for every decision that names `ruled_by` or holds a `## Ruling` section
 - **from:** CE-139, session 2026-10-30a
+
+## INV-85: an open item's kill bar can be emptied or rewritten after its run, so the item closes without a verdict or against the new bar
+
+- **affects:** owners and reviewers trusting a recorded verdict
+- **why not eliminated:** the engine cannot tell a correction before the run from a change after it
+- **control:** individual: the op log's section lines; the reviewer reads them (FRAMEWORK §5.2, manual-mode § task close)
+- **from:** CE-108, session 2026-10-30a
