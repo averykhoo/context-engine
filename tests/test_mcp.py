@@ -70,7 +70,7 @@ CALLS = {
     "hk_regen_index": ([], {}),
     "decision_import": (["log.md", "--dry-run"], {"path": "log.md", "dry_run": True}),
     "doc_freeze": (["docs/plan.md", "--note", "CE-1 closed"], {"path": "docs/plan.md", "note": "CE-1 closed"}),
-    "doc_archive": (["docs/old.md", "--to", "docs/archive", "--why", "over its cap"], {"path": "docs/old.md", "to": "docs/archive", "why": "over its cap"}),
+    "doc_archive": (["docs/old.md", "--to", "docs/archive", "--why", "over its cap", "--lines", "5-9"], {"path": "docs/old.md", "to": "docs/archive", "why": "over its cap", "lines": "5-9"}),
     "criterion_new": (["the words", "--from", "US-1, DEC-2", "--status", "planned", "--under", "Core", "--id", "AC-9"], {"text": "the words", "source": "US-1, DEC-2", "status": "planned", "under": "Core", "id": "AC-9"}),
     "criterion_set": (["AC-9", "--status", "retired", "--text", "w", "--from", "DEC-2"], {"id": "AC-9", "status": "retired", "text": "w", "source": "DEC-2"}),
     "register_show": (["--engine"], {"engine": True}),

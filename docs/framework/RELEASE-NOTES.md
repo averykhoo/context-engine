@@ -15,6 +15,9 @@ component, procedure and guard.
   names, with its build status (built, deferred, prose-only, open work, done, map only,
   unowned), generated on demand from what G-D12 reads, the board and the guards lint reports;
   never stored, so it cannot go stale (§8.0.2, §8.3 G-D12) — CE-141.
+- `doc archive` also archives a doc with frontmatter (the ARCHIVED line first after it, a
+  `liveness:` key there turned FROZEN) and other material (moved unchanged), prunes a passage
+  with `--lines`, and names each pointer G-D3 newly reports, rewriting none (§7.3) — CE-96.
 - G-D3 also checks the backticked file names and repo paths in the docs a new `[guards] paths`
   list names (the kit ships it empty: off), and fails a bare file name that matches several
   files whose texts differ (§8.3) — DEC-113, DEC-114.

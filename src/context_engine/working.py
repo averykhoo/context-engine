@@ -2141,9 +2141,10 @@ class Engine:
 
     # -- docs: freeze and archive (FRAMEWORK §6.7, §7.2, §7.3, CE-27) --------------------
 
-    def _doc(self, path: str) -> tuple[str, Path]:
+    def _doc(self, path: str, markdown: bool = True) -> tuple[str, Path]:
         """A hand-written `.md` doc inside the root, as (repo-relative path, path): not a record,
-        whose liveness is its state (§6.7: a closed item stays in place)."""
+        whose liveness is its state (§6.7: a closed item stays in place). `markdown=False` takes
+        any other file too (`doc archive` moves other material unchanged, CE-96)."""
         raw = str(path).strip().replace("\\", "/")
         q = Path(raw)
         try:
@@ -2153,8 +2154,8 @@ class Engine:
         p = self.root / rel
         if not raw or not p.is_file():
             raise Refusal(f"there is no file {rel or path!r}", "give the doc's path relative to the repo root")
-        if p.suffix.lower() != ".md":
-            raise Refusal(f"{rel} is not a markdown doc", "freeze or archive only `.md` docs; move other material by hand with `git mv` (manual-mode.md § context-engine doc archive)")
+        if markdown and p.suffix.lower() != ".md":
+            raise Refusal(f"{rel} is not a markdown doc", "freeze only `.md` docs (G-D4 reads no other); other material is archived whole with `doc archive`, unchanged")
         for k in self.store.config.kinds.values():
             if G._under(rel, (k.dir, *k.extra_dirs)):
                 raise Refusal(f"{rel} is a {k.name} record, not a doc", "a record stays where it is (FRAMEWORK §6.7: a closed item keeps its file); its state is changed by its own operations")
@@ -2198,14 +2199,23 @@ class Engine:
             self.store.log("doc.freeze", rel, p, session, actor, ["liveness"])
         return f"{rel}: FROZEN {today} written on line {own.line}, above its {own.word} line; G-D4 now reads it as FROZEN"
 
-    def doc_archive(self, path: str, to: str = "", why: str = "", *, session: str, actor: str) -> str:
+    def doc_archive(self, path: str, to: str = "", why: str = "", lines: str = "", *, session: str, actor: str) -> str:
         """FRAMEWORK §7.3: move a tracked, committed doc, unrepaired, into the archive directory
-        (`to`, else `[working] archive`), opened with `ARCHIVED <date>`, and add its row to that
-        directory's redirect table (`README.md`, made by the first archive there). Not a
-        milestone (DEC-36): nothing is staged, and the next commit carries the old path's
-        deletion, the new file and the table with their op lines, which git shows as a rename."""
+        (`to`, else `[working] archive`), opened with `ARCHIVED <date>` (first after its
+        frontmatter, whose `liveness:` key becomes FROZEN), and add its row to that directory's
+        redirect table (`README.md`, made by the first archive there). Material that is not
+        markdown moves byte for byte, with no ARCHIVED line: its row dates it. With `lines`
+        (`A-B`), prune instead (CE-96): cut those lines of a markdown doc and append them
+        unchanged to `<dir>/<stem>-pruned.md` under `## Pruned from <doc> on <date>`, with a row.
+        Not a milestone (DEC-36): nothing is staged, and the next commit carries the writes with
+        their op lines (a whole move shows in git as a rename). Nothing outside the archive is
+        rewritten: the reply names each pointer G-D3 newly reports, to repoint by hand."""
         self._check(session, actor)
-        rel, p = self._doc(path)
+        rel, p = self._doc(path, markdown=False)
+        md = p.suffix.lower() == ".md"
+        span = _line_span(lines, rel) if str(lines).strip() else None
+        if span and not md:
+            raise Refusal(f"{rel} is not a markdown doc, so no passage of it is pruned", "archive it whole (drop --lines), or cut the passage by hand (manual-mode.md § context-engine doc archive)")
         where = (to or self.w.archive).strip().replace("\\", "/").strip("/")
         if not where:
             raise Refusal("no archive directory given, and [working] has no `archive`", "pass --to <directory>, or set `archive = \"docs/archive\"` in [working] of context.toml")
@@ -2220,36 +2230,98 @@ class Engine:
                 raise Refusal(f"{dest_dir} holds {k.name} records", "archive into a directory of its own, e.g. docs/archive")
         if PurePosixPath(rel).parent.as_posix() == dest_dir:
             raise Refusal(f"{rel} is already in the archive directory {dest_dir}", "nothing to do: nothing in an archive is moved again (FRAMEWORK §7.3)")
-        if p.name == A.REDIRECTS:
+        if p.name == A.REDIRECTS and not span:
             raise Refusal(f"{rel} has the name of an archive's redirect table ({A.REDIRECTS})", f"archive it by hand under another name (manual-mode.md § context-engine doc archive)")
-        dest = self.root / dest_dir / p.name
+        base = f"{p.stem}-pruned.md" if span else p.name
+        dest = self.root / dest_dir / base
         today = self.today().isoformat()
-        name = PurePosixPath(dest_dir, p.name).as_posix()
+        name = PurePosixPath(dest_dir, base).as_posix()
         table = self.root / dest_dir / A.REDIRECTS
         with self.store.lock():
             # AC-83: every check and every read before the first write, so a refusal writes nothing
-            if dest.exists():
+            if dest.exists() and not span:
                 raise Refusal(f"{dest_dir}/{p.name} exists already", "archive into another directory with --to, or by hand under a dated name (manual-mode.md § context-engine doc archive)")
             if not self._git("ls-files", "--", rel).strip():
                 raise Refusal(f"{rel} is not tracked by git", "commit it first (an archive moves tracked material, `git mv`, so its history follows it), or delete it if it was never worth keeping")
             if self._git("status", "--porcelain=v1", "--", rel).strip():
                 raise Refusal(f"{rel} has uncommitted changes", "commit them, or undo them, first: an archive moves the material as it stands in git, never repaired (FRAMEWORK §7.3)")
-            text = self._utf8(p, rel)
-            if text.lstrip("\ufeff").startswith("---"):
-                raise Refusal(f"{rel} opens with frontmatter, so `ARCHIVED <date>` cannot be its first line", "archive it by hand, the ARCHIVED line first after the frontmatter (manual-mode.md § context-engine doc archive)")
+            text = self._utf8(p, rel) if md else ""
             old = self._utf8(table, f"{dest_dir}/{A.REDIRECTS}") if table.exists() else None
-            moved = A.archived(text, today, session, rel)
-            redirects = A.redirects(old, dest_dir, A.redirect_row(rel, p.name, today, session, why))
+            if span:
+                kept, done = self._prune(rel, text, span, dest, name, today, session)
+                row = A.redirect_row(f"{rel} lines {span[0]}-{span[1]}", base, today, session, why)
+                how = ""
+            elif md:
+                moved = A.archived(text, today, session, rel)
+                if A.frontmatter(text) is None:
+                    how = f"first line ARCHIVED {today}"
+                else:
+                    how = f"ARCHIVED {today} first after its frontmatter" + (", whose `liveness:` is now FROZEN" if A.thawed_keys(text) else "")
+                row = A.redirect_row(rel, base, today, session, why)
+            else:
+                how = "moved unchanged: not markdown, so no ARCHIVED line; its row dates it"
+                row = A.redirect_row(rel, base, today, session, why)
+            redirects = A.redirects(old, dest_dir, row)
+            before = self._pointer_reds()
             dest.parent.mkdir(parents=True, exist_ok=True)
-            self.store.write_text(dest, moved)
-            p.unlink()
+            if span:
+                self.store.write_text(dest, done)
+                self.store.write_text(p, kept)
+            elif md:
+                self.store.write_text(dest, moved)
+                p.unlink()
+            else:
+                self.store.write_bytes(dest, p.read_bytes())
+                p.unlink()
             self.store.write_text(table, redirects)
-            self.store.log("doc.archive", rel, p, session, actor, ["moved"])
+            self.store.log("doc.archive", rel, p, session, actor, ["pruned" if span else "moved"])
             self.store.log("doc.archive", rel, dest, session, actor, ["archived"])
             self.store.log("doc.archive", rel, table, session, actor, ["redirect"])
-        cfg = (self.root / CONFIG_NAME).read_text(encoding="utf-8") if (self.root / CONFIG_NAME).exists() else ""
-        warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if _names_path(cfg, rel) else ""
-        return f"{rel}: archived as {name} (first line ARCHIVED {today}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
+            reds = self._pointer_reds() - before
+        if span:
+            out = f"{rel}: lines {span[0]}-{span[1]} pruned into {name} under `{A.pruned_heading(rel, today)}`, row added to {dest_dir}/{A.REDIRECTS}"
+        else:
+            cfg = (self.root / CONFIG_NAME).read_text(encoding="utf-8") if (self.root / CONFIG_NAME).exists() else ""
+            warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if _names_path(cfg, rel) else ""
+            out = f"{rel}: archived as {name} ({how}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
+        return out + _pointer_note(sorted(reds), name)
+
+    def _prune(self, rel: str, text: str, span: tuple[int, int], dest: Path, name: str, today: str, session: str) -> tuple[str, str]:
+        """`doc archive --lines`: (the doc without the passage, the archive file with the passage
+        appended under its dated heading), after every check a prune makes, before any write
+        (AC-148). Refused: a range past the doc's end, the whole doc (archive it whole), a range
+        cutting into the frontmatter, a FROZEN doc (never edited, §7.2), a cut that changes what
+        G-D4 reads, and a blank passage."""
+        first, last = span
+        n = A.line_count(text)
+        if last > n:
+            raise Refusal(f"{rel} has {n} lines, so --lines {first}-{last} runs past its end", "name lines the doc has, numbered from 1 as an editor numbers them")
+        if first == 1 and last == n:
+            raise Refusal(f"--lines {first}-{last} is the whole of {rel}", "archive it whole: drop --lines")
+        fm = A.frontmatter(text)
+        if fm is not None and first <= fm + 1:
+            raise Refusal(f"--lines {first}-{last} cuts into {rel}'s frontmatter (lines 1-{fm + 1})", "prune lines below the frontmatter")
+        given, _ = G.given(self)
+        window = self.store.config.guards.liveness_lines
+        own = G.declared(text.replace("\r\n", "\n"), window)
+        if own.word == "FROZEN" or given.get(rel, ("",))[0] == "FROZEN":
+            raise Refusal(f"{rel} is FROZEN", "nothing to do: a frozen doc is never edited (FRAMEWORK §7.2); archive it whole if it is in the way")
+        kept, passage = A.cut(text, first, last)
+        after = G.declared(kept.replace("\r\n", "\n"), window)
+        if own.word and after.word != own.word:
+            raise Refusal(f"--lines {first}-{last} would leave G-D4 reading {after.word or 'no liveness'} in {rel}, which declares {own.word} on line {own.line}",
+                          "keep the declaration, and the line that opens its block (a blank line, a heading or the frontmatter), out of the range")
+        if not passage.strip():
+            raise Refusal(f"--lines {first}-{last} of {rel} are blank", "name the passage to prune")
+        prior = self._utf8(dest, name) if dest.exists() else None
+        return kept, A.pruned(prior, passage, rel, today, session)
+
+    def _pointer_reds(self) -> collections.Counter:
+        """G-D3's failures as (doc, message), counted; none when `[guards] off` names G-D3. What a
+        write adds to them is what it left pointing at a path or heading that is gone (CE-96)."""
+        if "G-D3" in self.store.config.guards.off:
+            return collections.Counter()
+        return collections.Counter((f.path, f.message) for f in G.links(self))
 
     # -- write-time prose checks (CE-63, INV-60) --------------------------------------------
 
@@ -2942,6 +3014,35 @@ def _names_path(cfg: str, rel: str) -> bool:
             if s.strip().replace("\\", "/").removeprefix("./") == rel:
                 return True
     return False
+
+
+LINES_RE = re.compile(r"^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$")  # `doc archive --lines A-B` (or `A`)
+
+
+def _line_span(lines: str, rel: str) -> tuple[int, int]:
+    """`--lines A-B` (or `A`) as (first, last), numbered from 1 (CE-96)."""
+    m = LINES_RE.match(str(lines))
+    first, last = (int(m[1]), int(m[2] or m[1])) if m else (0, 0)
+    if first < 1 or last < first:
+        raise Refusal(f"--lines {lines} is not a range of {rel}'s lines", "give `A-B` (or `A`): the passage's first and last lines, numbered from 1 as an editor numbers them")
+    return first, last
+
+
+def _pointer_note(reds: list[tuple[str, str]], name: str) -> str:
+    """What `doc archive` adds to its reply for the G-D3 failures it caused (``reds``, as (doc,
+    message)): each doc and line, never rewritten (CE-96). A living doc's pointer is repointed
+    by hand; the archived copy's own pointers are never repaired (FRAMEWORK §7.3)."""
+
+    def where(items: list[tuple[str, str]]) -> str:
+        at = [f"{path} {msg.split(':', 1)[0]}" if msg.startswith("line ") else path for path, msg in items]
+        return ", ".join(at[:6]) + (f" and {len(at) - 6} more" if len(at) > 6 else "")
+
+    own = [r for r in reds if r[0] == name]
+    rest = [r for r in reds if r[0] != name]
+    out = f"; G-D3 now reports pointers to what moved, none rewritten: {where(rest)}; point each at {name} by hand" if rest else ""
+    if own:
+        out += f"; G-D3 reads {name}, whose own pointers the move broke ({where(own)}): an archive is never repaired, so take it out of [guards] links and paths"
+    return out
 
 
 def _size(s: str) -> int:

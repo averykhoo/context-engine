@@ -584,6 +584,12 @@ class Store:
         """Atomically replace a non-record file. Call it holding ``lock()``."""
         self._write(path, okf.Document(fm_lines=None, body="", newline="\n", raw=text))
 
+    def write_bytes(self, path: Path, data: bytes) -> None:
+        """Atomically replace a non-record file with ``data``, byte for byte: material that is not
+        markdown, which an archive moves unchanged (`doc archive`, CE-96). Call it holding
+        ``lock()``."""
+        self._put(path, data)
+
     def log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool = False) -> None:
         self._log(op, rec_id, path, session, actor, fields, mechanical)
 
@@ -703,7 +709,9 @@ class Store:
             raise Refusal(f"{self._rel(path)} {msg}{more}", remedy)
 
     def _write(self, path: Path, doc: okf.Document) -> None:
-        data = doc.render().encode("utf-8")
+        self._put(path, doc.render().encode("utf-8"))
+
+    def _put(self, path: Path, data: bytes) -> None:
         tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         tmp.write_bytes(data)
         for attempt in range(50):  # Windows refuses a replace while a reader has the file open

@@ -102,7 +102,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
-| doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table | `["moved"]`, `["archived"]`, `["redirect"]` |
+| doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table (`--lines`: the doc, then the archive file, then the table) | `["moved"]` (`--lines`: `["pruned"]`), `["archived"]`, `["redirect"]` |
 | criterion new, criterion set | `criterion.new`, `criterion.set` | id = the criterion, path = the criteria file | `["row"]`; the header names of the columns changed |
 
 ### Record kinds (the kit's defaults)
@@ -1124,20 +1124,24 @@ is frozen (§ task close), so G-D4 is never red between a close and its freeze.
 
 ### context-engine doc archive
 
-For a whole `.md` doc that git tracks, with no uncommitted change, and no frontmatter:
+For a file git tracks, with no uncommitted change: a whole doc or other file (the steps below),
+or a passage of a doc (§ Pruning part of a doc, after them).
 
 1. The archive directory is `--to`, else `[working] archive` (the kit's default is
-   `docs/archive`). Stop if the doc is already in it, if a file of its name is already there
-   (choose another directory, or a dated name), or if the doc is named `README.md`, which is the
+   `docs/archive`). Stop if the file is already in it, if a file of its name is already there
+   (choose another directory, or a dated name), or if it is named `README.md`, which is the
    redirect table's name.
-2. Move it: `git mv <doc> <dir>/<name>`. Never repair it: no fixed links, no updated text. (The
+2. Move it: `git mv <file> <dir>/<name>`. Never repair it: no fixed links, no updated text. (The
    engine moves the file without staging it, and the next commit records the move; git shows a
    rename either way.)
-3. Make its first line `ARCHIVED <today, YYYY-MM-DD> (session <key>), from <old path>.`, then one
-   blank line, then the doc as it was, in its own line endings. A doc with frontmatter cannot take
-   that first line: by hand, put the ARCHIVED line first after the frontmatter, where G-D4 reads it
-   too.
-4. Add the doc's row to `<dir>/README.md`, the directory's one redirect table, after the last
+3. Make a markdown doc's first line
+   `ARCHIVED <today, YYYY-MM-DD> (session <key>), from <old path>.`, then one blank line, then
+   the doc as it was, in its own line endings. A doc with frontmatter keeps it on top: the
+   ARCHIVED line goes first after its closing `---`, where G-D4 reads it too, and a `liveness:`
+   key in it, which G-D4 reads first, becomes
+   `liveness: FROZEN  # ARCHIVED <today>; was <its old value>`. Material that is not markdown
+   moves byte for byte, with no ARCHIVED line: its row dates it.
+4. Add its row to `<dir>/README.md`, the directory's one redirect table, after the last
    row of the table headed `| Was | Now | Archived | Why |`. Its cells: the old path; a markdown
    link whose text and target are both the archived file's name; `<today> (session <key>)`; the
    why, or `—`. With no README, create it: `# Archive: <dir>`, a
@@ -1147,20 +1151,39 @@ For a whole `.md` doc that git tracks, with no uncommitted change, and no frontm
 5. Log three op lines (§ What every write does). Not a milestone: the next commit carries the old
    path's deletion, the archived copy and the table.
 6. If `context.toml` names the old path (a route, a `[guards]` list), point the entry at the new
-   path or drop it, or lint is red (G-R1, G-D4); the engine's reply names such an entry. A link to
-   the old path in a doc lint reads (G-D3) is pointed at the archived copy.
+   path or drop it, or lint is red (G-R1, G-D4); the engine's reply names such an entry. A link
+   to the old path in a doc lint reads (G-D3) is red too: in a living doc, point it at the
+   archived copy by hand. The engine rewrites none of them; its reply names each pointer G-D3
+   newly reports (by hand: compare `context-engine lint`'s G-D3 lines before and after the
+   move). The archived copy's own links are never repaired: if G-D3 reads the archive
+   directory, take it out of `[guards] links` and `paths`.
 
-**Pruning part of a file** (an orientation note over its cap) is not an engine operation: what
-goes is a judgement. Cut the passage and append it unchanged to an archive file in the archive
-directory, under `## Pruned from <file> on <date>` (the headings are the file's index). A new
-archive file opens with `ARCHIVED <date>`, and gets its row in the redirect table once.
+**Pruning part of a doc** (an orientation note over its cap): which lines go is a judgement;
+the cut is mechanical, `context-engine doc archive <doc> --lines A-B [--to <dir>] [--why]`. The
+doc is markdown, tracked, committed (the lines named are the lines in git) and not FROZEN (a
+frozen doc is never edited).
+
+1. Cut lines A to B, numbered from 1 as an editor numbers them. Not the whole doc (archive it
+   whole), not into its frontmatter, and not so that G-D4 reads another liveness: keep the
+   declaration, and the blank line, heading or frontmatter that opens its block, out of the
+   range. A blank passage is nothing to prune.
+2. Append the passage unchanged to `<dir>/<stem>-pruned.md` (for `HANDOFF.md`,
+   `HANDOFF-pruned.md`): a blank line, `## Pruned from <doc> on <today>`, a blank line, the
+   passage. The headings are the file's index. A new archive file opens with
+   `ARCHIVED <today> (session <key>), passages pruned from <doc>, each under its dated heading.`
+3. Add a row to `<dir>/README.md` as in step 4 above, one per prune: its first cell
+   `<doc> lines A-B`, its link to the archive file.
+4. Log three op lines (§ What every write does): the doc, the archive file, the table. Then step
+   6 above: a link elsewhere to a heading that left the doc is red under G-D3.
 
 **Why:** an archive answers "where did X go?" (FRAMEWORK §7.3). `git mv` keeps the history with
 the material (`git log --follow`). Never repairing it keeps it evidence of what was true when it
 was archived. The `ARCHIVED <date>` first line is a FROZEN declaration to G-D4, so an archived
-LIVING doc no longer claims to be kept current. One redirect table per directory is where anyone
-holding the old path finds the new one. Only whole docs, because a partial move needs judgement,
-and only committed ones, so the move carries nobody's half-made edit.
+LIVING doc no longer claims to be kept current; in frontmatter, G-D4 reads the `liveness:` key
+before it, so that key says FROZEN too. One redirect table per directory is where anyone holding
+the old path finds the new one. Only committed material, so the move carries nobody's half-made
+edit. The engine names pointers rather than rewriting them: a pointer can sit in a record whose
+body is hashed or append-only, or in a frozen doc, which no write may change.
 
 ## The banner
 

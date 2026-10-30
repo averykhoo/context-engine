@@ -1452,9 +1452,9 @@ ships no named agent definitions (Claude Code's `.claude/agents/`), and a repo m
 Two rows are engine operations. **ACTIVE-PLAN to FROZEN** is `doc.freeze`, which writes the
 FROZEN line G-D4 reads (§7.2), and `task.close` refuses to close the last open item an
 ACTIVE-PLAN doc names until that doc is frozen, so the close and the freeze land in one commit
-and G-D4 is never red between them. **Archive** is `doc.archive`, for a whole doc (§7.3). The
-other rows are the session's judgement: a clean close walks them (§6.3 items 4 and 5), and
-housekeeping turns old batons into tasks (§6.11).
+and G-D4 is never red between them. **Archive** is `doc.archive`, for a whole doc or file, or a
+passage the session chose to prune (§7.3). The other rows are the session's judgement: a clean
+close walks them (§6.3 items 4 and 5), and housekeeping turns old batons into tasks (§6.11).
 
 ### 6.8 Push and CI
 
@@ -1724,16 +1724,24 @@ cite for each item.
 ### 7.3 Archive
 
 - `git mv` the material, never repair it.
-- First line: `ARCHIVED YYYY-MM-DD`.
-- One redirect table per archive directory: its `README.md`, one row per archived doc (old path,
-  new link, date, why). Nothing else in an archive is repaired, extended or kept current.
+- First line: `ARCHIVED YYYY-MM-DD`; in a doc with frontmatter, the first line after it, and a
+  `liveness:` key there becomes FROZEN. Material that is not markdown moves unchanged: its row
+  dates it.
+- One redirect table per archive directory: its `README.md`, one row per archived doc or pruned
+  passage (old path, new link, date, why). Nothing else in an archive is repaired, extended or
+  kept current.
 - Archive headings act as the index (`## Pruned from HANDOFF.md on <date>`).
-- **The engine's operation is `doc.archive`** (CLI `doc archive <doc> [--to <dir>] [--why]`): it
-  moves a whole tracked doc into `--to` or `[working] archive`, opens it with `ARCHIVED <date>
-  (session <key>), from <old path>.` and adds its row to the directory's `README.md`; the next
-  commit carries the move, which git shows as a rename. Pruning part of a file under a dated
-  heading needs a judgement of what goes, so it is done by hand (`manual-mode.md`). A copy kept
-  beside a living doc before a rewrite (§6.12) is also made by hand.
+- A link elsewhere that still uses the old path is red under G-D3, and is repointed by hand in a
+  living doc; the archived copy's own links are never repaired.
+- **The engine's operation is `doc.archive`** (CLI `doc archive <doc> [--to <dir>] [--why]
+  [--lines A-B]`): it moves a whole tracked file into `--to` or `[working] archive`, opens a
+  markdown doc with `ARCHIVED <date> (session <key>), from <old path>.` and adds its row to the
+  directory's `README.md`; the next commit carries the move, which git shows as a rename. With
+  `--lines`, it prunes instead: those lines leave the doc and are appended unchanged to
+  `<dir>/<stem>-pruned.md` under `## Pruned from <doc> on <date>`. Which lines go is the
+  session's judgement; the cut is the engine's, and it refuses one that would change the doc's
+  liveness. It rewrites nothing outside the archive: its reply names each pointer G-D3 newly
+  reports. A copy kept beside a living doc before a rewrite (§6.12) is made by hand.
 
 ### 7.4 Residual-risk register vs unverified hazards
 
@@ -1941,7 +1949,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
-| Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why)`: a whole doc into an archive directory with its redirect row (§7.3) |
+| Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why, lines)`: a whole doc or file into an archive directory with its redirect row, or the lines named pruned into it (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |

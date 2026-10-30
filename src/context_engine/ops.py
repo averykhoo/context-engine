@@ -462,9 +462,9 @@ def doc_freeze(e: Engine, c: Caller, path: str, note: str = "") -> tuple[int, st
 
 
 @op(write=True)
-def doc_archive(e: Engine, c: Caller, path: str, to: str = "", why: str = "") -> tuple[int, str]:
-    """Archive a tracked, committed `.md` doc (FRAMEWORK §7.3): move it unrepaired into the archive directory `to` (default `[working] archive`), its first line `ARCHIVED <date>`, and add a row (old path, new link, date, `why`) to that directory's redirect table, README.md. Not a milestone: the next commit carries the move (git shows a rename). The reply names any context.toml entry still pointing at the old path."""
-    return 0, e.doc_archive(path, to, why, **c.kw)
+def doc_archive(e: Engine, c: Caller, path: str, to: str = "", why: str = "", lines: str = "") -> tuple[int, str]:
+    """Archive a tracked, committed file (FRAMEWORK §7.3): move it unrepaired into the archive directory `to` (default `[working] archive`) and add a row (old path, new link, date, `why`) to that directory's redirect table, README.md. A `.md` doc opens with `ARCHIVED <date>` (first after any frontmatter, whose `liveness:` key becomes FROZEN); other material moves byte for byte. With `lines` (`A-B`), prune instead: cut those lines of the doc and append them unchanged to `<dir>/<stem>-pruned.md` under `## Pruned from <doc> on <date>`. Not a milestone: the next commit carries the writes (a whole move shows as a rename). Nothing outside the archive is rewritten: the reply names any context.toml entry still on the old path and each pointer G-D3 newly reports."""
+    return 0, e.doc_archive(path, to, why, lines, **c.kw)
 
 
 # -- the residual-risk register (FRAMEWORK §7.4) ------------------------------------------

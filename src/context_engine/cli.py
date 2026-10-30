@@ -288,10 +288,11 @@ def build() -> argparse.ArgumentParser:
     df_ = _sub(dd, "freeze", "write a FROZEN line with the date above the doc's liveness line (G-D4 then reads it as FROZEN)")
     df_.add_argument("path", help="the doc, relative to the root")
     df_.add_argument("--note", default="", help="why it is frozen (default: the board items it names closed)")
-    da = _sub(dd, "archive", "move a committed doc into an archive directory, unrepaired, first line ARCHIVED <date>, with a row in that directory's redirect table")
-    da.add_argument("path", help="the doc, relative to the root")
+    da = _sub(dd, "archive", "move a committed doc (or other file) into an archive directory, unrepaired, ARCHIVED <date> first, with a row in that directory's redirect table; or prune some of its lines there")
+    da.add_argument("path", help="the doc, or any other tracked file, relative to the root")
     da.add_argument("--to", default="", help="the archive directory (default: [working] archive)")
     da.add_argument("--why", default="", help="the redirect row's reason, e.g. `over its cap (G-D1)`")
+    da.add_argument("--lines", default="", metavar="A-B", help="prune these lines of the doc into <dir>/<stem>-pruned.md instead of moving it whole")
 
     rg = _sub(groups, "register", "the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
     rgs = _sub(rg, "show", "the register's entries")

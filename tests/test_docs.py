@@ -264,7 +264,6 @@ def test_archive_refuses_what_it_cannot_move_unrepaired_and_writes_nothing(repo)
     cases = [
         ("docs/new.md", {}, "docs/new.md is not tracked by git"),
         ("docs/edited.md", {}, "docs/edited.md has uncommitted changes"),
-        ("docs/fm.md", {}, "docs/fm.md opens with frontmatter"),
         ("docs/old.md", {}, "docs/archive/old.md exists already"),
         ("docs/archive/old.md", {}, "docs/archive/old.md is already in the archive directory docs/archive"),
         ("docs/README.md", {}, "docs/README.md has the name of an archive's redirect table"),
@@ -323,3 +322,149 @@ def test_the_redirect_table_takes_a_row_in_a_readme_written_by_hand_keeping_its_
     last = f"{A.REDIRECT_HEAD}\n{A.REDIRECT_RULE}\n| x.md | [x.md](x.md) | 2026-10-01 | — |"  # the table ends the file, with no newline
     assert A.redirects(last, "d", row) == f"{last}\n{row}\n"
     assert A.redirect_row("a b|c.md", "a b|c.md", "2026-10-08", "2026-10-08a", "") == "| a b\\|c.md | [a b\\|c.md](a%20b%7Cc.md) | 2026-10-08 (session 2026-10-08a) | — |"
+
+
+# -- doc archive beyond whole .md docs (CE-96) -------------------------------------------------
+
+
+def commit_all(root, message="more"):
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", message)
+
+
+@pytest.mark.criterion("AC-147")
+def test_archive_puts_archived_first_after_frontmatter_and_freezes_its_liveness_key(repo):
+    write(repo, "docs/fmk.md", "---\r\ntype: Runbook\r\nliveness: LIVING  # kept current\r\n---\r\n\r\n# R\r\n")  # CRLF stays
+    write(repo, "docs/rule.md", "---\n\nLIVING. A thematic break first, not frontmatter.\n")
+    commit_all(repo)
+    out = archive(repo, "docs/fm.md")
+    assert out == "docs/fm.md: archived as docs/archive/fm.md (ARCHIVED 2026-10-08 first after its frontmatter), row added to docs/archive/README.md"
+    assert (repo / "docs/archive/fm.md").read_text(encoding="utf-8") == f"---\ntitle: x\n---\nARCHIVED 2026-10-08 (session {KEY}), from docs/fm.md.\n\n\nLIVING.\n"
+    out = archive(repo, "docs/fmk.md")
+    assert out.endswith("(ARCHIVED 2026-10-08 first after its frontmatter, whose `liveness:` is now FROZEN), row added to docs/archive/README.md"), out
+    assert (repo / "docs/archive/fmk.md").read_bytes().decode("utf-8") == (
+        f"---\r\ntype: Runbook\r\nliveness: FROZEN  # ARCHIVED 2026-10-08; was LIVING  # kept current\r\n---\r\n"
+        f"ARCHIVED 2026-10-08 (session {KEY}), from docs/fmk.md.\r\n\r\n\r\n# R\r\n")
+    assert archive(repo, "docs/rule.md").endswith("(first line ARCHIVED 2026-10-08), row added to docs/archive/README.md")
+    assert (repo / "docs/archive/rule.md").read_text(encoding="utf-8").startswith("ARCHIVED 2026-10-08")
+    for name in ("fm.md", "fmk.md", "rule.md"):  # G-D4 reads each archived copy as FROZEN
+        assert G.declared((repo / "docs/archive" / name).read_text(encoding="utf-8"), 10).word == "FROZEN", name
+    assert reds(Engine(repo)) == []
+
+
+@pytest.mark.criterion("AC-147")
+def test_archive_moves_material_that_is_not_markdown_byte_for_byte(repo):
+    data = bytes([0xFF, 0x00, 0x0D, 0x0A]) + "LIVING, but not markdown\n".encode("utf-8")  # not UTF-8, CRLF and LF
+    (repo / "spike").mkdir()
+    (repo / "spike/probe.bin").write_bytes(data)
+    commit_all(repo)
+    out = archive(repo, "spike/probe.bin", why="probe done")
+    assert out == "spike/probe.bin: archived as docs/archive/probe.bin (moved unchanged: not markdown, so no ARCHIVED line; its row dates it), row added to docs/archive/README.md"
+    assert not (repo / "spike/probe.bin").exists() and (repo / "docs/archive/probe.bin").read_bytes() == data
+    assert f"| spike/probe.bin | [probe.bin](probe.bin) | 2026-10-08 (session {KEY}) | probe done |" in (repo / "docs/archive/README.md").read_text(encoding="utf-8")
+    assert [(x["op"], x["path"], x["fields"]) for x in oplines(repo)[-3:]] == [
+        ("doc.archive", "spike/probe.bin", ["moved"]), ("doc.archive", "docs/archive/probe.bin", ["archived"]), ("doc.archive", "docs/archive/README.md", ["redirect"])]
+    ops.OPS["commit"].call(Engine(repo), ops.Caller(KEY, ACTOR), message="CE-1: archive the probe")
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == ""
+    moved = git(repo, "show", "-M", "--name-status", "--format=", "HEAD").splitlines()
+    assert "R100\tspike/probe.bin\tdocs/archive/probe.bin" in moved, moved
+
+
+NOTES = "# Notes\n\nLIVING. Kept current.\n\n## Old\n\n- a\n- b\n\n## Now\n\n- c\n"
+
+
+@pytest.mark.criterion("AC-148")
+def test_archive_lines_prunes_a_passage_unchanged_under_its_dated_heading(repo):
+    write(repo, "docs/notes.md", NOTES)
+    commit_all(repo)
+    out = archive(repo, "docs/notes.md", lines="5-9", why="over its cap (G-D1)")
+    assert out == "docs/notes.md: lines 5-9 pruned into docs/archive/notes-pruned.md under `## Pruned from docs/notes.md on 2026-10-08`, row added to docs/archive/README.md"
+    assert (repo / "docs/notes.md").read_text(encoding="utf-8") == "# Notes\n\nLIVING. Kept current.\n\n## Now\n\n- c\n"
+    top = f"ARCHIVED 2026-10-08 (session {KEY}), passages pruned from docs/notes.md, each under its dated heading.\n"
+    first = "\n## Pruned from docs/notes.md on 2026-10-08\n\n## Old\n\n- a\n- b\n\n"
+    assert (repo / "docs/archive/notes-pruned.md").read_text(encoding="utf-8") == top + first
+    assert [(x["op"], x["path"], x["fields"]) for x in oplines(repo)[-3:]] == [
+        ("doc.archive", "docs/notes.md", ["pruned"]), ("doc.archive", "docs/archive/notes-pruned.md", ["archived"]), ("doc.archive", "docs/archive/README.md", ["redirect"])]
+    assert reds(Engine(repo)) == []  # the doc still declares LIVING, the archive file reads as FROZEN
+    ops.OPS["commit"].call(Engine(repo), ops.Caller(KEY, ACTOR), message="CE-1: prune the notes")
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == ""
+    # a second prune appends under a heading of its own, keeping every byte, with a row of its own
+    out = archive(repo, "docs/notes.md", lines="7")
+    assert (repo / "docs/notes.md").read_text(encoding="utf-8") == "# Notes\n\nLIVING. Kept current.\n\n## Now\n\n"
+    assert (repo / "docs/archive/notes-pruned.md").read_text(encoding="utf-8") == top + first + "\n## Pruned from docs/notes.md on 2026-10-08\n\n- c\n"
+    rows = [ln for ln in (repo / "docs/archive/README.md").read_text(encoding="utf-8").splitlines() if ln.startswith("| docs/")]
+    assert rows == [f"| docs/notes.md lines 5-9 | [notes-pruned.md](notes-pruned.md) | 2026-10-08 (session {KEY}) | over its cap (G-D1) |",
+                    f"| docs/notes.md lines 7-7 | [notes-pruned.md](notes-pruned.md) | 2026-10-08 (session {KEY}) | — |"]
+
+
+@pytest.mark.criterion("AC-148")
+def test_archive_lines_refuses_a_cut_it_cannot_make_cleanly_and_writes_nothing(repo):
+    write(repo, "docs/notes.md", NOTES)
+    write(repo, "docs/fmn.md", "---\ntitle: x\n---\n\nLIVING.\n\n- a\n")
+    write(repo, "docs/wrap.md", "# W\n\nAn intro.\n\nLIVING. Kept.\n\n- a\n")
+    write(repo, "docs/edited.md", "# E\n\nLIVING.\n\n- a\n")
+    (repo / "docs/data.json").write_bytes(b"{}\n")
+    commit_all(repo)
+    write(repo, "docs/edited.md", "# E\n\nLIVING.\n\n- b\n")
+    cases = [
+        ("docs/notes.md", "14-15", "docs/notes.md has 12 lines, so --lines 14-15 runs past its end"),
+        ("docs/notes.md", "1-12", "--lines 1-12 is the whole of docs/notes.md"),
+        ("docs/notes.md", "9-5", "--lines 9-5 is not a range of docs/notes.md's lines"),
+        ("docs/notes.md", "0-2", "--lines 0-2 is not a range"),
+        ("docs/notes.md", "five", "--lines five is not a range"),
+        ("docs/notes.md", "3", "--lines 3-3 would leave G-D4 reading no liveness in docs/notes.md, which declares LIVING on line 3"),
+        ("docs/wrap.md", "4", "--lines 4-4 would leave G-D4 reading no liveness in docs/wrap.md, which declares LIVING on line 5"),  # the blank line opening its block
+        ("docs/notes.md", "2", "--lines 2-2 of docs/notes.md are blank"),  # after a heading, the declaration still opens a block
+        ("docs/notes.md", "4", "--lines 4-4 of docs/notes.md are blank"),
+        ("docs/fmn.md", "3-5", "--lines 3-5 cuts into docs/fmn.md's frontmatter (lines 1-3)"),
+        ("docs/b.md", "5-6", "docs/b.md is FROZEN"),
+        ("docs/data.json", "1", "docs/data.json is not a markdown doc, so no passage of it is pruned"),
+        ("docs/edited.md", "5", "docs/edited.md has uncommitted changes"),
+    ]
+    status, files = git(repo, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(repo)
+    for path, lines, says in cases:
+        with pytest.raises(Refusal) as r:
+            archive(repo, path, lines=lines)
+        assert r.value.message.startswith(says), (path, lines, r.value.message)
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == status
+    assert snapshot(repo) == files
+
+
+@pytest.mark.criterion("AC-149")
+def test_archive_names_each_pointer_g_d3_now_reports_and_rewrites_none(tmp_path):
+    root = tmp_path / "repo"
+    target(root, {**DOCS, "guards": {**DOCS["guards"], "links": ["docs/index.md", "docs/archive"]}})
+    index = "# Index\n\nLIVING.\n\n- [the old notes](old.md)\n- [what is gone](notes.md#old)\n- [what stays](notes.md#now)\n"
+    write(root, "docs/index.md", index)
+    write(root, "docs/old.md", OLD + "\nSee [the index](index.md).\n")
+    write(root, "docs/notes.md", NOTES)
+    (root / "docs/archive").mkdir()
+    _init(root)
+    assert [f for f in Engine(root).lint() if f.guard == "G-D3"] == []
+    out = archive(root, "docs/old.md")
+    assert out.endswith("; G-D3 now reports pointers to what moved, none rewritten: docs/index.md line 5; point each at docs/archive/old.md by hand"
+                        "; G-D3 reads docs/archive/old.md, whose own pointers the move broke (docs/archive/old.md line 20): an archive is never repaired,"
+                        " so take it out of [guards] links and paths"), out
+    out = archive(root, "docs/notes.md", lines="5-9")
+    assert out.endswith("; G-D3 now reports pointers to what moved, none rewritten: docs/index.md line 6; point each at docs/archive/notes-pruned.md by hand"), out
+    assert (root / "docs/index.md").read_text(encoding="utf-8") == index  # nothing outside the archive is rewritten
+    assert sorted(f"{f.path}: {f.message.split(':')[0]}" for f in Engine(root).lint() if f.guard == "G-D3") == [
+        "docs/archive/old.md: line 20", "docs/index.md: line 5", "docs/index.md: line 6"]
+
+
+def test_archive_says_nothing_of_pointers_when_g_d3_is_off(tmp_path):
+    root = tmp_path / "repo"
+    target(root, {**DOCS, "guards": {**DOCS["guards"], "links": ["docs/index.md"], "off": ["G-D9", "G-D3"]}})
+    write(root, "docs/index.md", "# Index\n\nLIVING.\n\n- [the old notes](old.md)\n")
+    write(root, "docs/old.md", OLD)
+    _init(root)
+    assert archive(root, "docs/old.md") == "docs/old.md: archived as docs/archive/old.md (first line ARCHIVED 2026-10-08), row added to docs/archive/README.md"
+
+
+def test_the_archive_text_functions_keep_a_bom_and_line_endings():
+    bom = chr(0xFEFF)
+    assert A.archived(bom + "---\r\nliveness: FROZEN\r\n---", "2026-10-08", KEY, "a.md") == bom + f"---\r\nliveness: FROZEN\r\n---\r\nARCHIVED 2026-10-08 (session {KEY}), from a.md.\r\n\r\n"
+    assert A.thawed_keys("---\nliveness: 'LIVING'\nx: 1\n---\n") == [1] and A.thawed_keys("---\n\nliveness: LIVING\n") == []
+    assert A.cut(bom + "a\r\nb\r\nc", 3, 3) == (bom + "a\r\nb\r\n", "c")
+    assert A.line_count(bom + "a\nb\n") == 2 and A.line_count("a\nb") == 2
+    assert A.pruned("X", "c", "a.md", "2026-10-08", KEY) == "X\n\n## Pruned from a.md on 2026-10-08\n\nc\n"
