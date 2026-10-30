@@ -170,6 +170,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-120](DEC-120-okf-profile-framework-9-3-build-the-stale-after.md): OKF profile (FRAMEWORK §9.3): build the stale_after refusal and the charter_status read; cut the generated log.md and generated.by *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-121](DEC-121-doc-archive-names-the-pointers-g-d3-newly.md): doc archive names the pointers G-D3 newly reports after a move and rewrites none of them *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-122](DEC-122-archiving-a-doc-whose-frontmatter-declares.md): Archiving a doc whose frontmatter declares liveness turns that key FROZEN, keeping the old value in a comment *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-123](DEC-123-a-partial-prune-is-doc-archive-lines-a-b-into.md): A partial prune is doc archive --lines A-B, into one <stem>-pruned.md per source with one redirect row per prune *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
