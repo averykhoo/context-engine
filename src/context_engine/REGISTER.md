@@ -619,3 +619,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** no guard reads these yet, and the shape of sign-off/verified is not settled (FRAMEWORK §9.3)
 - **control:** individual: intake by hand, plus Not checked in working.py::Engine.criterion_new's docstring and manual-mode § criterion set
 - **from:** CE-42, session 2026-10-30a
+
+## INV-88: a settings orient hook whose matcher is narrower than every source (for example startup only) still makes the plugin stay quiet, so orient does not run on resume, clear or compact; the launcher's scanner reads every command key, not only SessionStart ones
+
+- **affects:** repos running the plugin beside a hand-written settings orient hook
+- **why not eliminated:** judging matchers needs a JSON parser in the POSIX launcher, which has none (DEC-124)
+- **control:** individual: kit README § Hook tells the owner to keep one SessionStart orient hook for every source
+- **from:** CE-146, session 2026-10-30a
+
+## INV-89: the plugin launcher checks a settings orient hook's program and --root but not whether the hook would succeed (for example, an engine that is present but broken), so beside such a hook it stays quiet and orient fails silently
+
+- **affects:** repos running the plugin beside a settings orient hook
+- **why not eliminated:** running the hook to find out would run orient twice (DEC-124 option d)
+- **control:** individual: contract § Session start: a failing hook is silent, so the agent says so when orient is missing from its context
+- **from:** CE-146, session 2026-10-30a
+
+## INV-90: the plugin launcher trusts a settings orient hook whose program or --root names a variable or starts with ~ without checking it, so one that expands to a stale path, or that quotes ~ or single-quotes a variable so its shell never expands it, keeps the plugin quiet
+
+- **affects:** repos whose committed settings hook uses $CLAUDE_PROJECT_DIR, %VAR% or ~
+- **why not eliminated:** the hook's shell expands it and the launcher cannot (DEC-124)
+- **control:** individual: contract § Session start: a failing hook is silent, so the agent says so when orient is missing from its context
+- **from:** CE-146, session 2026-10-30a
