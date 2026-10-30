@@ -3,14 +3,14 @@ type: Task
 id: CE-112
 title: Intake names the task set the owner asked for, so close-eagerly knows when it is done
 brief: At intake record the named task set; clean close fires when every named task is done
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 Intake names the task set the owner asked for, so close-eagerly knows when it is done
