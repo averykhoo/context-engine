@@ -10,8 +10,9 @@ here: it is on the board.
 
 ## 0.5, 2026-10-23: FRAMEWORK.md cut to what a user needs (CE-93)
 
-**No rule changed.** The text was cut to what is needed to understand and use the framework
-(DEC-49); the text before the cut is `FRAMEWORK-v0.5-2026-10-23.md`, beside FRAMEWORK.md.
+**No existing rule changed; one was added** (these release notes, the last line below). The
+text was cut to what is needed to understand and use the framework (DEC-49); the text before the
+cut is `FRAMEWORK-v0.5-2026-10-23.md`, beside FRAMEWORK.md.
 - Every *Not built yet* and *Built so far* marker, and every `(CE-n)`, is gone: build status is
   on the engine's board. A part that a repo adds when it needs it says so through §11.2's
   trigger instead (the deviation register, G-T4, the G-V2 raw-total floors).

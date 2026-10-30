@@ -475,11 +475,12 @@ The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words g
   `superseded_by` on the story and `supersedes` on its successor, and the reason as an amendment
   (`retired (by <who>): <why>`), so the why lives with the story.
 - **A retirement is final.** No operation undoes it, and a hand edit that undoes it is red: to
-  bring the intent back, record a new story. A story retired by hand (no logged `retire`) is
-  retired again by the operation, which records who and why; so are the stories an adopting repo
-  retired before it adopted the engine, with the owner's words from the one batched answer of
-  §11.4. A story is never created retired: only `record.retire` writes a retirement or a story
-  link.
+  bring the intent back, record a new story. Nothing retires a story on its own: one retired by
+  hand (no logged `retire`) is red (G-I2) until `record.retire` is run on it, on the call of
+  whoever may make it (above), so who and why are recorded. The stories an adopting repo retired
+  before it adopted the engine go through it the same way, with the owner's words from the one
+  batched answer of §11.4. A story is never created retired: only `record.retire` writes a
+  retirement or a story link.
 
 **Confirming a story** an agent reconstructed is owner intent too, so it is an operation that
 records whose words: `record.confirm(id, words, by, status)` (CLI `record confirm`).
@@ -489,9 +490,11 @@ records whose words: `record.confirm(id, words, by, status)` (CLI `record confir
   story yet (G-T1), and the words as an amendment (`confirmed (by <who>): <words>`). The `actor`
   stays the agent's: the text above `## Amendments` is still the reconstruction.
 - **A reconstruction starts `unconfirmed`,** and only a logged `confirm` moves it on; a
-  confirmation is never undone. A reconstruction made `live` by hand is confirmed by the
-  operation, which records whose words confirmed it. A successor that replaces a confirmed
-  reconstruction starts `unconfirmed` again and is confirmed by asking the owner again.
+  confirmation is never undone. Nothing confirms a story on its own: a reconstruction made `live`
+  or `unspecified` by hand (no logged `confirm`) is red (G-I2) until `record.confirm` is run on
+  it with the owner's words, so whose words confirmed it are recorded. A successor that replaces
+  a confirmed reconstruction starts `unconfirmed` again and is confirmed by asking the owner
+  again.
 
 What each operation checks and writes, step by step: `manual-mode.md` § context-engine record
 retire and § context-engine record confirm. Lint (G-I2) re-checks the stored files: a
@@ -719,7 +722,8 @@ a single revertible cutover commit.
 - `brief`: ≤120 characters, **a constraint, not a summary**;
 - body: summary, `## Traps`, and `## Read first`, whose relative links and `file::symbol`
   pointers G-D3 resolves on an open item when the board directory is among the docs `[guards]
-  links` lists; and `## Log`, which `comment` and `close` append to and which is never replaced.
+  links` lists (not checked: how many links there are, so an empty list passes); and `## Log`,
+  which `comment` and `close` append to and which is never replaced.
   Sessions keep reading the orientation note for item detail until items carry these sections.
 - **`## Design review`** (P17, P18), required before a task above the threshold is promoted to
   NOW. It names the affected persons; lists each foreseeable risk as *eliminated*, *reduced (how,
@@ -1983,7 +1987,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   the kit leaves it empty until the repo measures things, §11.2; list each under `liveness`
   too, so its liveness is checked), and `count_nouns`. A listed path that is missing, and a
   list whose docs are all FROZEN or ACTIVE-PLAN, are red. Not checked: a rule value restated in
-  prose (`NEXT holds 5`).
+  prose (`NEXT holds 5`); and a generated block inside a hand-written doc is not told apart from
+  the prose around it, so a count inside one is red like a typed one.
 - **G-D6:** generated indexes match a regeneration **and** are content-complete from a
   configured cutoff id. An index built from record frontmatter needs only the regeneration
   check; the cutoff check remains for indexes still built by parsing prose. The decision index
