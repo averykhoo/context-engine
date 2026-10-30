@@ -165,6 +165,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-115](DEC-115-framework-build-status-is-generated-on-demand.md): Framework build status is generated on demand (context-engine coverage), not kept as a stored table *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-116](DEC-116-criterion-writes-are-not-milestones.md): Criterion writes are not milestones *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-117](DEC-117-criterion-new-writes-rows-only-and-never.md): criterion new writes rows only and never guesses the table *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-118](DEC-118-criterion-ids.md): Criterion ids *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
