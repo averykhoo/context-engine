@@ -108,6 +108,7 @@ class Guards:
 
     off: tuple[str, ...] = ()  # guard ids lint does not report (LINT_IDS)
     links: tuple[str, ...] = ()  # G-D3: files and directories whose links and `file::symbol` spans must resolve
+    paths: tuple[str, ...] = ()  # G-D3: files and directories whose every backticked file name or repo path is a pointer that must resolve (CE-142); empty is off
     existence: tuple[str, ...] = ()  # G-T3: normative docs whose named files and `file::symbol` spans must exist
     signals: tuple[str, ...] = ()  # G-D7: files and directories under the signal budgets
     warn_max: int = 3  # G-D7: ⚠ per file

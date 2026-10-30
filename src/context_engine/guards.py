@@ -443,7 +443,8 @@ def links(e: Engine) -> list[Failure]:
     and every backticked `file::symbol` resolves, case-exact. A bare file name in a
     `file::symbol` resolves to any file of that name in the repo that git does not ignore (never a
     stale `build/` copy, CE-41); a symbol resolves when each of
-    its dotted parts is a word in the file.
+    its dotted parts is a word in the file. Then, in the docs `[guards] paths` lists, every
+    backticked file name or repo path (``path_pointers``, CE-142).
 
     Not checked: URLs (anything with a scheme), fenced code, an anchor into a file that is not
     markdown, which definition a symbol word is (a grep, not an import), and records no longer
@@ -488,6 +489,38 @@ def links(e: Engine) -> list[Failure]:
                 elif frag and hit.is_file() and hit.suffix == ".md" and frag not in anchors_of(hit):
                     bad.append(f"line {n}: link `{t}` names no heading of {hit.name}")
         out += [Failure("G-D3", rel, b, "point it at the path, heading or symbol that exists (grep it first), or drop it") for b in bad]
+    return out + path_pointers(e, files)
+
+
+def path_pointers(e: Engine, files: Files) -> list[Failure]:
+    """G-D3 on prose pointers (CE-142): in each doc `[guards] paths` lists, every backticked span
+    shaped like a file name or a repo path (G-T3's shape, `PATH_SPAN_RE`: a name with a text file's
+    extension, or a path with a `/`) resolves case-exact, from the repo root or from the doc's own
+    directory; a bare file name resolves to any file of that name that git does not ignore. Listing
+    a doc says every such span in it is a pointer into this repo, so the list holds docs that cite
+    no example paths, other repos' files or files not written yet: syntax cannot tell a pointer
+    from an example (`docs/invariants.md`, the kit's default, is an example in a runbook).
+
+    Not checked: docs not listed (a spec or runbook that cites example paths), spans with spaces,
+    globs or placeholders, or starting with `.` or `/`, `file::symbol` spans (G-D3 checks those in
+    the `links` docs), history notes (blockquotes, `*HISTORY —*` lines), fenced code, and records
+    no longer current (`status: deprecated`)."""
+    out: list[Failure] = []
+    for rel, path in docs(e.root, e.store.config.guards.paths):
+        if path is None:
+            out.append(Failure("G-D3", CONFIG_NAME, f"[guards] paths names {rel}, which does not exist", "fix the path, or drop it from [guards] paths"))
+            continue
+        text = _text(path)
+        if _deprecated(text):
+            continue
+        for n, line in prose(text, history=True):
+            for span in SPAN_RE.findall(line):
+                span = span.strip()
+                if CODE_REF_RE.match(span) or not PATH_SPAN_RE.match(span) or span.startswith((".", "/")):
+                    continue
+                if files.find(span) is None and files.case_exact(span.rstrip("/"), path.parent) is None:
+                    out.append(Failure("G-D3", rel, f"line {n}: `{span}` names no file or directory of this repo (case-exact)",
+                                       "point it at the path that exists (grep it first); if the span is an example or another repo's path, write it without backticks, or drop the doc from [guards] paths"))
     return out
 
 

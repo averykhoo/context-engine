@@ -2027,7 +2027,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   `[guards] links` lists, and checks relative links with their `#anchor`s and backticked
   `file::symbol` spans; a bare file name resolves to any file of that name that git does not
   ignore (outside a git work tree, any file outside `build/` and `dist/`), and a record no longer
-  current (`status: deprecated`) is history and is skipped.
+  current (`status: deprecated`) is history and is skipped. In the docs `[guards] paths` lists,
+  every backticked file name or repo path (G-T3's shape) resolves too, from the root or the
+  doc's directory. Not checked: backticked paths in a doc not listed there. Syntax cannot tell a
+  pointer from an example (a runbook's `docs/invariants.md` is an adopter's file), so only docs
+  that cite no example or other repo's paths are listed.
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
   (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is not a liveness
   word is red), or a line that opens a block (the first, or one after a blank line, a heading or

@@ -299,6 +299,7 @@ optional = true  # absent on a fresh clone
 [guards]
 off = []
 links = ["CLAUDE.md", "HANDOFF.md", "README.md", "docs/framework/FRAMEWORK.md", "docs/framework/RELEASE-NOTES.md", "docs/engine.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md", "src/context_engine/REGISTER.md", "src/context_engine/kit", "tasks"]  # G-D3; closed tasks are skipped (status: deprecated)
+paths = ["CLAUDE.md", "README.md", "docs/charter.md", "docs/engine.md", "docs/framework/RELEASE-NOTES.md"]  # G-D3 (CE-142): docs whose every backticked file name or path points into this repo; FRAMEWORK, the runbooks, the kit and tasks cite example and other repos' paths, so they are not listed
 existence = ["docs/criteria.md", "src/context_engine/REGISTER.md"]  # G-T3: the normative docs (§11.2 "traps accumulate"); stories are owner words that cite other repos' files, so they are not listed
 signals = ["CLAUDE.md", "HANDOFF.md", "docs/framework/FRAMEWORK.md", "docs/runbooks", "docs/charter.md", "docs/criteria.md"]  # G-D7
 warn_max = 3       # G-D7; provenance: JUDGEMENT, engine default (the global contract keeps about this many per section); wrong if a real trap goes unmarked to stay under it

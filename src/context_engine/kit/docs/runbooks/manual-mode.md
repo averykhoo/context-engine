@@ -410,7 +410,10 @@ Check every record, then the working state. `--working` does only the second hal
   and `[x]: path` names a file that exists with exactly that case, relative to the doc, and its
   anchor is a heading there (GitHub's slug: lower case, punctuation dropped, spaces to hyphens);
   every backticked `path::Name.attr` names a file that exists case-exact (a bare file name may be
-  anywhere in the repo) whose text has each dotted part as a word. *Why: a dead reference sends
+  anywhere in the repo) whose text has each dotted part as a word. In each file `[guards] paths`
+  lists, also every backticked file name or path (as G-T3 reads them, history notes skipped)
+  names a file or directory that exists case-exact, from the repo root or the doc's directory
+  (a bare name anywhere). *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
 - **G-D4** (only when `[guards]` lists `liveness` or `history` paths): read the first

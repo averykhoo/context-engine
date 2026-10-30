@@ -210,6 +210,46 @@ def test_g_d3_a_bare_name_never_resolves_to_a_stale_copy_under_build(tmp_path):
         assert reds(e, "G-D3") == ["docs/guide.md: line 1: `working.py` has no `OLD_RE` (from `working.py::OLD_RE`)"], kind
 
 
+POINTERS = """# Notes
+
+The archive is `notes-v1.md`, beside this file; the code is `src/real.py`, also `real.py`.
+The guide sits in `sub/guide.md` (from this doc) and `docs/sub/` (from the root).
+Renamed away: `notes-v2.md`, `src/gone.py`, and a wrong case, `Src/real.py`.
+Not pointers: `*.md`, `<path>.md`, `.github/ci.yml`, `/etc/hosts`, `src/real.py::Gone`, `a b.md`.
+> a quoted note cites `old.md`
+*HISTORY —* `src/moved.py` was here
+```
+`fenced.md`
+```
+"""
+
+
+@pytest.mark.criterion("AC-107")
+def test_g_d3_backticked_paths_in_the_docs_paths_lists_resolve_and_examples_elsewhere_pass(tmp_path):
+    """CE-142: a prose pointer in backticks (CE-93 verify-2's S3 renamed `FRAMEWORK-v0.5-2026-10-23.md`
+    in RELEASE-NOTES.md to a file that does not exist, and lint stayed clean). In a doc `[guards]
+    paths` lists, a file name or repo path in backticks resolves case-exact, from the root or the
+    doc's directory; globs, placeholders, spaces, a leading `.` or `/`, `file::symbol`, history notes
+    and fenced code are not pointers. A doc not listed is not read: its paths may be examples."""
+    write(tmp_path, "src/real.py", "X = 1\n")
+    write(tmp_path, "docs/notes-v1.md", "old\n")
+    write(tmp_path, "docs/sub/guide.md", "g\n")
+    write(tmp_path, "docs/notes.md", POINTERS)
+    write(tmp_path, "docs/spec.md", "An adopter's register is `docs/invariants.md`.\n")
+    e = make(tmp_path, paths=["docs/notes.md"])
+    assert reds(e, "G-D3") == [
+        "docs/notes.md: line 5: `notes-v2.md` names no file or directory of this repo (case-exact)",
+        "docs/notes.md: line 5: `src/gone.py` names no file or directory of this repo (case-exact)",
+        "docs/notes.md: line 5: `Src/real.py` names no file or directory of this repo (case-exact)",
+    ]
+    got = [f for f in e.lint() if f.guard == "G-D3"]
+    assert all("drop the doc from [guards] paths" in f.remedy for f in got)
+    write(tmp_path, "docs/notes.md", POINTERS.replace("Renamed away: `notes-v2.md`, `src/gone.py`, and a wrong case, `Src/real.py`.", "Fixed."))
+    assert reds(e, "G-D3") == []
+    gone = make(tmp_path, paths=["docs/nowhere.md"])
+    assert reds(gone, "G-D3") == ["context.toml: [guards] paths names docs/nowhere.md, which does not exist"]
+
+
 def linked(tmp_path) -> Engine:
     cfg = config()
     cfg["kinds"]["decision"] = {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "replaced", "required": ["title"]}
