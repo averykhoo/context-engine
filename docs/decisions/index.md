@@ -150,6 +150,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-100](DEC-100-an-answered-question-skips-the-tier-cap.md): An answered question skips the tier cap *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-101](DEC-101-ask-new-answered-is-exempt-from-the-three-part.md): ask new --answered is exempt from the three-part question body check *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-102](DEC-102-the-question-shape-check-lives-in-g-w4-not-a.md): The question-shape check lives in G-W4, not a new guard id *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-103](DEC-103-a-question-s-parts-are-read-mechanically-a-5.md): A question's parts are read mechanically: a 5-word recommendation, two options, a Context part *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
