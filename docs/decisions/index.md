@@ -176,6 +176,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-126](DEC-126-record-new-s-refusal-of-a-preset-status-or.md): record new's refusal of a preset status or SUPERSEDED on a decision is not behind G-W4's off switch *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-127](DEC-127-the-task-set-the-owner-asked-for-is-a-tasks.md): The task set the owner asked for is a tasks: line in the session's ledger stub, written by a new op session tasks *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-128](DEC-128-g-w6-also-fails-the-newest-close-whose-tasks.md): G-W6 also fails the newest close whose tasks: ids are missing from its rows: *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-129](DEC-129-hk-close-is-redesigned-not-dropped-it-closes.md): hk.close is redesigned, not dropped: it closes only on a git-checked Closes: trailer of a commit made outside the engine, or on a finished ledger entry naming the item closed, and a reopen outweighs either *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
