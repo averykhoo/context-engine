@@ -4,13 +4,15 @@ id: CE-138
 title: "G-I3 edge cases from CE-113's review: a capitalised Owner passes, a ruling may hold ## Amendments, AC-53 omits ruled_by"
 brief: Each gap gets a refusal seen to fail (DEC-11) or a Not checked line in 8.1; AC-53's text must name ruled_by
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-26c
-updated: 2026-10-26c
+moved: 2026-10-30a
+updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 G-I3 edge cases and AC-53's text, from CE-113's review
@@ -37,3 +39,4 @@ For 2 and 3: refuse it (one check shared by `record new`, `ask answer` and G-I3;
 ## Log
 
 - 2026-10-23f (claude-code/claude-opus-5-5): 2026-10-23f: promoted to NEXT (light reorder at close): a capitalised Owner slips past the guard CE-113 just built; NEXT was empty after CE-93 and CE-113 closed.
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: CE-138: done in 9700437: G-I3 matches the owner in any case (ruled_by casefolded, LONE_HUMAN_RE IGNORECASE). record new and ask answer refuse a decision text holding ## Amendments through the shared delegation_problems(new=True), and the at-rest case is named under G-I3's Not checked. AC-53 names ruled_by; AC-101 added, tested. Calls: DEC-87, DEC-88, DEC-89. Follow-ups: CE-147, CE-148.
