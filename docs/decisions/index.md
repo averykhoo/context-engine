@@ -163,6 +163,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-113](DEC-113-g-d3-reads-backticked-repo-paths-only-in-the.md): G-D3 reads backticked repo paths only in the docs a new [guards] paths list names *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-114](DEC-114-build-ce-144-the-optional-ambiguous-bare-name.md): Build CE-144 (the optional ambiguous-bare-name check) rather than drop it, in G-D3 only *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-115](DEC-115-framework-build-status-is-generated-on-demand.md): Framework build status is generated on demand (context-engine coverage), not kept as a stored table *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-116](DEC-116-criterion-writes-are-not-milestones.md): Criterion writes are not milestones *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
