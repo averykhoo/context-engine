@@ -148,7 +148,7 @@ def _head(head: str | None) -> str:
     return bullet(START_HEAD, head) if head else ""
 
 
-FOLLOWS = "follows"  # the closed session a follow-up continues (CE-84, DEC-45): `session start --follows <key>`
+FOLLOWS = "follows"  # the closed session a follow-up continues (CE-84, DEC-45): `session start --follows <key>`; a bullet, not a digest line (DEC-106)
 
 
 def _follows(key: str | None) -> str:
