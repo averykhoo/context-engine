@@ -161,6 +161,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-111](DEC-111-a-kill-bar-lives-in-a-board-item-s-kill-bar.md): A kill bar lives in a board item's Kill bar section, and task close --verdict is KILL, PASS or VOID with evidence *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-112](DEC-112-the-decision-status-status-agreement-check-is-a.md): The decision_status/status agreement check is a clause of G-W4, not a new G-id *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-113](DEC-113-g-d3-reads-backticked-repo-paths-only-in-the.md): G-D3 reads backticked repo paths only in the docs a new [guards] paths list names *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-114](DEC-114-build-ce-144-the-optional-ambiguous-bare-name.md): Build CE-144 (the optional ambiguous-bare-name check) rather than drop it, in G-D3 only *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
