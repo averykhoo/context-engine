@@ -2651,7 +2651,7 @@ class Engine:
         return out + self._decision_status_failures()
 
     def _decision_status_failures(self) -> list[Failure]:
-        """G-W4 on decisions (CE-137): a decision is `status: deprecated` exactly when its
+        """G-W4 on decisions (CE-137, DEC-112): a decision is `status: deprecated` exactly when its
         `decision_status` is SUPERSEDED (FRAMEWORK §9.3.1). `decision supersede` and `decision
         import` write the two together, so a disagreement is a hand edit or a `record new` that
         set one of the keys with `--set` (which does not refuse it yet); a `status: deprecated` on
