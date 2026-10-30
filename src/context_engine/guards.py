@@ -1409,7 +1409,7 @@ def ledger_close_outweighed(log: str, rid: str, key: str) -> str:
 
 
 def mechanical_closes(e: Engine) -> list[Failure]:
-    """G-W9 on the stored files (CE-6, AC-165): every mechanical `close` op line's item has a
+    """G-W9 on the stored files (CE-6, AC-165, DEC-129): every mechanical `close` op line's item has a
     close line in its `## Log` from that session citing its evidence, as `hk close` writes it,
     and the evidence holds: the commit is in HEAD's history and its `Closes:` trailers, as git
     reads them, name the item, or the ledger entry's `rows:` names it closed and the item's log

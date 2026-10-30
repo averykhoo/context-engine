@@ -1202,7 +1202,7 @@ class Engine:
         return f"done in {short} (its `Closes: {rid}` trailer, checked in git)"
 
     def hk_close(self, rid: str = "", commit: str = "", *, ledger: str = "", scan: bool = False, session: str, actor: str) -> str:
-        """Housekeeping's close (FRAMEWORK §6.11, G-W9, AC-20): close an open board item only on
+        """Housekeeping's close (FRAMEWORK §6.11, G-W9, AC-20, DEC-129): close an open board item only on
         recorded evidence, mechanical, its message citing the evidence. The evidence is a commit
         in HEAD's history whose `Closes:` trailer names the item (a commit made outside the engine
         that finished it, §6.10 item 1), checked in git, never on the caller's word; or a session's
@@ -1252,7 +1252,7 @@ class Engine:
         return "\n".join(lines) if lines else "no open task is named by a `Closes:` trailer in HEAD's history"
 
     def stamp_asked(self, *, session: str, actor: str) -> str:
-        """Housekeeping (FRAMEWORK §6.11 tier 0, CE-6): stamp each open question's `last_asked`
+        """Housekeeping (FRAMEWORK §6.11 tier 0, CE-6, DEC-130): stamp each open question's `last_asked`
         with the newest finished ledger entry whose `asked` receipt names it, where that is newer
         than the stamp it has (an `asked:` receipt written by hand, or given to `session close
         --asked` without `ask raised`). Each write is mechanical, and its op line records the
