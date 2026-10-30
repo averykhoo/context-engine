@@ -4,13 +4,15 @@ id: CE-141
 title: Generated build-status table for FRAMEWORK's components, procedures and guards
 brief: Generated with a guard that it is current, never hand prose; FRAMEWORK.md may carry no CE ids (AC-33)
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-23f
 created: 2026-10-24
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 Generated build-status table for FRAMEWORK's parts
@@ -30,3 +32,5 @@ Build a generated table (built / deferred with its §11.2 trigger / not built wi
 - DEC-81; FRAMEWORK §8.0.2, §11.1, §11.2; charter goal G-7
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 3ad5028 (lane de47cc3), cite in 8ba0b73: `context-engine coverage` (MCP `coverage`) prints each FRAMEWORK component, procedure and G-id with one build status (built/deferred/prose-only/open work/done/map only/unowned), generated on demand from G-D12's spec and newest coverage map, the board and LINT_IDS, never stored (DEC-115). Also: manual-mode by-hand section (kit copy), FRAMEWORK pointers, RELEASE-NOTES line, criteria AC-170 and AC-171.
