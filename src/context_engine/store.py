@@ -48,10 +48,10 @@ TOOL_OWNED = ("type", "id", "body_sha")
 ALIASES = "aliases"
 ALIAS_RE = re.compile(r"(?!.*::)[A-Za-z0-9!#$%&()*+\-.:;<=>?@\\^_|~]+")  # fullmatch: printable ASCII, no quote, comma, bracket, brace, `/`, `::` or space
 RESERVED_MD = ("index.md", "log.md")  # OKF §3.1
-RESERVE_OP = "id.reserve"  # the op log line that holds a reserved id (CE-105, CE-119)
+RESERVE_OP = "id.reserve"  # the op log line that holds a reserved id (CE-105, CE-119; why an op: DEC-92)
 # The most ids one `id reserve` hands out: a batch of linked records, not a block of the series; a
 # typo of a count would otherwise burn ids for good (they are never reused). provenance: JUDGEMENT,
-# CE-105; wrong if a real batch of linked records needs more.
+# CE-105, DEC-92; wrong if a real batch of linked records needs more.
 RESERVE_MAX = 20
 
 
