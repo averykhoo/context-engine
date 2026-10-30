@@ -78,7 +78,9 @@ These hold for every operation below. The per-operation sections only list what 
 ```
 
 `at` is local time with its offset. `fields` lists the keys changed, plus `"body"` if the body
-changed. `mechanical` is `true` only for housekeeping and the `--mechanical` flag.
+changed. `mechanical` is `true` only for housekeeping and the `--mechanical` flag. `as`, only on
+`hk.stamp_asked` lines, maps a session-keyed field to the key it was set to when that is not the
+writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the field against it).
 
 | Operation | `op` | `id`, `path` | `fields` |
 |---|---|---|---|
@@ -88,6 +90,8 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `D-n`; `ask new --answered` writes the question's `new` line first) | the question | the changed keys, `updated`, `body` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
+| hk close | `close`, mechanical (the task close's line) | the item | as task close |
+| hk stamp | `hk.stamp_asked`, mechanical, one line per question, with `as` | the question | `["last_asked", "updated"]` |
 | session start, close, pause, abandon | `session.start`, `session.close`, `session.pause`, `session.abandon` | id = session key (for abandon, the abandoned stub's), path = the ledger | `["kind"]` |
 | session tasks | `session.tasks` | id = session key, path = the ledger | `["tasks"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
@@ -281,7 +285,13 @@ stub; over MCP `session_abandon(key, force, stale)`). By hand, for each stub:
    of that only on the owner's word.
 3. Change its heading to `## <key> · kind: abandoned`, keep its lines, and add `- **abandoned:**
    <your key>: never closed or paused; last active <time>, <n> closes or pauses since` (with
-   `; on the owner's word (--force)` when it was short of the window).
+   `; on the owner's word (--force)` when it was short of the window), then `- **derived
+   digest:** <n> commits with `Session: <key>` (<short hashes, newest first, at most 8, then
+   (+<m> more)>); `Closes:` <the ids their Closes: trailers name, or none>; <n> op log lines`.
+   The commits are `git log -F --grep="Session: <key>" --format='%h %(trailers:key=Session,valueonly,separator=%x2C) / %(trailers:key=Closes,valueonly,separator=%x2C)' HEAD`,
+   kept where the Session trailer is exactly `<key>`; the op log lines are those whose
+   `session` is `<key>`. Say `1 commit`, `1 op log line` in the singular, and leave out the
+   parenthesis when there are no commits.
 4. Its op log lines HEAD lacks are what it left in flight: when there are any, file a baton (§
    context-engine baton add) naming how many and the files they name, to review them and commit
    them with `context-engine commit --sweep`, or undo them.
@@ -289,7 +299,8 @@ stub; over MCP `session_abandon(key, force, stale)`). By hand, for each stub:
    it at once (a milestone).
 
 **Why:** a dead session must not look live, and its unfinished work must reach someone (G-W11).
-By the time a stub is stale it was shown to the owner at the start of each of those sessions, so
+The derived digest keeps what git and the op log can say about it, so a conversation that died
+without a close loses only its prose judgement. By the time a stub is stale it was shown to the owner at the start of each of those sessions, so
 housekeeping abandons it without asking again; the reply lists each one, so the close digest
 can say so.
 
@@ -590,7 +601,16 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W7**: for each board item and each of `moved`, `updated`, `closed`, `last_asked`: the value
   equals the `session` of the newest op log line for that id whose `fields` lists the key; with
   no such line, the value is older than the log's first session. Every op log line parses as
-  JSON. *Why: those keys are written only by operations, so a mismatch is a hand edit.*
+  JSON. A line carrying `as` (housekeeping's `last_asked` stamp) is checked against the key
+  `as` gives for that field instead. *Why: those keys are written only by operations, so a
+  mismatch is a hand edit.*
+- **G-W9**: for each op log line with `"op": "close"` and `"mechanical": true`: the item's
+  `## Log` has a line `- <that session> (<actor>): closed: done in <sha> (its `Closes: <id>`
+  trailer, checked in git)` where `git log -1 --format='%(trailers:key=Closes,valueonly)' <sha>`
+  names the item (a commit git does not know fails in a full clone and is trusted in a shallow one), or `... closed: closed in
+  session <key> (its ledger entry's rows name it closed)` where that finished ledger entry's
+  `rows:` says `<id> (closed`. *Why: a mechanical close is housekeeping's, which acts only on
+  recorded evidence; one without it hides a judgement nobody recorded.*
 
 A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed), and
 the write-time stops that check the same rule are off with it (among them G-I1 and G-I2 in
@@ -1109,6 +1129,54 @@ the other uncommitted op lines (FRAMEWORK §5.5 rule 4).
 The pause must be open. Set `state: done`, `resumed: <key>`.
 
 **Why:** closes the loop so `orient` stops listing it, and records who picked it up.
+
+## Housekeeping (FRAMEWORK §6.11)
+
+Two of housekeeping's operations live with their records: `baton expire` (MCP
+`hk_expire_batons`) and `decision index` (MCP `hk_regen_index`). The others are here. Each
+write is mechanical (`"mechanical": true`), with actor `process:housekeep` unless the caller
+gives one, and none forms new intent: each carries out what a commit or the ledger already says.
+
+### context-engine hk close
+
+`context-engine hk close <id> --commit <sha>`, `hk close <id> --ledger <key>`, or `hk close
+--scan` (MCP `hk_close(id, commit, ledger, scan)`). Closes an open item only on recorded
+evidence. By hand:
+
+1. **A commit:** it must be in HEAD's history (`git merge-base --is-ancestor <sha> HEAD`), and
+   git must read `Closes: <id>` in its trailers: `git log -1
+   --format='%(trailers:key=Closes,valueonly)' <sha>` names it (a `Closes:` line outside the
+   message's last paragraph is not a trailer). Refuse it if the item was already closed in that
+   commit's own tree (`git show <sha>:<the item's path>` says `state: closed`: it is the item's
+   own close commit, and the item was reopened since), or if the item's `## Log` already cites
+   the hash (it was closed on it and reopened since). The message is `done in <short sha> (its
+   `Closes: <id>` trailer, checked in git)`.
+2. **A ledger entry:** the session `<key>`'s entry must be finished (not `kind: open`) and its
+   `rows:` must say `<id> (closed`. The message is `closed in session <key> (its ledger entry's
+   rows name it closed)`.
+3. Then do § context-engine task close with that message, logging the `close` line with
+   `"mechanical": true`. Never an owner question: it closes only on the owner's answer.
+4. **`--scan`:** `git log -F --grep=Closes: --format='%H %(trailers:key=Closes,valueonly,separator=%x2C)' HEAD`;
+   for each open task (not a question) a trailer names, try its commits newest first by step 1,
+   and close on the first that holds. List each one no commit could close, with why.
+
+**Why:** no tool closes on its own judgement: calling a close "mechanical" would only hide that
+someone decided it. A commit made outside the engine that finished an item carries `Closes:
+<id>` (FRAMEWORK §6.10 item 1), so the engine checks git, not the caller's word, and G-W9
+re-checks it in the stored files. Anything else housekeeping would close is proposed to the
+session, which closes it with `task close` as its own judgement.
+
+### context-engine hk stamp
+
+`context-engine hk stamp` (MCP `hk_stamp_asked`). By hand: for every finished ledger entry
+(not `kind: open`), read the ids its `asked` receipt (or `- **asked:**` line) names. For each
+open question among them, take the newest such entry's key; if the question's `last_asked` is
+empty or older than that key, set `last_asked: <that key>` and `updated: <your key>`, and log
+`hk.stamp_asked`, mechanical, with `"as": {"last_asked": "<that key>"}`.
+
+**Why:** a question raised in chat restarts its overdue clock (FRAMEWORK §5.3), but an `asked`
+receipt written by hand, or given to `session close --asked` without `ask raised`, stamps
+nothing, so the question would come back as overdue though the owner saw it.
 
 ## The residual-risk register
 

@@ -23,7 +23,7 @@ delegation names who ruled (`ruled_by`) and keeps the owner's words apart from i
 ``framework_status`` (CE-141) is no guard: it reads what G-D12 reads, the board and the guard ids lint
 reports, and gives each item of the spec one build status, on demand (`context-engine coverage`).
 
-Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W9 to G-W11 (housekeeping), G-V1 to
+Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W10 and G-W11 (housekeeping), G-V1 to
 G-V3 (the run ledger).
 """
 
@@ -74,7 +74,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e) + stale(e)
+    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + mechanical_closes(e) + coverage(e) + intent(e) + stale(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -1309,7 +1309,8 @@ UNPARSEABLE = "do not parse as JSON"  # G-W7's op log parse failure; working.py:
 
 def tool_owned(e: Engine) -> list[Failure]:
     """G-W7 on the stored files: every session-keyed tool-owned key of a board item (`moved`, `updated`,
-    `closed`, `last_asked`) names the session of the newest logged operation that wrote it; a
+    `closed`, `last_asked`) names the session of the newest logged operation that wrote it (or
+    the key that line's `as` records for it: housekeeping stamping `last_asked`, CE-6); a
     value no operation wrote must be older than the op log's first entry (written before the
     engine ran the board). Every op log line parses.
 
@@ -1341,8 +1342,11 @@ def tool_owned(e: Engine) -> list[Failure]:
             v = str(v)
             op = newest.get((r.id, k))
             if op is not None:
-                if v != str(op.get("session")):
-                    out.append(Failure("G-W7", rel, f"`{k}: {v}`, but the newest operation that wrote it ({op.get('op')}, {op.get('at', '?')}) was in session {op.get('session')}", f"restore `{k}` from git: {k} is changed only by an operation (manual-mode.md § What every write does)"))
+                stamped = op.get("as") if isinstance(op.get("as"), dict) else {}
+                want = str(stamped.get(k) or op.get("session"))  # `as`: housekeeping stamped another session's key (CE-6)
+                if v != want:
+                    said = f"stamped {want}" if stamped.get(k) else f"was in session {op.get('session')}"
+                    out.append(Failure("G-W7", rel, f"`{k}: {v}`, but the newest operation that wrote it ({op.get('op')}, {op.get('at', '?')}) {said}", f"restore `{k}` from git: {k} is changed only by an operation (manual-mode.md § What every write does)"))
             elif first is None or not re.fullmatch(KEY_RE, v) or key_order(v) >= key_order(first):
                 out.append(Failure("G-W7", rel, f"`{k}: {v}`, but no logged operation wrote it", f"restore `{k}` from git, or redo the change with the operation that owns it"))
     return out
@@ -1379,6 +1383,69 @@ def op_records(e: Engine) -> list[Failure]:
                 f"restore {rel} from the working copy or commit that has it and commit it by path with its op line (manual-mode.md § context-engine commit); never delete an op line")
         for rel, (n, op, count) in seen.items()
     ]
+
+
+# -- G-W9 mechanical closes ---------------------------------------------------------------
+
+CLOSE_EVIDENCE_RE = re.compile(
+    r"^- (?P<session>\S+) \(.*?\): closed: (?:done in (?P<sha>[0-9a-f]{7,40}) \(its `Closes: (?P<id>[^`]+)` trailer"
+    r"|closed in session (?P<key>\S+) \(its ledger entry)", re.MULTILINE)
+
+
+def mechanical_closes(e: Engine) -> list[Failure]:
+    """G-W9 on the stored files (CE-6, AC-165): every mechanical `close` op line's item has a
+    close line in its `## Log` from that session citing its evidence, as `hk close` writes it,
+    and the evidence holds: the commit's `Closes:` trailers, as git reads them, name the item,
+    or the ledger entry's `rows:` names it closed. One failure per close line.
+
+    A cited commit git does not know fails in a full clone; in a shallow one (CI's checkout), or
+    with no git at all, its citation is trusted, as G-W7 trusts the op log.
+
+    Not checked: a commit a shallow clone does not have; a close line edited by hand to cite other evidence
+    (that is a body edit G-W7 does not see); whether the work is really done."""
+    if not e.w.board:
+        return []
+    heads = {r.id: r for r in e.board_heads()}
+    led = None
+    shallow: bool | None = None  # asked of git once, the first time a cited commit is not found
+    out: list[Failure] = []
+    for _, op in _ops(e):
+        if not isinstance(op, dict) or op.get("op") != "close" or op.get("mechanical") is not True:
+            continue
+        rid, who = str(op.get("id")), str(op.get("session"))
+        r = heads.get(rid)
+        if r is None:
+            continue  # gone from the board: G-W7's op_records names a missing file
+        rel = r.path.relative_to(e.root).as_posix()
+        ok, why = False, f"its ## Log has no close line from session {who} citing a commit's `Closes: {rid}` trailer or a ledger entry"
+        for m in CLOSE_EVIDENCE_RE.finditer(okf.parse(r.path.read_bytes().decode("utf-8", errors="replace")).body):  # heads carry no body
+            if m["session"] != who:
+                continue
+            if m["sha"]:
+                if m["id"] != rid:
+                    why = f"its close cites `Closes: {m['id']}`, not {rid}"
+                    continue
+                said = L._git(e.root, "log", "-1", "--format=%(trailers:key=Closes,valueonly,separator=%x2C)", m["sha"], "--")
+                if said is None and shallow is None:
+                    shallow = (L._git(e.root, "rev-parse", "--is-shallow-repository") or "").strip() != "false"
+                if said is None and not shallow:
+                    why = f"its close cites {m['sha']}, which git does not know in this full clone"
+                    continue
+                if said is None or rid in [x.strip() for x in said.replace("\n", ",").split(",")]:
+                    ok = True  # None in a shallow clone, or with no git: the commit may be cut off, so its citation is trusted
+                    break
+                why = f"its close cites {m['sha']}, whose trailers do not carry `Closes: {rid}`"
+            else:
+                led = led if led is not None else (L.parse_ledger((e.root / e.w.ledger).read_bytes().decode("utf-8")) if e.w.ledger and (e.root / e.w.ledger).is_file() else L.parse_ledger(L.EMPTY_LEDGER))
+                entry = led.get(m["key"])
+                if entry is not None and entry.kind != "open" and L.closed_in_rows(entry.field("rows") or "", rid):
+                    ok = True
+                    break
+                why = f"its close cites the ledger entry {m['key']}, whose `rows:` does not name {rid} closed"
+        if not ok:
+            out.append(Failure("G-W9", rel, f"{rid} was closed mechanically in session {who}, but {why}",
+                               f"a mechanical close needs evidence (FRAMEWORK §6.11): reopen it (`task reopen {rid}`), then close it with `hk close {rid} --commit <sha>` on a commit carrying `Closes: {rid}`, or with `task close` as a session's own judgement"))
+    return out
 
 
 # -- G-D12 framework coverage ------------------------------------------------------------

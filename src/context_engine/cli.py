@@ -80,6 +80,14 @@ def build() -> argparse.ArgumentParser:
     p.add_argument("--rows", required=True, help="the items this session touched")
     p.add_argument("--deferred", required=True, help="the steps skipped (the gate, the commit, ...)")
 
+    hk = _sub(groups, "hk", "housekeeping that carries out recorded intent and forms none (FRAMEWORK §6.11); also `baton expire` and `decision index`").add_subparsers(dest="op", required=True)
+    hc = _sub(hk, "close", "close an open item only on recorded evidence, mechanically, citing it (G-W9)")
+    hc.add_argument("id", nargs="?", default="", help="the item's id (none with --scan)")
+    hc.add_argument("--commit", default="", help="a commit in HEAD's history whose `Closes:` trailer names the item; git checks it")
+    hc.add_argument("--ledger", default="", metavar="KEY", help="a session whose finished ledger entry's rows name the item closed")
+    hc.add_argument("--scan", action="store_true", help="every open task a commit's `Closes:` trailer names; lists each it cannot close, with why")
+    _sub(hk, "stamp", "stamp each open question's last_asked from the newest `asked` receipt in the ledger that names it")
+
     _sub(groups, "orient", "the session-start read in one capped response: banner, batons and pauses, the board's NOW and NEXT, questions to raise, the top item")
     _sub(groups, "routes", "where each framework component lives ([[routes]] in context.toml)")
     _sub(groups, "coverage", "FRAMEWORK's components, procedures and guards with their build status, generated from G-D12's spec and coverage map, the board and lint")
@@ -329,6 +337,8 @@ CLI_OPS = {
     ("baton", "add"): "baton_add",
     ("baton", "done"): "baton_done",
     ("baton", "expire"): "hk_expire_batons",
+    ("hk", "close"): "hk_close",
+    ("hk", "stamp"): "hk_stamp_asked",
     ("pause", "open"): "pause_open",
     ("pause", "resume"): "pause_resume",
     ("record", "new"): "record_new",

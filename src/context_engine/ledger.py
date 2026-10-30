@@ -183,6 +183,12 @@ def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[st
     )
 
 
+def closed_in_rows(rows: str, rid: str) -> re.Match | None:
+    """A finished entry's `rows:` saying ``rid`` closed, as `CE-2 (closed)`: housekeeping's
+    ledger evidence for a close (FRAMEWORK §6.11, G-W9)."""
+    return re.search(rf"(?<![\w-]){re.escape(rid)}(?![\w-])\s*\(closed", rows)
+
+
 def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None, tasks: str | None = None) -> str:
     return f"## {key} · kind: pause\n\n" + _follows(follows) + _tasks(tasks) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
 

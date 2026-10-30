@@ -765,8 +765,8 @@ class Store:
         for r in done:
             log(r)
 
-    def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool) -> None:
-        entry = {
+    def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool, as_: dict[str, str] | None = None) -> None:
+        entry: dict[str, Any] = {
             "at": _now(),
             "session": session,
             "actor": actor,
@@ -776,6 +776,8 @@ class Store:
             "fields": fields,
             "mechanical": mechanical,
         }
+        if as_:
+            entry["as"] = dict(as_)
         log = self.root / self.config.oplog
         log.parent.mkdir(parents=True, exist_ok=True)
         with open(log, "a", encoding="utf-8", newline="\n") as f:
@@ -817,10 +819,14 @@ class Store:
         body: Callable[[str], str] | None = None,
         check: Callable[[Record], dict[str, Any] | None] | None = None,
         op: str = "set",
+        as_: dict[str, str] | None = None,
     ) -> Record:
         """Change top-level frontmatter keys, and through ``body`` the body of a non-append-only
         record. Every other byte of the file is kept. The record is re-read under the lock, so
-        ``check`` (which may refuse, or return more changes) and ``body`` see the current text."""
+        ``check`` (which may refuse, or return more changes) and ``body`` see the current text.
+        ``as_`` maps a session-keyed field to the session key it was set to when that is not the
+        writer's (housekeeping stamping `last_asked` from a ledger receipt, CE-6): the op line
+        carries it as ``as``, and G-W7 checks the field against it."""
         self._check_caller(session, actor)
         owned = [k for k in (*changes, *unset) if k in TOOL_OWNED]
         if owned:
@@ -841,7 +847,7 @@ class Store:
                 rec.doc.delete(key)
             self._validate(rec.kind, rec.doc, rec.path, aliases=ALIASES in changes)
             self._write(rec.path, rec.doc)
-            self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical)
+            self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical, as_)
             self._reindex(rec.kind, session, actor)
         return rec
 

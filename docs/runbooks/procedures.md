@@ -19,8 +19,9 @@ achieve, its guards and its reasons; this file says what to do, in what order. E
   `CE_ACTOR` and `CE_SESSION` set). Over MCP the same operation is the tool
   `mcp__context-engine__<group>_<verb>` (`init` is `mcp__context-engine__init`, `why` is
   `mcp__context-engine__why`), except `baton expire`, which is
-  `mcp__context-engine__hk_expire_batons`, and `decision index`, which is
-  `mcp__context-engine__hk_regen_index`; from the Claude Code plugin the prefix is
+  `mcp__context-engine__hk_expire_batons`, `decision index`, which is
+  `mcp__context-engine__hk_regen_index`, and `hk stamp`, which is
+  `mcp__context-engine__hk_stamp_asked`; from the Claude Code plugin the prefix is
   `mcp__plugin_context-engine_engine__` instead. `—` means the step is not an engine operation.
 - **By hand**: the same step without the engine, as a link into
   [manual-mode.md](manual-mode.md), which does every operation by hand and says why.
@@ -238,7 +239,7 @@ goes into the owner digest.
 |---|---|---|---|---|
 | — | A stale `kind: open` stub (another session's, with 3 or more closes or pauses after its last activity) becomes `kind: abandoned`, its lines kept, with an `abandoned:` line and a baton for whatever it left in flight. No owner word is needed: it was shown to the owner at each of those sessions. List each one it abandoned in the close digest. Its lines are not `mechanical`: abandoning is a judgement the engine makes for the session | `context-engine session abandon --stale` | [§ session abandon](manual-mode.md#context-engine-session-abandon) | a dead session must not look live, and its unfinished work must reach someone (G-W11) |
 | — | Foreign commits | — | § Reconciling foreign commits | a human's work enters the record |
-| — | A close whose `asked:` receipt was written by hand (no `ask.raised` op line for it): set `last_asked` to that session's key on each question it names | — (not an operation yet) | [§ ask raised](manual-mode.md#context-engine-ask-raised) for the keys written | the overdue clock must restart when a question really was raised |
+| — | A finished entry whose `asked` receipt names a question whose `last_asked` is older (a receipt written by hand, or given to `session close --asked` without `ask raised`): set `last_asked` to that entry's key | `context-engine hk stamp` (MCP: `hk_stamp_asked`) | [§ hk stamp](manual-mode.md#context-engine-hk-stamp) | the overdue clock must restart when a question really was raised |
 | — | Commits since the last session that name a board item in their title: a dated comment on the item | `context-engine task comment --mechanical <id> "<sha>: <subject>"` | [§ task comment](manual-mode.md#context-engine-task-comment) | the item's log shows its history without reading git |
 | — | A pause record whose uncommitted paths are all committed now: mark it resumed, citing the commit | `context-engine pause resume <id>` | [§ pause resume](manual-mode.md#context-engine-pause-resume) | a pause whose work landed is no longer work carried over |
 
@@ -247,8 +248,8 @@ goes into the owner digest.
 | § | Do | Engine | By hand | Why |
 |---|---|---|---|---|
 | — | Expire every baton and pause record with 2 or more closes or pauses after its session into a LATER task | `context-engine baton expire` (MCP: `hk_expire_batons`) | [§ baton expire](manual-mode.md#context-engine-baton-expire) | work carried over from earlier sessions must not drift for ever (G-W3) |
-| — | Close each item named by a `Closes: <id>` trailer in a commit, citing the commit; anything else housekeeping would close is proposed to the session, never closed by it | `context-engine task close <id> -m "done in <sha> (Closes: trailer)"` | [§ task close](manual-mode.md#context-engine-task-close) | a close needs evidence; a mechanical close without it hides a judgement that nobody recorded |
+| — | Close each open task named by a `Closes: <id>` trailer in a commit, citing the commit (git checks the trailer); list what it could not close; anything else housekeeping would close is proposed to the session, never closed by it | `context-engine hk close --scan` (one item: `hk close <id> --commit <sha>`) | [§ hk close](manual-mode.md#context-engine-hk-close) | a close needs evidence; a mechanical close without it hides a judgement that nobody recorded (G-W9) |
 | — | Stamp every append-only record whose body is final | `context-engine record stamp <ids>` | [§ record stamp](manual-mode.md#context-engine-record-stamp) | owner words in an unstamped record can still drift (G-D10) |
 | — | Mark each item that housekeeping updated, so the update does not count as progress | `context-engine task touch --mechanical <id>` | [§ task touch](manual-mode.md#context-engine-task-touch) | a mechanical touch must not look like progress |
 | — | Regenerate the decision index, where `[working] decision_index` is set (every engine write to a decision already does; a by-hand decision does not) | `context-engine decision index` (MCP: `hk_regen_index`) | [§ decision index](manual-mode.md#context-engine-decision-index) | a generated file is checked by byte equality, so a stale one is red (G-D6) |
-| — | Raise every ratcheting floor to its current count and regenerate any other generated file, where the repo has them, as the guard that names each one says | — | regenerate or raise by hand | as above |
+| — | Raise every ratcheting floor to its current count and regenerate any other generated file, where the repo has them, as the guard that names each one says | — (no ratcheting floor exists until G-V2's raw-total floors, FRAMEWORK §8.5) | regenerate or raise by hand | as above |

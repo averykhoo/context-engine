@@ -557,7 +557,7 @@ MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions
 # session's own close or pause; and the banner, which a clean close writes after the session's
 # close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
 MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "record_confirm", "decision_supersede",
-              "baton_add", "pause_open", "session_close", "session_pause", "session_abandon", "banner_set"}
+              "baton_add", "pause_open", "session_close", "session_pause", "session_abandon", "banner_set", "hk_close"}
 OWNER = {"actor": "owner", "story_status": "live"}
 
 
@@ -612,6 +612,8 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("task_section", id="CE-2", name="Traps", text="- one")
     w("task_close", id="CE-2", msg="done")
     w("task_reopen", id="CE-2", msg="not yet")
+    git(mrepo, "commit", "-q", "--allow-empty", "-m", "finished by hand", "-m", "Closes: CE-1")
+    w("hk_close", id="CE-1", commit=git(mrepo, "rev-parse", "HEAD").strip())  # housekeeping's close is a task close (CE-6)
     w("id_reserve", kind="task", count=2)  # not a milestone: its lines ride along (CE-105)
     (mrepo / "notes.md").write_text("# Notes\n\nACTIVE-PLAN until the trial ends.\n", encoding="utf-8")
     w("doc_freeze", path="notes.md")
@@ -656,8 +658,10 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("hk_expire_batons")
     sha = run(mrepo, "banner_show", c)[1].split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
-    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
+    w("ask_new", title="And this?", body=ASK_BODY, pri="LATER")
+    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board", asked="ASK-2")  # no `ask raised`
     w("session_start")
+    w("hk_stamp_asked")  # last_asked from that receipt (CE-6): not a milestone
     w("session_pause", rows="none", deferred="everything")
     dead = ops.Caller(actor=ACTOR)
     run(mrepo, "session_start", dead)

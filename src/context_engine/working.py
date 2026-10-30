@@ -9,8 +9,9 @@ Which kinds play which part is configured in ``[working]`` of ``context.toml``; 
 whose part is not configured refuses and says so.
 
 Deliberately not handled here: the G-W11 guard itself (a stale stub is abandoned by
-``session_abandon``, CE-124, which housekeeping runs), rotating the ledger, and the `hk_` operations other than baton
-expiry and regenerating the decision index (CE-6).
+``session_abandon``, CE-124, which housekeeping runs), rotating the ledger, and the `hk_`
+operations not built yet (``hk.comment``, ``hk.ratchet``: no ratcheting floor exists until
+G-V2's, CE-6).
 """
 
 from __future__ import annotations
@@ -559,6 +560,39 @@ class Engine:
                           "show it to the owner; abandon it now only on the owner's word, with --force")
         return self._abandon(key, n, last, session=session, actor=actor, forced=n < ABANDON_AFTER)
 
+    def derived_digest(self, key: str) -> str:
+        """What a dead session left, derived from git and the op log (CE-6, the 2026-10-13b
+        review), so a conversation that died without a close loses only its prose judgement: the
+        commits in HEAD's history whose `Session:` trailer names ``key`` (newest first), the ids
+        their `Closes:` trailers name, and how many op log lines it wrote. One `git log`, filtered
+        to the trailer as git parses it.
+
+        Not checked: commits on another branch, and commits whose trailer is not in the last
+        paragraph (git does not read them as trailers; they are that session's all the same)."""
+        out = L._git(self.root, "log", "-F", f"--grep=Session: {key}",
+                     "--format=%h%x1f%(trailers:key=Session,valueonly,separator=%x2C)%x1f%(trailers:key=Closes,valueonly,separator=%x2C)%x1e", "HEAD")
+        commits: list[str] = []
+        closes: list[str] = []
+        for row in (out or "").split("\x1e"):
+            parts = row.strip("\n").split("\x1f")
+            if len(parts) != 3 or key not in [x.strip() for x in parts[1].split(",")]:
+                continue
+            commits.append(parts[0].strip())
+            closes += [x.strip() for x in parts[2].split(",") if x.strip() and x.strip() not in closes]
+        log = self.root / self.store.config.oplog
+        lines = 0
+        for ln in (log.read_bytes().decode("utf-8", errors="replace").splitlines() if log.is_file() else []):
+            if key not in ln:
+                continue  # a cheap skip before the parse
+            try:
+                o = json.loads(ln)
+            except ValueError:
+                continue
+            lines += isinstance(o, dict) and o.get("session") == key
+        shown = ", ".join(commits[:8]) + (f" (+{len(commits) - 8} more)" if len(commits) > 8 else "")
+        made = f"{len(commits)} commit{'s' if len(commits) != 1 else ''} with `Session: {key}`" + (f" ({shown})" if commits else "")
+        return f"{made}; `Closes:` {', '.join(closes) if closes else 'none'}; {lines} op log line{'s' if lines != 1 else ''}"
+
     def _abandon(self, key: str, n: int, last: str, *, session: str, actor: str, forced: bool) -> str:
         path = self._path("ledger")
         oplog = self.store.config.oplog
@@ -569,7 +603,8 @@ class Engine:
                 if entry is None or entry.kind != "open":
                     raise Refusal(f"{key} is no longer an open stub", "re-read the ledger; another session closed or abandoned it")
                 why = f"{session}: never closed or paused; last active {last}, {n} closes or pauses since" + ("; on the owner's word (--force)" if forced else "")
-                entry.text = entry.text.replace(f"## {key} · kind: open", f"## {key} · kind: abandoned", 1).rstrip("\n") + "\n" + L.bullet("abandoned", why)
+                entry.text = (entry.text.replace(f"## {key} · kind: open", f"## {key} · kind: abandoned", 1).rstrip("\n") + "\n"
+                              + L.bullet("abandoned", why) + L.bullet("derived digest", self.derived_digest(key)))
                 entry.kind = "abandoned"
                 self.store.write_text(path, led.render())
                 self.store.log("session.abandon", key, path, session, actor, ["kind"])
@@ -697,12 +732,12 @@ class Engine:
         if problems:
             raise Refusal(f"the task {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), f"pass `--goals G-n,...` naming the charter goals it serves ({', '.join(sorted(known, key=lambda x: int(x[2:])))}); a goal the charter lacks is an owner question (FRAMEWORK §3.1)")
 
-    def _board_set(self, rid: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), body: Callable[[str], str] | None = None, check: Callable[[Record], None] | None = None, mechanical: bool = False, op: str = "set") -> Record:
+    def _board_set(self, rid: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), body: Callable[[str], str] | None = None, check: Callable[[Record], None] | None = None, mechanical: bool = False, op: str = "set", as_: dict[str, str] | None = None) -> Record:
         kind = self.store.config.kind_for_id(rid)
         if kind.name not in self._board():
             raise Refusal(f"{rid} is a {kind.name}, not a board item", "use the operation for that kind")
         changes = {**changes, "updated": session}
-        return self.store.set(rid, changes, session=session, actor=actor, unset=unset, body=body, check=check, mechanical=mechanical, op=op)
+        return self.store.set(rid, changes, session=session, actor=actor, unset=unset, body=body, check=check, mechanical=mechanical, op=op, as_=as_)
 
     def _log_line(self, session: str, actor: str, text: str) -> Callable[[str], str]:
         lines = text.strip().splitlines()
@@ -787,7 +822,7 @@ class Engine:
         return f"{rid}: {'updated' if mechanical else 'moved'} {session}"
 
     @_milestone
-    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "", residuals: list[str] | None = None, verdict: str = "") -> str:
+    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "", residuals: list[str] | None = None, verdict: str = "", mechanical: bool = False) -> str:
         """``state: closed`` and the derived OKF ``status: deprecated``, in place (AC-12). A
         milestone: its commit is titled ``<id>: close; <msg>`` and carries ``Closes: <id>``
         (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11).
@@ -801,7 +836,10 @@ class Engine:
         ``verdict`` (CE-108) is ``<KILL|PASS|VOID>: <evidence>``, judged against the item's
         pre-registered ``## Kill bar``: a verdict needs the bar, and an item carrying a bar closes
         only with one. It goes in the item's Log, the reply and the close's commit message, so
-        the bar and its verdict are linked where an audit reads them."""
+        the bar and its verdict are linked where an audit reads them.
+
+        ``mechanical`` is housekeeping's close (``hk_close``, CE-6), which has checked its
+        evidence first; G-W9 re-checks every mechanical close in the stored files."""
         self._check(session, actor)
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
@@ -848,7 +886,7 @@ class Engine:
             return self._log_line(session, actor, f"closed: {msg.strip()}{judged}{said}")(text)
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
-        self._board_set(rid, changes, session=session, actor=actor, check=check, body=log, op="close")
+        self._board_set(rid, changes, session=session, actor=actor, check=check, body=log, op="close", mechanical=mechanical)
         # set after the write, so a close refused partway never commits a `Closes:` (the batch of
         # `_milestone` commits when the operation ends)
         title = f"{rid}: close; " + _short(msg, C.TITLE_MAX - len(rid) - 9)
@@ -1111,6 +1149,130 @@ class Engine:
 
         self._board_set(rid, {"state": "open", "closed": None, "moved": session}, session=session, actor=actor, unset=("status",), check=check, body=self._log_line(session, actor, f"reopened: {msg.strip()}"), op="reopen")
         return f"{rid}: reopened"
+
+    # -- housekeeping: closes on recorded evidence, `last_asked` from receipts (FRAMEWORK §6.11, CE-6)
+
+    def _closes_trailers(self, sha: str) -> list[str] | None:
+        """The ids in commit ``sha``'s ``Closes:`` trailers, as git parses them (only the
+        message's last paragraph is trailers), or None when git cannot show the commit."""
+        out = L._git(self.root, "log", "-1", "--format=%(trailers:key=Closes,valueonly,separator=%x2C)", sha, "--")
+        if out is None:
+            return None
+        return [x.strip() for x in out.replace("\n", ",").split(",") if x.strip()]
+
+    def _ledger_names_closed(self, key: str, rid: str) -> bool:
+        """The ledger entry ``key`` exists, is not a stub, and its `rows:` line says ``rid`` closed."""
+        entry = self.read_ledger().get(key)
+        return entry is not None and entry.kind != "open" and bool(L.closed_in_rows(entry.field("rows") or "", rid))
+
+    def _commit_evidence(self, rec: Record, commit: str) -> str:
+        """The close message when ``commit`` is evidence that ``rec`` is done: it is in HEAD's
+        history, git reads `Closes: <id>` in its trailers, the item was not already closed in
+        that commit's own tree (an engine close commit, whose close is done), and the item's log
+        does not cite it yet (the item was reopened after a close on it). Refuses otherwise,
+        naming which."""
+        rid = rec.id
+        full = (L._git(self.root, "rev-parse", "--verify", "-q", f"{commit}^{{commit}}") or "").strip()
+        if not full:
+            raise Refusal(f"git knows no commit {commit!r}", f"name a commit in this repo's history that carries `Closes: {rid}` (`git log --grep \"Closes: {rid}\"`)")
+        short = full[:7]
+        if L._git(self.root, "merge-base", "--is-ancestor", full, "HEAD") is None:
+            raise Refusal(f"{short} is not in HEAD's history", "close only on a commit that is in this branch's history")
+        if rid not in (self._closes_trailers(full) or []):
+            raise Refusal(f"{short} does not carry `Closes: {rid}` as a trailer (git reads trailers only from a message's last paragraph)",
+                          f"housekeeping closes only on that evidence; close it as this session's own judgement with `task close {rid} -m \"<why>\"`")
+        rel = rec.path.relative_to(self.root).as_posix()
+        then = L._git(self.root, "show", f"{full}:./{rel}")
+        if then is None:
+            raise Refusal(f"{rid} is not in {short}'s tree ({rel})", f"a commit made before {rid} existed is no evidence that it is done")
+        if okf.parse(then).get("state") == "closed":
+            raise Refusal(f"{rid} was already closed in {short} (its close commit), and has been reopened since", f"a reopen outweighs the old trailer: close it with `task close {rid}` when it is done again")
+        if any(full.startswith(m) for m in L.SHA_RE.findall(rec.doc.body)):
+            raise Refusal(f"{rid}'s log already cites {short}: it was closed on it before and reopened since", f"a reopen outweighs the old trailer: close it with `task close {rid}` when it is done again")
+        return f"done in {short} (its `Closes: {rid}` trailer, checked in git)"
+
+    def hk_close(self, rid: str = "", commit: str = "", *, ledger: str = "", scan: bool = False, session: str, actor: str) -> str:
+        """Housekeeping's close (FRAMEWORK §6.11, G-W9, AC-20): close an open board item only on
+        recorded evidence, mechanical, its message citing the evidence. The evidence is a commit
+        in HEAD's history whose `Closes:` trailer names the item (a commit made outside the engine
+        that finished it, §6.10 item 1), checked in git, never on the caller's word; or a session's
+        ledger entry whose `rows:` names the item closed. ``scan`` closes every open task some
+        commit's trailer names, and lists each one that evidence could not close, with why.
+
+        Not checked: whether the work is really done (the trailer is someone's recorded word that
+        it is); an owner question (it closes only on the owner's answer, and a scan skips it)."""
+        self._check(session, actor)
+        if scan:
+            if rid or commit or ledger:
+                raise Refusal("--scan with an item or evidence", "`hk close --scan` alone, or `hk close <id> --commit <sha>` (or `--ledger <key>`)")
+            return self._hk_close_scan(session=session, actor=actor)
+        if not rid or bool(commit) == bool(ledger):
+            raise Refusal("name the item and exactly one piece of evidence", "`hk close <id> --commit <sha>` (a commit carrying `Closes: <id>`) or `hk close <id> --ledger <key>` (a session whose rows name it closed); `hk close --scan` for every trailer")
+        rec = self.store.get(rid)
+        if commit:
+            msg = self._commit_evidence(rec, commit)
+        else:
+            if not self._ledger_names_closed(ledger, rid):
+                raise Refusal(f"the ledger has no finished entry {ledger} whose `rows:` names {rid} closed",
+                              f"housekeeping closes only on that evidence; close it as this session's own judgement with `task close {rid} -m \"<why>\"`")
+            msg = f"closed in session {ledger} (its ledger entry's rows name it closed)"
+        return self.close(rid, msg, session=session, actor=actor, mechanical=True)
+
+    def _hk_close_scan(self, *, session: str, actor: str) -> str:
+        out = L._git(self.root, "log", "-F", "--grep=Closes:", "--format=%H%x1f%(trailers:key=Closes,valueonly,separator=%x2C)%x1e", "HEAD")
+        if out is None:
+            raise Refusal("git cannot read this repo's history", "run it in a git checkout with at least one commit")
+        open_tasks = {r.id for r in self._open_board() if not (self.w.question and r.kind.name == self.w.question)}
+        named: dict[str, list[str]] = {}
+        for row in out.split("\x1e"):
+            sha, _, ids = row.strip("\n").partition("\x1f")
+            for i in (x.strip() for x in ids.replace("\n", ",").split(",")):
+                if i in open_tasks and sha:
+                    named.setdefault(i, []).append(sha)  # newest first
+        done: list[str] = []
+        skipped: list[str] = []
+        for i, shas in named.items():
+            why = ""
+            for sha in shas:
+                try:
+                    done.append(self.hk_close(i, sha, session=session, actor=actor))
+                    break
+                except Refusal as r:
+                    why = r.message
+            else:
+                skipped.append(f"{i}: not closed ({why})")
+        lines = done + skipped
+        return "\n".join(lines) if lines else "no open task is named by a `Closes:` trailer in HEAD's history"
+
+    def stamp_asked(self, *, session: str, actor: str) -> str:
+        """Housekeeping (FRAMEWORK §6.11 tier 0, CE-6): stamp each open question's `last_asked`
+        with the newest finished ledger entry whose `asked` receipt names it, where that is newer
+        than the stamp it has (an `asked:` receipt written by hand, or given to `session close
+        --asked` without `ask raised`). Each write is mechanical, and its op line records the
+        stamped key under `as`, which G-W7 checks the field against.
+
+        Not checked: whether the question really was raised in that session (the receipt is that
+        session's word); open stubs (a live session's `ask raised` stamps as it goes)."""
+        self._check(session, actor)
+        role = self._role("question")
+        newest: dict[str, str] = {}
+        for e in self.read_ledger().entries:
+            if e.kind == "open":
+                continue
+            for q in ID_RE.findall(" ".join(x for x in (e.receipt("asked"), e.field("asked")) if x)):
+                if q not in newest or key_order(e.key) > key_order(newest[q]):
+                    newest[q] = e.key
+        done = []
+        for r in self._open_board():
+            k = newest.get(r.id)
+            if r.kind.name != role or k is None:
+                continue
+            cur = str(r.doc.get("last_asked") or "")
+            if cur and key_order(cur) >= key_order(k):
+                continue
+            self._board_set(r.id, {"last_asked": k}, session=session, actor=actor, mechanical=True, op="hk.stamp_asked", as_={"last_asked": k})
+            done.append(f"{r.id}: last_asked {k} (was {cur or 'empty'})")
+        return "\n".join(done) if done else "no open question is named by an `asked` receipt newer than its `last_asked`"
 
     def section(self, rid: str, name: str, text: str, *, session: str, actor: str) -> str:
         """Replace one named body section (`section.set`, FRAMEWORK §8.0.2)."""
@@ -2827,7 +2989,7 @@ class Engine:
 
     def lint(self, working: bool = False) -> list[Failure]:
         """Every guard (`working`: the working-state guards alone), less those `[guards] off` names."""
-        found = self.lint_working() + G.tool_owned(self) if working else self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract() + G.lint(self)
+        found = self.lint_working() + G.tool_owned(self) + G.mechanical_closes(self) if working else self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract() + G.lint(self)
         off = set(self.store.config.guards.off)
         return [f for f in found if f.guard not in off]
 

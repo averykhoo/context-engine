@@ -896,7 +896,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    - **live sessions visible:** open stubs are the sessions in flight, and `orient()` lists
      them;
    - **crashes detectable:** a stub never closed within the configured window is a session
-     that died; housekeeping marks it `kind: abandoned` and files a baton (G-W11);
+     that died; housekeeping marks it `kind: abandoned`, with a digest derived from git and
+     the op log (its commits, their `Closes:` lines, its op count), and files a baton (G-W11);
    - **a baseline for foreign commits:** the stub records HEAD as its `start head`, read under
      the same lock, and the close or pause keeps it; the session reconciles foreign commits up
      to it (§6.10 item 2);
@@ -1183,7 +1184,8 @@ numbered for citation (the order is below):
      a conclusion reached, `doc.archive` for a doc over its cap.
 6. Anything skipped becomes a baton.
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
-     finish (closes named by `Closes:` trailers, floor ratchets, stamps, regenerated indexes).
+     finish (closes named by `Closes:` trailers, `hk.close`; floor ratchets; stamps; regenerated
+     indexes).
      Its operation list goes into the digest.
 7. **Prove this close with lint and the gate's status,** then commit by path whatever the engine
    did not (`context-engine commit <paths> -m ...`, which takes any write still uncommitted, with
@@ -1591,7 +1593,7 @@ any edit agent.
 
 | Tier | Who | Does | Example operations |
 |---|---|---|---|
-| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton; stamping `last_asked` from `asked:` receipts written by hand |
+| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton and a derived digest; stamping `last_asked` from `asked:` receipts that stamped nothing (`hk.stamp_asked`); closing what a commit's `Closes:` trailer names (`hk.close`) |
 | 1 | **small agents restricted to the engine's `hk.*` operations (MCP tools `hk_*`)** | reading unstructured text, writing through typed operations | commits since the last session → dated task comments; clearing a pause record whose paths are now committed; reconciling foreign commits (§6.10); spotting owner words not yet recorded (reported, not written) |
 | 2 | **the main session** | every judgement | ranking, criteria, task bodies, answers, closes without evidence |
 
@@ -1604,9 +1606,15 @@ mechanical part itself, in the order `procedures.md` § Housekeeping gives, mark
 
 **Closing is the hard case.** No tool auto-closes on its own judgement: calling a close
 "mechanical" would only hide that someone decided to close it.
-`hk.close(id, commit)` closes only when that commit **really carries** `Closes: <id>` (the engine
-checks git, not the agent's word) or the session's ledger entry names the item as closed, and it
-cites that evidence in the close message (G-W9). Otherwise housekeeping proposes the close and
+`hk.close(id, commit)` closes only when that commit, in HEAD's history, **really carries**
+`Closes: <id>` as a trailer (the engine checks git, not the agent's word), or `hk.close(id,
+ledger)` when that session's finished ledger entry names the item closed in its `rows:`, and it
+cites that evidence in the close message (G-W9). The trailer it acts on is a commit made outside
+the engine that finished an item (§6.10 item 1): an engine close already wrote the close its own
+commit's trailer names. So a commit is no evidence when the item was already closed in that
+commit's tree, or when the item's log already cites it: either way the item was reopened since,
+and a reopen outweighs the old trailer. `hk.close` with `scan` closes every open task such a
+trailer names and lists what it could not close. Otherwise housekeeping proposes the close and
 the session approves the batch.
 
 **When:**
@@ -1718,8 +1726,9 @@ cite for each item.
   `follows: <key>` (§6.3).
   `session.abandon` writes `abandoned`: start-of-session housekeeping runs it, as
   `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
-  its last activity (the owner's window), and files a baton for the op lines it left
-  uncommitted; a stub short of the window is abandoned only on the owner's word (`--force`).
+  its last activity (the owner's window), adds a `derived digest:` line (G-W11), and files a
+  baton for the op lines it left uncommitted; a stub short of the window is abandoned only on
+  the owner's word (`--force`).
 - **Written by the engine:** `session.start`, `session.close`, `session.pause`, `session.abandon`, and
   a line in the session's own stub by `ask.raised` (`asked:`) and `session.tasks` (`tasks:`). The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
@@ -1972,7 +1981,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.comment(id, text, commit)`, `hk.stamp`, `hk.ratchet`, `hk.close(id, commit)` (checks the `Closes:` trailer in git, §6.11) |
+| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); not built: `hk.comment(id, text, commit)`, `hk.ratchet` (no ratcheting floor exists until G-V2's) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
@@ -2193,7 +2202,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   session. This repeated reminder is what makes the board the owner's tracker.
 - **G-W9:** every `--mechanical` close cites its evidence: a commit whose message carries
   `Closes: <id>`, or a ledger entry naming the item. `hk.close` checks it at write time; the
-  lint re-checks it in the stored files.
+  lint re-checks it in the stored files: the item's log line from that session cites a commit
+  whose trailers git reads as `Closes: <id>`, or a finished ledger entry whose `rows:` names it
+  closed. A cited commit git does not know fails in a full clone; a shallow one (CI's checkout) trusts it.
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
   and the count goes into the run's report. **No budget by default:** change sizes vary by
   session, so a cap that suits a large session would be unreasonably large for most, and a
@@ -2204,7 +2215,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
   from the stub's last activity (an owner judgement); the trial measures it (§8.0.3) and gives it
   provenance (G-D9). `session abandon --stale` (§7.1) is what housekeeping runs to keep it
-  green.
+  green; the `abandoned` entry carries a `derived digest:` (the commits whose `Session:` trailer
+  names it, the ids their `Closes:` trailers name, its op log line count), so a dead
+  conversation loses only its prose judgement.
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.

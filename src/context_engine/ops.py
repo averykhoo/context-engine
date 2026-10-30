@@ -311,6 +311,18 @@ def hk_expire_batons(e: Engine, c: Caller) -> tuple[int, str]:
 
 
 @op(write=True)
+def hk_close(e: Engine, c: Caller, id: str = "", commit: str = "", ledger: str = "", scan: bool = False) -> tuple[int, str]:
+    """Housekeeping: close an open item only on recorded evidence, mechanically, citing it (G-W9): `commit`, a commit in HEAD's history whose `Closes:` trailer names it (checked in git), or `ledger`, a session key whose ledger entry's rows name it closed. `scan`: every open task some commit's trailer names; each it cannot close is listed with why. Never on the caller's word: anything else is the session's own `task_close`."""
+    return 0, e.hk_close(id, commit, ledger=ledger, scan=scan, session=c.session, actor=c.actor or "process:housekeep")
+
+
+@op(write=True)
+def hk_stamp_asked(e: Engine, c: Caller) -> tuple[int, str]:
+    """Housekeeping: stamp each open question's `last_asked` from the newest finished ledger entry whose `asked` receipt names it, where that is newer (a receipt written by hand, or given to `session close` without `ask raised`)."""
+    return 0, e.stamp_asked(session=c.session, actor=c.actor or "process:housekeep")
+
+
+@op(write=True)
 def pause_open(e: Engine, c: Caller, in_flight: str, resume: str, evidence: str = "", deferred: list[str] | None = None) -> tuple[int, str]:
     """Write a pause record (branch and dirty paths from git) and commit it."""
     return 0, e.pause_open(in_flight, resume, evidence=evidence, deferred=deferred or [], **c.kw)

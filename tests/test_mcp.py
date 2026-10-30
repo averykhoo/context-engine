@@ -51,6 +51,8 @@ CALLS = {
     "baton_add": (["step", "--why", "w"], {"step": "step", "why": "w"}),
     "baton_done": (["BTN-1", "e"], {"id": "BTN-1", "evidence": "e"}),
     "hk_expire_batons": ([], {}),
+    "hk_close": (["CE-1", "--commit", "abc1234", "--ledger", "2026-10-07b", "--scan"], {"id": "CE-1", "commit": "abc1234", "ledger": "2026-10-07b", "scan": True}),
+    "hk_stamp_asked": ([], {}),
     "pause_open": (["--in-flight", "i", "--resume", "r", "--evidence", "e", "--deferred", "d"], {"in_flight": "i", "resume": "r", "evidence": "e", "deferred": ["d"]}),
     "pause_resume": (["PAU-1"], {"id": "PAU-1"}),
     "record_new": (["decision", "T", "--body", "words", "--set", "actor=owner", "--id", "DEC-7"], {"kind": "decision", "title": "T", "body": "words", "fields": {"actor": "owner"}, "id": "DEC-7"}),
@@ -189,6 +191,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("ask_new", title="Which way?", body=ASK_BODY)
     w("id_reserve", kind="task", count=2)
     w("ask_raised", ids=["ASK-1"])
+    w("hk_stamp_asked")
     w("ask_later", id="ASK-1")
     w("ask_answer", id="ASK-1", words="this way", title="This way")
     w("record_new", kind="decision", title="Kept", body="Owner words.", fields={"actor": "owner", "decision_status": "BUILT"})
@@ -208,8 +211,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
-    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
+    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, which needs git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
+    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "hk_close", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
 
 
 @pytest.mark.criterion("AC-19")
