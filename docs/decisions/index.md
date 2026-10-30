@@ -147,6 +147,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-97](DEC-97-the-kit-ships-the-agent-roster-as-framework-6-6.md): The kit ships the agent roster as FRAMEWORK §6.6 text, not as .claude/agents/*.md named agents *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-98](DEC-98-record-confirm-refuses-a-successor-confirmed-in.md): record confirm refuses a successor confirmed in the words that confirmed a story it supersedes; an exact repeat by the owner is quoted with when and where *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-99](DEC-99-ask-new-answered-takes-the-owner-s-words-as-its.md): ask new --answered takes the owner's words as its value, the decision title in --decision-title *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-100](DEC-100-an-answered-question-skips-the-tier-cap.md): An answered question skips the tier cap *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
