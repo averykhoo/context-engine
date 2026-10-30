@@ -7,11 +7,42 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-30a · kind: open
+## 2026-10-30a · kind: close
 
-- **opened:** 2026-10-30T22:55:25+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-138, CE-139, CE-85, CE-106, CE-107, CE-117, CE-118, CE-105, CE-119, CE-134, CE-143,
+  CE-46, CE-53, CE-140, CE-39, CE-102, CE-111, CE-44, CE-84, CE-123, CE-120, CE-108, CE-109, CE-137,
+  CE-142, CE-144, CE-141, CE-42, CE-136, CE-96, CE-146, CE-147, CE-148, CE-149, CE-112 (closed);
+  CE-6 (partial, NOW); CE-150..CE-166 (filed); CE-18, CE-156, CE-161, CE-164, CE-165 (NEXT, rerank);
+  CE-29, CE-90, CE-110, CE-145 (rerank moves); DEC-85 (owner); DEC-86..DEC-130 (PROVISIONAL);
+  ASK-22, ASK-23 (raised); INV-84..INV-90 (filed)
+- **receipts:**
+  - guards: gate PASSED in 473.9s (1346 passed in 472.58s) on g1/code:661e476fc0f93c36; readers
+    PASSED (343 passed); lint: clean; tools/linux_gate.py 1346 passed; CI gate run 41133267123
+    success
+  - read: orient (hook); task show CE-84; procedures.md (session start, intake, clean close, rerank,
+    push, housekeeping); fan-out.md; census of all open tasks by agents
+  - asked: ASK-22, ASK-23
+- **summary** (the owner digest):
+  - Owner away (DEC-85): 35 tasks closed in two ultracode waves of worktree builders, a skeptic
+    review per lane, serial integration; CE-6 landed partly and is NOW.
+  - Agent calls DEC-86..DEC-130 are PROVISIONAL: review them when back; DEC-95 (init appends
+    merge=union without asking) and DEC-115 (coverage table has a generator but no guard) are
+    flagged.
+  - Rerank done: opus ranked, fable gave the asked-for second opinion, a verifier reconciled
+    (docs/evidence/rerank-2026-10-30a.md). NOW CE-6; NEXT CE-18, CE-156, CE-161, CE-164, CE-165.
+  - Owner questions: ASK-22 (drop CE-110 or paste its rules into the global CLAUDE.md), ASK-23
+    (retire CE-145 into INV-31).
+  - Residual follow-ups filed as CE-150..CE-166; register INV-84..INV-90. Owner-held, untouched:
+    CE-40, CE-47, CE-56 rename, CE-110, CE-132, CE-166, CE-11, CE-28.
+  - Pushed through 296202c (gate and Linux gate 1346 passed, CI green); the close commits go in a
+    second push with its own watcher.
+  - Lesson: worktree builders hold with PYTHONPATH=<wt>/src and core.autocrlf=false; reserve AC
+    ranges per lane; closing the NOW item empties NOW (G-W5) until a promote.
+- **Still owed:**
+  - owner: answer ASK-22 and ASK-23
+  - owner: review PROVISIONAL DEC-86..DEC-130
+  - owner: CE-40, CE-47, CE-56 rename, CE-110, CE-132, CE-166
 - **start head:** 60b1123e38e65497bf6b7e85ce29657ddfc50d9f
-- **asked:** ASK-22, ASK-23
 
 ---
 

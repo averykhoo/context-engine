@@ -1279,3 +1279,4 @@
 {"at": "2026-10-31T05:30:45+08:00", "session": "2026-10-30a", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "ASK-23", "path": "tasks/ASK-23-retire-ce-145-folding-its-agent-half.md", "fields": ["last_asked", "updated"], "mechanical": false}
 {"at": "2026-10-31T05:30:45+08:00", "session": "2026-10-30a", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "2026-10-30a", "path": "docs/ledger/session-log.md", "fields": ["asked"], "mechanical": false}
 {"at": "2026-10-31T05:47:37+08:00", "session": "2026-10-30a", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-10-30a", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-10-31T05:47:57+08:00", "session": "2026-10-30a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-10-30a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
