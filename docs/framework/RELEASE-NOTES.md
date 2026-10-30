@@ -10,6 +10,9 @@ status is not here: it is on the board.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
+- G-D3 also checks the backticked file names and repo paths in the docs a new `[guards] paths`
+  list names (the kit ships it empty: off), and fails a bare file name that matches several
+  files whose texts differ (§8.3) — DEC-113, DEC-114.
 - The roster: every role the session delegates, with what it runs as, its model tier, what it
   writes and what it returns, the arbiter on `fable` where the owner asked for it; the kit
   ships the roster as text, not as named agents (§6.6) — DEC-18, CE-39.
