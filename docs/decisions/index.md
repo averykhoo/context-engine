@@ -142,6 +142,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-92](DEC-92-linked-batches-reserve-their-ids-with-an-id.md): Linked batches reserve their ids with an id-reserve op, not a batch task new *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-93](DEC-93-ac-33-drops-its-allowance-for-ce-n-build-marks.md): AC-33 drops its allowance for (CE-n) build marks in FRAMEWORK.md *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-94](DEC-94-adopting-repos-get-no-eol-lf-attribute-from-init.md): Adopting repos get no eol=lf attribute from init *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-95](DEC-95-init-appends-the-op-log-merge-union-line-to.md): init appends the op log merge=union line to .gitattributes without asking *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
