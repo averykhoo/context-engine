@@ -3,7 +3,7 @@ type: Task
 id: CE-147
 title: 'record new story accepts a body holding ## Amendments; the text below falls outside body_sha'
 brief: Refuse it at the write (seen to fail, DEC-11) or name it under Not checked; decisions do this since CE-138 (DEC-88)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
