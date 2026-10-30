@@ -231,6 +231,71 @@ def test_close_refuses_residuals_with_no_register_and_an_unready_review(tmp_path
     assert e.close(no_residual, "done", **kw(key)) == f"{no_residual}: closed (done)"
 
 
+# -- (b2) close states the residual risk of any item, and the register starts on first use (CE-120) --
+
+STATED = "the register is edited by hand | rung: individual | why: plain git cannot be refused | control: G-W13 | affects: the next session"
+
+
+@pytest.mark.criterion("AC-127")
+def test_close_files_a_stated_residual_of_an_unreviewed_item_creating_the_register(eng, capsys):
+    """Adhoc AAR entry 33: no close had ever filed a residual, and `register show` refused. Any
+    item's close states one (`--residual`), it is filed once as the next INV-n in a register made
+    on first use, and the item's Log records the answer, `none` included."""
+    e, key = eng
+    reg = e.root / "docs/invariants.md"
+    assert e.register_show() == "register docs/invariants.md: 0 residual risks (no file yet: the first `task close` that files a residual, from a design review or `--residual`, creates it)"
+    rid = e.new("task", "Plain work", **kw(key)).id
+    assert main(["--root", str(e.root), "--session", key, "--actor", ACTOR, "task", "close", rid, "-m", "done", "--residual", STATED]) == 0
+    assert "residuals filed as INV-1" in capsys.readouterr().out
+    [x] = R.entries(reg.read_text(encoding="utf-8"))
+    assert (x.id, x.risk) == ("INV-1", "the register is edited by hand")
+    assert x.fields == {"affects": "the next session", "why not eliminated": "plain git cannot be refused", "control": "individual: G-W13", "from": f"{rid}, session {key}"}
+    assert f"closed: done\n  residual risk: INV-1" in e.store.get(rid).doc.body
+    assert e.register_show().startswith("register docs/invariants.md: 1 residual risk\n")
+    e.reopen(rid, "again", **kw(key))
+    assert "residuals filed" not in e.close(rid, "done", residuals=[STATED], **kw(key))  # filed once
+    assert len(R.entries(reg.read_text(encoding="utf-8"))) == 1
+    other = e.new("task", "Other work", **kw(key)).id
+    assert e.close(other, "done", residuals=["None"], **kw(key)) == f"{other}: closed (done)"
+    assert "closed: done\n  residual risk: none" in e.store.get(other).doc.body
+    assert _guards(e, "G-W13") == []
+
+
+@pytest.mark.criterion("AC-127")
+@pytest.mark.parametrize(
+    "given, reason",
+    [
+        ([STATED.replace(" | why: plain git cannot be refused", "")], "has no `why:`"),
+        ([STATED.replace("rung: individual", "rung: eliminate")], "at rung eliminate"),
+        ([STATED.replace(" | affects: the next session", "")], "no `affects:` field"),
+        ([STATED.replace("control:", "contrl:")], "unknown field 'contrl'"),
+        (["none", STATED], "`--residual none` and a residual risk"),
+    ],
+)
+def test_close_refuses_a_malformed_stated_residual_and_stays_open(eng, given, reason):
+    e, key = eng
+    rid = e.new("task", "Plain work", **kw(key)).id
+    with pytest.raises(Refusal) as r:
+        e.close(rid, "done", residuals=given, **kw(key))
+    assert reason in r.value.message, r.value.message
+    assert e.store.get(rid).doc.get("state") == "open" and not (e.root / "docs/invariants.md").exists()
+
+
+@pytest.mark.criterion("AC-127")
+def test_a_close_that_states_no_residual_asks_for_one_where_a_register_is_configured(eng, tmp_path):
+    e, key = eng
+    rid = e.new("task", "Plain work", **kw(key)).id
+    out = e.close(rid, "done", **kw(key))
+    assert out.startswith(f"{rid}: closed (done); residual risk not stated: say `--residual none`"), out
+    assert "manual-mode.md § context-engine task close" in out and "residual risk:" not in e.store.get(rid).doc.body
+    (tmp_path / "none").mkdir()
+    off, key2 = _repo(tmp_path / "none", register=None)  # no register: nothing to ask about
+    plain = off.new("task", "Plain work", **kw(key2)).id
+    assert off.close(plain, "done", **kw(key2)) == f"{plain}: closed (done)"
+    with pytest.raises(Refusal, match="no register is configured"):
+        off.close(off.new("task", "Risky", **kw(key2)).id, "done", residuals=[STATED], **kw(key2))
+
+
 # -- (c) G-W12 and G-W13 at rest --------------------------------------------------------------
 
 

@@ -41,6 +41,7 @@ from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coe
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the rows guards.py::ROW_ID_RE reads
+RESIDUAL_FORM = "<risk> | rung: <reduce|collective|individual> | why: <why not eliminated> | control: <the guard or rule> | affects: <who>"  # a residual stated at `task close` (CE-120)
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
@@ -713,13 +714,20 @@ class Engine:
         return f"{rid}: {'updated' if mechanical else 'moved'} {session}"
 
     @_milestone
-    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "") -> str:
+    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "", residuals: list[str] | None = None) -> str:
         """``state: closed`` and the derived OKF ``status: deprecated``, in place (AC-12). A
         milestone: its commit is titled ``<id>: close; <msg>`` and carries ``Closes: <id>``
-        (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11)."""
+        (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11).
+
+        ``residuals`` is the close's answer to "did this work leave a residual risk?" (CE-120,
+        FRAMEWORK §7.4): ``["none"]``, or one ``<risk> | rung: | why: | control: | affects:`` line
+        per risk, each filed in the register as the next INV-n (created on first use) with the
+        design review's. Logged either way, so the record tells a "none" from a question skipped;
+        where a register is configured, a close that states nothing (and has no review) says so."""
         self._check(session, actor)
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
+        stated = self._stated_residuals(rid, residuals or [])
         if self.w.question and self.store.config.kind_for_id(rid).name == self.w.question:
             # FRAMEWORK §5.3: a question is closed only by an owner answer (audit finding A20)
             raise Refusal(
@@ -735,11 +743,15 @@ class Engine:
                 raise Refusal(f"{rid} is already closed", "nothing to do; `reopen` it if it is not done")
             self._plans_frozen(rec.id)
             was.append(str(rec.doc.get("pri")))
-            if rec.doc.get("review"):
-                filed.extend(self._file_residuals(rec, session, actor))
+            if rec.doc.get("review") or stated:
+                filed.extend(self._file_residuals(rec, session, actor, stated or None))
+
+        def log(text: str) -> str:  # after check(), so it can name the INV ids filed
+            said = f"\nresidual risk: {', '.join(filed) if stated else 'none'}" if residuals else ""
+            return self._log_line(session, actor, f"closed: {msg.strip()}{said}")(text)
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
-        self._board_set(rid, changes, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"closed: {msg.strip()}"), op="close")
+        self._board_set(rid, changes, session=session, actor=actor, check=check, body=log, op="close")
         # set after the write, so a close refused partway never commits a `Closes:` (the batch of
         # `_milestone` commits when the operation ends)
         title = f"{rid}: close; " + _short(msg, C.TITLE_MAX - len(rid) - 9)
@@ -748,7 +760,28 @@ class Engine:
         self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", body.strip()) if x)
         self.store.commit_trailers = [f"Closes: {rid}"]
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
+        if not residuals and not filed and self.w.register and not self.store.get(rid).doc.get("review"):
+            moved = f"; residual risk not stated: say `--residual none` at a close, or file each risk with `--residual \"{RESIDUAL_FORM}\"` (one missed now goes in by hand, manual-mode.md § context-engine task close)"
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
+
+    def _stated_residuals(self, rid: str, given: list[str]) -> list[R.Risk]:
+        """The residual risks a close states (CE-120): ``none`` alone, or well-formed risk lines."""
+        given = [g.strip() for g in given if g and g.strip()]
+        if any(g.lower() == "none" for g in given):
+            if len(given) > 1:
+                raise Refusal(f"closing {rid} with `--residual none` and a residual risk", "give `none` alone, or only the risks")
+            return []
+        out = []
+        for g in given:
+            rv = R.parse(f"- residual: {g}")
+            # the review's checks on one residual line; its `affects` stands in for the review's,
+            # and F.A.M.E. belongs to a design review, not to a risk stated at close
+            probs = rv.bad or R.problems(R.Review(affects=rv.risks[0].fields.get("affects"), risks=rv.risks, fame=dict.fromkeys(R.FAME, "-")))
+            if probs:
+                probs = [p.replace("no `affects:` line naming who can be hurt", "no `affects:` field naming who can be hurt") for p in probs]
+                raise Refusal(f"the residual {g[:60]!r} is not well-formed: {'; '.join(probs)}", f"write it as `{RESIDUAL_FORM}`, its rung one of {', '.join(r for r in R.RUNGS if r != 'eliminate')}")
+            out.append(rv.risks[0])
+        return out
 
     def _plans_frozen(self, rid: str) -> None:
         """CE-27 (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): refuse to close
@@ -817,11 +850,15 @@ class Engine:
         if bad:
             raise Refusal(f"review trigger {bad[0]!r} is not configured", f"use one of {_one(allowed)} (`review_triggers` in [working] of context.toml)")
 
-    def _file_residuals(self, rec: Record, session: str, actor: str) -> list[str]:
-        """Inside the close's lock: append the review's residuals to the register (idempotent)."""
-        rv, probs = R.check(rec.doc.body)
-        if probs:
-            raise Refusal(f"{rec.id}'s design review is not ready, so its residuals cannot be filed: {'; '.join(probs)}", f"fix `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" \"<text>\"`, then close")
+    def _file_residuals(self, rec: Record, session: str, actor: str, stated: list[R.Risk] | None = None) -> list[str]:
+        """Inside the close's lock: append the review's residuals, and those the close states
+        (``stated``, CE-120), to the register, creating it on first use (idempotent)."""
+        rv = R.Review()
+        if rec.doc.get("review"):
+            rv, probs = R.check(rec.doc.body)
+            if probs:
+                raise Refusal(f"{rec.id}'s design review is not ready, so its residuals cannot be filed: {'; '.join(probs)}", f"fix `## {R.SECTION}` with `task section {rec.id} \"{R.SECTION}\" \"<text>\"`, then close")
+        rv = R.Review(affects=rv.affects, risks=[*rv.residuals, *(stated or [])])
         if not rv.residuals:
             return []
         if not self.w.register:
@@ -854,7 +891,9 @@ class Engine:
         return top
 
     def register_show(self, engine: bool = False) -> str:
-        """The register's entries: this repo's, or with ``engine`` the one shipped in the package."""
+        """The register's entries: this repo's, or with ``engine`` the one shipped in the package.
+        A configured register no residual has been filed in yet is empty, not an error (CE-120:
+        the file is created by the first `task close` that files one)."""
         if engine:
             path, where = R.packaged(), f"engine {__version__}"
         else:
@@ -862,7 +901,9 @@ class Engine:
                 raise Refusal("[working] has no `register` path", "set `register = \"<repo-relative path>\"` in [working], or pass --engine for the engine's own")
             path, where = self.root / self.w.register, self.w.register
         if not path.exists():
-            raise Refusal(f"no register at {path}", "reinstall the engine: its REGISTER.md is package data" if engine else "the first `task close` that files a residual creates it")
+            if not engine:
+                return f"register {where}: 0 residual risks (no file yet: the first `task close` that files a residual, from a design review or `--residual`, creates it)"
+            raise Refusal(f"no register at {path}", "reinstall the engine: its REGISTER.md is package data")
         return R.summary(path.read_bytes().decode("utf-8"), where)
 
     def _engine_register_line(self) -> str | None:

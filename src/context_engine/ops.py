@@ -201,9 +201,9 @@ def task_touch(e: Engine, c: Caller, id: str, mechanical: bool = False) -> tuple
 
 
 @op(write=True)
-def task_close(e: Engine, c: Caller, id: str, msg: str = "", body: str = "") -> tuple[int, str]:
-    """Close an item; `msg` says what finished it and is required. A milestone: the engine commits it with `Closes: <id>`, and `body` goes in that commit's message (the `Sabotage:` and receipt lines). Closing the NOW item while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
-    return 0, e.close(id, msg, body=body, **c.kw)
+def task_close(e: Engine, c: Caller, id: str, msg: str = "", body: str = "", residual: list[str] | None = None) -> tuple[int, str]:
+    """Close an item; `msg` says what finished it and is required. A milestone: the engine commits it with `Closes: <id>`, and `body` goes in that commit's message (the `Sabotage:` and receipt lines). `residual` answers "did this work leave a residual risk?": ["none"], or one `<risk> | rung: <rung> | why: <why> | control: <control> | affects: <who>` per risk, each filed in the register as the next INV-n (the register is created on first use). Closing the NOW item while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
+    return 0, e.close(id, msg, body=body, residuals=residual, **c.kw)
 
 
 @op(write=True)

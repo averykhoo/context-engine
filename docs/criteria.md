@@ -70,6 +70,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-27 | `task close` on an item carrying `review:` appends each residual to the configured register as the next `INV-n`, under the close's lock, and logs it; re-closing adds no duplicate; it refuses residuals with no register configured, and a review that is not ready | US-14 | tested |
 | AC-28 | Lint fails G-W12 on an open NOW item carrying `review:` whose review is not ready, and G-W13 on a closed reviewed item whose residuals are missing from the register, a register entry missing a field, or two entries sharing an INV id | US-14 | tested |
 | AC-29 | The engine's register ships as package data: `register show --engine` reads the `REGISTER.md` inside the installed package, and `orient` in a repo whose register is not that file points at it | US-14 | tested |
+| AC-127 | `task close` on any item takes the close's answer to whether its work left a residual risk (`residual`: `none`, or one line per risk naming its rung, why, control and affects): each risk is checked as a review's residual line plus `affects`, filed once as the next INV-n in a register created on first use, and the answer is logged on the item; a malformed line, or `none` with a risk, is refused and the item stays open; where a register is configured, a close of an unreviewed item that states nothing says so in its reply; `register show` on a configured register with no file yet reports 0 residual risks (CE-120) | US-14 | tested |
 
 ## Adoption (CE-15)
 

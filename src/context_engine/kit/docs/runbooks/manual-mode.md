@@ -707,6 +707,20 @@ Log one op line per close that added entries: `op: register.append`, `id` the ta
 register, `fields` the new INV ids. With residuals and no register configured, stop: configure
 one first.
 
+**Ask, before every close, whether the work left a residual risk** (a risk that was not
+reasonably practicable to eliminate, FRAMEWORK §7.4), reviewed item or not, and state the
+answer (`--residual`, repeatable): `none`, or one line per risk in the form `<risk> | rung:
+<reduce|collective|individual> | why: <why not eliminated> | control: <the guard or rule> |
+affects: <who>`. Check each line as a design review's `- residual:` line is checked (a rung other
+than `eliminate`, a `why`, a `control`, no other field) plus an `affects`; refuse `none` given
+with a risk. File each risk as above, with the review's, its own `affects` in its entry, creating
+the register on first use. Append the answer to the close's `## Log` line as a second line,
+indented two spaces: `residual risk: <the INV ids filed>` (none filed when every risk was already
+there, from this task) or `residual risk: none`. A close that states nothing writes no such line,
+so the record tells a question skipped from a "none"; where a register is configured and the item
+carries no `review:`, the engine's reply says the risk was not stated. A risk missed at close goes
+into the register by hand, as above.
+
 **If an ACTIVE-PLAN doc names the item** (a doc G-D4 reads, `[guards] liveness` or `history`,
 whose liveness is ACTIVE-PLAN and whose first `liveness_lines` lines name it) and every other
 board item named there is closed, stop: freeze that doc first (§ doc freeze), then close. The
@@ -996,7 +1010,9 @@ The pause must be open. Set `state: done`, `resumed: <key>`.
 Read the register file named by `[working] register` (the kit's default is `docs/invariants.md`).
 Print `register <path>: <N> residual risks`, then for each `## INV-n: <risk>` entry, a blank
 line, `INV-n: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
-indented two spaces. With `--engine`, read instead the `REGISTER.md` inside the installed
+indented two spaces. A register file that does not exist yet is empty: print `register <path>: 0
+residual risks` and say the first `task close` that files a residual creates it (a missing
+`[working] register` is still an error). With `--engine`, read instead the `REGISTER.md` inside the installed
 `context_engine` package (`<interpreter> -c "import context_engine, os;
 print(os.path.dirname(context_engine.__file__))"` prints the directory) and say `engine
 <version>` for the path.

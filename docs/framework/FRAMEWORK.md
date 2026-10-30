@@ -1139,7 +1139,8 @@ numbered for citation (the order is below):
    - `Still owed:`.
 3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
-   `Closes:` and `Sabotage:` lines, §5.5 rule 4), a light reorder (the standup; the full
+   `Closes:` and `Sabotage:` lines, §5.5 rule 4; each close states the residual risk its work
+   left, or `none`, §7.4), a light reorder (the standup; the full
    re-rank is §6.14), mint (with the session key; a task names its `goals`, §5.2). Before a
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
    `task.close` refuses until then.
@@ -1722,14 +1723,18 @@ cite for each item.
 - **It is P17's register of residual risks.** Each entry says what the risk is and whom it
   affects, why it was not eliminated, how it is controlled (the P17 rung, and the guard or rule
   by name), and where it came from (task, decision or incident). Entries arrive
-  from a task's design review when it closes (§5.2), and from any session that notices a risk
-  and confirms it (an unverified hazard, once confirmed, below).
+  from a task's design review when it closes (§5.2), from the close of any task, which states
+  whether its work left a residual risk (`task.close` with `residual`: `none`, or one line per
+  risk; the answer is logged on the task, so a skipped question shows), and from any session that
+  notices a risk and confirms it (an unverified hazard, once confirmed, below).
 - **Where it lives:** one markdown file named by `[working] register` (a target repo:
   `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).
   Each entry is `## INV-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
   eliminated:**`, `- **control:** <rung>: <guard or rule>` and `- **from:** <task>, session
   <key>`. `INV-n` ids are never reused: the next is one above the highest in the file and in
-  any `register.append` op, so an entry deleted by hand does not give its id to another risk. `context-engine register show` prints it; G-W13 checks
+  any `register.append` op, so an entry deleted by hand does not give its id to another risk.
+  The file is created by the first close that files a residual; until then `context-engine
+  register show` reports it empty. `context-engine register show` prints it; G-W13 checks
   that every closed reviewed task's residuals are in it and that every entry is whole.
 - **The register is handed over with the work:** the engine's own register is
   `src/context_engine/REGISTER.md`, shipped as package data, so it travels with the engine to

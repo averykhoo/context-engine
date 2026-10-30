@@ -120,6 +120,7 @@ def build() -> argparse.ArgumentParser:
             cb = x.add_mutually_exclusive_group()
             cb.add_argument("--body", default="", help="the close commit's message body: the Sabotage: and receipt lines")
             cb.add_argument("--body-file", type=Path, help="read --body from a file")
+            x.add_argument("--residual", action="append", help="did this work leave a residual risk? `none`, or one `<risk> | rung: <rung> | why: <why> | control: <control> | affects: <who>` per risk (repeat it), each filed in the register as the next INV-n")
     se = _sub(t, "section", "replace one named ## section of an item's body (not ## Log: use `task comment`)")
     se.add_argument("id", help="the item's id")
     se.add_argument("name", help="the section's heading, without ##")
