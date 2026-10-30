@@ -153,6 +153,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-103](DEC-103-a-question-s-parts-are-read-mechanically-a-5.md): A question's parts are read mechanically: a 5-word recommendation, two options, a Context part *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-104](DEC-104-a-bare-ask-new-with-no-body-is-refused-the-cli.md): A bare ask new with no body is refused; the CLI takes --body-file *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-105](DEC-105-only-a-closed-session-can-be-followed.md): Only a closed session can be followed *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-106](DEC-106-a-follow-up-names-the-followed-session-in-a.md): A follow-up names the followed session in a follows bullet, not a digest line *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
