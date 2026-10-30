@@ -3,14 +3,14 @@ type: Task
 id: CE-141
 title: Generated build-status table for FRAMEWORK's components, procedures and guards
 brief: Generated with a guard that it is current, never hand prose; FRAMEWORK.md may carry no CE ids (AC-33)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 Generated build-status table for FRAMEWORK's parts
