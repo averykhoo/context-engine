@@ -145,6 +145,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-95](DEC-95-init-appends-the-op-log-merge-union-line-to.md): init appends the op log merge=union line to .gitattributes without asking *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-96](DEC-96-the-5-2-read-first-link-floor-dropped-by-ce-93.md): The §5.2 Read-first link floor dropped by CE-93 returns as a Not checked clause, not as a board item *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-97](DEC-97-the-kit-ships-the-agent-roster-as-framework-6-6.md): The kit ships the agent roster as FRAMEWORK §6.6 text, not as .claude/agents/*.md named agents *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-98](DEC-98-record-confirm-refuses-a-successor-confirmed-in.md): record confirm refuses a successor confirmed in the words that confirmed a story it supersedes; an exact repeat by the owner is quoted with when and where *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
