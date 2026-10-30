@@ -275,7 +275,9 @@ commit messages and code comments keep the old ids.
 4. Board items and open questions: `task new` or `ask new`, with `--id` to keep a number (`Q8`
    as `--id ASK-8`), then `task set <id> --set aliases=[<old id>, ...]` (for a question too; a
    list may hold several, e.g. a rank and a slug, and the next `aliases=` replaces the whole list).
-   An answered question stays history: its decision holds the answer.
+   An answered question stays history: its decision holds the answer. An open question's body
+   (`--body-file`) states its context, two or more options and a recommendation with its why,
+   which `ask new` checks (FRAMEWORK §5.3): fill in what the old record lacks first.
 
 ## 4. Upgrade (FRAMEWORK §8.0)
 

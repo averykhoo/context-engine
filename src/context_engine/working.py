@@ -127,7 +127,7 @@ def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
     is a decision. ``dec`` is the decision that stands now; ``was`` the owner's answer it replaced."""
     now = f"the owner's answer was {was}, superseded by {dec}" if was and was != dec else f"the owner's answer is {dec}"
     return (f"{now}: change it with `record amend {dec} \"<words>\"` or replace it "
-            f"with `decision supersede {dec} <new DEC>`; for a follow-up, `ask new \"<question>\"` citing {rid} and {dec}")
+            f"with `decision supersede {dec} <new DEC>`; for a follow-up, `ask new \"<question>\" --body-file <ask.md>` citing {rid} and {dec}")
 
 
 def _answered_by(answered: Any) -> str:
@@ -968,10 +968,19 @@ class Engine:
     # -- owner questions (FRAMEWORK §5.3) -----------------------------------------------
 
     def ask_new(self, title: str, *, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None, rid: str = "") -> Record:
+        """File an open owner question. Its body states the three parts (FRAMEWORK §5.3, CE-44):
+        context, two or more options, and a recommendation with its why (``guards.ask_problems``);
+        a body that lacks one is refused before anything is written, and so is no body (the
+        template, which only names the parts). G-W4 re-checks an open question's stored body, so
+        it fails one filed another way (`task new --kind question`) or emptied by a later edit."""
+        self._check(session, actor)
         extra: dict[str, Any] = {"last_asked": None}
         if blocks:
             extra["blocks"] = list(blocks)
-        text = body if body.strip() else f"**Question:** {title}\n\n**Why owner-only:**\n\n**Options:**\n\n**Recommendation:** <the option, and why in a line; or \"none cheap: <why>\" (FRAMEWORK §5.3)>\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
+        text = body if body.strip() else f"**Question:** {title}\n\n**Context:**\n\n**Why owner-only:**\n\n**Options:**\n\n**Recommendation:** <the option, and why in a line; or \"none (too costly): <why>\" or \"none (needs human judgement): <why>\" (FRAMEWORK §5.3)>\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
+        if "G-W4" not in self.store.config.guards.off and (bad := G.ask_problems(text)):
+            raise Refusal(f"the question {bad[0]}" + (f" (and {len(bad) - 1} more: {'; '.join(bad[1:])})" if len(bad) > 1 else "") + " (FRAMEWORK §5.3)",
+                          G.ASK_REMEDY + "; write the body to a file and pass it with `--body-file`")
         return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid)
 
     @_milestone
@@ -2458,6 +2467,10 @@ class Engine:
                     # CE-31: nothing is open and answered at once (a by-hand reopen of an answered question)
                     dec = _answered_by(r.doc.get("answered"))
                     out.append(Failure("G-W4", rel, f"{r.id} is open but carries `answered:` ({dec})", f"restore `state: closed` and `status: deprecated` from git: {self._answered_remedy(r.id, r.doc.get('answered'))}"))
+                if state == "open" and r.kind.name == self.w.question and (bad := G.ask_problems(self.store.read(r.path).body)):
+                    # CE-44: an open question states context, options and a recommendation; `ask new` refuses one that does not
+                    more = f" (and {len(bad) - 1} more: {'; '.join(bad[1:])})" if len(bad) > 1 else ""
+                    out.append(Failure("G-W4", rel, f"{r.id} is open but {bad[0]}{more}", f"{G.ASK_REMEDY}: edit its body (not owner words), or `task section {r.id} <part> \"<text>\"` for a `## <part>` section"))
                 if state == "open":
                     open_.append(r)
             for pri, cap in self.w.caps.items():

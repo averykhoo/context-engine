@@ -788,11 +788,13 @@ into the flat directory once the schema carries `state` (§11.4).
 - **Own id series** (`ASK-n`), ranked in the same tiers as tasks.
 - **Each question states:**
   - the question, answerable in one line;
+  - its **context**: what led to the question, so the owner need not reconstruct it;
   - why it is owner-only (the "who decides" test, P8);
-  - the options, with the agent's **recommendation**: one the agent holds with reasonable
-    confidence, and the why in a line. Spend only cheap effort on reaching it: reading, a quick
-    probe, a short subagent. Not a long `fable` session, and not building and testing a
-    feature to find out. Where no recommendation is cheap, say so and why;
+  - **two or more options**, with the agent's **recommendation** and its reasoning: one the
+    agent holds with reasonable confidence, and the why in a line. Spend only cheap effort on
+    reaching it: reading, a quick probe, a short subagent. Not a long `fable` session, and not
+    building and testing a feature to find out. Where a recommendation would cost too much to
+    reach, or genuinely needs human judgement, the question says which, and why, in place of one;
   - what it blocks: the blocked tasks declare `deps: [ASK-n]`, and closing the question
     unblocks them.
 - **Rationing:**
@@ -818,7 +820,9 @@ into the flat directory once the schema carries `state` (§11.4).
   follow-up is a new question citing both. A question closed without an answer may reopen.
   `ask answer` likewise refuses a question that already carries `answered:`, so no question is
   answered by two decisions; the remedies name the decision that stands now, following `superseded_by`.
-- **Operations:** `ask.new`; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
+- **Operations:** `ask.new` refuses a body that lacks the context, two options or the
+  recommendation with its reasoning (or the exemption that stands for it; a template placeholder
+  counts as nothing), and G-W4 re-checks every open question's stored body; `ask.raised([ids])` stamps `last_asked` and writes the `asked:`
   receipt; `ask.later(id)` re-stamps without answering; `ask.answer(id, words, title)` records
   the words verbatim as a decision with `actor: owner` under the given title, closes the question, and reports which
   tasks it unblocked. **An answer that delegates the ruling** ("you decide") is the owner's answer
@@ -2072,7 +2076,10 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 - **G-W3:** no baton or pause record older than two sessions: two `close` or `pause` entries
   after the owning session. Housekeeping repairs it.
 - **G-W4:** closed ids do not appear on the open board; `state` and the derived OKF `status`
-  agree on every task, and the board query reads `state`; no open question carries `answered:`.
+  agree on every task, and the board query reads `state`; no open question carries `answered:`;
+  every open question's body states its context, two or more options and a recommendation with
+  its reasoning, or says which exemption leaves it without one (§5.3; `ask new` refuses the same
+  at write time). Not checked: whether those parts are any good, and a closed question.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists. The engine checks `asked:` when the entry is written; the lint re-checks

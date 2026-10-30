@@ -16,7 +16,7 @@ from context_engine.cli import main
 from context_engine.errors import Refusal
 from context_engine.working import Engine
 
-from conftest import _toml
+from conftest import ASK_BODY, _toml
 
 S, ACTOR = "2026-10-12d", "claude-code/test"
 W = {"session": S, "actor": ACTOR}
@@ -567,7 +567,7 @@ def test_every_decision_write_regenerates_the_index_grouped_by_status_then_tag(e
     c = dec(eng, "Gamma")
     eng.supersede(b, c, **W)
     eng.correct(a, "Monday", "sic", **W)
-    q = eng.ask_new("Which?", **W)
+    q = eng.ask_new("Which?", body=ASK_BODY, **W)
     eng.ask_answer(q.id, "this one", title="Delta", **W)  # a decision made through another operation
     text = index.read_text(encoding="utf-8")
     assert text == eng.store.render_index()
@@ -1060,12 +1060,12 @@ def test_an_alias_two_records_carry_is_refused_on_lookup_and_a_decision_keeps_it
 
 
 def test_task_new_and_ask_new_keep_an_imported_number(deng):
-    assert deng.ask_new("Which way?", rid="ASK-8", **W).id == "ASK-8"  # Q8 keeps its number
-    assert deng.ask_new("And then?", **W).id == "ASK-9"
+    assert deng.ask_new("Which way?", body=ASK_BODY, rid="ASK-8", **W).id == "ASK-8"  # Q8 keeps its number
+    assert deng.ask_new("And then?", body=ASK_BODY, **W).id == "ASK-9"
     with pytest.raises(Refusal, match="ASK-8 is already in use"):
-        deng.ask_new("Again", rid="ASK-8", **W)
+        deng.ask_new("Again", body=ASK_BODY, rid="ASK-8", **W)
     with pytest.raises(Refusal, match="CE-3 is not an id of the question series"):
-        deng.ask_new("Wrong series", rid="CE-3", **W)
+        deng.ask_new("Wrong series", body=ASK_BODY, rid="CE-3", **W)
     assert main(["--root", str(deng.root), "--session", S, "--actor", ACTOR, "task", "new", "Kept", "--id", "CE-14"]) == 0
     assert deng.store.find("CE-14").name.startswith("CE-14-kept")
     for bad, want in (("CE-014", "give CE-14: no leading zeros"), ("CE-0", "give CE-n, n from 1")):
@@ -1183,7 +1183,7 @@ def test_ask_answer_records_a_delegated_ruling_apart_from_the_owners_words(eng, 
     """CE-113: with `ruling` and `ruled_by`, `ask answer` quotes only the owner's delegating words, puts
     the ruling under `## Ruling` outside the quote, stamps `actor: owner asked` with `ruled_by`, and says
     so on the question and in the index; lint stays green."""
-    q = eng.ask_new("Which index layout?", **W)
+    q = eng.ask_new("Which index layout?", body=ASK_BODY, **W)
     out = eng.ask_answer(q.id, OWNER_DELEGATES, title="Layout B", ruling=RULING, ruled_by="claude-code/fable", **W)
     assert out.startswith(f"{q.id}: answered as D-1 (ruled by claude-code/fable on the owner's delegation; actor: owner asked), closed")
     d = eng.store.get("D-1").doc
@@ -1198,14 +1198,14 @@ def test_ask_answer_records_a_delegated_ruling_apart_from_the_owners_words(eng, 
     assert "*(owner asked, ruled by claude-code/fable, 2026-10-12)*" in (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
     assert eng.store.lint() == [] and g_i3(eng) == []
     # the owner's own answer is unchanged: `actor: owner`, no `ruled_by`, no `## Ruling`
-    q2 = eng.ask_new("Red or blue?", **W)
+    q2 = eng.ask_new("Red or blue?", body=ASK_BODY, **W)
     eng.ask_answer(q2.id, "blue", title="Blue", **W)
     d2 = eng.store.get("D-2").doc
     assert (d2.get("actor"), "ruled_by" in d2.data, "## Ruling" in d2.body) == ("owner", False, False)
     # the CLI: --ruling-file and --ruled-by
     (tmp_path / "words.md").write_text("Pick one yourself.\n", encoding="utf-8")
     (tmp_path / "ruling.md").write_text("Green.\n", encoding="utf-8")
-    q3 = eng.ask_new("Which shade?", **W)
+    q3 = eng.ask_new("Which shade?", body=ASK_BODY, **W)
     root = ["--root", str(eng.root), "--session", S, "--actor", ACTOR]
     assert main([*root, "ask", "answer", q3.id, "--file", str(tmp_path / "words.md"), "--title", "Green", "--ruling-file", str(tmp_path / "ruling.md"), "--ruled-by", "claude-code/opus"]) == 0, capsys.readouterr().err
     d3 = eng.store.get("D-3").doc
@@ -1224,7 +1224,7 @@ def test_ask_answer_records_a_delegated_ruling_apart_from_the_owners_words(eng, 
     ids=["ruling-alone", "ruled_by-alone", "ruled_by-owner", "heading-in-words"],
 )
 def test_ask_answer_refuses_a_ruling_it_cannot_tell_apart_from_the_owners_words(eng, words, kw, match):
-    q = eng.ask_new("Which index layout?", **W)
+    q = eng.ask_new("Which index layout?", body=ASK_BODY, **W)
     before = eng.store.get(q.id).path.read_bytes()
     with pytest.raises(Refusal, match=re.escape(match)):
         eng.ask_answer(q.id, words, title="Layout B", **kw, **W)
@@ -1307,7 +1307,7 @@ def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path
     e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
     rid = delegated(e, actor="owner")
     assert e.store.get(rid).doc.get("actor") == "owner" and g_i3(e) == []
-    q = e.ask_new("Which layout?", **W)
+    q = e.ask_new("Which layout?", body=ASK_BODY, **W)
     e.ask_answer(q.id, "I said so.\n\n## Ruling\n\nmine", title="Mine", **W)
     assert g_i3(e) == []
 
@@ -1351,7 +1351,7 @@ def test_record_new_refuses_the_owner_in_any_case_and_an_amendments_line_in_a_ru
     ids=["ruled_by-Owner", "amendments-in-ruling", "amendments-in-words"],
 )
 def test_ask_answer_refuses_the_owner_in_any_case_and_an_amendments_line(eng, words, kw, match):
-    q = eng.ask_new("Which index layout?", **W)
+    q = eng.ask_new("Which index layout?", body=ASK_BODY, **W)
     before = eng.store.get(q.id).path.read_bytes()
     with pytest.raises(Refusal, match=re.escape(match)) as got:
         eng.ask_answer(q.id, words, title="Layout B", **kw, **W)

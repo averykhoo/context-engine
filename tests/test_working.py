@@ -20,7 +20,7 @@ from context_engine.cli import main
 from context_engine.errors import Refusal
 from context_engine.working import Engine, status_paths
 
-from conftest import _toml
+from conftest import ASK_BODY, _toml
 
 ACTOR = "claude-code/test"
 TODAY = dt.date(2026, 10, 8)
@@ -183,7 +183,7 @@ def test_close_refuses_without_a_stub(eng):
 @pytest.mark.criterion("AC-11")
 def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     key = started(eng)
-    q = eng.ask_new("Pick a colour?", pri="NEXT", **kw(key))
+    q = eng.ask_new("Pick a colour?", body=ASK_BODY, pri="NEXT", **kw(key))
     with pytest.raises(Refusal, match=f"does not name {q.id}"):
         eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts(asked="none"))
     eng.ask_raised([q.id], **kw(key))
@@ -192,16 +192,131 @@ def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     assert eng.read_ledger().get(key).receipt("asked") == q.id  # carried from the stub
 
 
-def test_a_new_question_asks_for_a_recommendation(eng):
+ASK_HEADINGS = """## Question
+
+Which index layout?
+
+## Context
+
+The index is regenerated on every decision write, and it has grown past one screen.
+
+## Options
+
+- A. One flat table, newest first.
+
+### B. A table per decision status
+
+The PROVISIONAL rows come first, where the owner looks.
+
+## Recommendation
+
+B: the owner reads the PROVISIONAL rows first, and it needs no new key.
+
+## Log
+"""
+ASK_PLAIN = """Context: a stale stub was abandoned by hand three times in one trial.
+
+Options:
+1. An engine op that housekeeping runs.
+2. Keep it by hand.
+
+Recommendation: none (needs human judgement): it is the owner's tolerance for a stub left open, not a fact to look up.
+
+## Log
+"""
+
+
+def _ask(context="Two parsers disagree on CRLF.", options=("- A. Normalise on read.", "- B. Normalise on write."), rec="A, since every reader then sees one form."):
+    return f"**Context:** {context}\n\n**Options:**\n\n" + "\n".join(options) + f"\n\n**Recommendation:** {rec}\n\n## Log\n"
+
+
+@pytest.mark.criterion("AC-121")
+@pytest.mark.parametrize("body", [ASK_BODY, ASK_HEADINGS, ASK_PLAIN, _ask(rec="none (too costly): telling them apart needs a week-long trial run"),
+                                  _ask(options=("1) Normalise on read.", "2) Normalise on write.", "3) Leave it."))])
+def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommendation(eng, body):
+    """CE-44 (DEC-34 and its amendment): every ask records its context, several options and a
+    recommendation with its reasoning, or says which exemption leaves it without one; headings,
+    bold labels and plain labels all count."""
+    key = started(eng)
+    q = eng.ask_new("Which way?", body=body, **kw(key))
+    assert eng.store.read(q.path).body.strip() == body.strip()
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+@pytest.mark.criterion("AC-121")
+@pytest.mark.parametrize("body, says", [
+    ("", "states no context"),  # the template only names the parts
+    (_ask(context="<what led to it>"), "states no context"),
+    ("**Options:**\n\n- A. one\n- B. two\n\n**Recommendation:** A, since it is the shorter way.\n", "states no context"),
+    (_ask(options=("- A. Normalise on read.",)), "lists 1 option under"),
+    (_ask(options=("Normalise on read, or on write.",)), "lists 0 options under"),
+    (_ask(options=("- <option one>", "- <option two>")), "lists 0 options under"),
+    (_ask(rec=""), "has no recommendation"),
+    (_ask(rec="<the option, and why in a line>"), "has no recommendation"),
+    (_ask(rec="A."), "without reasoning (1 word;"),
+    (_ask(rec="none: not sure yet"), "recommends `none` without saying which exemption applies"),
+])
+def test_ask_new_refuses_a_question_lacking_a_part_and_writes_nothing(eng, body, says):
+    """CE-44: `ask new` refuses, before any byte is written, a question whose body lacks its
+    context, two or more options, or a recommendation with its reasoning; the remedy names the
+    parts and the two exemptions."""
+    key = started(eng)
+    with pytest.raises(Refusal, match=re.escape(says)) as exc:
+        eng.ask_new("Which way?", body=body, **kw(key))
+    assert "**Context:**" in exc.value.remedy and "none (needs human judgement)" in exc.value.remedy and "--body-file" in exc.value.remedy
+    assert list(eng.store.heads("question")) == []
+
+
+@pytest.mark.criterion("AC-121")
+def test_ask_new_takes_its_body_from_a_file_and_refuses_none_through_the_cli(eng, capsys, tmp_path):
+    """CE-44: through the CLI, the body comes with --body or --body-file; with neither, the
+    refusal names what a question states."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    assert main([*base, "ask", "new", "Which way?"]) == 2
+    err = capsys.readouterr().err
+    assert "states no context" in err and "(and 2 more" in err and "--body-file" in err, err
+    (tmp_path / "ask.md").write_text(ASK_PLAIN, encoding="utf-8")
+    assert main([*base, "ask", "new", "Which way?", "--body-file", str(tmp_path / "ask.md")]) == 0, capsys.readouterr().err
+    assert "Recommendation: none (needs human judgement)" in eng.store.read(next(eng.store.heads("question")).path).body
+
+
+@pytest.mark.criterion("AC-122")
+def test_lint_g_w4_fails_an_open_question_lacking_a_part_and_passes_a_closed_one(eng):
+    """CE-44: G-W4 re-checks an open question's stored body, so it catches one filed past `ask
+    new` (`task new --kind question`) or emptied by a later hand edit; a closed question is history."""
+    key = started(eng)
+    good = eng.ask_new("Which way?", body=ASK_BODY, **kw(key))
+    past = eng.new("question", "Filed past ask new", body="**Question:** which?\n\n## Log\n", **kw(key))
+    assert [(f.path, f.message) for f in eng.lint() if f.guard == "G-W4"] == [
+        (past.path.relative_to(eng.root).as_posix(), f"{past.id} is open but states no context: a `**Context:**` part saying what led to the question (and 2 more: lists 0 options under `**Options:**`, not two or more (one list item each); has no recommendation: a `**Recommendation:**` part with the option and why)")]
+    text = good.path.read_text(encoding="utf-8")
+    good.path.write_text(text.replace("- B. that way\n", ""), encoding="utf-8")  # a hand edit drops an option
+    found = {f.path: f for f in eng.lint() if f.guard == "G-W4"}
+    rel = good.path.relative_to(eng.root).as_posix()
+    assert found[rel].message == f"{good.id} is open but lists 1 option under `**Options:**`, not two or more (one list item each)"
+    assert f"task section {good.id}" in found[rel].remedy and "**Recommendation:**" in found[rel].remedy
+    eng.ask_answer(good.id, "this way", title="This way", **kw(key))  # closed: its answer is a decision, the question history
+    assert rel not in {f.path for f in eng.lint() if f.guard == "G-W4"}
+
+
+@pytest.mark.criterion("AC-121")
+def test_ask_new_files_any_body_while_g_w4_is_off(eng):
+    """CE-44: the refusal is G-W4's write-time twin, so a repo that switches G-W4 off is not
+    refused what its lint would not fail."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["guards"]["off"] = [*cfg["guards"]["off"], "G-W4"]
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    eng = Engine(eng.root, today=lambda: TODAY)
     key = started(eng)
     q = eng.ask_new("Pick a colour?", **kw(key))
-    assert "**Recommendation:**" in q.path.read_text(encoding="utf-8")
+    assert "**Recommendation:**" in q.path.read_text(encoding="utf-8")  # the template still names the parts
 
 
 @pytest.mark.criterion("AC-11")
 def test_close_refuses_while_an_overdue_question_is_unraised(eng):
     key = started(eng)
-    q = eng.ask_new("Old question?", pri="LATER", **kw(key))
+    q = eng.ask_new("Old question?", body=ASK_BODY, pri="LATER", **kw(key))
     eng.store.set(q.id, {"last_asked": "2026-09-01a"}, **kw(key))  # 37 days ago
     with pytest.raises(Refusal, match="G-W8"):
         eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
@@ -303,14 +418,14 @@ def test_cli_close_of_the_only_now_item_exits_zero_and_prints_the_warning(eng, c
 def test_answering_an_owner_question_at_now_says_g_w5_is_red_like_a_close(eng):
     """CE-36: `ask answer` closes a board item too; a question at NOW leaves NOW short."""
     key = started(eng)
-    q = eng.ask_new("Which way?", pri="NOW", **kw(key))
+    q = eng.ask_new("Which way?", body=ASK_BODY, pri="NOW", **kw(key))
     nxt = task(eng, key, "Next", pri="NEXT")
     out = eng.ask_answer(q.id, "this way", title="This way", **kw(key))
     short = "NOW holds 0 (none); the cap is exactly 1"
     assert out == (f"{q.id}: answered as DEC-1, closed; unblocked none; G-W5 is red until NOW is refilled: {short}; "
                    f"ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id})")
     assert [f.message for f in guards(eng, "G-W5")] == [short]
-    q2 = eng.ask_new("Again?", pri="LATER", **kw(key))
+    q2 = eng.ask_new("Again?", body=ASK_BODY, pri="LATER", **kw(key))
     assert eng.ask_answer(q2.id, "no", title="No", **kw(key)) == f"{q2.id}: answered as DEC-2, closed; unblocked none"  # not at NOW: not its doing
     eng.promote(nxt.id, "NOW", **kw(key))
     assert guards(eng, "G-W5") == []
@@ -452,7 +567,7 @@ def test_comment_section_and_show_slice_the_body(eng):
 
 def test_answer_records_the_owner_words_as_a_decision_and_unblocks(eng):
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     t = task(eng, key, deps=[q.id])
     out = eng.ask_answer(q.id, "blue, obviously", title="Blue", **kw(key))
     dec = next(eng.store.records("decision"))
@@ -472,7 +587,7 @@ def test_ask_new_answered_files_the_question_closed_with_the_owners_decision(eng
     for n in range(5):  # NEXT is full; an answered question never holds a place in it
         task(eng, key, title=f"Next {n}", pri="NEXT")
     with pytest.raises(Refusal, match="NEXT already holds 5"):
-        eng.ask_new("Still open?", **kw(key))
+        eng.ask_new("Still open?", body=ASK_BODY, **kw(key))
     t = task(eng, key, title="Waits on the colour")
     words = tmp_path / "words.md"
     words.write_text('blue, "obviously"\n\nnot red\n', encoding="utf-8")
@@ -536,7 +651,7 @@ def test_ask_new_answered_options_without_the_words_are_refused_through_the_cli(
 def test_task_close_refuses_a_question_and_names_ask_answer(eng):
     """FRAMEWORK §5.3: a question closes only on an owner answer (CE-20, audit finding A20)."""
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     before = q.path.read_bytes()
     with pytest.raises(Refusal, match=f"{q.id} is an owner question") as exc:
         eng.close(q.id, "decided it myself", **kw(key))
@@ -555,7 +670,7 @@ def test_task_reopen_refuses_an_answered_question_and_names_the_decision_ops(eng
     (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
     eng = Engine(eng.root, today=lambda: TODAY)
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
     dec = eng.store.get(q.id).doc.get("answered")["decision"]
     before = q.path.read_bytes()
@@ -565,8 +680,9 @@ def test_task_reopen_refuses_an_answered_question_and_names_the_decision_ops(eng
         assert op in exc.value.remedy
     assert q.path.read_bytes() == before  # nothing written, `answered:` kept
     # the remedy runs as written: each command it names is a real CLI command
-    other = eng.ask_answer(eng.ask_new("Which shade?", **kw(key)).id, "navy", title="Navy", **kw(key)).split()[3].rstrip(",")
-    fill = {'"<words>"': '"navy, not blue"', '"<question>"': '"Which shade of blue?"', "<new DEC>": other}
+    other = eng.ask_answer(eng.ask_new("Which shade?", body=ASK_BODY, **kw(key)).id, "navy", title="Navy", **kw(key)).split()[3].rstrip(",")
+    (eng.root / "ask.md").write_text(ASK_BODY, encoding="utf-8")  # CE-44: a follow-up states its context, options and recommendation
+    fill = {'"<words>"': '"navy, not blue"', '"<question>"': '"Which shade of blue?"', "<new DEC>": other, "<ask.md>": (eng.root / "ask.md").as_posix()}
     commands = re.findall(r"`((?:record amend|ask new|decision supersede) [^`]*)`", exc.value.remedy)
     assert len(commands) == 3
     for command in commands:
@@ -584,7 +700,7 @@ def test_ask_answer_refuses_an_open_question_that_already_carries_answered(eng):
     """CE-31: a by-hand reopen leaves a question open and answered (G-W4); a second `ask answer`
     would make two decisions answer it and hide that G-W4 failure."""
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
     dec = eng.store.get(q.id).doc.get("answered")["decision"]
     eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
@@ -599,7 +715,7 @@ def test_ask_answer_refuses_an_open_question_that_already_carries_answered(eng):
 
 def test_task_set_cannot_clear_answered_to_get_round_the_reopen_refusal(eng):
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
     for call in ({"raw": {"answered": ""}}, {"raw": {}, "unset": ("answered",)}):
         with pytest.raises(Refusal, match="`answered` is changed by an operation"):
@@ -610,7 +726,7 @@ def test_task_set_cannot_clear_answered_to_get_round_the_reopen_refusal(eng):
 def test_task_reopen_still_repairs_a_question_closed_without_an_answer(eng):
     """A pre-CE-20 `task close ASK-n` (audit A20) left no `answered:`: reopening it is the repair."""
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     eng.store.set(q.id, {"state": "closed", "status": "deprecated", "closed": key}, **kw(key))  # the old close
     assert eng.reopen(q.id, "closed without an answer (A20)", **kw(key)) == f"{q.id}: reopened"
     assert eng.store.get(q.id).doc.get("state") == "open"
@@ -619,7 +735,7 @@ def test_task_reopen_still_repairs_a_question_closed_without_an_answer(eng):
 def test_an_open_question_carrying_answered_fails_lint(eng):
     """G-W4 at rest (CE-31): a by-hand reopen of an answered question leaves it open and answered."""
     key = started(eng)
-    q = eng.ask_new("Red or blue?", **kw(key))
+    q = eng.ask_new("Red or blue?", body=ASK_BODY, **kw(key))
     eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
     assert [f for f in eng.lint() if f.guard == "G-W4"] == []
     eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
@@ -807,7 +923,7 @@ def _busy_repo(eng, traps="- trap one"):
     eng.section(top.id, "Read first", "- docs/x.md", **kw(key))
     task(eng, key, "A next item", pri="NEXT")
     task(eng, key, "A later item", pri="LATER")
-    q = eng.ask_new("Overdue question?", pri="LATER", **kw(key))
+    q = eng.ask_new("Overdue question?", body=ASK_BODY, pri="LATER", **kw(key))
     eng.store.set(q.id, {"last_asked": "2026-09-01a"}, **kw(key))
     return key, other
 
@@ -1125,11 +1241,11 @@ def test_record_amend_and_ask_answer_take_the_owners_words_from_a_file(eng, caps
     assert f'- **{key} ({ACTOR}):** keep "it" C:\\one\\file\n\n  second paragraph\n' in body and "\ufeff" not in body, body
     assert main([*base, "record", "amend", "DEC-1", "by argument"]) == 0
     assert eng.store.get("DEC-1").doc.body.endswith(f"- **{key} ({ACTOR}):** by argument\n")
-    q = eng.ask_new("Which way?", **kw(key))
+    q = eng.ask_new("Which way?", body=ASK_BODY, **kw(key))
     assert main([*base, "ask", "answer", q.id, "--file", str(words), "--title", "This way"]) == 0
     assert f"{q.id}: answered as DEC-2" in capsys.readouterr().out
     assert 'keep "it" C:\\one\\file\n\nsecond paragraph' in eng.store.get("DEC-2").doc.body
-    q2 = eng.ask_new("Again?", **kw(key))
+    q2 = eng.ask_new("Again?", body=ASK_BODY, **kw(key))
     before = eng.store.get("DEC-1").doc.body
     for argv, says in ((["record", "amend", "DEC-1", "x", "--file", str(words)], "both as an argument and with --file"),
                        (["ask", "answer", q2.id, "x", "--file", str(words), "--title", "T"], "both as an argument and with --file"),
@@ -1164,7 +1280,7 @@ def test_owner_words_after_an_option_land_even_where_argparse_fills_the_position
     monkeypatch.setattr(argparse.ArgumentParser, "parse_known_args", old_argparse)
     key = started(eng)
     base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
-    q = eng.ask_new("Which way?", **kw(key))
+    q = eng.ask_new("Which way?", body=ASK_BODY, **kw(key))
     assert main([*base, "ask", "answer", q.id, "--title", "This way", "this way, said after the title"]) == 0
     assert "this way, said after the title" in eng.store.get("DEC-1").doc.body
     assert main([*base, "record", "amend", "DEC-1", "amended"]) == 0

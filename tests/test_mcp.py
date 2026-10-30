@@ -14,7 +14,7 @@ from context_engine.cli import main
 from context_engine.mcp import cap, server
 from context_engine.working import Engine
 
-from conftest import _toml
+from conftest import ASK_BODY, _toml
 from test_working import CONFIG, LEDGER, NOTE
 
 ACTOR = "claude-code/test"
@@ -181,7 +181,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("task_close", id="CE-2", msg="done")
     w("task_reopen", id="CE-2", msg="not yet")
     w("task_promote", id="CE-2", pri="NEXT")
-    w("ask_new", title="Which way?")
+    w("ask_new", title="Which way?", body=ASK_BODY)
     w("id_reserve", kind="task", count=2)
     w("ask_raised", ids=["ASK-1"])
     w("ask_later", id="ASK-1")

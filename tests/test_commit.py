@@ -28,7 +28,7 @@ from context_engine.lock import FileLock
 from context_engine.working import Engine
 
 from test_working import ACTOR, CONFIG, FRAMEWORK, LEDGER, NOTE, TODAY
-from conftest import _toml
+from conftest import ASK_BODY, _toml
 
 EVERY = {**CONFIG, "engine": {**CONFIG["engine"], "commit": "every-write"}}  # the sweep's tests: each write commits
 
@@ -157,7 +157,7 @@ def test_a_library_call_commits_too(repo):
 def test_one_operation_that_writes_twice_makes_one_commit(repo):
     """`ask answer` writes a decision, then closes the question: one operation, one commit."""
     c = start(repo)
-    run(repo, "ask_new", c, title="Red or blue?")
+    run(repo, "ask_new", c, title="Red or blue?", body=ASK_BODY)
     before = count(repo)
     _, line = run(repo, "ask_answer", c, id="ASK-1", words="blue", title="Blue it is")
     assert count(repo) == before + 1, line
@@ -618,7 +618,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     git(mrepo, "add", "old.md")
     git(mrepo, "commit", "-q", "-m", "old.md, to archive")
     w("doc_archive", path="old.md", to="archive")
-    w("ask_new", title="Which way?")
+    w("ask_new", title="Which way?", body=ASK_BODY)
     w("ask_raised", ids=["ASK-1"])
     w("ask_later", id="ASK-1")
     w("ask_answer", id="ASK-1", words="this way", title="This way")

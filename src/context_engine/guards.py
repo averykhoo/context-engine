@@ -1766,6 +1766,97 @@ def delegation_problems(data, body: str, *, new: bool = False) -> list[str]:
     return out
 
 
+# -- an owner question's three parts (FRAMEWORK §5.3; CE-44) ---------------------------------
+
+# The labels a question's body is split on, as a heading (`## Options`), a bold label
+# (`**Options:**`) or, for these names only, a plain one (`Options:`).
+ASK_LABELS = ("question", "context", "background", "why owner-only", "options", "recommendation", "blocks", "log")
+ASK_LABEL_RE = re.compile(
+    r"^[ \t]{0,3}(?:(?P<hashes>#{1,6})[ \t]+(?P<h>[^\n]*?)[ \t]*:?[ \t]*#*[ \t]*$"
+    r"|\*\*(?P<b>[^*\n:]+?)[ \t]*(?::\*\*|\*\*[ \t]*:)[ \t]*(?P<brest>.*)$"
+    rf"|(?P<p>{'|'.join(re.escape(x) for x in ASK_LABELS)})[ \t]*:[ \t]*(?P<prest>.*)$)",
+    re.IGNORECASE,
+)
+ASK_OPTION_RE = re.compile(r"^[ \t]{0,3}(?:(?:[-*+]|\d{1,2}[.)]|[A-Za-z][.)])[ \t]+|#{3,6}[ \t]+)(?P<text>\S.*)$")  # `- A ...`, `1. ...`, `A) ...`, `### A ...`
+ASK_PLACEHOLDER_RE = re.compile(r"<[^<>\n]*>")  # a template's `<the option, and why>`, which says nothing
+ASK_NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
+ASK_EXEMPT_RE = re.compile(r"cost|judge?ment", re.IGNORECASE)  # which exemption a `none` takes: too costly, or human judgement
+# Provenance: JUDGEMENT (CE-44): the fewest words that can hold an option and a reason ("B: it
+# needs no migration"); wrong if a real recommendation with its why is refused, or a bare option passes.
+RECOMMENDATION_MIN_WORDS = 5
+
+
+def ask_parts(body: str) -> dict[str, str]:
+    """A question's body split into its labelled parts (lower-cased label -> text, the label
+    line's own text first), up to `## Log`. A heading deeper than the part's own (`### A` under
+    `## Options`, or under a bold label) stays inside it, unless it is one of ``ASK_LABELS``."""
+    parts: dict[str, str] = {}
+    current, level = None, 0
+    for line in body.replace("\r\n", "\n").split("\n"):
+        m = ASK_LABEL_RE.match(line)
+        if m and m["hashes"]:
+            name = m["h"].strip().rstrip(":").strip().lower()
+            if current is not None and len(m["hashes"]) > level and name not in ASK_LABELS:
+                parts[current] += line + "\n"
+                continue
+            current, level, rest = name, len(m["hashes"]), ""
+        elif m:
+            current, level, rest = (m["b"] or m["p"]).strip().lower(), 2, (m["brest"] if m["b"] else m["prest"]) or ""
+        elif current is not None:
+            parts[current] += line + "\n"
+            continue
+        else:
+            continue
+        if current == "log":
+            break
+        parts[current] = parts.get(current, "") + rest + "\n"
+    parts.pop("log", None)
+    return parts
+
+
+def _said(text: str) -> str:
+    """The text with template placeholders dropped, nested ones too (`<... "none: <why>" ...>`):
+    what it actually says."""
+    while (cut := ASK_PLACEHOLDER_RE.sub("", text)) != text:
+        text = cut
+    return text.strip()
+
+
+def ask_problems(body: str) -> list[str]:
+    """What an owner question's body lacks of the three parts every question states (FRAMEWORK
+    §5.3, DEC-34 and its amendment): context (`Context` or `Background`); two or more options,
+    one list item or `###` heading each, under `Options`; and a recommendation with its reasoning
+    (at least ``RECOMMENDATION_MIN_WORDS`` words), or `none` saying which exemption applies (too
+    costly to reach, or it needs human judgement) and why. `ask new` refuses a body that lacks one;
+    G-W4 fails an open question that does. A part is a heading, a bold label or a plain label
+    (``ASK_LABEL_RE``); a template's `<...>` placeholder counts as nothing.
+
+    Not checked: whether the context, the options or the reasoning are any good (a judgement),
+    that the recommendation names one of the options, and a closed question (its answer is a
+    decision; it is history)."""
+    parts = ask_parts(body)
+    out: list[str] = []
+    if not _said(parts.get("context", "") + parts.get("background", "")):
+        out.append("states no context: a `**Context:**` part saying what led to the question")
+    options = [m["text"] for ln in parts.get("options", "").split("\n") if (m := ASK_OPTION_RE.match(ln)) and _said(m["text"])]
+    if len(options) < 2:
+        out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item each)")
+    rec = _said(parts.get("recommendation", ""))
+    words = len(rec.split())
+    if not rec:
+        out.append("has no recommendation: a `**Recommendation:**` part with the option and why")
+    elif ASK_NONE_RE.match(rec) and not ASK_EXEMPT_RE.search(rec):
+        out.append("recommends `none` without saying which exemption applies: too costly to reach, or it needs human judgement")
+    elif words < RECOMMENDATION_MIN_WORDS:
+        out.append(f"gives its recommendation without reasoning ({words} word{'' if words == 1 else 's'}; the option and why take at least {RECOMMENDATION_MIN_WORDS})")
+    return out
+
+
+ASK_REMEDY = ("give the question a `**Context:**` part, two or more `**Options:**` (one list item each) and a `**Recommendation:**` "
+              "with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>` (FRAMEWORK §5.3; "
+              "manual-mode.md § context-engine ask new has the template)")
+
+
 def delegated_rulings(e: Engine) -> list[Failure]:
     """G-I3 (CE-113): every current decision (`[working] decision`; a `status: deprecated` one is
     history) passes `delegation_problems`, so a ruling made on the owner's delegation is never

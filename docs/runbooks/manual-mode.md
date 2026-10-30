@@ -344,7 +344,10 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W3**: no open baton or pause from a session with 2 or more closes/pauses after it. *Why:
   work carried over from earlier sessions must be done or become a task, not drift.*
 - **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`; and no
-  open question carries `answered:` (an answered question never reopens, § task reopen).
+  open question carries `answered:` (an answered question never reopens, § task reopen); and
+  every open question's body states its context, two or more options and a recommendation
+  with its reasoning, as § ask new says. *Why: the owner answers a question in one line only
+  when it carries what they need to decide.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt.
 - **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
@@ -783,16 +786,27 @@ names the record, so nobody mistakes which one answered.
 ### context-engine ask new
 
 As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null) and
-`blocks: [...]` if it blocks items. Default body:
+`blocks: [...]` if it blocks items. The body states three parts, and the engine refuses one
+that lacks any (with `--body` or `--body-file`; with neither it refuses too): **context**, under
+`Context` or `Background`; **two or more options**, one list item (`- A. ...`, `1. ...`, `A)
+...`) or `###` heading each, under `Options`; and a **recommendation with its reasoning**, at
+least five words, or `none` saying which exemption applies (too costly to reach, or it needs
+human judgement) and why. A part is a heading (`## Options`), a bold label (`**Options:**`) or
+a plain one (`Options:`); a `<...>` placeholder counts as nothing. The template:
 
 ```
 **Question:** <title>
 
-**Why owner-only:**
+**Context:** <what led to the question>
+
+**Why owner-only:** <the "who decides" test>
 
 **Options:**
 
-**Recommendation:** <the option, and why in a line; or "none cheap: <why>" (FRAMEWORK §5.3)>
+- A. <option>
+- B. <option>
+
+**Recommendation:** <the option, and why in a line; or "none (too costly): <why>" or "none (needs human judgement): <why>" (FRAMEWORK §5.3)>
 
 **Blocks:** <ids or none>
 
@@ -800,7 +814,9 @@ As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null)
 ```
 
 Then raise it in chat this session. Ids in `blocks` are not checked to exist (deps are), so
-check them yourself.
+check them yourself. Lint (G-W4) re-checks the three parts on every open question, so one filed
+with `task new --kind question`, or edited since, fails until its body states them; a closed
+question is history and is not checked.
 
 **Already answered in chat** (`--answered <words>` or `--answered-file <words.md>`, with
 `--decision-title <title>`): a question put to the owner through a chat question tool, with no
@@ -819,11 +835,15 @@ Asked in chat and answered there, so it was never open on the board; recorded wi
 ```
 
 and answer it at once, as § context-engine ask answer does, steps 2 to 4, in the same commit. Its
-tier cap is not checked: it is closed before the commit, so it never holds a place there.
+tier cap is not checked: it is closed before the commit, so it never holds a place there. Its
+body need not state the three parts: it was asked and answered in chat, and the decision holds
+the answer.
 
 **Why:** a question waiting on the owner is a board item, so it is ranked and gets raised, never
 buried in prose (FRAMEWORK §5.3). "Why owner-only" makes the asker check that it really is the
-owner's call (P8). A question whose recommendation is cheap to undo is not: record it instead as
+owner's call (P8). The context, the options and a reasoned recommendation let the owner answer
+in one line without reconstructing the problem; the recommendation is skipped only where it
+would cost more than the question is worth, or where no amount of reading can settle it. A question whose recommendation is cheap to undo is not: record it instead as
 your own decision, with your own actor and `decision_status: PROVISIONAL` (§ context-engine
 record new), and flag it in the close digest. An answer given in chat to a question with no record
 is still the owner's words: `--answered` keeps it on the rails `ask answer` uses (a stamped

@@ -18,7 +18,7 @@ from context_engine.config import load
 from context_engine.errors import Refusal
 from context_engine.working import Engine
 
-from conftest import _toml
+from conftest import ASK_BODY, _toml
 from test_commit import _init, git
 from test_working import ACTOR, CONFIG, FRAMEWORK, LEDGER, NOTE, TODAY
 
@@ -178,7 +178,7 @@ def test_orient_names_an_active_plan_whose_items_were_all_closed_outside_the_eng
 def test_ask_answer_refuses_the_last_open_item_an_active_plan_names_until_it_is_frozen(tmp_path):
     """CE-95 (1): an answer closes its question, so it checks the plans as task close does."""
     e = target(tmp_path)
-    q = e.ask_new("Which way?", **W)
+    q = e.ask_new("Which way?", body=ASK_BODY, **W)
     write(tmp_path, PLAN, f"# Plan\n\nACTIVE-PLAN until {q.id} is answered.\n")
     before = snapshot(tmp_path)
     with pytest.raises(Refusal) as r:

@@ -12,6 +12,20 @@ REPO = Path(__file__).resolve().parents[1]
 SESSION = "2026-10-08c"
 ACTOR = "claude-code/test"
 WORKER = Path(__file__).with_name("_worker.py")
+# An owner question's body with the three parts `ask new` requires (FRAMEWORK §5.3, CE-44)
+ASK_BODY = """**Question:** which way?
+
+**Context:** a fixture's question, filed to exercise the engine.
+
+**Options:**
+
+- A. this way
+- B. that way
+
+**Recommendation:** A, since it is the shorter way round.
+
+## Log
+"""
 
 CONFIG = {
     "engine": {"oplog": "ops.jsonl", "lockfile": ".context/engine.lock", "bundles": ["docs/decisions", "tasks"]},

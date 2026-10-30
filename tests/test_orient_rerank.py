@@ -9,6 +9,8 @@ from test_working import CONFIG, _toml, eng, kw, started, task  # noqa: F401  (e
 
 from context_engine.working import Engine
 
+from conftest import ASK_BODY
+
 
 def with_charter(root, last: str | None) -> Engine:
     cfg = {**CONFIG, "guards": {**CONFIG["guards"], "charter": "charter.md"}}
@@ -24,7 +26,7 @@ def test_orient_says_rerank_due_only_when_next_holds_no_task(eng):
     assert eng.rerank_due() == []  # an empty board: nothing to rank
     task(eng, key, "Later work")
     assert eng.rerank_due() == ["NEXT holds no task, 1 open: the sprint is done"]
-    eng.ask_new("A question", pri="NEXT", **kw(key))  # an owner question waits on the owner, not on a rank
+    eng.ask_new("A question", body=ASK_BODY, pri="NEXT", **kw(key))  # an owner question waits on the owner, not on a rank
     assert len(eng.rerank_due()) == 1
     out = eng.orient(key)
     assert "## Rerank due: tell the owner\n- NEXT holds no task" in out
