@@ -155,6 +155,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-105](DEC-105-only-a-closed-session-can-be-followed.md): Only a closed session can be followed *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-106](DEC-106-a-follow-up-names-the-followed-session-in-a.md): A follow-up names the followed session in a follows bullet, not a digest line *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-107](DEC-107-gate-receipt-is-off-by-default-in-the-engine-on.md): gate_receipt is off by default in the engine, on in the kit template and this repo *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-108](DEC-108-task-close-asks-about-residual-risk-through-an.md): task close asks about residual risk through an optional statement plus a reply nudge, not a mandatory flag *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
