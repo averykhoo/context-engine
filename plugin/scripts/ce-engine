@@ -94,7 +94,7 @@ orient_hooks() {
 # PATH) and its --root, when it names one, is this repo. A program or --root that names a variable
 # ($, %) or starts with ~ is not judged: the hook's shell expands it, this one cannot. A
 # stale one (another machine's path, a moved repo or interpreter) fails silently, so beside only
-# stale ones this one runs orient and says which hook it stood in for (CE-146).
+# stale ones this one runs orient and says which hook it stood in for (CE-146, DEC-124).
 stale=
 if [ "$mode" = orient ]; then
   us=$(printf '\037')
