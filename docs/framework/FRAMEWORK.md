@@ -494,7 +494,9 @@ records whose words: `record.confirm(id, words, by, status)` (CLI `record confir
   or `unspecified` by hand (no logged `confirm`) is red (G-I2) until `record.confirm` is run on
   it with the owner's words, so whose words confirmed it are recorded. A successor that replaces
   a confirmed reconstruction starts `unconfirmed` again and is confirmed by asking the owner
-  again.
+  again, in the words of that new answer: their earlier confirmation is never quoted for it, and
+  `record.confirm` refuses words that confirmed a story the successor replaces, directly or down
+  its `supersedes` chain.
 
 What each operation checks and writes, step by step: `manual-mode.md` § context-engine record
 retire and § context-engine record confirm. Lint (G-I2) re-checks the stored files: a

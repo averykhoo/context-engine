@@ -1178,14 +1178,19 @@ unconfirmed`): the owner read it and said it is what they meant. `record confirm
 1. Say whose words they are. `--by owner` (the default) or `human:<id>`; the words are theirs,
    verbatim, written to a file and passed with `--file` (or given as the argument). An agent
    never confirms a story on its own: stop, and ask the owner (FRAMEWORK §11.4 asks once, for
-   all of them, in one batched question).
+   all of them, in one batched question). A successor that replaces a confirmed reconstruction
+   (§ context-engine record retire, step 5) is confirmed by asking the owner again, in the words
+   of that new answer: their earlier confirmation is never quoted for it.
 2. Check before any change. The record must be a story whose `actor` is an agent's
    reconstruction and which is not `retired` (to bring a retired story's intent back, record a
    new story); its hash must match (as § context-engine record amend). A story that an earlier
    `confirm` line of the op log confirmed is not confirmed again, even if a hand edit has since
    made it `unconfirmed`: stop, and restore it from git. A reconstruction already `live` or
    `unspecified` with no such line was confirmed by hand: confirm it here, so whose words
-   confirmed it are recorded.
+   confirmed it are recorded. Follow the story's `supersedes` links, and theirs in turn: if the
+   words are those of a `confirmed (by <who>): <words>` amendment on any story found there
+   (whitespace aside), stop, and ask the owner again; if they answer in the very same words,
+   quote them with when and where they said them.
 3. Set `story_status: live`, or `unspecified` with `--status unspecified` when no criterion comes
    from the story yet (lint G-T1 fails a `live` story with none). Leave `actor` as it is. Then
    append an amendment as in § context-engine record amend, with the text `confirmed (by
@@ -1198,7 +1203,9 @@ story's amendments, and the op log line is what lint reads. G-I2 fails a reconst
 `live` or `unspecified` with no logged `confirm` (a hand edit of `story_status`, which lint cannot
 otherwise tell from any other, since the op log records keys, not values), and a story that a
 logged `confirm` confirmed but that is `unconfirmed` again. The `actor` stays the agent's because
-provenance is never rewritten: the words above `## Amendments` are still the agent's.
+provenance is never rewritten: the words above `## Amendments` are still the agent's. A
+successor is asked about afresh because the owner confirmed the record it replaces, not this
+one: their earlier words, quoted here, would record a confirmation they never gave for it.
 
 ## Decisions
 

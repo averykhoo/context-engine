@@ -13,6 +13,9 @@ here: it is on the board.
 - The roster: every role the session delegates, with what it runs as, its model tier, what it
   writes and what it returns, the arbiter on `fable` where the owner asked for it; the kit
   ships the roster as text, not as named agents (§6.6) — DEC-18, CE-39.
+- A replaced reconstruction is confirmed by asking the owner again, never by quoting their
+  earlier confirmation; `record confirm` refuses the words that confirmed a story the successor
+  replaces (§3.2) — DEC-66, CE-102.
 
 ## 0.5, 2026-10-23: FRAMEWORK.md cut to what a user needs (CE-93)
 

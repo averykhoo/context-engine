@@ -124,6 +124,31 @@ def test_a_reconstruction_is_never_created_live_or_unspecified(chain, status):
     assert make(chain, off=["G-I2"]).record_new("story", "Off", "words", {**RECON, "story_status": status}, **W).id == "US-3"
 
 
+@pytest.mark.criterion("AC-112")
+def test_a_successor_is_not_confirmed_in_the_words_that_confirmed_a_story_it_replaces(chain):
+    """DEC-66: a replaced reconstruction is re-confirmed by asking the owner again, never by
+    quoting the owner's earlier confirmation, however far back the `supersedes` chain."""
+    e = make(chain)
+    for title in ("Rebuilt", "Again", "Once more"):
+        e.record_new("story", title, "words", RECON, **W)  # US-3, US-4, US-5: one reconstruction's words
+    words = "yes, that is what I meant\nkeep it"
+    e.confirm("US-3", words, **W)
+    e.retire("US-3", "it named the wrong goal", by="agent", superseded_by="US-4", **W)
+    for quoted in (words, "yes, that is   what I meant keep it", "  yes, that is what I meant\n  keep it\n"):  # re-wrapped is the same words
+        before = snapshot(chain)
+        with pytest.raises(Refusal, match=r"these are the words that confirmed US-3, which US-4 replaces.*asking the owner again, never by quoting"):
+            e.confirm("US-4", quoted, **W)
+        assert snapshot(chain) == before
+    e.retire("US-4", "it named the wrong actor", by="agent", superseded_by="US-5", **W)  # never confirmed: the chain goes on to US-3
+    with pytest.raises(Refusal, match=r"these are the words that confirmed US-3, which US-5 replaces"):
+        e.confirm("US-5", words, **W)
+    assert e.confirm("US-5", "yes, asked again today: that is it", **W).startswith("US-5: confirmed by owner")
+    assert reds(e, "G-I2") == []
+    # a story that replaces none, and an owner's words that happen to match another story's, pass
+    e.record_new("story", "Other", "words", RECON, **W)  # US-6
+    assert e.confirm("US-6", words, **W).startswith("US-6: confirmed by owner")
+
+
 # -- G-I2 on confirmations -----------------------------------------------------------------
 
 

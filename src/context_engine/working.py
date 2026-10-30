@@ -45,6 +45,21 @@ CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the r
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
 PIN_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)(?:\.\*)?")
+AMENDMENT_ENTRY_RE = re.compile(r"^- \*\*[^\n]*?\):\*\* (.*?)(?=^- \*\*|\Z)", re.MULTILINE | re.DOTALL)  # store.py::amended's entries
+CONFIRMED_RE = re.compile(r"confirmed \(by [^)]*\): (.*)")  # Engine.confirm's amendment text
+
+
+def confirmation_words(body: str) -> list[str]:
+    """The words of each `confirmed (by <who>): <words>` amendment of a story's body, each with
+    its whitespace collapsed (the entry's own indentation included), so a quote re-wrapped or
+    re-indented is still the same words."""
+    out = []
+    for m in AMENDMENT_ENTRY_RE.finditer(okf.get_section(body, "Amendments") or ""):
+        if c := CONFIRMED_RE.fullmatch(" ".join(m.group(1).split())):
+            out.append(c.group(1))
+    return out
+
+
 BRIEF_MAX = 120  # FRAMEWORK §5.2: a constraint, not a summary
 BOARD_OWNED = {
     "state": "close or reopen",
@@ -1366,7 +1381,8 @@ class Engine:
         agent's: provenance is never rewritten. A confirmation is not redone: a story that a logged
         `confirm` confirmed is refused, whatever its frontmatter says now. A reconstruction made
         `live` or `unspecified` by hand, with no logged `confirm`, may be confirmed here to record
-        whose words confirmed it."""
+        whose words confirmed it. A successor is confirmed in new words: words that confirmed a
+        story it supersedes, directly or down the chain, are refused (DEC-66)."""
         self._check(session, actor)
         kind = self.store.config.guards.stories
         if not kind:
@@ -1399,6 +1415,23 @@ class Engine:
                               "`record confirm` confirms a story an agent reconstructed (`actor: agent (reconstructed from ...)`); an owner's story is recorded `live` at `record new`")
             if now not in ("unconfirmed", *G.CONFIRMED):
                 raise Refusal(f"{rid} is `story_status: {now}`, none of unconfirmed, live, unspecified", "restore `story_status` from git (`git log -p` on the file)")
+            # a successor is re-confirmed by asking the owner again, never by quoting the words that
+            # confirmed a story it replaces, however far back the `supersedes` chain (DEC-66, CE-102)
+            said = " ".join(words.split())
+            seen, todo = {rid}, [str(s) for s in D.as_list(d.get("supersedes"))]
+            while todo:
+                pid = todo.pop(0)
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                try:
+                    old = self.store.get(pid).doc
+                except Refusal:
+                    continue  # a dangling link is G-I2's to report, not a reason to refuse here
+                if said in confirmation_words(old.body):
+                    raise Refusal(f"these are the words that confirmed {pid}, which {rid} replaces",
+                                  f"a replaced reconstruction is confirmed by asking the owner again, never by quoting their earlier confirmation (FRAMEWORK §3.2): ask them to confirm {rid} and pass their new words; if they answer with the very same words, quote them with when and where they said them")
+                todo += [str(s) for s in D.as_list(old.get("supersedes"))]
             d.set("story_status", status)
             return {rid: ["story_status"]}
 
