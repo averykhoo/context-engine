@@ -1353,46 +1353,69 @@ AMENDS = "Layout B.\n\n## Amendments\n\n- **2026-10-12 (owner):** a note that wa
 
 @pytest.mark.criterion("AC-101")
 @pytest.mark.parametrize(
-    "body, fields, match",
+    "body, fields, match, remedy",
     [
-        (None, {"ruled_by": "Owner"}, "`ruled_by: Owner`"),
-        (None, {"ruled_by": "OWNER"}, "`ruled_by: OWNER`"),
-        (None, {"actor": "Owner"}, "stamped `actor: Owner`"),
-        (None, {"actor": "Human:avery"}, "stamped `actor: Human:avery`"),
-        (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{AMENDS}', {}, "holds a `## Amendments` line"),
+        (None, {"ruled_by": "Owner"}, "`ruled_by: Owner`", "ruled_by=<who ruled>"),
+        (None, {"ruled_by": "OWNER"}, "`ruled_by: OWNER`", "ruled_by=<who ruled>"),
+        (None, {"actor": "Owner"}, "stamped `actor: Owner`", "ruled_by=<who ruled>"),
+        (None, {"actor": "Human:avery"}, "stamped `actor: Human:avery`", "ruled_by=<who ruled>"),
+        (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{AMENDS}', {}, "holds a `## Amendments` line", "record amend"),
     ],
     ids=["ruled_by-Owner", "ruled_by-OWNER", "actor-Owner", "actor-Human", "amendments-in-ruling"],
 )
-def test_record_new_refuses_the_owner_in_any_case_and_an_amendments_line_in_a_ruling(eng, body, fields, match):
+def test_record_new_refuses_the_owner_in_any_case_and_an_amendments_line_in_a_ruling(eng, body, fields, match, remedy):
     """CE-138: `owner` and `human:` name the owner whatever their case, and a `## Amendments` line
     in the text being recorded would put what follows it outside `body_sha`, reading as a later
     amendment; `record new` refuses both before any byte."""
     with pytest.raises(Refusal, match=re.escape(match)) as got:
         delegated(eng, body=body, **fields)
-    assert "ruled_by=<who ruled>" in got.value.remedy and "record amend" in got.value.remedy
-    assert not list(eng.store.records("decision"))
-    with pytest.raises(Refusal, match=re.escape("holds a `## Amendments` line")):
-        dec(eng, body=AMENDS)  # the owner's own decision too: nothing is recorded as an amendment
+    assert remedy in got.value.remedy
     assert not list(eng.store.records("decision"))
 
 
 @pytest.mark.criterion("AC-101")
 @pytest.mark.parametrize(
-    "words, kw, match",
+    "words, kw, match, remedy",
     [
-        (OWNER_DELEGATES, {"ruling": RULING, "ruled_by": "Owner"}, "`ruled_by: Owner`"),
-        (OWNER_DELEGATES, {"ruling": AMENDS, "ruled_by": "claude-code/fable"}, "holds a `## Amendments` line"),
-        (AMENDS, {}, "holds a `## Amendments` line"),
+        (OWNER_DELEGATES, {"ruling": RULING, "ruled_by": "Owner"}, "`ruled_by: Owner`", "in any case"),
+        (OWNER_DELEGATES, {"ruling": AMENDS, "ruled_by": "claude-code/fable"}, "holds a `## Amendments` line", "record amend"),
+        (AMENDS, {}, "holds a `## Amendments` line", "record amend"),
     ],
     ids=["ruled_by-Owner", "amendments-in-ruling", "amendments-in-words"],
 )
-def test_ask_answer_refuses_the_owner_in_any_case_and_an_amendments_line(eng, words, kw, match):
+def test_ask_answer_refuses_the_owner_in_any_case_and_an_amendments_line(eng, words, kw, match, remedy):
     q = eng.ask_new("Which index layout?", body=ASK_BODY, **W)
     before = eng.store.get(q.id).path.read_bytes()
     with pytest.raises(Refusal, match=re.escape(match)) as got:
         eng.ask_answer(q.id, words, title="Layout B", **kw, **W)
-    assert "in any case" in got.value.remedy and "record amend" in got.value.remedy
+    assert remedy in got.value.remedy
     assert eng.store.get(q.id).path.read_bytes() == before and not list(eng.store.records("decision"))
+
+
+@pytest.mark.criterion("AC-140")
+@pytest.mark.parametrize("off", [[], ["G-I3"]], ids=["guards-on", "G-I3-off"])
+def test_an_amendments_line_is_refused_in_every_append_only_record_new_whatever_guards_are_off(tmp_path, off):
+    """CE-147: a `## Amendments` line in a text being recorded puts what follows it outside
+    `body_sha`, where it reads as a later amendment. `record new` refuses it for a story as for a
+    decision, and `record new` and `ask answer` refuse it with G-I3 switched off too: it guards the
+    stamp, not G-I3's rule. A `## Amendments` heading with trailing blanks counts; a mention in a
+    sentence does not."""
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": off}}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    for kind, fields in (("story", {"actor": "owner"}), ("decision", {"actor": "owner", "decision_status": "BUILT"})):
+        for body in (AMENDS, AMENDS.replace("## Amendments\n", "## Amendments  \r\n")):
+            with pytest.raises(Refusal, match=re.escape(f"the {kind} holds a `## Amendments` line")) as got:
+                e.record_new(kind, "Words", body, fields, **W)
+            assert "record amend" in got.value.remedy
+            with pytest.raises(Refusal, match=re.escape("holds a `## Amendments` line")):
+                e.record_new(kind, "Words", body, fields, rid=f"{e.store.config.kind(kind).prefix}-9", **W)
+        assert not list(e.store.records(kind))
+    q = e.ask_new("Which index layout?", body=ASK_BODY, **W)
+    with pytest.raises(Refusal, match=re.escape("holds a `## Amendments` line")):
+        e.ask_answer(q.id, AMENDS, title="Layout B", **W)
+    assert not list(e.store.records("decision")) and not (tmp_path / "stories").exists()
+    sid = e.record_new("story", "Words", "The `## Amendments` heading is where notes go.\n", {"actor": "owner"}, **W).id
+    assert "## Amendments" in e.store.get(sid).doc.body
 
 
 @pytest.mark.criterion("AC-101")

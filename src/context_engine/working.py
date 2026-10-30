@@ -1167,9 +1167,12 @@ class Engine:
             fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
             body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
                     f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
-        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
+        if amends := G.amendments_in_new_text(body):  # whatever `[guards] off` says (CE-147)
+            raise Refusal(f"the decision answering {rid} {amends}",
+                          "neither the owner's words nor the ruling holds a `## Amendments` line; once the decision exists, a later note goes in with `record amend <id> \"<text>\"`")
+        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
             raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
-                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading, and neither part holds a `## Amendments` line (a later note goes in with `record amend`)")
+                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading")
         return fields, body
 
     def _is_question(self, rid: str) -> None:
@@ -1439,9 +1442,11 @@ class Engine:
                 fields[key] = session
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
-        if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
+        if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147)
+            raise Refusal(f"the {kind} {amends}", f"record the {kind}'s text without that line; once it exists, a later note goes in with `record amend <id> \"<text>\"`")
+        if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
             raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
-                          f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`; no decision's text holds a `## Amendments` line when it is recorded (a later note goes in with `record amend`)")
+                          f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`")
         if rid.strip():
             return self.store.create_many(kind, [(rid.strip(), fields, body.strip("\n") + "\n")], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)

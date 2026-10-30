@@ -465,7 +465,9 @@ intent only once accepted.
 **As records:** a story file is an append-only record (§8.0.1). `record.new` (CLI
 `record new story`) writes the owner's words with `actor` and `via`; `record.amend` appends an
 entry under `## Amendments`, keyed by session and actor; `record.stamp` freezes `body_sha` once.
-The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words goes red.
+The body hash (G-D10) makes "verbatim" mechanical: rewriting the owner's words goes red, and
+`record.new` refuses words holding a `## Amendments` line, whose text below it the hash would
+leave out (§6.5).
 
 **Retiring a story** is owner intent too, so it is an operation that records who and why:
 `record.retire(id, why, by, superseded_by)` (CLI `record retire`).
@@ -1279,7 +1281,9 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 **Operations:** `record.new` (CLI `record new decision`), `record.amend` (appends an entry under
 `## Amendments`, keyed by session and actor; the only allowed body change), `record.stamp`
 (freezes `body_sha` once; nothing ever replaces it) and `record.correct` (below) work on every
-append-only kind. Then:
+append-only kind. `record.new` of any append-only kind, and `ask.answer`, refuse a text holding a
+`## Amendments` line, whatever `[guards] off` names: the text below it would fall outside
+`body_sha` and read as a later amendment, and at rest no guard can tell it from a real one. Then:
 - `decision.supersede(old, new)` sets both directions under one lock and derives OKF `status`;
 - `decision.set(id, fields, unset)` changes a decision's own keys (`decision_status`,
   `reopen_if`, `tags`, `title`, `description`) and refuses the rest: a link, the derived
@@ -1996,13 +2000,12 @@ doc measured before the trial starts.
   `owner` or `human:<id>` alone (both matched in any case), and holds the owner's delegating words
   above a `## Ruling` section that holds the ruling, neither part empty; a decision without
   `ruled_by` has no `## Ruling` section. `record.new` and `ask.answer` refuse what G-I3 would fail,
-  by the same check, and with it a decision text holding a `## Amendments` line (the text below it
-  would fall outside `body_sha` and read as a later amendment). Not checked: a delegated ruling
-  recorded with neither `ruled_by` nor `## Ruling` (it reads as the owner's own; only the
-  transcript can tell, so it is the recorder's duty at the write, §6.5), whether the words above
-  `## Ruling` are the owner's, whether `ruled_by` names who really ruled, a text written by hand
-  with a `## Amendments` line of its own (at rest it reads as a real amendment), and a superseded
-  decision (history). Off while `[working] decision` is unset.
+  by the same check. Not checked: a delegated ruling recorded with neither `ruled_by` nor
+  `## Ruling` (it reads as the owner's own; only the transcript can tell, so it is the recorder's
+  duty at the write, §6.5), whether the words above `## Ruling` are the owner's, whether `ruled_by`
+  names who really ruled, a text written by hand with a `## Amendments` line of its own (at rest
+  it reads as a real amendment; the writes refuse one whatever `[guards] off` names, §6.5), and a
+  superseded decision (history). Off while `[working] decision` is unset.
 
 The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,

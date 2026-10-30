@@ -2139,7 +2139,19 @@ def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[t
     return out
 
 
-def delegation_problems(data, body: str, *, new: bool = False) -> list[str]:
+AMENDMENTS_IN_NEW_TEXT = "holds a `## Amendments` line in the text being recorded, so the text below it would fall outside `body_sha` and read as a later amendment, not as the words recorded"
+
+
+def amendments_in_new_text(body: str) -> str:
+    """What is wrong with a text about to be recorded as an append-only record's own words, or ""
+    (CE-147, DEC-88): a `## Amendments` line anywhere in it puts the text below that line outside
+    `body_sha`, where it reads as a later amendment. `record new` (every append-only kind) and `ask
+    answer` refuse it whatever `[guards] off` names: it guards the stamp, not one guard's rule. At
+    rest the line is the amendments' own, so lint cannot tell a hand-written one apart."""
+    return AMENDMENTS_IN_NEW_TEXT if okf.AMENDMENTS_HEADING.search(body.replace("\r\n", "\n")) else ""
+
+
+def delegation_problems(data, body: str) -> list[str]:
     """G-I3 on one decision (CE-113): a ruling made on the owner's delegation names who ruled and
     keeps the owner's words apart from it. With `ruled_by`: it names someone other than the owner;
     the `actor` is not a lone `owner` or `human:<id>` (the ruling is not that human's own words or
@@ -2148,14 +2160,10 @@ def delegation_problems(data, body: str, *, new: bool = False) -> list[str]:
     Ruling` section, which would be a ruling with nobody named as having made it. ``data`` is the
     frontmatter (a mapping: a `ruled_by` key that is present but blank counts); ``body`` the text.
     `owner` and `human:` are matched in any case (CE-138). `record new` and `ask answer` call it
-    too, on what they are about to write, with ``new``: then a `## Amendments` line anywhere in
-    the text is refused as well (CE-138), since the text below it would fall outside `body_sha`
-    and read as a later amendment; at rest that line is the amendments' own, so lint cannot."""
+    too, on what they are about to write, after `amendments_in_new_text` (CE-147)."""
     text = body.replace("\r\n", "\n")
     m = okf.AMENDMENTS_HEADING.search(text)
-    out = []
-    if new and m:
-        out.append("holds a `## Amendments` line in the text being recorded, so the text below it would fall outside `body_sha` and read as a later amendment, not as the words recorded")
+    out: list[str] = []
     text = text[: m.start()] if m else text
     ruling = RULING_RE.search(text)
     if RULED_BY not in data:
