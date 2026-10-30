@@ -987,7 +987,7 @@ def instant(value: object) -> dt.datetime | None:
 
 
 def stale(e: Engine) -> list[Failure]:
-    """G-D4's freshness half (FRAMEWORK §9.3, CE-136): no live item carries an expired
+    """G-D4's freshness half (FRAMEWORK §9.3, CE-136, DEC-120): no live item carries an expired
     `stale_after`. Read in three places: the frontmatter of every record of every kind that is
     live (not `status: deprecated`, and its `state`, where it has one, not closed, done or
     expired); the `stale_after` cell of each criterion of `[working] criteria` that is not
@@ -1973,7 +1973,7 @@ def charter_head(text: str) -> okf.Document | None:
 
 
 def charter_problems(text: str) -> list[tuple[str, str]]:
-    """G-I1 on the charter's lifecycle keys (FRAMEWORK §9.3.1, CE-136), as (message, remedy):
+    """G-I1 on the charter's lifecycle keys (FRAMEWORK §9.3.1, CE-136, DEC-120), as (message, remedy):
     where it has frontmatter, a `charter_status` from the vocabulary (`CHARTER_STATUSES`) and an
     OKF `status`, where present, of `draft`, `stable` or `deprecated` only, since the charter's own
     state goes in `charter_status`. A charter with no frontmatter (the kit's) or none of these

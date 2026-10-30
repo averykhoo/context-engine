@@ -2557,7 +2557,7 @@ class Engine:
 
     def unconfirmed_charter(self) -> list[str]:
         """The charter (`[guards] charter`) when its `charter_status` is `unconfirmed`: an agent's
-        reconstruction the owner has not reviewed (FRAMEWORK §3.1, §11.4; CE-136). Orient asks at
+        reconstruction the owner has not reviewed (FRAMEWORK §3.1, §11.4; CE-136, DEC-120). Orient asks at
         every session start until it is confirmed; lint does not fail it, since a migrated repo
         starts there. Off while `charter` is unset or G-I1 is off.
 
