@@ -4,13 +4,15 @@ id: CE-142
 title: G-D3 checks backticked repo paths in prose, not only links and file::symbol
 brief: Must tell a pointer from a glob, placeholder or example; sabotage with CE-93 verify-2's S3 rename
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-30a
+updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 G-D3 checks backticked repo paths in prose, not only links and file::symbol
@@ -30,3 +32,6 @@ Extend G-D3 (or add a guard) so a backticked path to a repo file resolves, sabot
 - `guards.py::links`; `guards.py::Files`; FRAMEWORK §8.3 G-D3
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 395088f (lane 057715d), cite in 78ed041, release note in b3331f7: G-D3 checks backticked file names and repo paths in the docs a new [guards] paths list names (guards.py::path_pointers, config.py::Guards.paths; kit ships paths = []); CE-93's S3 rename now turns lint red; FRAMEWORK §8.3 says what is not checked; AC-107 tested; DEC-113
+  residual risk: none
