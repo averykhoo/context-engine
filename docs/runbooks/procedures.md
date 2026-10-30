@@ -109,6 +109,12 @@ delegating words apart from the ruling: `context-engine ask answer <id> --file <
 section ([§ ask answer](manual-mode.md#context-engine-ask-answer); lint G-I3). Never `actor:
 owner` on the agent's own call.
 
+Records that cite each other (a batch of linked tasks, a decision and the tasks it names, a draft
+an agent writes that cites a record the coordinator has not written yet) get their ids first:
+`context-engine id reserve <kind> --count <n>`, then each record is written with `--id`
+([§ id reserve](manual-mode.md#context-engine-id-reserve)). Never cite a guessed next number or a
+`DEC-<NEW>` placeholder: lint fails a placeholder (G-D2) and an id no record has (G-D3).
+
 ## Clean close (§6.3)
 
 A natural stopping point. **Close eagerly: as soon as every task you were asked for is done, in

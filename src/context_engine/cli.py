@@ -90,7 +90,7 @@ def build() -> argparse.ArgumentParser:
     n.add_argument("--brief", default="", help="a constraint, not a summary; at most 120 characters")
     n.add_argument("--deps", default="", help="the ids it depends on, comma- or space-separated")
     n.add_argument("--body", default="", help="the item's body (default: the title, then empty ## Traps, ## Read first and ## Log)")
-    n.add_argument("--id", default="", help="keep an imported number: a never-used id of the kind's series (default: the next free one)")
+    n.add_argument("--id", default="", help="an id this session reserved (`id reserve`), or keep an imported number: a never-used id of the kind's series (default: the next free one)")
     n.add_argument("--goals", default="", help="the charter goals it serves, e.g. G-2,G-7; required where [guards] task_goals names the kind")
     st = _sub(t, "set", "set or unset frontmatter fields no operation owns (e.g. brief, labels, aliases)")
     st.add_argument("id", help="the item's id")
@@ -132,6 +132,11 @@ def build() -> argparse.ArgumentParser:
     sh.add_argument("--section", help="show only this ## section")
     sh.add_argument("--head", type=int, default=5, help="how many of the newest ## Log entries to show (0: all; default: 5)")
 
+    ir = _sub(groups, "id", "ids reserved before a batch of records that cite each other is written (G-D2, CE-105)").add_subparsers(dest="op", required=True)
+    irr = _sub(ir, "reserve", "hold the next ids of a kind's series for this session: cite them, then write each record with --id")
+    irr.add_argument("kind", help="a board or append-only kind from context.toml, e.g. task or decision")
+    irr.add_argument("--count", type=int, default=1, help="how many ids, from 1 to 20 (default: 1)")
+
     a = _sub(groups, "ask", "owner questions, ASK-n (FRAMEWORK §5.3)").add_subparsers(dest="op", required=True)
     an = _sub(a, "new", "file an owner question; raise it in chat this session")
     an.add_argument("title", help="the question, in one line")
@@ -139,7 +144,7 @@ def build() -> argparse.ArgumentParser:
     an.add_argument("--brief", default="", help="a constraint, not a summary; at most 120 characters")
     an.add_argument("--blocks", default="", help="the ids it blocks, comma- or space-separated")
     an.add_argument("--body", default="", help="the question's body (default: a Question, Options, Recommendation skeleton)")
-    an.add_argument("--id", default="", help="keep an imported number, e.g. ASK-8 for Q8 (default: the next free one)")
+    an.add_argument("--id", default="", help="an id this session reserved (`id reserve`), or keep an imported number, e.g. ASK-8 for Q8 (default: the next free one)")
     ar = _sub(a, "raised", "record that these questions were raised in chat this session")
     ar.add_argument("ids", nargs="+", help="the question ids, comma- or space-separated")
     al = _sub(a, "later", "the owner deferred the question: stop it counting as overdue for now")
@@ -178,6 +183,7 @@ def build() -> argparse.ArgumentParser:
     rn.add_argument("kind", help="an append-only kind, e.g. decision or story")
     rn.add_argument("title", help="the record's title")
     rn.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="a frontmatter field, e.g. actor=owner; repeat for each")
+    rn.add_argument("--id", default="", help="an id this session reserved (`id reserve`), cited before the record was written (default: the next free one)")
     body = rn.add_mutually_exclusive_group(required=True)
     body.add_argument("--body", help="the record's text (owner words verbatim)")
     body.add_argument("--file", type=Path, help="read the body from a file (owner words keep their line breaks)")
@@ -286,6 +292,7 @@ CLI_OPS = {
     ("lint", None): "lint",
     **{("task", v): f"task_{v}" for v in ("new", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
     **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer")},
+    ("id", "reserve"): "id_reserve",
     ("baton", "list"): "baton_list",
     ("baton", "add"): "baton_add",
     ("baton", "done"): "baton_done",

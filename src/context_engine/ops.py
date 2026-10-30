@@ -165,7 +165,7 @@ def lint(e: Engine, c: Caller, working: bool = False) -> tuple[int, str]:
 
 @op(write=True)
 def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", id: str = "", goals: list[str] | None = None) -> tuple[int, str]:
-    """File a board item. `brief` is a constraint, not a summary (at most 120 characters). `id` keeps an imported number (a never-used id of the kind's series); none takes the next. `goals` names the charter goals (G-n) a task serves; required where `[guards] task_goals` names the kind."""
+    """File a board item. `brief` is a constraint, not a summary (at most 120 characters). `id` is one this session reserved (`id_reserve`), or keeps an imported number (a never-used id of the kind's series); none takes the next. `goals` names the charter goals (G-n) a task serves; required where `[guards] task_goals` names the kind."""
     rec = e.new(kind, title, pri=pri, brief=brief, deps=deps or [], body=body, rid=id, goals=goals or [], **c.kw)
     return 0, f"{rec.id}: created at {pri} ({_rel(e, rec.path)})"
 
@@ -231,12 +231,21 @@ def task_show(e: Engine, c: Caller, id: str, section: str | None = None, head: i
     return 0, e.show(id, section=section, head=head).rstrip("\n")
 
 
+# -- ids (FRAMEWORK §8.3 G-D2, CE-105, CE-119) -----------------------------------------------
+
+
+@op(write=True)
+def id_reserve(e: Engine, c: Caller, kind: str, count: int = 1) -> tuple[int, str]:
+    """Reserve the next `count` ids (1 to 20) of a board or append-only kind's series for this session, before writing a batch of records that cite each other, or a draft that cites a record not yet written: cite the ids, then write each with `task_new`, `ask_new` or `record_new` `id=`. No other write hands a reserved id out, and another session's `id=` is refused; one never written stays a gap (ids are never reused). Never cite a guessed id or a `DEC-<NEW>` placeholder."""
+    return 0, e.reserve(kind, count, **c.kw)
+
+
 # -- owner questions (FRAMEWORK §5.3) -----------------------------------------------------
 
 
 @op(write=True)
 def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "") -> tuple[int, str]:
-    """File an owner question (ASK-n); raise it in chat this session. `id` keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8])."""
+    """File an owner question (ASK-n); raise it in chat this session. `id` is one this session reserved (`id_reserve`), or keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8])."""
     rec = e.ask_new(title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, **c.kw)
     return 0, f"{rec.id}: question created at {pri}; raise it in chat this session"
 
@@ -302,9 +311,9 @@ def pause_resume(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 
 @op(write=True)
-def record_new(e: Engine, c: Caller, kind: str, title: str, body: str, fields: dict[str, str] | None = None) -> tuple[int, str]:
-    """A new decision or story, stamped when it is created. Owner words go in `body` verbatim; set actor=owner in `fields`. A ruling made on the owner's delegation: `ruled_by` (who ruled) and an actor that is not the owner alone (`owner asked`) in `fields`, and a body of the owner's delegating words verbatim, then a `## Ruling` section holding the ruling."""
-    rec = e.record_new(kind, title, body, fields or {}, **c.kw)
+def record_new(e: Engine, c: Caller, kind: str, title: str, body: str, fields: dict[str, str] | None = None, id: str = "") -> tuple[int, str]:
+    """A new decision or story, stamped when it is created, with the next free id or `id` (one this session reserved with `id_reserve`). Owner words go in `body` verbatim; set actor=owner in `fields`. A ruling made on the owner's delegation: `ruled_by` (who ruled) and an actor that is not the owner alone (`owner asked`) in `fields`, and a body of the owner's delegating words verbatim, then a `## Ruling` section holding the ruling."""
+    rec = e.record_new(kind, title, body, fields or {}, rid=id, **c.kw)
     return 0, f"{rec.id}: created and stamped ({_rel(e, rec.path)})"
 
 

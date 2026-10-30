@@ -153,6 +153,9 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
 - Applies to stories, criteria, decisions, tasks and questions, and also to rule numbers,
   procedure step numbers, guard check numbers and the section numbers of this document.
 - Cite stable keys, never line numbers.
+- **An id is cited only once it exists or is reserved.** Records that cite each other, written in
+  one batch or by an agent that cannot learn the id, reserve their ids first (`id.reserve`) and are
+  written with them; never a guessed next number, never a placeholder such as `DEC-<NEW>`.
 - Code is cited as `file::symbol`.
 - **One standard id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
   questions, register entries): `[A-Z]+-[1-9][0-9]*`, a prefix of capitals, a dash, and a number
@@ -1853,6 +1856,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
+| Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
@@ -1943,8 +1947,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   `max_lines`, `max_bytes` and `max_width` on a `[[routes]]` entry, applied to the routed file
   or to each `.md` under a routed directory. Table rows are exempt from the width cap.
 - **G-D2:** ids are unique within their series and never reused; a new id is allocated after
-  scanning open and closed items. In the stored files, no two files carry one id, and the op log never
-  shows an id created twice.
+  scanning open and closed items, above every id the op log shows reserved (`id.reserve`). In the
+  stored files, no two files carry one id, and the op log never shows an id created twice.
 - **G-D3:** every link and `file::symbol` resolves, case-exact. The lint reads the docs
   `[guards] links` lists, and checks relative links with their `#anchor`s and backticked
   `file::symbol` spans; a bare file name resolves to any file of that name that git does not

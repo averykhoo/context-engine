@@ -51,7 +51,8 @@ CALLS = {
     "hk_expire_batons": ([], {}),
     "pause_open": (["--in-flight", "i", "--resume", "r", "--evidence", "e", "--deferred", "d"], {"in_flight": "i", "resume": "r", "evidence": "e", "deferred": ["d"]}),
     "pause_resume": (["PAU-1"], {"id": "PAU-1"}),
-    "record_new": (["decision", "T", "--body", "words", "--set", "actor=owner"], {"kind": "decision", "title": "T", "body": "words", "fields": {"actor": "owner"}}),
+    "record_new": (["decision", "T", "--body", "words", "--set", "actor=owner", "--id", "DEC-7"], {"kind": "decision", "title": "T", "body": "words", "fields": {"actor": "owner"}, "id": "DEC-7"}),
+    "id_reserve": (["decision", "--count", "3"], {"kind": "decision", "count": 3}),
     "record_stamp": (["DEC-1", "DEC-2"], {"ids": ["DEC-1", "DEC-2"]}),
     "record_amend": (["DEC-1", "more"], {"id": "DEC-1", "text": "more"}),
     "record_correct": (["DEC-1", "--after", "a", "--text", "b"], {"id": "DEC-1", "after": "a", "text": "b"}),
@@ -181,6 +182,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("task_reopen", id="CE-2", msg="not yet")
     w("task_promote", id="CE-2", pri="NEXT")
     w("ask_new", title="Which way?")
+    w("id_reserve", kind="task", count=2)
     w("ask_raised", ids=["ASK-1"])
     w("ask_later", id="ASK-1")
     w("ask_answer", id="ASK-1", words="this way", title="This way")

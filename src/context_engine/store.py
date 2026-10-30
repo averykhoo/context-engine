@@ -48,6 +48,11 @@ TOOL_OWNED = ("type", "id", "body_sha")
 ALIASES = "aliases"
 ALIAS_RE = re.compile(r"(?!.*::)[A-Za-z0-9!#$%&()*+\-.:;<=>?@\\^_|~]+")  # fullmatch: printable ASCII, no quote, comma, bracket, brace, `/`, `::` or space
 RESERVED_MD = ("index.md", "log.md")  # OKF §3.1
+RESERVE_OP = "id.reserve"  # the op log line that holds a reserved id (CE-105, CE-119)
+# The most ids one `id reserve` hands out: a batch of linked records, not a block of the series; a
+# typo of a count would otherwise burn ids for good (they are never reused). provenance: JUDGEMENT,
+# CE-105; wrong if a real batch of linked records needs more.
+RESERVE_MAX = 20
 
 
 @dataclass
@@ -317,6 +322,49 @@ class Store:
             if isinstance(op, dict) and op.get("op") in ("new", "import") and op.get("id"):
                 out.add(str(op["id"]))
         return out
+
+    def reserved_ids(self, kind: Kind | None = None) -> dict[str, str]:
+        """Every id an `id.reserve` op line holds (of ``kind``'s series, or of any), with the
+        session that reserved it, the first line's if two name one id (CE-105). A reserved id is
+        held for good: no other write hands it out (``new`` skips it, ``create_many`` refuses it to
+        every other session), and one never written stays a gap, since ids are never reused."""
+        path = self.root / self.config.oplog
+        if not path.is_file():
+            return {}
+        out: dict[str, str] = {}
+        tag = f'"{RESERVE_OP}"'
+        for line in path.read_bytes().decode("utf-8", errors="replace").splitlines():
+            if tag not in line:  # cheap: allocation reads this under the lock (CE-88)
+                continue
+            try:
+                op = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(op, dict) and op.get("op") == RESERVE_OP and op.get("id"):
+                rid = str(op["id"])
+                if kind is None or kind.id_re.match(rid):
+                    out.setdefault(rid, str(op.get("session")))
+        return out
+
+    def _numbers(self, kind: Kind, ids) -> set[int]:
+        return {int(m.group(1)) for rid in ids if (m := kind.id_re.match(rid))}
+
+    def reserve(self, kind_name: str, count: int, *, session: str, actor: str) -> list[str]:
+        """Hold the next ``count`` ids of a kind's series for ``session`` (CE-105, CE-119): above
+        every id a file or `id:` key holds, every id the op log shows created (`new`, `import`),
+        and every id already reserved, so it is one no write has handed out or will. Under the
+        lock, one `id.reserve` op line per id, naming no path (it writes no file)."""
+        self._check_caller(session, actor)
+        kind = self.config.kind(kind_name)
+        if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= RESERVE_MAX:
+            raise Refusal(f"a count of {count!r}", f"reserve from 1 to {RESERVE_MAX} ids at a time: the ids of one batch of records that cite each other")
+        with self._lock():
+            taken = self.ids_in_use(kind) | self._numbers(kind, self.created_ids()) | self._numbers(kind, self.reserved_ids(kind))
+            top = max(taken, default=0)
+            ids = [f"{kind.prefix}-{top + i}" for i in range(1, count + 1)]
+            for rid in ids:
+                self._log(RESERVE_OP, rid, None, session, actor, [], False)
+        return ids
 
     def ids_in_use(self, kind: Kind) -> set[int]:
         """Every number in the series, open and closed, from file names and from `id:` keys (G-D2).
@@ -709,14 +757,14 @@ class Store:
         for r in done:
             log(r)
 
-    def _log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool) -> None:
+    def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool) -> None:
         entry = {
             "at": _now(),
             "session": session,
             "actor": actor,
             "op": op,
             "id": rec_id,
-            "path": self._rel(path),
+            "path": "" if path is None else self._rel(path),  # None: the op wrote no file (`id.reserve`)
             "fields": fields,
             "mechanical": mechanical,
         }
@@ -735,7 +783,7 @@ class Store:
         if clash:
             raise Refusal(f"`{clash[0]}` is set by the engine", f"drop `{clash[0]}` from the fields")
         with self._lock():
-            used = self.ids_in_use(kind)
+            used = self.ids_in_use(kind) | self._numbers(kind, self.reserved_ids(kind))  # a reserved id is never handed out again
             rid = f"{kind.prefix}-{max(used, default=0) + 1}"
             slug = slugify(str(fields.get("title", "")))
             path = self.root / kind.dir / (f"{rid}-{slug}.md" if slug else f"{rid}.md")
@@ -900,7 +948,8 @@ class Store:
 
     def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:
         """Write several new records with ids the caller chose (an import keeps every id), all or
-        nothing: each id must be free and each record valid before any file is written. Each
+        nothing: each id must be free and each record valid before any file is written. An id
+        another session reserved (`id reserve`) is not free; one this session reserved is. Each
         item is (id, fields, body); append-only records are stamped when they are created."""
         self._check_caller(session, actor)
         kind = self.config.kind(kind_name)
@@ -909,6 +958,7 @@ class Store:
             used = self.ids_in_use(kind)
             amap = self.alias_map() if any(f.get(ALIASES) for _, f, _ in items) else {}
             created = self.created_ids()
+            reserved = self.reserved_ids(kind)
             for rid, fields, body in items:
                 m = kind.id_re.fullmatch(rid)
                 if not m or int(m.group(1)) < 1 or rid != f"{kind.prefix}-{int(m.group(1))}":
@@ -916,6 +966,8 @@ class Store:
                     raise Refusal(f"{rid} is not an id of the {kind.name} series as the engine writes it", f"give {want}: no leading zeros")
                 if int(m.group(1)) in used or rid in created:
                     raise Refusal(f"{rid} is already in use" + (" (the op log shows it was created before)" if int(m.group(1)) not in used else ""), "an id is never reused (G-D2)")
+                if reserved.get(rid, session) != session:
+                    raise Refusal(f"{rid} is reserved by session {reserved[rid]}", "use an id this session reserved (`id reserve`), or none for the next free one: a reserved id is its session's alone")
                 clash = [k for k in TOOL_OWNED if k in fields]
                 if clash:
                     raise Refusal(f"`{clash[0]}` is set by the engine", f"drop `{clash[0]}` from the fields")

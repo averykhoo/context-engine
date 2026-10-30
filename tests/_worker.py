@@ -5,6 +5,7 @@ usage: _worker.py ROOT GATE OP N TAG [ID]
   amend  N TAG ID   amend record ID N times with "<TAG> <i>"
   set    N TAG ID   set field `note_<TAG>` on record ID N times
   start  N TAG      run `session.start` N times (the repo needs a [working] ledger)
+  reserve N TAG     reserve one task id N times (`id reserve`, CE-105)
 """
 
 import sys
@@ -31,6 +32,8 @@ for i in range(int(n)):
         store.amend(target, f"{tag} {i}", **kw)
     elif op == "set":
         store.set(target, {f"note_{tag}": i}, **kw)
+    elif op == "reserve":
+        store.reserve("task", 1, **kw)
     elif op == "start":
         Engine(root).session_start(actor=kw["actor"])
     else:

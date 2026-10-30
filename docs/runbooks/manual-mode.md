@@ -100,6 +100,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
+| id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
 | doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table | `["moved"]`, `["archived"]`, `["redirect"]` |
 
@@ -502,6 +503,31 @@ listed in `[guards]` that does not exist is itself a failure.
 **Why:** lint is the check on the stored files. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).
 
+## Reserved ids
+
+### context-engine id reserve
+
+For a batch of records that cite each other (linked tasks, a decision and the tasks it names), or
+a draft that cites a record not yet written: hold their ids first, cite those, then write each
+record with `--id`. Only a board kind or an append-only kind (the ones `task new`, `ask new` and
+`record new` create).
+
+1. How many: one id or more, up to twenty at a time.
+2. The first id: one above the highest number of the series in a file name, an `id:` key, a `new`
+   or `import` line of the op log, or an `id.reserve` line. The rest follow it.
+3. Append one `id.reserve` line per id to the op log (§ What every write does): `path` is `""`,
+   `fields` is `[]`. It is not a milestone: the next commit carries the lines.
+4. Write each record as its operation says, with the reserved id (`task new --id`, `ask new --id`,
+   `record new --id`), in this session. An id another session reserved is never taken: the
+   `id.reserve` line's `session` says whose it is. An id reserved and never written stays a gap.
+5. Before committing, every reserved id the batch cites must be written: lint G-D3 fails a body
+   that names an id no record has.
+
+**Why:** a batch whose bodies name each other's ids, written before the ids existed, cited the
+wrong records, and the bodies are append-only (adhoc AAR entry 31); an agent that cannot learn an
+id wrote a `DEC-<NEW>` placeholder instead (entry 32, lint G-D2). Held in the op log, a reserved id
+is one no other write hands out, so the citation is right before the record exists.
+
 ## The board (tasks and owner questions)
 
 ### context-engine task new
@@ -510,9 +536,11 @@ records that were valid when written but stale now. A non-empty result is a fail
 2. The brief is at most 120 characters. Every named dep must exist. The tier's cap must have room
    (NOW 1, NEXT 5, counting open items of both kinds). Otherwise, demote something first.
 3. Id: the highest number in the series + 1. Count file names *and* `id:` keys, open and closed.
-   Never reuse a number. An item imported from a repo's own board keeps its number when it has one
-   (`--id ASK-8` for an imported `Q8`), if no file and no `new` or `import` line of the op log
-   ever had that id; it is written as the engine writes ids (no leading zeros).
+   Never reuse a number, and skip every id an `id.reserve` line of the op log holds. An id this
+   session reserved is written with `--id` (§ context-engine id reserve). An item imported from a
+   repo's own board keeps its number when it has one (`--id ASK-8` for an imported `Q8`), if no
+   file and no `new` or `import` line of the op log ever had that id and no other session
+   reserved it; it is written as the engine writes ids (no leading zeros).
 4. File: `tasks/<id>-<slug>.md`. Slug: lowercase the title; replace each run of characters other
    than ASCII `a-z` and `0-9` (accented letters included) with `-`; strip `-` from both ends. If
    it is over 48 characters, take the first 48 and drop everything from the last `-` on, even a
@@ -1027,8 +1055,8 @@ reject it, a round of fixes later.
 
 ### context-engine record new
 
-1. Take the next free id in the kind's series (as `context-engine task new`): `D-n` in `docs/decisions`,
-   `S-n` in `docs/stories`, file `<id>-<slug>.md`.
+1. Take the next free id in the kind's series (as `context-engine task new`), or `--id`, one this
+   session reserved: `D-n` in `docs/decisions`, `S-n` in `docs/stories`, file `<id>-<slug>.md`.
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if its only possible value is the present: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else

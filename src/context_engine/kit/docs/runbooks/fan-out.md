@@ -85,6 +85,10 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
 - The gate in a worktree imports that worktree's code, and the worktree is checked out with the
   line endings the byte checks expect ([gate.md](gate.md)).
 - Board, ledger and other working-state writes stay with the session, in the main tree.
+- A builder whose text cites a record not written yet gets that id from the session, which
+  reserves it in the main tree (`context-engine id reserve`) and writes the record with `--id`
+  ([manual-mode § context-engine id reserve](manual-mode.md#context-engine-id-reserve)); never a
+  placeholder such as `DEC-<NEW>`, nor a guessed number.
 - Commit by path; never `git stash`: in a shared tree it swallows another session's work (P12).
 - A builder's commit carries the session's key like any agent commit: its message ends in one
   trailer paragraph, `Session: <key>` and `Co-Authored-By:` together with no blank line between

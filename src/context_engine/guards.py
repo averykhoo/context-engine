@@ -382,8 +382,8 @@ def placeholders(e: Engine) -> list[Failure]:
 
     Not checked: frontmatter (a title may name the placeholder it is about), records no longer
     current (`status: deprecated`: history), other placeholder forms (`DEC-n`, `<id>`: templates
-    use them), and whether an id that replaced a placeholder is the right one (a guessed id passes;
-    an id reserve op is not built)."""
+    use them), and whether an id that replaced a placeholder is the right one (a guessed id passes:
+    `id reserve` is how a draft gets the id it will cite, store.py::Store.reserve)."""
     st = e.store
     seen: set[Path] = set()
     out: list[Failure] = []
@@ -402,7 +402,7 @@ def placeholders(e: Engine) -> list[Failure]:
                 continue
             for m in PLACEHOLDER_RE.finditer(SPAN_RE.sub("", line)):
                 out.append(Failure("G-D2", rel, f"line {n}: `{m.group()}` is an id placeholder, not an id",
-                                   "write the record first and cite the id it was given (`record new` / `task new` print it), or drop the citation; never guess the next number"))
+                                   "write the record first and cite the id it was given (`record new` / `task new` print it), or reserve it first (`id reserve <kind>`) and write the record with `--id`, or drop the citation; never guess the next number"))
 
     for kind in st.config.kinds.values():
         for path in st._files(kind):
@@ -610,7 +610,9 @@ def record_refs(e: Engine) -> list[Failure]:
     (dated comments that quote other repos' ids), inline code, fenced code, blockquotes and
     `*HISTORY —*` lines, frontmatter (the link fields are the operations' to check), ids of series
     this repo does not configure, and whether a cited id is the record the writer meant (an id
-    that exists passes: entry 31's misnumbered batch needs an id reserve, which is not built)."""
+    that exists passes: entry 31's misnumbered batch is prevented by reserving its ids first,
+    store.py::Store.reserve, not caught here). An id reserved but not yet written is no record, so
+    a batch citing it is red until the batch is written."""
     st = e.store
     known: dict[str, Path] = {}
     for kind in st.config.kinds.values():

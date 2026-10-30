@@ -460,7 +460,7 @@ class Engine:
                 except ValueError:
                     continue
                 if isinstance(o, dict) and o.get("session") == key and o.get("path") != self.w.ledger:  # this commit carries the ledger's
-                    left.append(str(o.get("path") or "?"))
+                    left.append(str(o.get("path") or f"{o.get('op')} {o.get('id')}"))  # `id.reserve` names no path
             # CE-131: the open board items it was working on, as the board records it (the last
             # session to write or move each), so a task it took up is not left looking owned
             claimed = [r.id for r in self._open_board() if key in (str(r.doc.get("updated") or ""), str(r.doc.get("moved") or ""))]
@@ -539,6 +539,21 @@ class Engine:
                 raise Refusal(f"{rid} is not an id of the {k.name} series", f"give an id of the form {k.prefix}-n, or none for the next free one")
             return self.store.create_many(kind, [(rid.strip(), fields, text)], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, text, session=session, actor=actor)
+
+    def reserve(self, kind: str, count: int = 1, *, session: str, actor: str) -> str:
+        """Reserve the next ``count`` ids of a kind's series for this session (CE-105, CE-119), so
+        a batch of records that cite each other, or a draft that cites a record not yet written,
+        cites ids that will exist instead of a guess or a `DEC-<NEW>` placeholder; each is then
+        written with its operation's ``id``. Only kinds an operation creates with a chosen id: the
+        board's and the append-only ones."""
+        self._check(session, actor)
+        k = self.store.config.kind(kind)
+        if kind not in self._board() and k.mode != "append-only":
+            makers = [*self._board(), *(n for n, x in self.store.config.kinds.items() if x.mode == "append-only")]
+            raise Refusal(f"{kind!r} is a {k.mode} kind no operation creates with a chosen id", f"reserve ids of {', '.join(makers)}")
+        ids = self.store.reserve(kind, count, session=session, actor=actor)
+        how = "ask new --id" if kind == self.w.question else "task new --id" if kind in self._board() else "record new --id"
+        return f"reserved {', '.join(ids)} for session {session}: cite them, then write each with `{how}`"
 
     def _task_goal_check(self, kind: str, goals: list[str]) -> None:
         """Refuse a task of the `[guards] task_goals` kind whose `goals` are not goals of the
@@ -1203,8 +1218,9 @@ class Engine:
     # -- append-only records (G-D10) ----------------------------------------------------
 
     @_milestone
-    def record_new(self, kind: str, title: str, body: str, raw: dict[str, str], *, session: str, actor: str) -> Record:
-        """A new decision or story, stamped when it is created. A required key the caller left out
+    def record_new(self, kind: str, title: str, body: str, raw: dict[str, str], *, session: str, actor: str, rid: str = "") -> Record:
+        """A new decision or story, stamped when it is created, with the next free id or ``rid``
+        (one this session reserved, or a never-used id of the series). A required key the caller left out
         is filled when its only possible value is the present: a date-typed key with today, a key-typed one with this session."""
         self._check(session, actor)
         k = self.store.config.kind(kind)
@@ -1224,6 +1240,8 @@ class Engine:
         if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
             raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
                           f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`; no decision's text holds a `## Amendments` line when it is recorded (a later note goes in with `record amend`)")
+        if rid.strip():
+            return self.store.create_many(kind, [(rid.strip(), fields, body.strip("\n") + "\n")], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
 
     def _story_checks(self, fields: dict[str, Any]) -> None:

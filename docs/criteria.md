@@ -189,6 +189,13 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-82 | `task close` refuses, before any byte, to close the last open board item that an ACTIVE-PLAN doc G-D4 reads names in its window, naming each such doc with `doc freeze <doc>` as the remedy; once they are frozen the close goes through and G-D4 stays green; with G-D4 off it does not check | US-9 | tested |
 | AC-83 | `doc archive` moves a tracked, committed `.md` doc without frontmatter into `--to` or `[working] archive`, its first line `ARCHIVED <date> (session <key>), from <old path>.` and the rest unchanged; adds its row to that directory's `README.md` redirect table (made LIVING by the first archive, or a `## Redirects` section in a README without one); logs three `doc.archive` lines and stages nothing, so the next commit carries a rename; names a `context.toml` entry left on the old path; and refuses, writing nothing, an untracked doc, uncommitted changes, frontmatter, a name already archived there, a doc already in the directory or named `README.md`, a directory outside the root, and no directory | US-9 | tested |
 
+## Reserved ids (CE-105, CE-119)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-130 | `id reserve <kind> --count n` (n from 1 to the engine's cap, of a board or append-only kind; else refused before any line) holds the next n ids of the series for the session: above every id a file name or `id:` key holds, every id a `new` or `import` op line created and every id already reserved, under the lock, with one `id.reserve` op line per id naming no path; `task new`, `ask new` and `record new` without `--id` skip every reserved id, and concurrent reserves and writes never share one | US-2 | tested |
+| AC-131 | `task new`, `ask new` and `record new --id <id>` write a record with an id this session reserved (a decision stamped as `record new` stamps it); another session's reserved id is refused before any byte, naming the session that holds it; a batch citing its reserved ids is G-D3 red until every one is written, then lint is green (G-D2, G-D3, G-W7) | US-2 | tested |
+
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

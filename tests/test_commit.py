@@ -598,6 +598,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("task_section", id="CE-2", name="Traps", text="- one")
     w("task_close", id="CE-2", msg="done")
     w("task_reopen", id="CE-2", msg="not yet")
+    w("id_reserve", kind="task", count=2)  # not a milestone: its lines ride along (CE-105)
     (mrepo / "notes.md").write_text("# Notes\n\nACTIVE-PLAN until the trial ends.\n", encoding="utf-8")
     w("doc_freeze", path="notes.md")
     (mrepo / "old.md").write_text("# Old\n\nLIVING.\n", encoding="utf-8")
