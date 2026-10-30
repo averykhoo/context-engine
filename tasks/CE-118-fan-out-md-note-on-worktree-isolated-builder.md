@@ -4,13 +4,15 @@ id: CE-118
 title: fan-out.md note on worktree-isolated builder friction
 brief: Record the worktree-round frictions from the adhoc trial in fan-out.md
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 fan-out.md note on worktree-isolated builder friction
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 30, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 4dd58fa: fan-out.md Worktrees: create from current main, gitignored inputs absent, Write tool confined to the worktree so reports are copied out, per-worktree .scratch sweep.
