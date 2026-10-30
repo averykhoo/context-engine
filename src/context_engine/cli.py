@@ -66,7 +66,7 @@ def build() -> argparse.ArgumentParser:
     c = _sub(s, "close", "clean close: write this session's ledger entry over its stub")
     c.add_argument("--rows", required=True, help="the items this session touched and how each ended, e.g. `CE-2 (closed); AC-10 (tested)`")
     c.add_argument("--summary", action="append", required=True, help="one line of the owner digest; repeat for each, 1 to 7 lines")
-    c.add_argument("--guards", required=True, help="receipt: the gate and lint results, verbatim")
+    c.add_argument("--guards", required=True, help="receipt: the gate and lint results, verbatim (where [working] gate_receipt is set, it must match it: the gate's pass count, e.g. `1112 passed`, or `not run`)")
     c.add_argument("--read", required=True, help="receipt: what was read to start work")
     c.add_argument("--asked", default="", help="receipt: the owner questions raised in chat; must name each one at NOW or NEXT (default: those `ask raised` recorded)")
     c.add_argument("--owed", action="append", default=[], help="one thing still owed (an answer, a check, a push); repeat for each (default: nothing)")
