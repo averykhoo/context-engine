@@ -1372,8 +1372,9 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
 
 **The roster:** every role the session delegates, one row each. *Model* is a tier of the rule
 above (least, reading, most), and the repo's contract names each tier's model. Every role but the
-coordinator is a subagent, and every subagent but an `Explore` scout persists to its own file as
-it goes; *Writes* is what it may change beyond that file.
+coordinator is a subagent, and every subagent but an `Explore` scout and the housekeeping agent
+persists to its own file as it goes (the housekeeping agent's `hk_` operations are logged in the
+op log instead); *Writes* is what it may change beyond that file.
 
 | Role | Runs as | Model | Writes | Returns |
 |---|---|---|---|---|

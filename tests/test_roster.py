@@ -48,8 +48,13 @@ def test_the_roster_keeps_fable_to_the_arbiter_explore_to_a_scout_that_need_not_
     fable = [role for role, row in rows.items() if "fable" in row["Model"]]
     assert fable == ["arbiter"], f"only the arbiter runs on `fable` (the rule above the roster): {fable}"
     assert "never a fan-out" in rows["arbiter"]["Runs as"], rows["arbiter"]
-    assert "the owner asked" in rows["arbiter"]["Model"], "the arbiter is on `fable` only where the owner asked for it"
+    assert rows["arbiter"]["Model"].startswith("`fable` where the owner asked for it"), "the arbiter is on `fable` only where the owner asked for it"
     explore = [role for role, row in rows.items() if "`Explore`" in row["Runs as"]]
     assert explore == ["scout, auditor"] and "cannot persist" in rows["scout, auditor"]["Runs as"], explore
-    assert "`hk_`" in rows["housekeeping agent"]["Runs as"] and "`hk_`" in rows["housekeeping agent"]["Writes"], rows["housekeeping agent"]
-    assert re.search(r"\bnothing\b", rows["watcher"]["Writes"]) and "push" in rows["watcher"]["Writes"], rows["watcher"]
+    hk = rows["housekeeping agent"]
+    assert "its only tools are the engine's `hk_` operations" in hk["Runs as"], hk
+    assert re.fullmatch(r"only through `hk_` operations(, [^|]*)?", hk["Writes"]), hk
+    # The watcher writes nothing, and a push is among what it may NOT do: a cell that only mentions
+    # a push ("nothing but the fix it pushes when a run is red") must fail.
+    watcher = rows["watcher"]["Writes"]
+    assert re.fullmatch(r"nothing: no (?:[\w-]+, )*[\w-]+ or push", watcher), watcher
