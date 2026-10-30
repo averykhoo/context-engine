@@ -192,7 +192,7 @@ class Files:
 
     def differing(self, name: str) -> list[str]:
         """The repo paths a bare file name ``name`` matches when it is not at the repo root, matches
-        more than one file, and their texts differ (line endings ignored); else none (CE-144).
+        more than one file, and their texts differ (line endings ignored); else none (CE-144, DEC-114).
         Byte-equal copies, such as the kit's runbooks and contract beside this repo's (AC-71), are
         one text under two paths, so a bare name for them is no ambiguity."""
         name = name.rstrip("/")
@@ -530,7 +530,7 @@ def links(e: Engine) -> list[Failure]:
 
 
 def path_pointers(e: Engine, files: Files) -> list[Failure]:
-    """G-D3 on prose pointers (CE-142): in each doc `[guards] paths` lists, every backticked span
+    """G-D3 on prose pointers (CE-142, DEC-113): in each doc `[guards] paths` lists, every backticked span
     shaped like a file name or a repo path (G-T3's shape, `PATH_SPAN_RE`: a name with a text file's
     extension, or a path with a `/`) resolves case-exact, from the repo root or from the doc's own
     directory; a bare file name resolves to any file of that name that git does not ignore, and is
