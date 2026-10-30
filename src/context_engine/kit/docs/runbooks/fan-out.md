@@ -97,3 +97,6 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
 - A workflow script is a tracked file, so a run can be repeated and reviewed (FRAMEWORK §6.6).
 - Every agent in it persists its own output, as above; a fan-out that dies at its last agent is
   otherwise paid for twice.
+- A workflow cannot express a dependency on another run, or on a board item's `deps`. The
+  coordinator sequences runs: it launches the dependent one only after the earlier is reviewed and
+  committed, and passes the output by file.
