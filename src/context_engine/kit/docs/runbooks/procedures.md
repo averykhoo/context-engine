@@ -62,7 +62,7 @@ clean close's job (FRAMEWORK §5.2).
 | § | Do | Engine | By hand | Why |
 |---|---|---|---|---|
 | 1 | The contract is loaded: global, repo (`CLAUDE.md`, `AGENTS.md`, and the framework contract `CLAUDE.md` imports) and subtree; in an adopted repo the `SessionStart` hook has put `orient`'s output in the context | — | read them if the harness did not; if no orient output is there, the hook did not run (it fails silently): run `orient` yourself after the next step and tell the owner | the rules come before the work |
-| — | Mint the session key and reserve it with a `kind: open` stub; use the key as `CE_SESSION` | `context-engine session start` | [§ session start](manual-mode.md#context-engine-session-start) | two sessions never share a key, and a live session is visible to the others (§5.5) |
+| — | Mint the session key and reserve it with a `kind: open` stub; use the key as `CE_SESSION`. Work on what a closed session left (the owner found it wanting after its close) starts a follow-up session that names it: `--follows <its key>`, and orient then shows what it left. Never reopen a closed entry | `context-engine session start`; `context-engine session start --follows <key>` | [§ session start](manual-mode.md#context-engine-session-start) | two sessions never share a key, and a live session is visible to the others (§5.5); the ledger is append-only, so a follow-up links back instead of reopening |
 | — | Start-of-session housekeeping: stale stubs, foreign commits, hand-written receipts | — | § Housekeeping, at session start | what happened since the last session is reconciled before it is built on |
 | 2–5 | Read the banner, open batons and pause records (yours first), other open sessions, the NEXT tier, the questions to raise, and the top item's brief, Traps and Read first | `context-engine orient` | [§ orient](manual-mode.md#context-engine-orient) | one capped read replaces opening a dozen files |
 | — | Show the owner the other open sessions it lists, in chat, one line each: the key, when it opened and when it last did anything (orient's `last active`: its newest op line or commit); say "none" when there are none. Stop, close or abandon none of them without the owner's word | `context-engine orient` (its open-sessions section); per key, `git log -1 --format='%h %cI' --grep='^Session: <key>$'` and `grep '"session": "<key>"' <op log>` (its last line): the later is its last activity | [§ orient](manual-mode.md#context-engine-orient) item 3 | an open stub is either a live session in another window or one that died; only the owner knows which, and what to stop |
@@ -121,7 +121,8 @@ A natural stopping point. **Close eagerly: as soon as every task you were asked 
 that same turn, before the final reply.** Never ask whether to close, and never wait for more
 instructions; what is left for the owner goes in the digest (item 8). Stay open only when the
 owner says so, and pause (§ Pause) at an awkward stop.
-More work asked for after the close starts a new session (§ Session start). The records come
+More work asked for after the close starts a new session (§ Session start), with `session start
+--follows <key>` when it fixes or finishes what this one left. The records come
 first, then the gate, then the ledger entry that carries the gate's result, then the commit of
 what the engine did not commit (it commits at milestones, each task's close and the session's
 close among them, and each such commit takes with it what was still uncommitted before it).

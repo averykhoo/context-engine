@@ -263,22 +263,43 @@ class Engine:
 
     # -- sessions (FRAMEWORK §5.5, §6.3, §6.4) ------------------------------------------
 
-    def session_start(self, *, actor: str) -> str:
+    def session_start(self, *, actor: str, follows: str = "") -> str:
         """Mint ``max(newest ledger key, banner key) + 1 letter`` under the lock and reserve it
         with a ``kind: open`` stub (AC-10), recording HEAD as its ``start head``: the session
-        reconciles foreign commits up to it (CE-65)."""
+        reconciles foreign commits up to it (CE-65). ``follows`` (CE-84, DEC-45) names the closed
+        session this one follows up (work found wanting after its close): the stub carries
+        `follows: <key>`, the close or pause carries it on, and orient shows what that session
+        left. The closed session is never reopened or written to; a key that is not a `kind:
+        close` entry is refused before anything is written."""
         if not actor or not ACTOR_RE.match(actor):
             self._check("2000-01-01a", actor)  # raises the actor refusal
+        follows = follows.strip()
         path = self._path("ledger")
         with self.store.lock():
             led = self.read_ledger()
+            if follows:
+                self._followable(led, follows)
             b = self.banner()
             key = L.next_key(L.newest([*led.keys(), b.key if b else None]), self.today())
-            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor, L.head_sha(self.root))))
+            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor, L.head_sha(self.root), follows or None)))
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, led.render())
             self.store.log("session.start", key, path, key, actor, ["kind"])
         return key
+
+    def _followable(self, led: L.Ledger, key: str) -> None:
+        """Refuse a ``--follows`` key that names no closed session (CE-84): a follow-up continues
+        work that was closed, so an open, paused or abandoned session has its own way back."""
+        entry = led.get(key)
+        if entry is None:
+            raise Refusal(f"the ledger has no session {key} to follow", f"pass the key of a closed session, as its `## <key> · kind: close` heading in {self.w.ledger} shows it")
+        if entry.kind != "close":
+            how = {
+                "open": "it is still open: work in it if it is yours, or wait for its close",
+                "pause": "resume its pause record instead (`pause resume <id>`, orient lists it)",
+                "abandoned": "its unfinished work is in the baton it was abandoned with: do that baton",
+            }.get(entry.kind, "follow a closed session only")
+            raise Refusal(f"session {key} is `kind: {entry.kind}`, not closed, so there is nothing to follow up", how)
 
     def actor_spellings(self, actor: str) -> list[tuple[str, int]]:
         """The other spellings of ``actor`` the op log already signs with (``same_agent``), each
@@ -348,7 +369,7 @@ class Engine:
             if unraised:
                 raise Refusal(f"overdue owner questions {_one(unraised)} were not raised this session (G-W8)", "raise each in chat, then run `ask raised`, or `ask later` if the owner defers")
 
-        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD)), "session.close", check)
+        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD), e.field(L.FOLLOWS)), "session.close", check)
         return f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
 
     def staleness(self, keys: list[str]) -> dict[str, tuple[int, str]]:
@@ -501,7 +522,7 @@ class Engine:
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
             raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
-        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD)), "session.pause")
+        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD), e.field(L.FOLLOWS)), "session.pause")
         return f"session {key} paused: ledger entry written"
 
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------
@@ -1985,7 +2006,11 @@ class Engine:
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
         seen = self.last_active([e.key for e in others])
-        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" + (f"; last active {seen[e.key][0]} ({seen[e.key][1]})" if e.key in seen else "") for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
+        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" + (f"; follows {e.field(L.FOLLOWS)}" if e.field(L.FOLLOWS) else "") + (f"; last active {seen[e.key][0]} ({seen[e.key][1]})" if e.key in seen else "") for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
+        mine = led.get(session) if session else None
+        followed = mine.field(L.FOLLOWS) if mine else None
+        if followed:  # CE-84: a follow-up session starts from what the closed one left
+            sections.append(Part(f"Follows {followed}: what it closed with", "\n".join(self.follows_lines(led, followed)), f"the `## {followed}` entry in {self.w.ledger}", rank=1))
 
         top = [ln for ln in self.list(pri="NOW")]
         sections.append(Part("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`", rank=1))
@@ -2037,6 +2062,20 @@ class Engine:
             sections.insert(0, Part("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`", rank=0))
         head = f"# orient {session or '(no session)'}\n"
         return fit(head, sections, self.w.orient_max_bytes)
+
+    def follows_lines(self, led: L.Ledger, key: str) -> list[str]:
+        """What the closed session ``key`` left, for the session that follows it up (CE-84): its
+        rows, its owner digest and what it still owed, as its ledger entry says them.
+
+        Not checked: that the entry is still `kind: close` (`session start --follows` checked it,
+        and a closed entry never changes)."""
+        entry = led.get(key)
+        if entry is None:
+            return [f"- {key} is no longer in the ledger"]
+        out = [f"- rows: {entry.field('rows') or 'none'}"]
+        out += [f"- digest: {s}" for s in L.items(entry, "summary")]
+        out += [f"- still owed: {s}" for s in L.items(entry, "Still owed")]
+        return out
 
     def last_active(self, keys: list[str]) -> dict[str, tuple[str, str]]:
         """When each session in ``keys`` last did anything, and what (CE-104; adhoc AAR entry 1,

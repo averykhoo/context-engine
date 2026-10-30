@@ -107,10 +107,10 @@ def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: b
 
 
 @op(write=True)
-def session_start(e: Engine, c: Caller) -> tuple[int, str]:
-    """Open a framework session: mint its key and write the ledger stub. Call it first, every session."""
-    c.session = e.session_start(actor=c.actor)
-    out = f"session {c.session} opened (stub written to {e.w.ledger}); pass --session {c.session} or set CE_SESSION={c.session}"
+def session_start(e: Engine, c: Caller, follows: str = "") -> tuple[int, str]:
+    """Open a framework session: mint its key and write the ledger stub. Call it first, every session. `follows`: the key of a closed session this one follows up (more work found after its close); the stub records it, and orient shows what that session left. A closed session is never reopened."""
+    c.session = e.session_start(actor=c.actor, follows=follows)
+    out = f"session {c.session} opened (stub written to {e.w.ledger}{f'; follows {follows.strip()}' if follows.strip() else ''}); pass --session {c.session} or set CE_SESSION={c.session}"
     other = e.actor_spellings(c.actor or "")
     if other:  # CE-122: one agent keeps one spelling, so a query for it finds all its lines
         known = ", ".join(f"`{a}` ({n} op line{'s' if n != 1 else ''})" for a, n in other[:3])

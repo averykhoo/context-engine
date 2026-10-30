@@ -881,7 +881,9 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      that died; housekeeping marks it `kind: abandoned` and files a baton (G-W11);
    - **a baseline for foreign commits:** the stub records HEAD as its `start head`, read under
      the same lock, and the close or pause keeps it; the session reconciles foreign commits up
-     to it (§6.10 item 2).
+     to it (§6.10 item 2);
+   - **a link back from a follow-up:** a stub opened with `follows: <key>` names the closed
+     session it continues (§6.3), and the close or pause keeps it too.
 2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen)`
    refuses when the banner's hash differs from the one this session last saw; re-read, merge
    and retry. **And only if lint would pass it:** it refuses a write that would add a failure of
@@ -1108,7 +1110,11 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 before its final reply.** It never asks whether to close and never sits open waiting for
 instructions; what is left for the owner goes in the close's digest. It stays open only when the
 owner says so; an awkward stopping point is a pause (§6.4), not an open stub. More work asked for
-after a close starts a new session. The rule is in the contract, which every session loads, not
+after a close starts a new session. **A closed session is never reopened:** a session that fixes
+or finishes what a closed one left starts with `session.start(follows=<its key>)`, so its stub
+carries `follows: <key>` (and its close or pause after it), and `orient` shows that session's rows,
+digest and still-owed lines; a key that is not a `kind: close` entry is refused (an open session
+is worked in, a paused one resumed, an abandoned one's baton done). The rule is in the contract, which every session loads, not
 only in the procedures runbook, which a session reads on demand.
 
 Write the records first, then run the gate, then commit what the engine has not (it commits at
@@ -1666,6 +1672,8 @@ cite for each item.
 - **One entry per session, without exception:** `kind: open` (the stub `session.start` writes,
   §5.5), then `close` or `pause`; `abandoned` for a stub that housekeeping found was never closed; and
   `foreign` for reconciled human commits (§6.10), which the session writes by hand from the runbook.
+  An entry never changes kind back: a follow-up to a closed session is a new entry carrying
+  `follows: <key>` (§6.3).
   `session.abandon` writes `abandoned`: start-of-session housekeeping runs it, as
   `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
   its last activity (the owner's window), and files a baton for the op lines it left

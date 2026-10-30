@@ -180,6 +180,71 @@ def test_close_refuses_without_a_stub(eng):
         eng.session_close("2026-10-08q", actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
 
 
+# -- a follow-up session (CE-84, DEC-45) ------------------------------------------------------
+
+
+@pytest.mark.criterion("AC-123")
+def test_a_follow_up_session_names_the_closed_one_and_never_reopens_it(eng, capsys):
+    """CE-84: work found wanting after a close goes to a new session that says which one it
+    follows: its stub, its close and orient name it, and the closed entry is never written to."""
+    closed = eng.read_ledger().get("2026-10-07b").text
+    base = ["--root", str(eng.root), "--actor", ACTOR]
+    assert main([*base, "session", "start", "--follows", "2026-10-07b"]) == 0, capsys.readouterr().err
+    out = capsys.readouterr().out
+    key = out.split()[1]
+    assert "follows 2026-10-07b" in out, out
+    led = eng.read_ledger()
+    assert led.get(key).kind == "open" and led.get(key).field("follows") == "2026-10-07b"
+    assert led.get("2026-10-07b").kind == "close" and led.get("2026-10-07b").text == closed  # never reopened
+    text = eng.orient(key)
+    assert "## Follows 2026-10-07b: what it closed with" in text, text
+    assert "- rows: CE-1 (created)\n- digest: did things\n- still owed: nothing" in text
+    other = eng.session_start(actor=ACTOR)  # another session sees the follow-up for what it is
+    assert f"- {key}, opened " in eng.orient(other) and "; follows 2026-10-07b" in eng.orient(other)
+    assert "## Follows" not in eng.orient(other)
+    eng.session_close(key, actor=ACTOR, rows="CE-1 (fixed)", summary=["fixed what 2026-10-07b left"], receipts=receipts())
+    entry = eng.read_ledger().get(key)
+    assert entry.kind == "close" and entry.field("follows") == "2026-10-07b" and entry.field("rows") == "CE-1 (fixed)"
+    assert eng.read_ledger().get("2026-10-07b").text == closed
+    eng.session_pause(other, actor=ACTOR, rows="x", deferred="y")
+    assert eng.read_ledger().get(other).field("follows") is None  # only a follow-up carries it
+
+
+@pytest.mark.criterion("AC-123")
+def test_follows_lines_join_a_wrapped_digest_line():
+    """CE-84: orient's follow-up part reads the closed entry's items whole, though the ledger
+    wraps them at 100 columns."""
+    long = "a digest line long enough that the ledger wraps it onto a second line, " * 2
+    text = L.render_close("2026-10-07c", "CE-1 (fixed)", {"guards": "g", "read": "r"}, [long.strip(), "short"], ["owed " + long.strip()])
+    assert "\n    " in text  # it did wrap
+    entry = L.Entry("2026-10-07c", "close", text)
+    assert L.items(entry, "summary") == [long.strip(), "short"] and L.items(entry, "Still owed") == ["owed " + long.strip()]
+
+
+@pytest.mark.criterion("AC-123")
+def test_a_paused_follow_up_keeps_its_follows_line(eng):
+    key = eng.session_start(actor=ACTOR, follows="2026-10-07a")
+    eng.session_pause(key, actor=ACTOR, rows="x", deferred="y")
+    assert eng.read_ledger().get(key).field("follows") == "2026-10-07a"
+
+
+@pytest.mark.criterion("AC-123")
+@pytest.mark.parametrize("make, follows, says", [
+    (lambda e: None, "2026-09-01a", "the ledger has no session 2026-09-01a to follow"),
+    (lambda e: e.session_start(actor=ACTOR), "", "is `kind: open`, not closed"),
+    (lambda e: e.session_pause(e.session_start(actor=ACTOR), actor=ACTOR, rows="x", deferred="y"), "2026-10-08a", "is `kind: pause`, not closed"),
+])
+def test_session_start_refuses_to_follow_a_session_that_is_not_closed(eng, make, follows, says):
+    """CE-84: only a closed session is followed up; an open one is worked in, a paused one
+    resumed. The refusal writes nothing: no stub, no key minted."""
+    made = make(eng)
+    follows = follows or made
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match=re.escape(says)):
+        eng.session_start(actor=ACTOR, follows=follows)
+    assert (eng.root / "ledger.md").read_bytes() == before
+
+
 @pytest.mark.criterion("AC-11")
 def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     key = started(eng)

@@ -148,17 +148,25 @@ def _head(head: str | None) -> str:
     return bullet(START_HEAD, head) if head else ""
 
 
-def render_open(key: str, at: str, actor: str, head: str | None = None) -> str:
-    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _head(head)
+FOLLOWS = "follows"  # the closed session a follow-up continues (CE-84, DEC-45): `session start --follows <key>`
+
+
+def _follows(key: str | None) -> str:
+    return bullet(FOLLOWS, key) if key else ""
+
+
+def render_open(key: str, at: str, actor: str, head: str | None = None, follows: str | None = None) -> str:
+    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _follows(follows) + _head(head)
 
 
 RECEIPTS = ("guards", "read", "asked")
 
 
-def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None) -> str:
+def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None, follows: str | None = None) -> str:
     rec = [f"{k}: {receipts[k]}" for k in RECEIPTS if receipts.get(k)]
     return (
         f"## {key} · kind: close\n\n"
+        + _follows(follows)
         + bullet("rows", rows)
         + sub_bullets("- **receipts:**", rec)
         + sub_bullets("- **summary** (the owner digest):", summary)
@@ -167,8 +175,21 @@ def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[st
     )
 
 
-def render_pause(key: str, rows: str, deferred: str, head: str | None = None) -> str:
-    return f"## {key} · kind: pause\n\n" + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
+def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None) -> str:
+    return f"## {key} · kind: pause\n\n" + _follows(follows) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
+
+
+def items(entry: Entry, head: str) -> list[str]:
+    """The `  - ` items under the bullet that starts ``- **<head>`` (a close's `summary`, its
+    `Still owed`), each with its continuation lines joined."""
+    m = re.search(rf"^- \*\*{re.escape(head)}[^\n]*\n((?:  .*\n?)*)", entry.text, re.MULTILINE)
+    out: list[str] = []
+    for ln in (m.group(1).splitlines() if m else []):
+        if ln.startswith("  - "):
+            out.append(ln[4:].strip())
+        elif out and ln.startswith("    "):
+            out[-1] += " " + ln.strip()
+    return out
 
 
 # -- foreign commits (FRAMEWORK §6.10, CE-65) ----------------------------------------------

@@ -61,7 +61,8 @@ def build() -> argparse.ArgumentParser:
     ini.add_argument("--skip-settings", action="store_true", help="the owner said no: leave an existing .claude/settings.local.json alone; with none, write no hook (the Claude Code plugin runs orient)")
 
     s = _sub(groups, "session", "open, close or pause a framework session (FRAMEWORK §6.1, §6.3, §6.4)").add_subparsers(dest="op", required=True)
-    _sub(s, "start", "open a session: mint its key and write the ledger stub; run it first, every session")
+    ss = _sub(s, "start", "open a session: mint its key and write the ledger stub; run it first, every session")
+    ss.add_argument("--follows", default="", metavar="KEY", help="the key of a closed session this one follows up (work found wanting after its close); never reopens it")
     c = _sub(s, "close", "clean close: write this session's ledger entry over its stub")
     c.add_argument("--rows", required=True, help="the items this session touched and how each ended, e.g. `CE-2 (closed); AC-10 (tested)`")
     c.add_argument("--summary", action="append", required=True, help="one line of the owner digest; repeat for each, 1 to 7 lines")

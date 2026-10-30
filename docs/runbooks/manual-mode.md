@@ -175,6 +175,12 @@ different case or one extra BOM gives a hash that never matches the engine's.*
 
    Read HEAD in the same step as the key (step 1), before anything else is committed. Outside a
    git checkout, or before its first commit, leave the `start head` line out.
+   **A follow-up session** (`--follows <key>`: it fixes or finishes what a closed session left)
+   first checks that `## <key> · kind: close` is in the ledger, and stops if the entry is
+   missing or of another kind (an open session is worked in, a paused one resumed, an
+   abandoned one's baton done). Its stub then carries `- **follows:** <key>` between the
+   `opened` and `start head` lines. Never edit the closed entry. Your close or pause later keeps
+   the `follows` line, first in the entry, above `rows`.
 4. Leave it uncommitted: a session start is not a milestone, so it stays uncommitted and goes
    into the next commit, yours or another session's (§ What every write does, **Commit the
    write**).
@@ -192,7 +198,9 @@ the key the moment it is minted, shows the session is live (`orient` lists open 
 leaves evidence if the session dies (G-W11) (FRAMEWORK §5.5 rule 1). The banner key
 counts too, because a session may have written the banner before its ledger entry. The start
 head is where this session's reconciling of foreign commits ends and the next session's begins
-(procedures.md § Reconciling foreign commits).
+(procedures.md § Reconciling foreign commits). The ledger is append-only, so a closed session is
+never reopened: a follow-up links back to it with `follows`, and reads what it left (its rows,
+digest and still-owed lines, which orient shows) before starting.
 
 ### context-engine session close
 
@@ -226,6 +234,8 @@ head is where this session's reconciling of foreign commits ends and the next se
    - **start head:** <the stub's start head, unchanged>
    ```
    Leave out the `asked:` line if it is empty, and the `start head` line if the stub has none.
+   A follow-up session's stub carries `- **follows:** <key>`: keep it as the entry's first
+   bullet, above `rows` (a pause keeps it the same way).
    Op log: `session.close`, fields `["kind"]`.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
@@ -296,7 +306,11 @@ ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`
    line each (`procedures.md` § Session start): the key, its `opened` value, and `; last active
    <time> (<what>)`, the newest of its op log lines (`op <op>`, by its `at`) and of the commits
    whose `Session:` trailer names it (`commit <sha>`, by committer date), so a session that died
-   without a close shows how long it has been quiet; say `none` when there are none;
+   without a close shows how long it has been quiet; say `none` when there are none; a stub
+   with a `follows:` line adds `; follows <key>` after its `opened` value;
+   then, only when your own stub carries `follows: <key>`, a `Follows <key>: what it closed
+   with` part (its bytes come with part 4's): `- rows: ...` from that closed entry, then one
+   `- digest: ...` line per summary item and one `- still owed: ...` line per `Still owed` item;
 4. board items at NOW and NEXT (as `context-engine task list`);
    then, only when a re-rank is due (§ The last rerank), a `Rerank due: tell the owner` part:
    one line per reason, then where the re-rank is (`procedures.md` § Rerank);
