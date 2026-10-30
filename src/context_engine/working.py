@@ -41,6 +41,9 @@ from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coe
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the rows guards.py::ROW_ID_RE reads
+KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a run (CE-108)
+VERDICTS = ("KILL", "PASS", "VOID")  # the bar fired; it did not; the run cannot judge it
+VERDICT_RE = re.compile(rf"(?:{'|'.join(VERDICTS)}):\s*\S.*")
 RESIDUAL_FORM = "<risk> | rung: <reduce|collective|individual> | why: <why not eliminated> | control: <the guard or rule> | affects: <who>"  # a residual stated at `task close` (CE-120)
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
@@ -714,7 +717,7 @@ class Engine:
         return f"{rid}: {'updated' if mechanical else 'moved'} {session}"
 
     @_milestone
-    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "", residuals: list[str] | None = None) -> str:
+    def close(self, rid: str, msg: str, *, session: str, actor: str, body: str = "", residuals: list[str] | None = None, verdict: str = "") -> str:
         """``state: closed`` and the derived OKF ``status: deprecated``, in place (AC-12). A
         milestone: its commit is titled ``<id>: close; <msg>`` and carries ``Closes: <id>``
         (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11).
@@ -723,11 +726,19 @@ class Engine:
         FRAMEWORK §7.4): ``["none"]``, or one ``<risk> | rung: | why: | control: | affects:`` line
         per risk, each filed in the register as the next INV-n (created on first use) with the
         design review's. Logged either way, so the record tells a "none" from a question skipped;
-        where a register is configured, a close that states nothing (and has no review) says so."""
+        where a register is configured, a close that states nothing (and has no review) says so.
+
+        ``verdict`` (CE-108) is ``<KILL|PASS|VOID>: <evidence>``, judged against the item's
+        pre-registered ``## Kill bar``: a verdict needs the bar, and an item carrying a bar closes
+        only with one. It goes in the item's Log, the reply and the close's commit message, so
+        the bar and its verdict are linked where an audit reads them."""
         self._check(session, actor)
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
         stated = self._stated_residuals(rid, residuals or [])
+        verdict = " ".join((verdict or "").split())
+        if verdict and not VERDICT_RE.fullmatch(verdict):
+            raise Refusal(f"the verdict {verdict[:60]!r} is not `<{'|'.join(VERDICTS)}>: <evidence>`", f"lead with the outcome against the kill bar ({', '.join(VERDICTS)}), then a colon and the evidence, e.g. `KILL: best AUC 0.629 < 0.7 (results.md § 3)`")
         if self.w.question and self.store.config.kind_for_id(rid).name == self.w.question:
             # FRAMEWORK §5.3: a question is closed only by an owner answer (audit finding A20)
             raise Refusal(
@@ -743,12 +754,14 @@ class Engine:
                 raise Refusal(f"{rid} is already closed", "nothing to do; `reopen` it if it is not done")
             self._plans_frozen(rec.id)
             was.append(str(rec.doc.get("pri")))
+            self._against_bar(rec, verdict)
             if rec.doc.get("review") or stated:
                 filed.extend(self._file_residuals(rec, session, actor, stated or None))
 
         def log(text: str) -> str:  # after check(), so it can name the INV ids filed
             said = f"\nresidual risk: {', '.join(filed) if stated else 'none'}" if residuals else ""
-            return self._log_line(session, actor, f"closed: {msg.strip()}{said}")(text)
+            judged = f"\nverdict against the {KILL_BAR.lower()}: {verdict}" if verdict else ""
+            return self._log_line(session, actor, f"closed: {msg.strip()}{judged}{said}")(text)
 
         changes = {"state": "closed", "status": "deprecated", "closed": session, "moved": session}
         self._board_set(rid, changes, session=session, actor=actor, check=check, body=log, op="close")
@@ -757,12 +770,26 @@ class Engine:
         title = f"{rid}: close; " + _short(msg, C.TITLE_MAX - len(rid) - 9)
         whole = msg.strip()
         self.store.commit_title = title
-        self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", body.strip()) if x)
+        self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", f"Verdict: {verdict} (against {rid}'s ## {KILL_BAR})" if verdict else "", body.strip()) if x)
         self.store.commit_trailers = [f"Closes: {rid}"]
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
         if not residuals and not filed and self.w.register and not self.store.get(rid).doc.get("review"):
             moved = f"; residual risk not stated: say `--residual none` at a close, or file each risk with `--residual \"{RESIDUAL_FORM}\"` (one missed now goes in by hand, manual-mode.md § context-engine task close)"
-        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){moved}{self._now_left(was)}"
+        judged = f"; verdict {verdict.split(':')[0]} against its {KILL_BAR.lower()}" if verdict else ""
+        return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){judged}{moved}{self._now_left(was)}"
+
+    def _against_bar(self, rec: Record, verdict: str) -> None:
+        """CE-108 (adhoc AAR entry 7): a verdict is judged against a bar written down before the
+        run, so the close refuses a verdict with no ``## Kill bar``, and an item whose bar is
+        written closes only with a verdict against it.
+
+        Not checked: that the bar was written before the run (its `section` op line, in the op
+        log, says when), and whether the verdict follows from the evidence: that is the reviewer's."""
+        bar = (okf.get_section(rec.doc.body, KILL_BAR) or "").strip()
+        if verdict and not bar:
+            raise Refusal(f"{rec.id} has no `## {KILL_BAR}`, so there is no pre-registered bar to judge the verdict against", f"write the bar before the run with `task section {rec.id} \"{KILL_BAR}\" \"<the measure, the threshold, what fires it>\"`; or close without `--verdict`")
+        if bar and not verdict:
+            raise Refusal(f"{rec.id} carries a pre-registered `## {KILL_BAR}`, and the close gives no verdict against it", f"close with `--verdict \"<{'|'.join(VERDICTS)}>: <evidence>\"`; VOID when the run cannot judge the bar (an invalid measurement)")
 
     def _stated_residuals(self, rid: str, given: list[str]) -> list[R.Risk]:
         """The residual risks a close states (CE-120): ``none`` alone, or well-formed risk lines."""
@@ -987,6 +1014,8 @@ class Engine:
             raise Refusal("## Log is appended to, never replaced", "use `comment`")
 
         def check(rec: Record) -> None:
+            if name == KILL_BAR and rec.doc.get("state") == "closed":  # CE-108: the bar was judged at close
+                raise Refusal(f"{rid} is closed, and its `## {KILL_BAR}` was judged by its close's verdict", f"a bar is not rewritten after its verdict: `task comment {rid}` with the correction, or reopen it and run again")
             self._review_ready_at_now(rec, okf.set_section(rec.doc.body, name, text), rec.doc.get("review"))
 
         self._board_set(rid, {}, session=session, actor=actor, body=lambda b: okf.set_section(b, name, text), check=check, op="section")

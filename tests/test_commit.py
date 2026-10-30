@@ -680,6 +680,22 @@ def test_a_task_close_commits_with_closes_its_body_and_what_rode_along(mrepo):
     assert git(mrepo, "status", "--porcelain").strip() == ""
 
 
+@pytest.mark.criterion("AC-126")
+def test_a_verdict_against_a_pre_registered_kill_bar_lands_in_the_log_the_reply_and_the_close_commit(mrepo):
+    """CE-108 (adhoc AAR entry 7): the bar written before the run sits in the item's `## Kill bar`,
+    and the close's verdict is linked to it where an audit reads: the Log, the reply, the commit."""
+    c = start(mrepo)
+    run(mrepo, "task_new", c, title="Run the trial")
+    run(mrepo, "task_section", c, id="CE-1", name="Kill bar", text="KILL if same-vs-host AUC < 0.7 for every tier")
+    _, line = run(mrepo, "task_close", c, id="CE-1", msg="trial run", verdict="KILL:  best AUC 0.629 (results.md § 3)")
+    assert line.startswith("CE-1: closed (trial run); verdict KILL against its kill bar"), line
+    msg = git(mrepo, "log", "-1", "--format=%B")
+    assert "Verdict: KILL: best AUC 0.629 (results.md § 3) (against CE-1's ## Kill bar)" in msg, msg
+    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}"], msg
+    body = (mrepo / "tasks").glob("CE-1-*.md").__next__().read_text(encoding="utf-8")
+    assert f"closed: trial run\n  verdict against the kill bar: KILL: best AUC 0.629 (results.md § 3)\n" in body, body
+
+
 @pytest.mark.criterion("AC-77")
 def test_a_long_close_message_is_cut_in_the_title_and_kept_whole_in_the_body(mrepo):
     c = start(mrepo)

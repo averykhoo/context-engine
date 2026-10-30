@@ -751,6 +751,14 @@ a single revertible cutover commit.
     next `INV-n`, once per task and risk however often the task is reopened and closed. A close
     refuses an unready review, and residuals with no register configured. G-W13 re-checks the
     stored files.
+- **`## Kill bar`**, when a task's fate rests on a run: the bar written down before the run (the
+  measure, the threshold, what fires it), so the result cannot choose its own bar. Its close must
+  give a verdict against it, `task.close` with `verdict`: `KILL` (the bar fired), `PASS` (it did
+  not) or `VOID` (the run cannot judge it, e.g. an invalid measurement), then a colon and the
+  evidence. The close refuses a bar with no verdict and a verdict with no bar, and writes the
+  verdict into the item's `## Log` and the close's commit message, so the bar and the verdict are
+  linked where an audit reads them; a closed item's bar is not rewritten. Whether the verdict
+  follows from the evidence stays the reviewer's call.
 
 **Edit rules (task tree):**
 - frontmatter changes only through operations carrying the session key;
@@ -1140,7 +1148,8 @@ numbered for citation (the order is below):
 3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
    `Closes:` and `Sabotage:` lines, §5.5 rule 4; each close states the residual risk its work
-   left, or `none`, §7.4), a light reorder (the standup; the full
+   left, or `none`, §7.4, and an item carrying a `## Kill bar` closes with its verdict, §5.2), a
+   light reorder (the standup; the full
    re-rank is §6.14), mint (with the session key; a task names its `goals`, §5.2). Before a
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
    `task.close` refuses until then.

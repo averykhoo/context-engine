@@ -429,6 +429,43 @@ def test_close_without_a_message_is_refused(eng, msg):
     assert rec.path.read_bytes() == before
 
 
+@pytest.mark.criterion("AC-126")
+@pytest.mark.parametrize(
+    "bar, verdict, match",
+    [
+        (None, "KILL: AUC 0.6", "has no `## Kill bar`, so there is no pre-registered bar"),
+        ("", "PASS: AUC 0.8", "has no `## Kill bar`"),  # an empty section is no bar
+        ("KILL if AUC < 0.7", "", "carries a pre-registered `## Kill bar`, and the close gives no verdict"),
+        ("KILL if AUC < 0.7", "fired: AUC 0.6", "is not `<KILL|PASS|VOID>: <evidence>`"),
+        ("KILL if AUC < 0.7", "KILL:  ", "is not `<KILL|PASS|VOID>: <evidence>`"),
+    ],
+)
+def test_a_close_refuses_a_verdict_without_a_kill_bar_and_a_kill_bar_without_a_verdict(eng, bar, verdict, match):
+    """CE-108: a bar written before the run is judged by the close, never skipped, and a verdict
+    with no bar written beforehand judges nothing."""
+    key = started(eng)
+    rec = task(eng, key)
+    if bar is not None:
+        eng.section(rec.id, "Kill bar", bar, **kw(key))
+    before = eng.store.find(rec.id).read_bytes()
+    with pytest.raises(Refusal, match=re.escape(match)):
+        eng.close(rec.id, "ran it", verdict=verdict, **kw(key))
+    assert eng.store.find(rec.id).read_bytes() == before
+
+
+@pytest.mark.criterion("AC-126")
+def test_a_judged_kill_bar_is_not_rewritten_after_the_close(eng):
+    key = started(eng)
+    rec = task(eng, key)
+    eng.section(rec.id, "Kill bar", "KILL if AUC < 0.7", **kw(key))
+    assert eng.close(rec.id, "ran it", verdict="VOID: the measurement is invalid", **kw(key)).startswith(f"{rec.id}: closed (ran it); verdict VOID against its kill bar")
+    with pytest.raises(Refusal, match="its `## Kill bar` was judged by its close's verdict"):
+        eng.section(rec.id, "Kill bar", "KILL if AUC < 0.5", **kw(key))
+    eng.section(rec.id, "Traps", "- none", **kw(key))  # other sections of a closed item are not held
+    eng.reopen(rec.id, "run again", **kw(key))
+    eng.section(rec.id, "Kill bar", "KILL if AUC < 0.5", **kw(key))  # reopened: a new bar for a new run
+
+
 @pytest.mark.criterion("AC-55")
 @pytest.mark.parametrize("next_", [2, 0])
 def test_closing_the_only_now_item_closes_and_says_g_w5_is_red_with_the_promote_remedy(eng, next_):

@@ -721,6 +721,16 @@ so the record tells a question skipped from a "none"; where a register is config
 carries no `review:`, the engine's reply says the risk was not stated. A risk missed at close goes
 into the register by hand, as above.
 
+**If the item carries a `## Kill bar`** (a bar written before a run, saying which measure and
+which threshold fires it), the close must give a verdict against it, `--verdict "<outcome>:
+<evidence>"`, its outcome one of `KILL` (the bar fired), `PASS` (it did not) or `VOID` (the run
+cannot judge the bar, e.g. an invalid measurement), then a colon and the evidence (a results
+file and its section). Without a bar, or with an empty one, refuse a verdict: write the bar first
+(§ task section), before the run, so its op line shows it came first. Add the verdict to the
+close's `## Log` line as a second line, indented two spaces, `verdict against the kill bar:
+<verdict>` (before any `residual risk:` line), and to the close commit's body as a paragraph
+`Verdict: <verdict> (against <id>'s ## Kill bar)`, before the `--body` text.
+
 **If an ACTIVE-PLAN doc names the item** (a doc G-D4 reads, `[guards] liveness` or `history`,
 whose liveness is ACTIVE-PLAN and whose first `liveness_lines` lines name it) and every other
 board item named there is closed, stop: freeze that doc first (§ doc freeze), then close. The
@@ -738,7 +748,8 @@ over its cap (G-W5's own remedy applies then) or when `[guards] off` names G-W5.
 item, the register if it changed, the op log and what was still uncommitted, at once. The message: the
 title `<id>: close; <message>` (its first line, cut at a word with `...` to fit 72 characters);
 then `Ops: <op> <id>, ...` naming the op lines it carries, when there is more than its own; then
-the whole message, if the title cut it or it runs over a line; then the body given with `--body`
+the whole message, if the title cut it or it runs over a line; then the `Verdict:` paragraph, if
+the close gave one; then the body given with `--body`
 or `--body-file` (the `Sabotage:` lines [sabotage.md](sabotage.md) step 5 asks for, and any
 receipts); then the `Also carries ...` paragraph when another session's lines go in; then one
 trailer paragraph, `Closes: <id>` and `Session: <key>`. Close a task once its work is committed,
@@ -751,6 +762,10 @@ A question closed by `task close` would carry no decision in the owner's words, 
 would in effect have answered its own question (FRAMEWORK §5.3).
 The residuals move to the register at close because that is when the design is final, and the
 register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
+Every close states its residual risk, `none` included, so the record tells a risk judged absent
+from a question never asked (an adopter's six closes filed none, and nobody could say which).
+A verdict is linked to the bar written before the run, so a bar cannot be chosen, or quietly
+skipped, after the result is known.
 A plan that names the item is frozen before the close, not after: G-D4 turns red on an
 ACTIVE-PLAN doc once every item it names is closed (FRAMEWORK §6.7: it freezes when its item
 closes), and a freeze is the session's own step with no owner call in it, so the close refuses
@@ -782,7 +797,9 @@ open while claiming an answer; clearing `answered:` instead would orphan the dec
 
 Replace the content under `## <name>` up to the next `## ` heading. Add the section at the end if
 it is missing. Never `## Log`: use `comment`. On an open NOW item carrying `review:`, check the
-result's `## Design review` as in `task promote`, and do not write it while a check fails.
+result's `## Design review` as in `task promote`, and do not write it while a check fails. On a
+closed item, never `## Kill bar`: its close judged it (comment the correction, or reopen the
+item and run again).
 
 **Why:** the `## Traps` and `## Read first` sections are replaced as they get better. The Log is history, so it is only
 ever appended to.
