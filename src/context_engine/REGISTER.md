@@ -612,3 +612,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the check is a presence check by design; it cannot tell whether the statement is true or about the gate
 - **control:** individual: the receipt is verbatim in the ledger and the close digest, read by the owner; docstring Not checked
 - **from:** CE-123, session 2026-10-30a
+
+## INV-87: neither the criterion ops nor lint check that a retired criteria row names the decision that retired it, that a deviates row names its deviation entry, or that a story marked sign-off: required keeps its criteria planned (FRAMEWORK §3.3)
+
+- **affects:** owners who rely on sign-off: required
+- **why not eliminated:** no guard reads these yet, and the shape of sign-off/verified is not settled (FRAMEWORK §9.3)
+- **control:** individual: intake by hand, plus Not checked in working.py::Engine.criterion_new's docstring and manual-mode § criterion set
+- **from:** CE-42, session 2026-10-30a
