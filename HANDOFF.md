@@ -3,22 +3,23 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-26c)
+## Banner (2026-10-30a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **CE-138 is NOW** (owner, 2026-10-26c): G-I3 edge cases from CE-113's review. NEXT is empty after it; rerank due then.
-- **Kit-edit freeze LIFTED (owner, DEC-72, 2026-10-23f).** CE-84, CE-85, CE-102, CE-105, CE-111, CE-119, CE-120 and CE-123
-  (built 2026-10-23a, not committed) were waiting on it and are now workable.
-- **Just landed (2026-10-26c):** CE-79 closed (adhoc trial: keep going; adhoc pushed through 4488738; INV-31 hook seen on all
-  four events); its unobserved agent half (first turn after a compaction keeps its key) is CE-145 at LATER. ASK-21 answered as
-  DEC-84: CE-126 gets option B (an op-line lane field), kept at LATER.
-- **Earlier:** CE-113 done (21a88d9: `ruled_by` and `## Ruling`, lint G-I3); CE-93 done (c5b812f: FRAMEWORK.md rewritten for
-  users; old text `FRAMEWORK-v0.5-2026-10-23.md`, internals `docs/engine.md`, `RELEASE-NOTES.md`); builders' calls
-  DEC-73..DEC-83 PROVISIONAL; review follow-ups CE-138..CE-144. The MCP server runs pre-CE-113 code until Claude Code restarts.
-- **Pushed through c1842b4** (2026-10-26c; local and Linux gate 1112 passed, CI green).
+- **CE-6 is NOW** (rerank 2026-10-30a): housekeeping ops, partial (hk close, G-W9, hk stamp, derived digest landed); split
+  hk.ratchet out first. NEXT: CE-18, CE-156, CE-161, CE-164, CE-165. Opus ranked, fable gave the owner-asked second opinion,
+  a verifier reconciled (`docs/evidence/rerank-2026-10-30a.md`); Last rerank: 2026-10-30a.
+- **Just landed (2026-10-30a, owner away, DEC-85):** 35 tasks closed through two ultracode build waves (worktree builders, a
+  skeptic review per lane, serial integration): CE-138, 139, 85, 106, 107, 117, 118, 105, 119, 134, 143, 46, 53, 140, 39,
+  102, 111, 44, 84, 123, 120, 108, 109, 137, 142, 144, 141, 42, 136, 96, 146, 147, 148, 149, 112. Agent calls DEC-86..DEC-130
+  are PROVISIONAL (owner to review); residual follow-ups filed as CE-150..CE-166; register INV-84..INV-90.
+- **Owner questions open:** ASK-22 (drop CE-110 or paste its rules into the global CLAUDE.md), ASK-23 (retire CE-145 into INV-31).
+- **Owner-held, not done:** CE-40, CE-47, CE-56 (rename half), CE-110, CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
+- **Pushed through 296202c** (2026-10-31; local gate 1346 passed, Linux gate 1346 passed; CI green, run 41133267123).
 - **Every clean close sets the banner** (G-W1).
-- **Lesson (2026-10-23a):** a worktree builder's gate can be a false green (subprocess tests run the main tree's editable install).
+- **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each
+  parallel lane a reserved AC-id range; an integrator that closes the NOW item empties NOW (G-W5) until the next promote.
 - **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
