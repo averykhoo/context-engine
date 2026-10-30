@@ -1409,7 +1409,7 @@ CONFIRMED = ("live", "unspecified")  # what `record confirm` makes an agent's re
 # G-I3 (CE-113): a ruling made on the owner's delegation, told apart from the owner's own words
 RULED_BY = "ruled_by"  # the decision key naming who ruled on the owner's delegation (FRAMEWORK §6.5)
 RULING_RE = re.compile(r"^## Ruling[ \t]*$", re.MULTILINE)  # the heading the ruling sits under, below the owner's words
-LONE_HUMAN_RE = re.compile(r"owner|human:\S+")  # an actor that says the words and the call are one human's own
+LONE_HUMAN_RE = re.compile(r"owner|human:\S+", re.IGNORECASE)  # an actor that says the words and the call are one human's own; any case (CE-138)
 DELEGATED_ACTOR = "owner asked"  # FRAMEWORK §6.5: the owner asked, another made the call
 SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column, by its header
 INTENT_OFF = "unset it in [guards] to switch the guard off"
@@ -1725,7 +1725,7 @@ def retire_problems(e: Engine, stories: list[tuple[str, str, object]]) -> list[t
     return out
 
 
-def delegation_problems(data, body: str) -> list[str]:
+def delegation_problems(data, body: str, *, new: bool = False) -> list[str]:
     """G-I3 on one decision (CE-113): a ruling made on the owner's delegation names who ruled and
     keeps the owner's words apart from it. With `ruled_by`: it names someone other than the owner;
     the `actor` is not a lone `owner` or `human:<id>` (the ruling is not that human's own words or
@@ -1733,20 +1733,25 @@ def delegation_problems(data, body: str) -> list[str]:
     delegating words, then a `## Ruling` section holding the ruling. Without `ruled_by`: no `##
     Ruling` section, which would be a ruling with nobody named as having made it. ``data`` is the
     frontmatter (a mapping: a `ruled_by` key that is present but blank counts); ``body`` the text.
-    `record new` and `ask answer` call it too, on what they are about to write."""
+    `owner` and `human:` are matched in any case (CE-138). `record new` and `ask answer` call it
+    too, on what they are about to write, with ``new``: then a `## Amendments` line anywhere in
+    the text is refused as well (CE-138), since the text below it would fall outside `body_sha`
+    and read as a later amendment; at rest that line is the amendments' own, so lint cannot."""
     text = body.replace("\r\n", "\n")
     m = okf.AMENDMENTS_HEADING.search(text)
+    out = []
+    if new and m:
+        out.append("holds a `## Amendments` line in the text being recorded, so the text below it would fall outside `body_sha` and read as a later amendment, not as the words recorded")
     text = text[: m.start()] if m else text
     ruling = RULING_RE.search(text)
     if RULED_BY not in data:
-        return [] if ruling is None else ["has a `## Ruling` section but no `ruled_by`, so nothing says who made the ruling, and it reads as the owner's"]
-    out = []
+        return out + ([] if ruling is None else ["has a `## Ruling` section but no `ruled_by`, so nothing says who made the ruling, and it reads as the owner's"])
     who = str(data.get(RULED_BY) or "").strip()
     actor = str(data.get("actor") or "").strip()
     if not who:
         out.append("has a blank `ruled_by`, so nothing says who made the ruling")
-    elif who == "owner":
-        out.append("says `ruled_by: owner`, but a ruling is delegated only to someone else; the owner's own call is a decision with `actor: owner` and no `ruled_by`")
+    elif who.casefold() == "owner":
+        out.append(f"says `ruled_by: {who}`, but a ruling is delegated only to someone else; the owner's own call is a decision with `actor: owner` and no `ruled_by`")
     if LONE_HUMAN_RE.fullmatch(actor):
         out.append(f"is a ruling by {who or 'someone'} on the owner's delegation, but is stamped `actor: {actor}`, so the ruling reads as the owner's own words and call")
     if ruling is None:
@@ -1768,7 +1773,9 @@ def delegated_rulings(e: Engine) -> list[Failure]:
     Not checked: a delegated ruling recorded with no `ruled_by` and no `## Ruling` section (it
     reads as the owner's own decision, and only the transcript can tell: FRAMEWORK §6.5 makes
     that the recorder's duty at the write), whether the words above `## Ruling` are the owner's
-    (G-D10 pins them as typed), and whether `ruled_by` names who really ruled."""
+    (G-D10 pins them as typed), whether `ruled_by` names who really ruled, and a text written by
+    hand with a `## Amendments` line of its own (at rest it reads as a real amendment; `record
+    new` and `ask answer` refuse it at the write, CE-138)."""
     if not e.w.decision:
         return []
     st = e.store

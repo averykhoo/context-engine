@@ -1894,13 +1894,16 @@ doc measured before the trial starts.
   mirrors `superseded_by`, and an op log line written by hand (trusted, as G-W7 trusts it).
 - **G-I3:** a ruling made on the owner's delegation is not stamped as the owner's. Every
   current decision with `ruled_by` names someone other than `owner`, has an `actor` that is not
-  `owner` or `human:<id>` alone, and holds the owner's delegating words above a `## Ruling` section
-  that holds the ruling, neither part empty; a decision without `ruled_by` has no `## Ruling`
-  section. `record.new` and `ask.answer` refuse what G-I3 would fail, by the same check. Not
-  checked: a delegated ruling recorded with neither `ruled_by` nor `## Ruling` (it reads as the
-  owner's own; only the transcript can tell, so it is the recorder's duty at the write, §6.5),
-  whether the words above `## Ruling` are the owner's, whether `ruled_by` names who really ruled,
-  and a superseded decision (history). Off while `[working] decision` is unset.
+  `owner` or `human:<id>` alone (both matched in any case), and holds the owner's delegating words
+  above a `## Ruling` section that holds the ruling, neither part empty; a decision without
+  `ruled_by` has no `## Ruling` section. `record.new` and `ask.answer` refuse what G-I3 would fail,
+  by the same check, and with it a decision text holding a `## Amendments` line (the text below it
+  would fall outside `body_sha` and read as a later amendment). Not checked: a delegated ruling
+  recorded with neither `ruled_by` nor `## Ruling` (it reads as the owner's own; only the
+  transcript can tell, so it is the recorder's duty at the write, §6.5), whether the words above
+  `## Ruling` are the owner's, whether `ruled_by` names who really ruled, a text written by hand
+  with a `## Amendments` line of its own (at rest it reads as a real amendment), and a superseded
+  decision (history). Off while `[working] decision` is unset.
 
 The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,

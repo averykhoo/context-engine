@@ -1310,3 +1310,67 @@ def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path
     q = e.ask_new("Which layout?", **W)
     e.ask_answer(q.id, "I said so.\n\n## Ruling\n\nmine", title="Mine", **W)
     assert g_i3(e) == []
+
+
+AMENDS = "Layout B.\n\n## Amendments\n\n- **2026-10-12 (owner):** a note that was never amended in\n"
+
+
+@pytest.mark.criterion("AC-101")
+@pytest.mark.parametrize(
+    "body, fields, match",
+    [
+        (None, {"ruled_by": "Owner"}, "`ruled_by: Owner`"),
+        (None, {"ruled_by": "OWNER"}, "`ruled_by: OWNER`"),
+        (None, {"actor": "Owner"}, "stamped `actor: Owner`"),
+        (None, {"actor": "Human:avery"}, "stamped `actor: Human:avery`"),
+        (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{AMENDS}', {}, "holds a `## Amendments` line"),
+    ],
+    ids=["ruled_by-Owner", "ruled_by-OWNER", "actor-Owner", "actor-Human", "amendments-in-ruling"],
+)
+def test_record_new_refuses_the_owner_in_any_case_and_an_amendments_line_in_a_ruling(eng, body, fields, match):
+    """CE-138: `owner` and `human:` name the owner whatever their case, and a `## Amendments` line
+    in the text being recorded would put what follows it outside `body_sha`, reading as a later
+    amendment; `record new` refuses both before any byte."""
+    with pytest.raises(Refusal, match=re.escape(match)) as got:
+        delegated(eng, body=body, **fields)
+    assert "ruled_by=<who ruled>" in got.value.remedy and "record amend" in got.value.remedy
+    assert not list(eng.store.records("decision"))
+    with pytest.raises(Refusal, match=re.escape("holds a `## Amendments` line")):
+        dec(eng, body=AMENDS)  # the owner's own decision too: nothing is recorded as an amendment
+    assert not list(eng.store.records("decision"))
+
+
+@pytest.mark.criterion("AC-101")
+@pytest.mark.parametrize(
+    "words, kw, match",
+    [
+        (OWNER_DELEGATES, {"ruling": RULING, "ruled_by": "Owner"}, "`ruled_by: Owner`"),
+        (OWNER_DELEGATES, {"ruling": AMENDS, "ruled_by": "claude-code/fable"}, "holds a `## Amendments` line"),
+        (AMENDS, {}, "holds a `## Amendments` line"),
+    ],
+    ids=["ruled_by-Owner", "amendments-in-ruling", "amendments-in-words"],
+)
+def test_ask_answer_refuses_the_owner_in_any_case_and_an_amendments_line(eng, words, kw, match):
+    q = eng.ask_new("Which index layout?", **W)
+    before = eng.store.get(q.id).path.read_bytes()
+    with pytest.raises(Refusal, match=re.escape(match)) as got:
+        eng.ask_answer(q.id, words, title="Layout B", **kw, **W)
+    assert "in any case" in got.value.remedy and "record amend" in got.value.remedy
+    assert eng.store.get(q.id).path.read_bytes() == before and not list(eng.store.records("decision"))
+
+
+@pytest.mark.criterion("AC-101")
+def test_lint_g_i3_fails_a_hand_edited_capitalised_owner(eng):
+    """CE-138: G-I3 matches the owner in any case at rest too, where a hand edit puts it."""
+    rid = delegated(eng)
+    path = eng.store.get(rid).path
+    good = path.read_text(encoding="utf-8")
+    for old, new, says in (("ruled_by: claude-code/fable", "ruled_by: Owner", "says `ruled_by: Owner`"),
+                           ("actor: owner asked", "actor: Owner", "stamped `actor: Owner`"),
+                           ("actor: owner asked", "actor: HUMAN:avery", "stamped `actor: HUMAN:avery`")):
+        assert old in good
+        path.write_text(good.replace(old, new), encoding="utf-8")
+        got = g_i3(eng)
+        assert [f.path for f in got] == [eng.store._rel(path)] and says in got[0].message, got
+    path.write_text(good, encoding="utf-8")
+    assert g_i3(eng) == []

@@ -1010,9 +1010,9 @@ class Engine:
             fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
             body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
                     f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
-        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
+        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
             raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
-                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`); the owner's words hold no `## Ruling` heading")
+                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading, and neither part holds a `## Amendments` line (a later note goes in with `record amend`)")
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
         answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
         was: list[str] = []
@@ -1221,9 +1221,9 @@ class Engine:
                 fields[key] = session
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
-        if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
+        if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
             raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
-                          f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`")
+                          f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`; no decision's text holds a `## Amendments` line when it is recorded (a later note goes in with `record amend`)")
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
 
     def _story_checks(self, fields: dict[str, Any]) -> None:

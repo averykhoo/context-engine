@@ -453,11 +453,14 @@ Check every record, then the working state. `--working` does only the second hal
   keeps reading as tested.*
 - **G-I3**, delegated rulings (only when `[working] decision` is set). Every decision that is not
   `status: deprecated` and has a `ruled_by` key: `ruled_by` is not blank and not `owner`; `actor`
-  is not `owner` or `human:<id>` alone (a ruling made on the owner's delegation is `owner asked`);
+  is not `owner` or `human:<id>` alone (a ruling made on the owner's delegation is `owner asked`;
+  `owner` and `human:` in any case, so `Owner` counts);
   and the text above `## Amendments` has the owner's delegating words, then a `## Ruling` heading
   with the ruling under it, neither part empty. A decision without `ruled_by` has no `## Ruling`
   heading. Not read: a delegated ruling recorded with neither (only the transcript can tell),
-  whether the words above `## Ruling` are the owner's, and whether `ruled_by` names who ruled. *Why:
+  whether the words above `## Ruling` are the owner's, whether `ruled_by` names who ruled, and a
+  text written with a `## Amendments` line of its own (it reads as a real amendment; § context-engine
+  record new stops it at the write). *Why:
   a ruling stamped `actor: owner`, or quoted as the owner's words, becomes frozen owner intent that
   nobody can amend away (FRAMEWORK §6.5).*
 - **G-D12** (only when `[guards]` sets `coverage_spec` or `coverage_maps`; red if only one is
@@ -813,7 +816,8 @@ or demoted to LATER.
    `Owner, answering ASK-n by delegating the ruling to <who ruled>: *"<words>"*`, a blank line,
    `## Ruling`, a blank line, `Ruled by <who ruled> on the owner's delegation; only the quote above
    is the owner's words.`, a blank line, then the ruling. Stop if the words hold a `## Ruling`
-   heading of their own (G-I3).
+   heading of their own (G-I3), or if the words or the ruling hold a `## Amendments` line (the
+   text below it would fall outside `body_sha` and read as a later amendment).
 3. On the question, set `state: closed`, `status: deprecated`, `closed: <key>`,
    `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` (with
    `ruled_by: <who ruled>` added for a delegated ruling) and `updated`.
@@ -1039,9 +1043,11 @@ reject it, a round of fixes later.
    aliases are fixed from then on (`decision set` refuses them). For a decision, stop unless it
    passes G-I3 of § context-engine lint: a ruling made on the owner's delegation (the owner said
    "you decide", and an agent or another human made the call) has `ruled_by: <who ruled>` (never
-   `owner`) and an `actor` that is not the owner alone (`owner asked`), and its body is the owner's
-   delegating words verbatim, then a `## Ruling` heading with the ruling under it; any other
-   decision has no `## Ruling` heading.
+   `owner`, in any case) and an `actor` that is not the owner alone (`owner asked`), and its body
+   is the owner's delegating words verbatim, then a `## Ruling` heading with the ruling under it;
+   any other decision has no `## Ruling` heading. No decision's text holds a `## Amendments` line
+   when it is recorded: the text below it would fall outside `body_sha` and read as a later
+   amendment (a later note goes in with § context-engine record amend).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
