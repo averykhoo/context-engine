@@ -137,6 +137,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-86](DEC-86-raise-the-fan-out-runbook-s-g-d1-max-lines-from.md): Raise the Fan-out runbook's G-D1 max_lines from 90 to 110 *(agent (claude-opus-5-5), 2026-10-30)*
 - [DEC-87](DEC-87-ac-53-s-provenance-list-names-ruled-by.md): AC-53's provenance list names ruled_by *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-88](DEC-88-a-decision-text-holding-amendments-is-refused.md): A decision text holding ## Amendments is refused at the write, through G-I3's shared check *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-89](DEC-89-new-criterion-ac-101-for-ce-138-s-refusals-not.md): New criterion AC-101 for CE-138's refusals, not a rewrite of AC-98, AC-99 or AC-100 *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## REJECTED
 
