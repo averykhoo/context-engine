@@ -287,7 +287,7 @@ component = "Fan-out runbook"
 path = "docs/runbooks/fan-out.md"
 mode = "replaced, LIVING"
 note = "delegation, workflows and the build rounds (FRAMEWORK §6.6)"
-max_lines = 90     # G-D1; provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
+max_lines = 110    # G-D1; provenance: MEASURED 2026-10-30a, the shipped runbook is 102 lines, plus room for a few rows; wrong if a method step is left out to stay under it
 max_bytes = 8000   # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
 max_width = 100    # provenance: JUDGEMENT, engine default, as the gate runbook's; wrong as above
 

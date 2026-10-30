@@ -48,6 +48,15 @@ verdict to return per run, and its persist file; the CI watcher's brief is in
 [procedures.md § Push and CI](procedures.md#push-and-ci-68). Use the cheapest model that can
 do it: haiku, or sonnet when it must read the logs.
 
+- **Never return on the first poll.** A watcher given one long open-ended wait ends its turn
+  instead of blocking, and the cost moves up to the agent that waits out the run. The loop lives
+  in deterministic code (the workflow script, or the coordinator's `run_in_background` shell
+  until-loop), not in the cheap model's judgement.
+- **Each watcher makes one bounded blocking wait** (the adhoc trial used 9 minutes or less), then
+  returns `finished` and `alive`; the loop starts the next watcher until `finished`.
+- **Confirm a terminal state twice, a minute apart** (process dead, run finished) before reporting
+  it: one poll can race a start and report a live run dead. A watcher's own timeout is not a finish.
+
 ## Build rounds
 
 The steps are FRAMEWORK §6.6's, in its order and with its numbers.

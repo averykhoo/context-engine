@@ -234,7 +234,7 @@ component = "Fan-out runbook"
 path = "docs/runbooks/fan-out.md"
 mode = "replaced only through the kit copy (AC-37), LIVING"
 note = "delegation, workflows and FRAMEWORK §6.6's build rounds (DEC-16, DEC-17, DEC-18 are the rules)"
-max_lines = 90     # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
+max_lines = 110    # G-D1; provenance: MEASURED 2026-10-30a, the runbook is 102 lines with the watcher, cross-run and worktree notes (CE-106, CE-107, CE-118), plus room for a few rows; wrong if a method step is left out to stay under it
 max_bytes = 8000   # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
 max_width = 100    # G-D1; provenance: MEASURED 2026-10-13c, as the gate runbook's; wrong as above
 
