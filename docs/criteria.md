@@ -53,7 +53,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 |---|---|---|---|
 | AC-18 | Every MCP tool calls the same function as its CLI subcommand; there is one implementation per operation | US-4 | tested |
 | AC-19 | Every write tool returns one line; every read tool returns a capped slice with a pointer to the rest | US-1 | tested |
-| AC-20 | `hk.close` refuses unless the named commit really carries `Closes: <id>` or the session's ledger entry names the item (G-W9): the commit is in HEAD's history and git reads the trailer (a `Closes:` line outside the last paragraph is refused), the item was not already closed in that commit's tree and its log does not cite the commit (a reopen outweighs the trailer); the close is mechanical and cites its evidence; `--scan` closes every open task a trailer names, never a question, and lists each it could not close | US-3 | tested |
+| AC-20 | `hk.close` refuses unless the named commit really carries `Closes: <id>` or the session's ledger entry names the item (G-W9): the commit is in HEAD's history and git reads the trailer (a `Closes:` line outside the last paragraph is refused), the item was not already closed in that commit's tree and its log does not cite the commit (a reopen outweighs the trailer), and the item's log has no close from the ledger entry's session and no reopen from a later one (a reopen outweighs the rows); the close is mechanical and cites its evidence; `--scan` closes every open task a trailer names, never a question, and lists each it could not close | US-3 | tested |
 
 ## Manual mode (CE-8)
 
@@ -242,7 +242,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-165 | G-W9 fails a mechanical `close` op line whose item's log has no close line from that session citing evidence, or cites a commit whose trailers git reads without `Closes: <id>`, or a ledger entry whose `rows:` does not name the item closed, or (in a full clone) a commit git does not know; a shallow clone trusts a commit it lacks | US-3 | tested |
+| AC-165 | G-W9 fails a mechanical `close` op line whose item's log has no close line from that session citing evidence, or cites a commit whose trailers git reads without `Closes: <id>` or that is not in HEAD's history, or a ledger entry whose `rows:` does not name the item closed or that a close from its session or a later reopen, in the log before that close line, outweighs, or (in a full clone) a commit git does not know; a shallow clone trusts a commit it lacks | US-3 | tested |
 | AC-166 | `hk stamp` sets each open question's `last_asked` to the newest finished ledger entry whose `asked` receipt names it, only where that is newer, as a mechanical write whose op line records the stamped key under `as`; G-W7 checks `last_asked` against that key, so the stamp passes and a hand edit still fails | US-3 | tested |
 | AC-167 | An abandoned stub carries a `derived digest:` line: the commits in HEAD's history whose `Session:` trailer is exactly its key, the ids their `Closes:` trailers name, and the count of its op log lines | DEC-69 | tested |
 

@@ -85,6 +85,30 @@ def test_hk_close_takes_a_ledger_entry_whose_rows_name_the_item_closed(eng):
         eng.hk_close(a.id, ledger=hk, **kw(hk))  # an open stub is no record of a close
     assert eng.hk_close(a.id, ledger=me, **kw(hk)).startswith(f"{a.id}: closed (closed in session {me} (its ledger entry's rows name it closed))")
     assert _g(eng, "G-W9") == []
+    later = started(eng)
+    eng.reopen(a.id, "not done after all", **kw(later))
+    assert _g(eng, "G-W9") == []  # G-W9 reads the log before the close: a later reopen does not turn it red
+    with pytest.raises(Refusal, match=rf"{a.id} was reopened in session {later}, after session {me}"):
+        eng.hk_close(a.id, ledger=me, **kw(later))  # a reopen outweighs the old rows
+
+
+@pytest.mark.criterion("AC-20")
+def test_hk_close_refuses_a_ledger_entry_whose_session_closed_the_item_that_was_reopened_since(eng):
+    """Session A closed it and its rows say so; session B reopened it. A's rows are no evidence
+    that it is done now (the 2026-10-30a review's probe). B started before A, as concurrent
+    sessions do, so A's own close line, not a later reopen, is what shows it."""
+    b_key = started(eng)
+    a_key = started(eng)
+    c = task(eng, a_key, "Closed then reopened")
+    eng.close(c.id, "done", **kw(a_key))
+    eng.session_close(a_key, actor=ACTOR, rows=f"{c.id} (closed)", summary=["did it"], receipts=receipts())
+    eng.reopen(c.id, "found a bug, not done", **kw(b_key))
+    with pytest.raises(Refusal, match=rf"{c.id}'s log has a close from session {a_key}: it was closed then, and has been reopened since"):
+        eng.hk_close(c.id, ledger=a_key, **kw(b_key))
+    assert eng.store.get(c.id).doc.get("state") == "open"
+    eng.close(c.id, f"closed in session {a_key} (its ledger entry's rows name it closed)", mechanical=True, **kw(b_key))  # skipped the check
+    red = _g(eng, "G-W9")
+    assert len(red) == 1 and f"cites the ledger entry {a_key}, but {c.id}'s log has a close from session {a_key}" in red[0].message, red
 
 
 @pytest.mark.criterion("AC-20")
@@ -132,6 +156,19 @@ def test_g_w9_fails_a_mechanical_close_without_evidence_or_with_evidence_that_do
     red = [f for f in _g(eng, "G-W9") if a.id in f.message]
     assert len(red) == 1 and f"cites {plain[:7]}, whose trailers do not carry `Closes: {a.id}`" in red[0].message, red
     assert [f.guard for f in eng.lint(working=True) if f.guard == "G-W9"] == ["G-W9", "G-W9"]  # it is a working-state guard
+
+
+@pytest.mark.criterion("AC-165")
+def test_g_w9_and_hk_close_refuse_a_commit_outside_heads_history(eng):
+    me, a, _ = _board(eng)
+    _git(eng.root, "checkout", "-q", "-b", "side")
+    side = _commit(eng.root, f"on another branch\n\nCloses: {a.id}\n", "side.txt")
+    _git(eng.root, "checkout", "-q", "main")
+    with pytest.raises(Refusal, match=rf"{side[:7]} is not in HEAD's history"):
+        eng.hk_close(a.id, side, **kw(me))
+    eng.close(a.id, f"done in {side[:7]} (its `Closes: {a.id}` trailer, checked in git)", mechanical=True, **kw(me))  # skipped the check
+    red = _g(eng, "G-W9")
+    assert len(red) == 1 and f"cites {side[:7]}, which is not in HEAD's history" in red[0].message, red
 
 
 @pytest.mark.criterion("AC-165")

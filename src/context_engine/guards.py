@@ -1392,11 +1392,29 @@ CLOSE_EVIDENCE_RE = re.compile(
     r"|closed in session (?P<key>\S+) \(its ledger entry)", re.MULTILINE)
 
 
+LOG_CLOSE_OR_REOPEN_RE = re.compile(r"^- (?P<session>\S+) \(.*?\): (?P<what>closed|reopened): ", re.MULTILINE)
+
+
+def ledger_close_outweighed(log: str, rid: str, key: str) -> str:
+    """Why session ``key``'s ledger entry naming ``rid`` closed is no evidence for closing it now,
+    read from ``log``, the item's log before that close: its log has a close from session ``key``
+    (it was closed then, and is open again, so it was reopened since), or a reopen from a later
+    session. A reopen outweighs the old rows, as it outweighs an old trailer. '' when neither."""
+    for m in LOG_CLOSE_OR_REOPEN_RE.finditer(log):
+        if m["what"] == "closed" and m["session"] == key:
+            return f"{rid}'s log has a close from session {key}: it was closed then, and has been reopened since"
+        if m["what"] == "reopened" and key_order(m["session"]) > key_order(key):
+            return f"{rid} was reopened in session {m['session']}, after session {key}"
+    return ""
+
+
 def mechanical_closes(e: Engine) -> list[Failure]:
     """G-W9 on the stored files (CE-6, AC-165): every mechanical `close` op line's item has a
     close line in its `## Log` from that session citing its evidence, as `hk close` writes it,
-    and the evidence holds: the commit's `Closes:` trailers, as git reads them, name the item,
-    or the ledger entry's `rows:` names it closed. One failure per close line.
+    and the evidence holds: the commit is in HEAD's history and its `Closes:` trailers, as git
+    reads them, name the item, or the ledger entry's `rows:` names it closed and the item's log
+    before that close shows no reopen since (`ledger_close_outweighed`). One failure per close
+    line.
 
     A cited commit git does not know fails in a full clone; in a shallow one (CI's checkout), or
     with no git at all, its citation is trusted, as G-W7 trusts the op log.
@@ -1418,7 +1436,8 @@ def mechanical_closes(e: Engine) -> list[Failure]:
             continue  # gone from the board: G-W7's op_records names a missing file
         rel = r.path.relative_to(e.root).as_posix()
         ok, why = False, f"its ## Log has no close line from session {who} citing a commit's `Closes: {rid}` trailer or a ledger entry"
-        for m in CLOSE_EVIDENCE_RE.finditer(okf.parse(r.path.read_bytes().decode("utf-8", errors="replace")).body):  # heads carry no body
+        body = okf.parse(r.path.read_bytes().decode("utf-8", errors="replace")).body  # heads carry no body
+        for m in CLOSE_EVIDENCE_RE.finditer(body):
             if m["session"] != who:
                 continue
             if m["sha"]:
@@ -1431,6 +1450,10 @@ def mechanical_closes(e: Engine) -> list[Failure]:
                 if said is None and not shallow:
                     why = f"its close cites {m['sha']}, which git does not know in this full clone"
                     continue
+                if said is not None and L._git(e.root, "merge-base", "--is-ancestor", m["sha"], "HEAD") is None:
+                    # a commit git has, shallow clone or not, is reachable from HEAD if it is in its history
+                    why = f"its close cites {m['sha']}, which is not in HEAD's history"
+                    continue
                 if said is None or rid in [x.strip() for x in said.replace("\n", ",").split(",")]:
                     ok = True  # None in a shallow clone, or with no git: the commit may be cut off, so its citation is trusted
                     break
@@ -1439,8 +1462,12 @@ def mechanical_closes(e: Engine) -> list[Failure]:
                 led = led if led is not None else (L.parse_ledger((e.root / e.w.ledger).read_bytes().decode("utf-8")) if e.w.ledger and (e.root / e.w.ledger).is_file() else L.parse_ledger(L.EMPTY_LEDGER))
                 entry = led.get(m["key"])
                 if entry is not None and entry.kind != "open" and L.closed_in_rows(entry.field("rows") or "", rid):
-                    ok = True
-                    break
+                    outweighed = ledger_close_outweighed(body[:m.start()], rid, m["key"])
+                    if not outweighed:
+                        ok = True
+                        break
+                    why = f"its close cites the ledger entry {m['key']}, but {outweighed}"
+                    continue
                 why = f"its close cites the ledger entry {m['key']}, whose `rows:` does not name {rid} closed"
         if not ok:
             out.append(Failure("G-W9", rel, f"{rid} was closed mechanically in session {who}, but {why}",

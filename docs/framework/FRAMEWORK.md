@@ -1612,8 +1612,10 @@ ledger)` when that session's finished ledger entry names the item closed in its 
 cites that evidence in the close message (G-W9). The trailer it acts on is a commit made outside
 the engine that finished an item (§6.10 item 1): an engine close already wrote the close its own
 commit's trailer names. So a commit is no evidence when the item was already closed in that
-commit's tree, or when the item's log already cites it: either way the item was reopened since,
-and a reopen outweighs the old trailer. `hk.close` with `scan` closes every open task such a
+commit's tree, or when the item's log already cites it: either way the item was reopened since
+(or a comment named it), and a reopen outweighs the old trailer. Likewise a ledger entry is no
+evidence when the item's log has a close from that session (it was closed then, so reopened
+since) or a reopen from a later one. `hk.close` with `scan` closes every open task such a
 trailer names and lists what it could not close. Otherwise housekeeping proposes the close and
 the session approves the batch.
 
@@ -2202,9 +2204,10 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   session. This repeated reminder is what makes the board the owner's tracker.
 - **G-W9:** every `--mechanical` close cites its evidence: a commit whose message carries
   `Closes: <id>`, or a ledger entry naming the item. `hk.close` checks it at write time; the
-  lint re-checks it in the stored files: the item's log line from that session cites a commit
-  whose trailers git reads as `Closes: <id>`, or a finished ledger entry whose `rows:` names it
-  closed. A cited commit git does not know fails in a full clone; a shallow one (CI's checkout) trusts it.
+  lint re-checks it in the stored files: the item's log line from that session cites a commit in
+  HEAD's history whose trailers git reads as `Closes: <id>`, or a finished ledger entry whose
+  `rows:` names it closed with no reopen since in the log before that line. A cited commit git
+  does not know fails in a full clone; a shallow one (CI's checkout) trusts it.
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
   and the count goes into the run's report. **No budget by default:** change sizes vary by
   session, so a cap that suits a large session would be unreasonably large for most, and a

@@ -1160,17 +1160,27 @@ class Engine:
             return None
         return [x.strip() for x in out.replace("\n", ",").split(",") if x.strip()]
 
-    def _ledger_names_closed(self, key: str, rid: str) -> bool:
-        """The ledger entry ``key`` exists, is not a stub, and its `rows:` line says ``rid`` closed."""
+    def _ledger_evidence(self, rec: Record, key: str) -> str:
+        """The close message when session ``key``'s ledger entry is evidence that ``rec`` is done:
+        it exists, is not a stub, its `rows:` line says the item closed, and the item's log shows
+        no reopen since (no close from that session, no reopen from a later one). Refuses
+        otherwise, naming which."""
+        rid = rec.id
         entry = self.read_ledger().get(key)
-        return entry is not None and entry.kind != "open" and bool(L.closed_in_rows(entry.field("rows") or "", rid))
+        if entry is None or entry.kind == "open" or not L.closed_in_rows(entry.field("rows") or "", rid):
+            raise Refusal(f"the ledger has no finished entry {key} whose `rows:` names {rid} closed",
+                          f"housekeeping closes only on that evidence; close it as this session's own judgement with `task close {rid} -m \"<why>\"`")
+        outweighed = G.ledger_close_outweighed(rec.doc.body, rid, key)
+        if outweighed:
+            raise Refusal(outweighed, f"a reopen outweighs the old ledger rows: close it with `task close {rid}` when it is done again")
+        return f"closed in session {key} (its ledger entry's rows name it closed)"
 
     def _commit_evidence(self, rec: Record, commit: str) -> str:
         """The close message when ``commit`` is evidence that ``rec`` is done: it is in HEAD's
         history, git reads `Closes: <id>` in its trailers, the item was not already closed in
         that commit's own tree (an engine close commit, whose close is done), and the item's log
-        does not cite it yet (the item was reopened after a close on it). Refuses otherwise,
-        naming which."""
+        does not cite it yet (the item was reopened after a close on it, or a comment named it:
+        either way it is not new). Refuses otherwise, naming which."""
         rid = rec.id
         full = (L._git(self.root, "rev-parse", "--verify", "-q", f"{commit}^{{commit}}") or "").strip()
         if not full:
@@ -1188,7 +1198,7 @@ class Engine:
         if okf.parse(then).get("state") == "closed":
             raise Refusal(f"{rid} was already closed in {short} (its close commit), and has been reopened since", f"a reopen outweighs the old trailer: close it with `task close {rid}` when it is done again")
         if any(full.startswith(m) for m in L.SHA_RE.findall(rec.doc.body)):
-            raise Refusal(f"{rid}'s log already cites {short}: it was closed on it before and reopened since", f"a reopen outweighs the old trailer: close it with `task close {rid}` when it is done again")
+            raise Refusal(f"{rid}'s log already cites {short}, so it is not new evidence (a close on it was reopened since, or a comment named it)", f"close it with `task close {rid}` as this session's own judgement when it is done")
         return f"done in {short} (its `Closes: {rid}` trailer, checked in git)"
 
     def hk_close(self, rid: str = "", commit: str = "", *, ledger: str = "", scan: bool = False, session: str, actor: str) -> str:
@@ -1212,10 +1222,7 @@ class Engine:
         if commit:
             msg = self._commit_evidence(rec, commit)
         else:
-            if not self._ledger_names_closed(ledger, rid):
-                raise Refusal(f"the ledger has no finished entry {ledger} whose `rows:` names {rid} closed",
-                              f"housekeeping closes only on that evidence; close it as this session's own judgement with `task close {rid} -m \"<why>\"`")
-            msg = f"closed in session {ledger} (its ledger entry's rows name it closed)"
+            msg = self._ledger_evidence(rec, ledger)
         return self.close(rid, msg, session=session, actor=actor, mechanical=True)
 
     def _hk_close_scan(self, *, session: str, actor: str) -> str:

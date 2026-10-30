@@ -607,10 +607,13 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W9**: for each op log line with `"op": "close"` and `"mechanical": true`: the item's
   `## Log` has a line `- <that session> (<actor>): closed: done in <sha> (its `Closes: <id>`
   trailer, checked in git)` where `git log -1 --format='%(trailers:key=Closes,valueonly)' <sha>`
-  names the item (a commit git does not know fails in a full clone and is trusted in a shallow one), or `... closed: closed in
+  names the item (a commit git does not know fails in a full clone and is trusted in a shallow one)
+  and `git merge-base --is-ancestor <sha> HEAD` succeeds, or `... closed: closed in
   session <key> (its ledger entry's rows name it closed)` where that finished ledger entry's
-  `rows:` says `<id> (closed`. *Why: a mechanical close is housekeeping's, which acts only on
-  recorded evidence; one without it hides a judgement nobody recorded.*
+  `rows:` says `<id> (closed` and the `## Log` above that line has no `closed:` line from
+  `<key>` and no `reopened:` line from a later session. *Why: a mechanical close is
+  housekeeping's, which acts only on recorded evidence; one without it hides a judgement nobody
+  recorded.*
 
 A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed), and
 the write-time stops that check the same rule are off with it (among them G-I1 and G-I2 in
@@ -1149,10 +1152,13 @@ evidence. By hand:
    message's last paragraph is not a trailer). Refuse it if the item was already closed in that
    commit's own tree (`git show <sha>:<the item's path>` says `state: closed`: it is the item's
    own close commit, and the item was reopened since), or if the item's `## Log` already cites
-   the hash (it was closed on it and reopened since). The message is `done in <short sha> (its
+   the hash (it was closed on it and reopened since, or a comment named it: either way it is not
+   new). The message is `done in <short sha> (its
    `Closes: <id>` trailer, checked in git)`.
 2. **A ledger entry:** the session `<key>`'s entry must be finished (not `kind: open`) and its
-   `rows:` must say `<id> (closed`. The message is `closed in session <key> (its ledger entry's
+   `rows:` must say `<id> (closed`. Refuse it if the item's `## Log` has a `closed:` line from
+   `<key>` (it was closed then and reopened since) or a `reopened:` line from a later session: a
+   reopen outweighs the old rows. The message is `closed in session <key> (its ledger entry's
    rows name it closed)`.
 3. Then do § context-engine task close with that message, logging the `close` line with
    `"mechanical": true`. Never an owner question: it closes only on the owner's answer.
