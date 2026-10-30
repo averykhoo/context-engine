@@ -27,6 +27,7 @@ CALLS = {
     "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--owed", "o"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "owed": ["o"]}),
     "session_pause": (["--rows", "r", "--deferred", "d"], {"rows": "r", "deferred": "d"}),
     "session_abandon": (["2026-10-01a", "--force"], {"key": "2026-10-01a", "force": True}),
+    "session_tasks": (["CE-1", "CE-2,CE-3"], {"ids": ["CE-1", "CE-2", "CE-3"]}),
     "orient": ([], {}),
     "routes": ([], {}),
     "coverage": ([], {}),
@@ -176,6 +177,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     key = w("session_start", actor=ACTOR).split()[1]
     w("task_new", title="First", pri="NOW", brief="b")
     w("task_new", title="Second", body="Summary.\n\n## Traps\n\n- none yet\n\n## Log\n")
+    w("session_tasks", ids=["CE-1", "CE-2"])
     w("task_set", id="CE-2", fields={"brief": "c"})
     w("task_dep", id="CE-2", add=["CE-1"])
     w("task_comment", id="CE-2", text="a note")

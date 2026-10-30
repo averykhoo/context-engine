@@ -155,6 +155,13 @@ def _follows(key: str | None) -> str:
     return bullet(FOLLOWS, key) if key else ""
 
 
+TASKS = "tasks"  # the board items the owner asked this session for, named at intake (`session tasks`, CE-112); the close's rows say how each ended
+
+
+def _tasks(ids: str | None) -> str:
+    return bullet(TASKS, ids) if ids else ""
+
+
 def render_open(key: str, at: str, actor: str, head: str | None = None, follows: str | None = None) -> str:
     return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _follows(follows) + _head(head)
 
@@ -162,11 +169,12 @@ def render_open(key: str, at: str, actor: str, head: str | None = None, follows:
 RECEIPTS = ("guards", "read", "asked")
 
 
-def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None, follows: str | None = None) -> str:
+def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None, follows: str | None = None, tasks: str | None = None) -> str:
     rec = [f"{k}: {receipts[k]}" for k in RECEIPTS if receipts.get(k)]
     return (
         f"## {key} · kind: close\n\n"
         + _follows(follows)
+        + _tasks(tasks)
         + bullet("rows", rows)
         + sub_bullets("- **receipts:**", rec)
         + sub_bullets("- **summary** (the owner digest):", summary)
@@ -175,8 +183,8 @@ def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[st
     )
 
 
-def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None) -> str:
-    return f"## {key} · kind: pause\n\n" + _follows(follows) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
+def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None, tasks: str | None = None) -> str:
+    return f"## {key} · kind: pause\n\n" + _follows(follows) + _tasks(tasks) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
 
 
 def items(entry: Entry, head: str) -> list[str]:

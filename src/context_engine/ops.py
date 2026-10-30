@@ -128,6 +128,12 @@ def session_close(e: Engine, c: Caller, rows: str, summary: list[str], guards: s
 
 
 @op(write=True)
+def session_tasks(e: Engine, c: Caller, ids: list[str] | None = None) -> tuple[int, str]:
+    """Intake: name the board items the owner asked this session for (added to the stub's `tasks:` line), so "every task asked for is done" is read from the record; with no ids, only reports. The reply gives each one's state and whether every one is closed: then close the session (close eagerly). `session close` refuses rows that do not name each one."""
+    return 0, e.session_tasks(ids or [], **c.kw)
+
+
+@op(write=True)
 def session_pause(e: Engine, c: Caller, rows: str, deferred: str) -> tuple[int, str]:
     """Pause: write a pause entry instead of a clean close; `deferred` names what was skipped."""
     return 0, e.session_pause(c.session, actor=c.actor, rows=rows, deferred=deferred)

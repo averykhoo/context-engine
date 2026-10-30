@@ -70,6 +70,8 @@ def build() -> argparse.ArgumentParser:
     c.add_argument("--read", required=True, help="receipt: what was read to start work")
     c.add_argument("--asked", default="", help="receipt: the owner questions raised in chat; must name each one at NOW or NEXT (default: those `ask raised` recorded)")
     c.add_argument("--owed", action="append", default=[], help="one thing still owed (an answer, a check, a push); repeat for each (default: nothing)")
+    st = _sub(s, "tasks", "intake: name the board items the owner asked this session for; with no ids, say which are still open")
+    st.add_argument("ids", nargs="*", help="the task ids, comma- or space-separated (file a task first for a request with none)")
     ab = _sub(s, "abandon", "mark another session's stale open stub abandoned, with a baton for what it left in flight (housekeeping: --stale)")
     ab.add_argument("key", nargs="?", default="", help="the stub's session key, as orient lists it")
     ab.add_argument("--stale", action="store_true", help="every other stub with 3 or more closes or pauses since its last activity")
@@ -315,6 +317,7 @@ CLI_OPS = {
     ("session", "close"): "session_close",
     ("session", "pause"): "session_pause",
     ("session", "abandon"): "session_abandon",
+    ("session", "tasks"): "session_tasks",
     ("orient", None): "orient",
     ("routes", None): "routes",
     ("coverage", None): "coverage",

@@ -1124,6 +1124,10 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 6. **On a design change, run a criteria census:** every existing criterion in scope is
    classified KEEP / rewrite / retire, with the work assigned to tasks or slices. The census
    is an evidence doc.
+7. **Name the tasks asked for.** A request for work names the board items it is for, filing a
+   task first for any that has none; `session.tasks(ids)` adds them to the session's stub as
+   its `tasks:` line. That line is what "every task it was asked for" means at the close
+   (§6.3): without it, the close is judged from the session's memory of the request.
 
 ### 6.3 Clean close (a natural stopping point)
 
@@ -1136,7 +1140,11 @@ or finishes what a closed one left starts with `session.start(follows=<its key>)
 carries `follows: <key>` (and its close or pause after it), and `orient` shows that session's rows,
 digest and still-owed lines; a key that is not a `kind: close` entry is refused (an open session
 is worked in, a paused one resumed, an abandoned one's baton done). The rule is in the contract, which every session loads, not
-only in the procedures runbook, which a session reads on demand.
+only in the procedures runbook, which a session reads on demand. **"Every task it was asked
+for" is the stub's `tasks:` line** (§6.2 item 7): `session.tasks()` with no ids, and `orient`,
+say which of them are still open, and when none is, the session closes. `session.close`
+refuses rows that do not name each one, done or not, and keeps the line in the entry (G-W6 checks
+the newest close at rest). Not checked: that the line names everything the owner asked for.
 
 Write the records first, then run the gate, then commit what the engine has not (it commits at
 milestones, and a task's close or the session's is one, §5.5 rule 4). What a clean close does,
@@ -1147,7 +1155,8 @@ numbered for citation (the order is below):
    of this session's own.
 2. Write the ledger entry:
    - the session key minted at start (§5.5); `session.close` writes over its `kind: open` stub;
-   - a `rows:` line naming the items touched;
+   - a `rows:` line naming the items touched, and every one the stub's `tasks:` line names
+     (§6.2 item 7), with how it ended;
    - receipts:
      - the guard results, the gate's own pass count among them (or that it was not run, and
        why): the gate's test baseline is read from this receipt, so where `[working]
@@ -1709,7 +1718,8 @@ cite for each item.
   `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
   its last activity (the owner's window), and files a baton for the op lines it left
   uncommitted; a stub short of the window is abandoned only on the owner's word (`--force`).
-- **Written by the engine:** `session.start`, `session.close`, `session.pause`, `session.abandon`. The receipts
+- **Written by the engine:** `session.start`, `session.close`, `session.pause`, `session.abandon`, and
+  a line in the session's own stub by `ask.raised` (`asked:`) and `session.tasks` (`tasks:`). The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
 - Append-only, newest first, **in its own file**, keyed by session key: **one file under the
   engine lock**, not one file per entry, until a trial shows append collisions.
@@ -1945,7 +1955,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 
 | Group | Tools |
 |---|---|
-| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1) |
+| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7) |
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |

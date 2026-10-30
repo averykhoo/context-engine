@@ -603,6 +603,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("session_start")
     w("task_new", title="One", pri="NOW")
     w("task_new", title="Two")
+    w("session_tasks", ids=["CE-1", "CE-2"])  # not a milestone: its line rides along (CE-112)
     w("task_set", id="CE-2", fields={"brief": "b"})
     w("task_promote", id="CE-2", pri="NEXT")
     w("task_dep", id="CE-2", add=["CE-1"])

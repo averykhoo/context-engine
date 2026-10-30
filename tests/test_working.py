@@ -245,6 +245,91 @@ def test_session_start_refuses_to_follow_a_session_that_is_not_closed(eng, make,
     assert (eng.root / "ledger.md").read_bytes() == before
 
 
+# -- the task set the owner named at intake (CE-112) ---------------------------------------------
+
+
+@pytest.mark.criterion("AC-155")
+def test_session_tasks_names_the_owners_tasks_in_the_stub_and_says_which_are_open(eng, capsys):
+    """CE-112 (adhoc AAR entry 17b): "every task asked for is done" was judged from memory; the
+    set is now named at intake in the stub, and the reply and orient say which are still open."""
+    key = started(eng)
+    one, two = task(eng, key, "One").id, task(eng, key, "Two").id
+    assert eng.session_tasks([], **kw(key)).startswith(f"no tasks named for {key}")
+    out = eng.session_tasks([one], **kw(key))
+    assert out == f"{key} tasks: {one} (open); 1 of 1 still open ({one}): close the session when every one is closed", out
+    eng.session_tasks([two, one], **kw(key))  # a union, first-named first, never a duplicate
+    assert eng.read_ledger().get(key).field(L.TASKS) == f"{one}, {two}"
+    assert eng.read_ledger().get(key).text.count(f"- **{L.TASKS}:**") == 1
+    text = eng.orient(key)
+    assert f"## Tasks the owner asked for: close when every one is closed\n- {one}: open\n- {two}: open\n- 2 of 2 still open" in text, text
+    other = started(eng)
+    assert "Tasks the owner asked for" not in eng.orient(other)  # only the session that named them
+    eng.close(one, msg="done", **kw(key))
+    eng.close(two, msg="done", **kw(key))
+    assert eng.session_tasks([], **kw(key)).endswith("every named task is closed: do the clean close now (close eagerly)")
+    assert "- every one is closed: do the clean close now" in eng.orient(key)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    assert main([*base, "session", "tasks"]) == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.startswith(f"{key} tasks: {one} (closed), {two} (closed);")
+
+
+@pytest.mark.criterion("AC-155")
+@pytest.mark.parametrize("ids, says", [
+    (["CE-99"], "no record CE-99"),
+    (["DEC-1"], "DEC-1 is a decision, not a board item"),
+    (["XYZ-1"], "no record kind has ids like 'XYZ-1'"),
+])
+def test_session_tasks_refuses_an_id_that_is_no_board_item_and_writes_nothing(eng, ids, says):
+    key = started(eng)
+    task(eng, key, "One")
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match=re.escape(says)):
+        eng.session_tasks(["CE-1", *ids], **kw(key))
+    assert (eng.root / "ledger.md").read_bytes() == before
+
+
+@pytest.mark.criterion("AC-155")
+def test_session_tasks_refuses_a_session_with_no_open_stub(eng):
+    key = started(eng)
+    task(eng, key, "One")
+    eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    with pytest.raises(Refusal, match=f"session {key} has no open ledger stub"):
+        eng.session_tasks(["CE-1"], **kw(key))
+
+
+@pytest.mark.criterion("AC-156")
+def test_close_refuses_rows_that_do_not_say_how_a_named_task_ended(eng):
+    """CE-112: a close names every task the owner asked for in its rows, done or not, and keeps
+    the `tasks:` line; a pause keeps it too."""
+    key = started(eng)
+    one, two = task(eng, key, "One").id, task(eng, key, "Two").id
+    eng.session_tasks([one, two], **kw(key))
+    eng.close(one, msg="done", **kw(key))
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match=re.escape(f"the rows do not say how {two} ended, which the owner asked for")):
+        eng.session_close(key, actor=ACTOR, rows=f"{one} (closed); CE-22 (new)", summary=["y"], receipts=receipts())
+    assert (eng.root / "ledger.md").read_bytes() == before
+    out = eng.session_close(key, actor=ACTOR, rows=f"{one} (closed); {two} (open: waits on the owner)", summary=["y"], receipts=receipts())
+    assert out.endswith(f"; the owner's named tasks still open: {two} (the rows say how each ended; the digest should too)"), out
+    entry = eng.read_ledger().get(key)
+    assert entry.kind == "close" and entry.field(L.TASKS) == f"{one}, {two}"
+    assert guards(eng, "G-W6") == []
+    paused = started(eng)
+    eng.session_tasks([one], **kw(paused))
+    eng.session_pause(paused, actor=ACTOR, rows="x", deferred="y")
+    assert eng.read_ledger().get(paused).field(L.TASKS) == one
+
+
+@pytest.mark.criterion("AC-156")
+def test_lint_g_w6_fails_a_newest_close_whose_rows_miss_a_named_task(eng):
+    path = eng.root / "ledger.md"
+    path.write_text(LEDGER.replace("- **rows:** CE-1 (created)\n", "- **tasks:** CE-1, CE-4\n- **rows:** CE-1 (created)\n", 1), encoding="utf-8")
+    assert [f.message for f in guards(eng, "G-W6")] == [
+        "the newest close (2026-10-07b) names CE-4 in its `tasks:` line (what the owner asked for) but not in its `rows:` line"]
+    path.write_text(LEDGER.replace("- **rows:** CE-1 (created)\n", "- **tasks:** CE-1, CE-4\n- **rows:** CE-1 (created); CE-4 (open)\n", 1), encoding="utf-8")
+    assert guards(eng, "G-W6") == []
+
+
 @pytest.mark.criterion("AC-11")
 def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     key = started(eng)

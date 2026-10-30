@@ -387,9 +387,75 @@ class Engine:
             unraised = [q for q in overdue if q not in named]
             if unraised:
                 raise Refusal(f"overdue owner questions {_one(unraised)} were not raised this session (G-W8)", "raise each in chat, then run `ask raised`, or `ask later` if the owner defers")
+            if unsaid := self._unsaid_tasks(stub.field(L.TASKS), rows):
+                raise Refusal(f"the rows do not say how {_one(unsaid)} ended, which the owner asked for (the stub's `{L.TASKS}:` line, CE-112)",
+                              f"name each in --rows with how it ended, e.g. `{unsaid[0]} (closed)` or `{unsaid[0]} (open: <why>)`")
 
-        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD), e.field(L.FOLLOWS)), "session.close", check)
-        return f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
+        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS)), "session.close", check)
+        out = f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
+        named = ID_RE.findall(self.read_ledger().get(key).field(L.TASKS) or "")
+        still = [rid for rid, state in self._task_states(named) if state != "closed"]
+        return out + (f"; the owner's named tasks still open: {_one(still)} (the rows say how each ended; the digest should too)" if still else "")
+
+    @staticmethod
+    def _unsaid_tasks(tasks: str | None, rows: str) -> list[str]:
+        """The named tasks (a `tasks:` line) that ``rows`` does not name (CE-112)."""
+        said = set(ID_RE.findall(rows))
+        return [rid for rid in dict.fromkeys(ID_RE.findall(tasks or "")) if rid not in said]
+
+    def _task_states(self, ids: list[str]) -> list[tuple[str, str]]:
+        """(id, its board state, or `missing` when no record has the id) for each id."""
+        out = []
+        for rid in ids:
+            try:
+                out.append((rid, str(self.store.get(rid).doc.get("state") or "?")))
+            except Refusal:
+                out.append((rid, "missing"))
+        return out
+
+    def session_tasks(self, ids: list[str], *, session: str, actor: str) -> str:
+        """Name the board items the owner asked this session for (FRAMEWORK §6.2 item 7, CE-112):
+        each must be an existing item of a board kind; they are added to the stub's `tasks:` line
+        (a union, first-named first), so "every task asked for is done" is read from the record,
+        not from memory. With no ids, only reports. Either way the reply says each one's state and
+        whether every one is closed, which is when the session closes (§6.3); `session close`
+        refuses rows that do not name each one (G-W6 at rest).
+
+        Not checked: that an id is one the owner really named, or that a closed item's work is
+        what the owner asked for."""
+        self._check(session, actor)
+        ids = list(dict.fromkeys(i.strip() for i in ids if i.strip()))
+        board = self._board()
+        for rid in ids:
+            kind = self.store.config.kind_for_id(rid)
+            if kind.name not in board:
+                raise Refusal(f"{rid} is a {kind.name}, not a board item", f"name the task the owner asked for; file one first with `task new` if the request has none ({', '.join(board)})")
+            self.store.find(rid)
+        stub = self.read_ledger().get(session)
+        if stub is None or stub.kind != "open":
+            raise Refusal(f"session {session} has no open ledger stub", "run `session start` first and pass its key")
+        named = ID_RE.findall(stub.field(L.TASKS) or "")
+        if ids:
+            path = self._path("ledger")
+            with self.store.lock():
+                led = self.read_ledger()
+                stub = led.get(session)
+                if stub is None or stub.kind != "open":
+                    raise Refusal(f"session {session} closed while its tasks were being named", "name them in the close's rows")
+                already = ID_RE.findall(stub.field(L.TASKS) or "")
+                named = already + [i for i in ids if i not in already]
+                text = re.sub(rf"^- \*\*{L.TASKS}:\*\*.*(?:\n  .*)*\n?", "", stub.text, flags=re.MULTILINE)
+                stub.text = text.rstrip("\n") + "\n" + L.bullet(L.TASKS, ", ".join(named))
+                self.store.write_text(path, led.render())
+                self.store.log("session.tasks", session, path, session, actor, [L.TASKS])
+        if not named:
+            return f"no tasks named for {session}: at intake, name the board items the owner asked for with `session tasks <ids>`"
+        states = self._task_states(named)
+        still = [rid for rid, state in states if state != "closed"]
+        head = f"{session} tasks: " + ", ".join(f"{rid} ({state})" for rid, state in states)
+        if still:
+            return head + f"; {len(still)} of {len(states)} still open ({', '.join(still)}): close the session when every one is closed"
+        return head + "; every named task is closed: do the clean close now (close eagerly)"
 
     def staleness(self, keys: list[str]) -> dict[str, tuple[int, str]]:
         """For each key, how many other sessions closed or paused after its last activity, and when
@@ -541,7 +607,7 @@ class Engine:
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
             raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
-        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD), e.field(L.FOLLOWS)), "session.pause")
+        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS)), "session.pause")
         return f"session {key} paused: ledger entry written"
 
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------
@@ -2417,6 +2483,13 @@ class Engine:
         followed = mine.field(L.FOLLOWS) if mine else None
         if followed:  # CE-84: a follow-up session starts from what the closed one left
             sections.append(Part(f"Follows {followed}: what it closed with", "\n".join(self.follows_lines(led, followed)), f"the `## {followed}` entry in {self.w.ledger}", rank=1))
+        named = ID_RE.findall(mine.field(L.TASKS) or "") if mine else []
+        if named:  # CE-112: what the owner asked for, so the close is not judged from memory
+            states = self._task_states(named)
+            still = [rid for rid, state in states if state != "closed"]
+            lines = [f"- {rid}: {state}" for rid, state in states]
+            lines.append(f"- {len(still)} of {len(states)} still open" if still else "- every one is closed: do the clean close now")
+            sections.append(Part("Tasks the owner asked for: close when every one is closed", "\n".join(lines), "`context-engine session tasks`", rank=0))
 
         top = [ln for ln in self.list(pri="NOW")]
         sections.append(Part("Board: NOW and NEXT", "\n".join(top + self.list(pri="NEXT")) or "empty", "`context-engine task list`", rank=1))
@@ -2922,6 +2995,9 @@ class Engine:
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}): {bad}", "add the gate's pass count to the `guards:` line, or say the gate was not run and why"))
                 if not last.field("rows"):
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `rows:` line", "name the items the session touched"))
+                elif unsaid := self._unsaid_tasks(last.field(L.TASKS), last.field("rows")):  # CE-112
+                    out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) names {_one(unsaid)} in its `{L.TASKS}:` line (what the owner asked for) but not in its `rows:` line",
+                                       "add each to `rows:` with how it ended"))
             for r in self._carried():
                 if self._age(led, r.doc.get("session")) >= self.w.baton_max_age:
                     out.append(Failure("G-W3", r.path.relative_to(self.root).as_posix(), f"{r.id} from {r.doc.get('session')} has outlived {self.w.baton_max_age} sessions", "do it and mark it done, or let housekeeping turn it into a task (`baton expire`)"))

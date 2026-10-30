@@ -89,6 +89,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | session start, close, pause, abandon | `session.start`, `session.close`, `session.pause`, `session.abandon` | id = session key (for abandon, the abandoned stub's), path = the ledger | `["kind"]` |
+| session tasks | `session.tasks` | id = session key, path = the ledger | `["tasks"]` |
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body"]` (the stamp is untouched) |
@@ -218,6 +219,8 @@ digest and still-owed lines, which orient shows) before starting.
    NEXT, and every overdue one. A question is overdue if `last_asked` is empty, or at least 5
    closes/pauses have happened since it, or it is at least 7 days old. The receipt written is your
    `asked` text if you gave one, otherwise the stub's line.
+   Then check the stub's `- **tasks:**` line (written by `session tasks`): your `rows` must
+   name every id on it, closed or not, with how it ended.
 4. Replace the stub's text, keeping its position, with (bullets wrapped at 100 columns,
    continuation lines indented):
 
@@ -238,6 +241,8 @@ digest and still-owed lines, which orient shows) before starting.
    Leave out the `asked:` line if it is empty, and the `start head` line if the stub has none.
    A follow-up session's stub carries `- **follows:** <key>`: keep it as the entry's first
    bullet, above `rows` (a pause keeps it the same way).
+   A stub's `- **tasks:**` line goes next, after `follows` and above `rows` (a pause keeps it
+   the same way).
    Op log: `session.close`, fields `["kind"]`.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
@@ -287,6 +292,25 @@ stub; over MCP `session_abandon(key, force, stale)`). By hand, for each stub:
 By the time a stub is stale it was shown to the owner at the start of each of those sessions, so
 housekeeping abandons it without asking again; the reply lists each one, so the close digest
 can say so.
+
+### context-engine session tasks
+
+`context-engine session tasks <ids>` (over MCP `session_tasks(ids)`), at intake (procedures.md §
+Intake, step 7). By hand:
+
+1. Each id must be an existing item of a board kind (a task or a question); for a request with
+   no item yet, file a task first (§ context-engine task new). Your session must have an open
+   stub.
+2. In your stub, delete any `- **tasks:**` line and add one at the end, with no blank line
+   before it: `- **tasks:** <every id named so far this session, first-named first, each once>`.
+3. Log `session.tasks` with your key as the id, the ledger as the path and `["tasks"]` as the
+   fields. It is not a milestone: leave it uncommitted.
+4. To see where they stand (`session tasks` with no ids, and orient, which shows them to your
+   session only), read each item's `state`: when every one is `closed`, do the clean close.
+
+**Why:** the clean close fires as soon as every task the owner asked for is done (FRAMEWORK
+§6.3), and without a recorded set that is judged from memory. The close
+refuses rows that do not name each one (§ context-engine session close, step 3).
 
 ## Reading
 
