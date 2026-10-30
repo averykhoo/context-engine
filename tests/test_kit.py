@@ -635,7 +635,7 @@ KNOWN_LEAKS: dict[str, list[str]] = {}
 
 def leaks(text: str) -> list[str]:
     """Every leak in ``text``, as ``line: match``. FRAMEWORK gets no allowance either: its `(CE-n)`
-    build marks went to the board (DEC-81), so a mark put back is a leak like any other id."""
+    build marks went to the board (DEC-81), so a mark put back is a leak like any other id (DEC-93)."""
     return [f"{n}: {m.group(0)}" for n, line in enumerate(text.splitlines(), 1) for m in LEAK.finditer(line)]
 
 
@@ -727,7 +727,7 @@ def test_line_endings_change_nothing_init_writes_or_lint_checks_in_an_adopting_r
     LF one: every check they make against the kit's text (G-D0's kit block and contract, init's
     kit-block and ignore-line checks) compares line endings aside. So an adopting repo needs no
     `eol=lf` in its .gitattributes; only this repo, whose tests compare kit files byte for byte,
-    pins it (above)."""
+    pins it (above; DEC-94)."""
     import shutil
 
     from context_engine.cli import run
