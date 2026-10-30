@@ -722,8 +722,8 @@ class Engine:
         milestone: its commit is titled ``<id>: close; <msg>`` and carries ``Closes: <id>``
         (DEC-22), and ``body`` goes in its message (the `Sabotage:` and receipt lines, DEC-11).
 
-        ``residuals`` is the close's answer to "did this work leave a residual risk?" (CE-120,
-        FRAMEWORK §7.4): ``["none"]``, or one ``<risk> | rung: | why: | control: | affects:`` line
+        ``residuals`` is the close's answer to "did this work leave a residual risk?" (CE-120, DEC-108,
+        FRAMEWORK §7.4): ``["none"]``, or one ``<risk> | rung: | why: | control: | affects:`` line (DEC-109)
         per risk, each filed in the register as the next INV-n (created on first use) with the
         design review's. Logged either way, so the record tells a "none" from a question skipped;
         where a register is configured, a close that states nothing (and has no review) says so.
@@ -759,7 +759,7 @@ class Engine:
             self._against_bar(rec, verdict)
             review = R.read(rec.doc.body)[0] if rec.doc.get("review") else None
             if none and review is not None and review.residuals:
-                # `none` would log a "none" while the review's risks are filed (review of CE-120)
+                # `none` would log a "none" while the review's risks are filed (review of CE-120, DEC-110)
                 n = len(review.residuals)
                 raise Refusal(
                     f"closing {rid} with `--residual none`, but its design review lists {n} residual risk{'s' if n != 1 else ''}",
@@ -793,7 +793,7 @@ class Engine:
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){judged}{moved}{self._now_left(was)}"
 
     def _against_bar(self, rec: Record, verdict: str) -> None:
-        """CE-108 (adhoc AAR entry 7): a verdict is judged against a bar written down before the
+        """CE-108 (adhoc AAR entry 7, DEC-111): a verdict is judged against a bar written down before the
         run, so the close refuses a verdict with no ``## Kill bar``, and an item whose bar is
         written closes only with a verdict against it.
 
