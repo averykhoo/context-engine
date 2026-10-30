@@ -1781,7 +1781,7 @@ ASK_OPTION_RE = re.compile(r"^[ \t]{0,3}(?:(?:[-*+]|\d{1,2}[.)]|[A-Za-z][.)])[ \
 ASK_PLACEHOLDER_RE = re.compile(r"<[^<>\n]*>")  # a template's `<the option, and why>`, which says nothing
 ASK_NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
 ASK_EXEMPT_RE = re.compile(r"cost|judge?ment", re.IGNORECASE)  # which exemption a `none` takes: too costly, or human judgement
-# Provenance: JUDGEMENT (CE-44): the fewest words that can hold an option and a reason ("B: it
+# Provenance: JUDGEMENT (CE-44, DEC-103; the check lives in G-W4, DEC-102): the fewest words that can hold an option and a reason ("B: it
 # needs no migration"); wrong if a real recommendation with its why is refused, or a bare option passes.
 RECOMMENDATION_MIN_WORDS = 5
 
