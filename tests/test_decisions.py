@@ -1355,10 +1355,10 @@ AMENDS = "Layout B.\n\n## Amendments\n\n- **2026-10-12 (owner):** a note that wa
 @pytest.mark.parametrize(
     "body, fields, match, remedy",
     [
-        (None, {"ruled_by": "Owner"}, "`ruled_by: Owner`", "ruled_by=<who ruled>"),
-        (None, {"ruled_by": "OWNER"}, "`ruled_by: OWNER`", "ruled_by=<who ruled>"),
-        (None, {"actor": "Owner"}, "stamped `actor: Owner`", "ruled_by=<who ruled>"),
-        (None, {"actor": "Human:avery"}, "stamped `actor: Human:avery`", "ruled_by=<who ruled>"),
+        (None, {"ruled_by": "Owner"}, "`ruled_by: Owner`", "ruled_by=<who ruled>` (never `owner`, in any case)"),
+        (None, {"ruled_by": "OWNER"}, "`ruled_by: OWNER`", "ruled_by=<who ruled>` (never `owner`, in any case)"),
+        (None, {"actor": "Owner"}, "stamped `actor: Owner`", "ruled_by=<who ruled>` (never `owner`, in any case)"),
+        (None, {"actor": "Human:avery"}, "stamped `actor: Human:avery`", "ruled_by=<who ruled>` (never `owner`, in any case)"),
         (f'Owner, delegating: *"{OWNER_DELEGATES}"*\n\n## Ruling\n\n{AMENDS}', {}, "holds a `## Amendments` line", "record amend"),
     ],
     ids=["ruled_by-Owner", "ruled_by-OWNER", "actor-Owner", "actor-Human", "amendments-in-ruling"],

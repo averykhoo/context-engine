@@ -564,8 +564,12 @@ Check every record, then the working state. `--working` does only the second hal
   no such line, the value is older than the log's first session. Every op log line parses as
   JSON. *Why: those keys are written only by operations, so a mismatch is a hand edit.*
 
-A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed). A path
-listed in `[guards]` that does not exist is itself a failure.
+A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed), and
+the write-time stops that check the same rule are off with it (among them G-I1 and G-I2 in
+§ context-engine record new for a story, G-I3 there and in § context-engine ask answer for a
+decision, G-W4 in § context-engine ask new). The `## Amendments` stop of record new and ask
+answer is no guard's twin and stays on. A path listed in `[guards]` that does not exist is itself
+a failure.
 
 **Why:** lint is the check on the stored files. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).

@@ -2000,7 +2000,8 @@ doc measured before the trial starts.
   `owner` or `human:<id>` alone (both matched in any case), and holds the owner's delegating words
   above a `## Ruling` section that holds the ruling, neither part empty; a decision without
   `ruled_by` has no `## Ruling` section. `record.new` and `ask.answer` refuse what G-I3 would fail,
-  by the same check. Not checked: a delegated ruling recorded with neither `ruled_by` nor
+  by the same check, except while `[guards] off` names G-I3, which switches off the lint and
+  these refusals together. Not checked: a delegated ruling recorded with neither `ruled_by` nor
   `## Ruling` (it reads as the owner's own; only the transcript can tell, so it is the recorder's
   duty at the write, §6.5), whether the words above `## Ruling` are the owner's, whether `ruled_by`
   names who really ruled, a text written by hand with a `## Amendments` line of its own (at rest
