@@ -1128,7 +1128,10 @@ numbered for citation (the order is below):
    - the session key minted at start (§5.5); `session.close` writes over its `kind: open` stub;
    - a `rows:` line naming the items touched;
    - receipts:
-     - the guard results;
+     - the guard results, the gate's own pass count among them (or that it was not run, and
+       why): the gate's test baseline is read from this receipt, so where `[working]
+       gate_receipt` names a pattern, `session.close` refuses a `guards:` receipt that does not
+       match it and lint fails the newest close (G-W6);
      - `read:` what was read to start work (e.g. `board only` / `board + note`), which
        **measures how cheap orientation is (job 3)**;
      - `asked:` naming every open question at NOW or NEXT and every overdue one (the engine
@@ -2090,8 +2093,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   at write time). Not checked: whether those parts are any good, and a closed question.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
-  question exists. The engine checks `asked:` when the entry is written; the lint re-checks
-  `guards:`, `read:` and `rows:` in the stored files.
+  question exists, and a `guards:` receipt matching `[working] gate_receipt` where it is set (a
+  gate pass count, or a statement that the gate was not run). The engine checks `asked:` when
+  the entry is written; the lint re-checks `guards:`, `read:` and `rows:` in the stored files.
 - **G-W7:** every record kind's tool-owned frontmatter is changed only by the tool; `moved` is
   consistent with the session-stamped op log. The lint checks each board item's `moved`,
   `updated`, `closed` and `last_asked` against the session of the newest logged operation that

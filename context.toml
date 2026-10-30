@@ -79,6 +79,7 @@ decision_index = "docs/decisions/index.md"   # generated from the decisions' fro
 criteria = "docs/criteria.md"               # `decision link` checks a criterion id is a row here
 archive = "docs/archive"                    # `doc archive` with no --to (FRAMEWORK §7.3, CE-27); none archived yet
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
+gate_receipt = '(?i)\d+ passed|passed \d+|not run|gate status'   # a close's `guards:` receipt names the gate's pass count, says it was not run, or quotes `gate status` (CE-123; the baseline is read from it, gate.md)
 
 # The scoped gate (FRAMEWORK §8.5 G-V1, CE-78): `context-engine gate run` runs the gate and records
 # its result against each scope's content id; `context-engine commit` refuses a path in `require`'s

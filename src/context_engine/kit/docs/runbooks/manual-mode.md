@@ -210,7 +210,8 @@ digest and still-owed lines, which orient shows) before starting.
 2. You need: `rows` (the items you touched, not empty); a summary of 1 to 7 lines (the owner
    digest); a `guards` receipt (gate and lint results, verbatim); a `read` receipt (what you read
    to start work). `asked` and `Still owed` are optional; an empty `Still owed` is written as
-   `nothing`.
+   `nothing`. Where `[working] gate_receipt` is set, the `guards` text must match that regex
+   (joined onto one line): the gate's pass count (`1112 passed`), or that it was not run and why.
 3. Check the asked ids: the ids in your `asked` text **plus** those in the stub's `- **asked:**`
    line (written by `ask raised`). Together they must name every open owner question at NOW or
    NEXT, and every overdue one. A question is overdue if `last_asked` is empty, or at least 5
@@ -363,7 +364,8 @@ Check every record, then the working state. `--working` does only the second hal
   with its reasoning, as § ask new says. *Why: the owner answers a question in one line only
   when it carries what they need to decide.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
-- **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt.
+- **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt, and its
+  `guards:` text matches `[working] gate_receipt` where that is set.
 - **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
   `task promote`. *Why: the promotion refused it, so a failing review there was edited by hand.*
 - **G-W13**: every `- residual:` line of a closed item carrying `review:` has a register entry

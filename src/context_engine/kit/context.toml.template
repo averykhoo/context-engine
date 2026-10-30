@@ -115,6 +115,7 @@ criteria = "docs/criteria.md"               # one `| AC-n | ... |` row per crite
 archive = "docs/archive"                    # where `doc archive` moves a doc when given no --to (FRAMEWORK §7.3); its README.md is the directory's redirect table, made by the first archive
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # the values a board item's `review:` may take: FRAMEWORK §5.2's design-review threshold, one per clause
 max_pauses = 2               # consecutive pause entries before lint asks for a clean close (G-W2); provenance: JUDGEMENT, engine default; wrong if real work routinely needs more
+gate_receipt = '(?i)\d+ passed|passed \d+|not run'   # a regex the close's `guards:` receipt must match: the gate's pass count, or "not run" and why (`session close` refuses, lint G-W6 fails the newest close); empty is off. Fit it to your gate's result line (pytest prints `N passed`)
 
 [working.caps]               # board tier caps: NOW holds exactly this many, others at most
 NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if the work never fits one item at a time

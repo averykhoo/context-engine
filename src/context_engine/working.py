@@ -339,6 +339,17 @@ class Engine:
             self.store.write_text(path, led.render())
             self.store.log(op, key, path, key, actor, ["kind"])
 
+    def _gate_receipt_problem(self, guards: str) -> str | None:
+        """What is wrong with a close's ``guards:`` receipt under ``[working] gate_receipt`` (CE-123):
+        a receipt that does not match carries no gate pass count and says nothing of the gate not
+        being run, so the gate's baseline cannot be read from it (gate.md § Test baselines).
+
+        Not checked: whether the count is true, or is the gate's and not some other suite's."""
+        pattern = self.w.gate_receipt
+        if not pattern or re.search(pattern, guards):
+            return None
+        return f"the `guards` receipt has no gate result: it does not match [working] gate_receipt ({pattern!r})"
+
     @_milestone
     def session_close(self, key: str, *, actor: str, rows: str, summary: list[str], receipts: dict[str, str], owed: list[str] | None = None) -> str:
         """Write the session's ledger entry over its stub, refusing a malformed receipt (AC-11, G-W6, G-W8)."""
@@ -351,6 +362,8 @@ class Engine:
         for name in ("guards", "read"):
             if not (receipts.get(name) or "").strip():
                 raise Refusal(f"the close has no `{name}` receipt", "guards: the gate and lint results, verbatim; read: what was read to start work")
+        if bad := self._gate_receipt_problem(" ".join(receipts["guards"].split())):
+            raise Refusal(bad, f"put the gate's own result line in it (its pass count, e.g. `1112 passed`), or say the gate was not run and why ([working] gate_receipt in {CONFIG_NAME}, CE-123)")
         receipts = dict(receipts)
 
         def check(led: L.Ledger, stub: L.Entry) -> None:
@@ -2460,7 +2473,8 @@ class Engine:
         key against the newest close (G-W1); the run of pauses since the last close (G-W2); carried
         batons and pause records by age (G-W3); each board item's ``state`` against its OKF
         ``status``, and an open question carrying ``answered:`` (G-W4); the tier caps (G-W5); and
-        the newest close's ``guards:``, ``read:`` and ``rows:`` lines (G-W6).
+        the newest close's ``guards:``, ``read:`` and ``rows:`` lines, and its ``guards:`` line
+        against ``[working] gate_receipt`` (G-W6).
 
         Not checked: any close but the newest, and the ``asked:`` receipt, which ``session close``
         checks when it writes the entry; the state key against ``status`` on decisions, stories
@@ -2491,6 +2505,8 @@ class Engine:
                 for name in ("guards", "read"):
                     if not last.receipt(name):
                         out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `{name}:` receipt", "receipts are written by `session close`; add the missing line"))
+                if last.receipt("guards") and (bad := self._gate_receipt_problem(last.receipt("guards"))):
+                    out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}): {bad}", "add the gate's pass count to the `guards:` line, or say the gate was not run and why"))
                 if not last.field("rows"):
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `rows:` line", "name the items the session touched"))
             for r in self._carried():

@@ -884,7 +884,7 @@ def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_p
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)
     _cli(tmp_path, "task", "new", "First", "--pri", "NOW", key=key)
-    _cli(tmp_path, "session", "close", "--rows", "T-1", "--summary", "bootstrapped", "--guards", "lint clean", "--read", "orient", key=key)
+    _cli(tmp_path, "session", "close", "--rows", "T-1", "--summary", "bootstrapped", "--guards", "gate not run (no code yet); lint clean", "--read", "orient", key=key)
     show = _cli(tmp_path, "banner", "show")
     assert show.split()[3] == "none", show
     assert _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- Bootstrapped.", key=key).startswith("banner written (the first)")
@@ -995,7 +995,7 @@ def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_p
     _fill_gate(tmp_path)
     key = _cli(tmp_path, "session", "start").split()[1]
     assert lint() == "lint: clean"  # no close yet: nothing is owed
-    _cli(tmp_path, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g", "--read", "r", key=key)
+    _cli(tmp_path, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g: 1 passed", "--read", "r", key=key)
     assert "G-W1" in lint() and "no `## Banner (<key>)` heading" in lint()
     _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- B.", key=key)
     assert lint() == "lint: clean"

@@ -67,6 +67,7 @@ class Working:
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
     criteria: str = ""  # the criteria file, one `| AC-n | ... |` table row per criterion; `decision link` checks criterion ids against it
     archive: str = ""  # the archive directory `doc archive` moves a doc into when given none (FRAMEWORK §7.3, CE-27); its README.md is the redirect table
+    gate_receipt: str = ""  # a regex the close's `guards:` receipt must match: a gate pass count, or a statement that the gate was not run (CE-123); empty is off
 
 
 @dataclass(frozen=True)
@@ -245,6 +246,11 @@ def from_dict(raw: dict) -> Config:
             raise Refusal(f"[working] names kind {name!r}, which is not declared", f"declare [kinds.{name}] or fix [working]")
     if w.get("decision_index") and not w.get("decision"):
         raise Refusal("[working] sets `decision_index` but names no `decision` kind", "set `decision = \"<kind>\"` in [working], or drop `decision_index`")
+    if w.get("gate_receipt"):
+        try:
+            re.compile(w["gate_receipt"])
+        except re.error as err:
+            raise Refusal(f"[working] `gate_receipt` is not a regular expression ({err})", "fix the pattern: a close's `guards:` receipt must match it (the kit's names a pass count or `not run`)") from None
     caps = w.get("caps", {})
     tiers = sorted({p for n in w.get("board", ()) for p in kinds[n].enums.get("pri", ())})
     if tiers:  # a cap names a board tier, so a typo (`NEXTT`) fails rather than leaving a tier uncapped

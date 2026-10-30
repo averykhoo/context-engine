@@ -1585,6 +1585,43 @@ def test_the_newest_close_needs_its_receipts_at_rest(eng):
     assert [f.message for f in guards(eng, "G-W6")] == ["the newest close (2026-10-07b) has no `read:` receipt"]
 
 
+GATE_RECEIPT = "(?i)[0-9]+ passed|passed [0-9]+|not run"  # the kit template's value, less the backslashes conftest.py::_toml does not escape
+
+
+@pytest.mark.criterion("AC-125")
+def test_a_guards_receipt_without_a_gate_result_is_refused_and_fails_lint_at_rest(tmp_path):
+    """CE-123 (adhoc AAR entry 36): a `guards:` receipt with no pass count leaves the gate's
+    baseline unknown, so under `[working] gate_receipt` the close is refused and lint fails the
+    newest close; a count, or a statement that the gate was not run, passes. Unset is off."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["gate_receipt"] = GATE_RECEIPT
+    e = _engine(tmp_path / "on", cfg)
+    [f] = guards(e, "G-W6")
+    assert f.message.startswith("the newest close (2026-10-07b): the `guards` receipt has no gate result"), f.message
+    key = started(e)
+    before = (e.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="has no gate result") as err:
+        e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="sabotage: drop the check -> red; lint clean"))
+    assert "pass count" in err.value.remedy and "gate_receipt" in err.value.remedy
+    assert (e.root / "ledger.md").read_bytes() == before
+    e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="gate PASSED 1112\n  passed; lint clean"))
+    assert guards(e, "G-W6") == []
+    key = started(e)
+    e.session_close(key, actor=ACTOR, rows="CE-1", summary=["docs only"], receipts=receipts(guards="gate not run: docs only; lint clean"))
+    assert guards(e, "G-W6") == []
+    off = _engine(tmp_path / "off", CONFIG)  # the default: no pattern, no check
+    off.session_close(started(off), actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="green"))
+    assert guards(off, "G-W6") == []
+
+
+@pytest.mark.criterion("AC-125")
+def test_a_gate_receipt_that_is_not_a_regex_is_refused_at_load(tmp_path):
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["gate_receipt"] = "([0-9]+ passed"
+    with pytest.raises(Refusal, match="`gate_receipt` is not a regular expression"):
+        _engine(tmp_path, cfg).lint()
+
+
 def test_tier_caps_fail_lint(eng):
     key = started(eng)
     a = task(eng, key, pri="NOW")
