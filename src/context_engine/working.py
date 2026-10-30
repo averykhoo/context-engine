@@ -289,7 +289,7 @@ class Engine:
 
     def _followable(self, led: L.Ledger, key: str) -> None:
         """Refuse a ``--follows`` key that names no closed session (CE-84): a follow-up continues
-        work that was closed, so an open, paused or abandoned session has its own way back."""
+        work that was closed, so an open, paused or abandoned session has its own way back (DEC-105)."""
         entry = led.get(key)
         if entry is None:
             raise Refusal(f"the ledger has no session {key} to follow", f"pass the key of a closed session, as its `## <key> · kind: close` heading in {self.w.ledger} shows it")
@@ -992,7 +992,7 @@ class Engine:
         """File an open owner question. Its body states the three parts (FRAMEWORK §5.3, CE-44):
         context, two or more options, and a recommendation with its why (``guards.ask_problems``);
         a body that lacks one is refused before anything is written, and so is no body (the
-        template, which only names the parts). G-W4 re-checks an open question's stored body, so
+        template, which only names the parts: DEC-104). G-W4 re-checks an open question's stored body, so
         it fails one filed another way (`task new --kind question`) or emptied by a later edit."""
         self._check(session, actor)
         extra: dict[str, Any] = {"last_asked": None}
@@ -1012,7 +1012,8 @@ class Engine:
         one `ask answer` writes (``words`` verbatim, `actor: owner`, `answers:`; ``ruling`` and
         ``ruled_by`` for a delegated ruling). What ``ask_answer`` would refuse is refused before
         the question is written, so a refusal leaves nothing behind. The question is never open,
-        so it takes no place in its tier (``capped=False``).
+        so it takes no place in its tier (``capped=False``). The flags are DEC-99, the skipped cap
+        DEC-100, and its exemption from the three-part body check DEC-101.
 
         Not checked: that the words answer this question (only the caller saw the chat)."""
         self._check(session, actor)
