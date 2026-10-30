@@ -591,3 +591,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** writes resolve aliases only where a lookup is read
 - **control:** individual: the refusal points at task show
 - **from:** CE-74, session 2026-10-14a
+
+## INV-84: a ruling made on the owner's delegation but recorded with neither `ruled_by` nor a `## Ruling` section reads as the owner's own decision, so neither G-I3 nor the write-time refusals of `record new` and `ask answer` can see it
+
+- **affects:** the owner, whose delegated call would read as their own frozen words; every later session that reads that decision as owner intent
+- **why not eliminated:** the file then looks exactly like an owner decision; only the transcript shows that the owner delegated the call, and the engine never reads the transcript
+- **control:** individual: the contract's "Who decides" rule and FRAMEWORK §6.5 (a delegated call is recorded with `ruled_by`, never as `actor: owner`); G-I3 for every decision that names `ruled_by` or holds a `## Ruling` section
+- **from:** CE-139, session 2026-10-30a
