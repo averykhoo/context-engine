@@ -270,6 +270,7 @@ def test_close_files_a_stated_residual_of_an_unreviewed_item_creating_the_regist
         ([STATED.replace(" | affects: the next session", "")], "no `affects:` field"),
         ([STATED.replace("control:", "contrl:")], "unknown field 'contrl'"),
         (["none", STATED], "`--residual none` and a residual risk"),
+        ([STATED + "\n- residual: a second risk | rung: reduce | why: w | control: c | affects: a"], "runs over more than one line"),
     ],
 )
 def test_close_refuses_a_malformed_stated_residual_and_stays_open(eng, given, reason):
@@ -279,6 +280,29 @@ def test_close_refuses_a_malformed_stated_residual_and_stays_open(eng, given, re
         e.close(rid, "done", residuals=given, **kw(key))
     assert reason in r.value.message, r.value.message
     assert e.store.get(rid).doc.get("state") == "open" and not (e.root / "docs/invariants.md").exists()
+
+
+@pytest.mark.criterion("AC-127")
+def test_a_reviewed_close_logs_every_residual_it_files_and_refuses_none(eng):
+    """Review of CE-120: `--residual none` on an item whose design review lists residuals logged
+    `residual risk: none` while the close filed them. The close refuses that `none`, and its Log
+    names every INV id the close files, the review's included, and those a re-close finds
+    already in the register."""
+    e, key = eng
+    rid = _reviewed(e, key)
+    with pytest.raises(Refusal) as r:
+        e.close(rid, "done", residuals=["none"], **kw(key))
+    assert "design review lists 2 residual risks" in r.value.message and "without `--residual none`" in r.value.remedy
+    assert e.store.get(rid).doc.get("state") == "open" and not (e.root / "docs/invariants.md").exists()
+    assert e.close(rid, "done", **kw(key)).endswith("residuals filed as INV-1, INV-2")
+    assert "closed: done\n  residual risk: INV-1, INV-2\n" in e.store.get(rid).doc.body + "\n"
+    e.reopen(rid, "one more", **kw(key))
+    assert e.close(rid, "again", residuals=[STATED], **kw(key)).endswith("residuals filed as INV-3")
+    assert "closed: again\n  residual risk: INV-3; already in the register: INV-1, INV-2\n" in e.store.get(rid).doc.body + "\n"
+    e.reopen(rid, "and more", **kw(key))
+    e.close(rid, "third", residuals=[STATED], **kw(key))
+    assert "closed: third\n  residual risk: already in the register: INV-1, INV-2, INV-3\n" in e.store.get(rid).doc.body + "\n"
+    assert _guards(e, "G-W13") == []
 
 
 @pytest.mark.criterion("AC-127")

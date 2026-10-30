@@ -1734,7 +1734,8 @@ cite for each item.
   by name), and where it came from (task, decision or incident). Entries arrive
   from a task's design review when it closes (§5.2), from the close of any task, which states
   whether its work left a residual risk (`task.close` with `residual`: `none`, or one line per
-  risk; the answer is logged on the task, so a skipped question shows), and from any session that
+  risk; `none` is refused when the task's design review lists a residual; the answer, with every
+  INV id the close files, is logged on the task, so a skipped question shows), and from any session that
   notices a risk and confirms it (an unverified hazard, once confirmed, below).
 - **Where it lives:** one markdown file named by `[working] register` (a target repo:
   `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).

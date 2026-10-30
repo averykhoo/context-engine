@@ -736,6 +736,7 @@ class Engine:
         if not msg or not msg.strip():
             raise Refusal(f"closing {rid} without a message", "say why it is closed, e.g. `done in <commit>` or `superseded by CE-n`")
         stated = self._stated_residuals(rid, residuals or [])
+        none = [g.strip().lower() for g in residuals or [] if g and g.strip()] == ["none"]
         verdict = " ".join((verdict or "").split())
         if verdict and not VERDICT_RE.fullmatch(verdict):
             raise Refusal(f"the verdict {verdict[:60]!r} is not `<{'|'.join(VERDICTS)}>: <evidence>`", f"lead with the outcome against the kill bar ({', '.join(VERDICTS)}), then a colon and the evidence, e.g. `KILL: best AUC 0.629 < 0.7 (results.md § 3)`")
@@ -747,6 +748,7 @@ class Engine:
             )
 
         filed: list[str] = []
+        before: list[str] = []
         was: list[str] = []
 
         def check(rec: Record) -> None:
@@ -755,11 +757,23 @@ class Engine:
             self._plans_frozen(rec.id)
             was.append(str(rec.doc.get("pri")))
             self._against_bar(rec, verdict)
+            review = R.read(rec.doc.body)[0] if rec.doc.get("review") else None
+            if none and review is not None and review.residuals:
+                # `none` would log a "none" while the review's risks are filed (review of CE-120)
+                n = len(review.residuals)
+                raise Refusal(
+                    f"closing {rid} with `--residual none`, but its design review lists {n} residual risk{'s' if n != 1 else ''}",
+                    f"close without `--residual none` (the close files the review's residuals); add `--residual \"{RESIDUAL_FORM}\"` only for a risk the review does not list",
+                )
             if rec.doc.get("review") or stated:
+                before.extend(self._filed_before(rec, [*(review.residuals if review else []), *stated]))
                 filed.extend(self._file_residuals(rec, session, actor, stated or None))
 
         def log(text: str) -> str:  # after check(), so it can name the INV ids filed
-            said = f"\nresidual risk: {', '.join(filed) if stated else 'none'}" if residuals else ""
+            ids = [", ".join(filed)] if filed else []
+            if before:
+                ids.append(f"already in the register: {', '.join(before)}")
+            said = f"\nresidual risk: {'; '.join(ids)}" if ids else ("\nresidual risk: none" if none else "")
             judged = f"\nverdict against the {KILL_BAR.lower()}: {verdict}" if verdict else ""
             return self._log_line(session, actor, f"closed: {msg.strip()}{judged}{said}")(text)
 
@@ -773,7 +787,7 @@ class Engine:
         self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", f"Verdict: {verdict} (against {rid}'s ## {KILL_BAR})" if verdict else "", body.strip()) if x)
         self.store.commit_trailers = [f"Closes: {rid}"]
         moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
-        if not residuals and not filed and self.w.register and not self.store.get(rid).doc.get("review"):
+        if not none and not stated and self.w.register and not self.store.get(rid).doc.get("review"):
             moved = f"; residual risk not stated: say `--residual none` at a close, or file each risk with `--residual \"{RESIDUAL_FORM}\"` (one missed now goes in by hand, manual-mode.md § context-engine task close)"
         judged = f"; verdict {verdict.split(':')[0]} against its {KILL_BAR.lower()}" if verdict else ""
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){judged}{moved}{self._now_left(was)}"
@@ -794,6 +808,9 @@ class Engine:
     def _stated_residuals(self, rid: str, given: list[str]) -> list[R.Risk]:
         """The residual risks a close states (CE-120): ``none`` alone, or well-formed risk lines."""
         given = [g.strip() for g in given if g and g.strip()]
+        for g in given:
+            if "\n" in g or "\r" in g:
+                raise Refusal(f"the residual {g[:60]!r} runs over more than one line", "give each risk its own `--residual`, on one line")
         if any(g.lower() == "none" for g in given):
             if len(given) > 1:
                 raise Refusal(f"closing {rid} with `--residual none` and a residual risk", "give `none` alone, or only the risks")
@@ -809,6 +826,15 @@ class Engine:
                 raise Refusal(f"the residual {g[:60]!r} is not well-formed: {'; '.join(probs)}", f"write it as `{RESIDUAL_FORM}`, its rung one of {', '.join(r for r in R.RUNGS if r != 'eliminate')}")
             out.append(rv.risks[0])
         return out
+
+    def _filed_before(self, rec: Record, risks: list[R.Risk]) -> list[str]:
+        """The INV ids of ``risks`` already in the register from ``rec`` (a re-close), so the
+        close's Log names them rather than writing an empty answer."""
+        path = (self.root / self.w.register) if self.w.register else None
+        if path is None or not path.exists() or not risks:
+            return []
+        want = {R.key(rec.id, r.text) for r in risks}
+        return [e.id for e in R.entries(path.read_bytes().decode("utf-8")) if R.key(e.source, e.risk) in want]
 
     def _plans_frozen(self, rid: str) -> None:
         """CE-27 (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): refuse to close

@@ -711,13 +711,17 @@ one first.
 reasonably practicable to eliminate, FRAMEWORK §7.4), reviewed item or not, and state the
 answer (`--residual`, repeatable): `none`, or one line per risk in the form `<risk> | rung:
 <reduce|collective|individual> | why: <why not eliminated> | control: <the guard or rule> |
-affects: <who>`. Check each line as a design review's `- residual:` line is checked (a rung other
-than `eliminate`, a `why`, a `control`, no other field) plus an `affects`; refuse `none` given
-with a risk. File each risk as above, with the review's, its own `affects` in its entry, creating
-the register on first use. Append the answer to the close's `## Log` line as a second line,
-indented two spaces: `residual risk: <the INV ids filed>` (none filed when every risk was already
-there, from this task) or `residual risk: none`. A close that states nothing writes no such line,
-so the record tells a question skipped from a "none"; where a register is configured and the item
+affects: <who>`, each on one line. Check each line as a design review's `- residual:` line is
+checked (a rung other than `eliminate`, a `why`, a `control`, no other field) plus an `affects`;
+refuse `none` given with a risk, and refuse `none` for an item whose design review lists a
+`- residual:` line (its risks are filed at this close, so the answer is not "none": close without
+`--residual`, or state only the risks the review does not list). File each risk as above, with the
+review's, its own `affects` in its entry, creating the register on first use. Append the answer
+to the close's `## Log` line as a second line, indented two spaces: `residual risk: <the INV ids
+filed>`, the review's included, then `; already in the register: <ids>` for each of this task's
+risks (the review's and those stated) that an earlier close filed, the part before it left out
+when nothing new was filed; or `residual risk: none`. A close that states nothing and has no
+risk of this task's to name writes no such line, so the record tells a question skipped from a "none"; where a register is configured and the item
 carries no `review:`, the engine's reply says the risk was not stated. A risk missed at close goes
 into the register by hand, as above.
 
