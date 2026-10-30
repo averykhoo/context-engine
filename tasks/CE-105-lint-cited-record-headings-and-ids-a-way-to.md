@@ -3,14 +3,14 @@ type: Task
 id: CE-105
 title: Lint cited record headings and ids; a way to reserve ids before a batch of linked tasks
 brief: 'Cross-refs in records must resolve: lint missing headings, and let a batch cite ids it has reserved'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-23a
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 Lint cited record headings and ids; a way to reserve ids before a batch of linked tasks
