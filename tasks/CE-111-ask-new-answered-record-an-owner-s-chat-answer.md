@@ -3,14 +3,14 @@ type: Task
 id: CE-111
 title: "ask new --answered: record an owner's chat answer to a question that had no ask record"
 brief: 'Recording a chat answer must not need a hand-built decision: ask new --answered'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 ask new --answered: record an owner's chat answer to a question that had no ask record
