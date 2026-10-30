@@ -2,6 +2,7 @@
 framework, one table row each, and no row is left without what it runs as, its model, what it
 writes and what it returns. The arbiter is the one role on `fable`, as one agent; a scout that
 must persist is not `Explore`; the housekeeping agent works only through the `hk_` operations.
+The kit ships the roster as this text, not as named agents (DEC-97).
 
 Not checked: whether a row's wording is right (the review does that), or that a session follows
 it (prompts are not read)."""
