@@ -523,12 +523,14 @@ class Engine:
         if len(holders) >= cap:
             raise Refusal(f"{pri} already holds {len(holders)} of {cap} ({_one(holders)})", f"demote one with `promote <id> LATER` first")
 
-    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None, rid: str = "", goals: list[str] | None = None) -> Record:
+    def new(self, kind: str, title: str, *, session: str, actor: str, pri: str = "LATER", brief: str = "", deps: list[str] | None = None, body: str = "", extra: dict[str, Any] | None = None, rid: str = "", goals: list[str] | None = None, capped: bool = True) -> Record:
         """File a board item with the next free id, or with ``rid`` when an import keeps a number
         (`Q8` becomes ASK-8, FRAMEWORK §11.4): an id of the kind's series that was never used.
         An item of the `[guards] task_goals` kind names the charter goals it serves (``goals``,
         G-I1's write-time twin, CE-99); ``goals=None`` skips that check, for housekeeping, which
-        makes no judgement call (an expired baton's task is then G-I1's to flag)."""
+        makes no judgement call (an expired baton's task is then G-I1's to flag). ``capped=False``
+        skips the tier cap, for an item closed before the operation returns (an answered question,
+        CE-111): it never holds a place in its tier."""
         self._check(session, actor)
         if kind not in self._board():
             raise Refusal(f"{kind!r} is not a board kind", f"use one of {', '.join(self._board())}")
@@ -538,7 +540,8 @@ class Engine:
             raise Refusal(f"the brief is {len(brief)} characters", f"cut it to {BRIEF_MAX}: a constraint, not a summary")
         for d in deps or []:
             self.store.find(d)
-        self._cap_check(pri)
+        if capped:
+            self._cap_check(pri)
         fields: dict[str, Any] = {"title": title}
         if brief:
             fields["brief"] = brief
@@ -971,6 +974,53 @@ class Engine:
         text = body if body.strip() else f"**Question:** {title}\n\n**Why owner-only:**\n\n**Options:**\n\n**Recommendation:** <the option, and why in a line; or \"none cheap: <why>\" (FRAMEWORK §5.3)>\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
         return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid)
 
+    @_milestone
+    def ask_answered(self, question: str, words: str, *, title: str, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None, rid: str = "", ruling: str = "", ruled_by: str = "") -> str:
+        """CE-111: file a question the owner already answered in chat (one put through a chat
+        question tool, with no ask record behind it) and record the answer, in one milestone:
+        the question as ``ask_new`` files it, then ``ask_answer`` on its id, so the decision is the
+        one `ask answer` writes (``words`` verbatim, `actor: owner`, `answers:`; ``ruling`` and
+        ``ruled_by`` for a delegated ruling). What ``ask_answer`` would refuse is refused before
+        the question is written, so a refusal leaves nothing behind. The question is never open,
+        so it takes no place in its tier (``capped=False``).
+
+        Not checked: that the words answer this question (only the caller saw the chat)."""
+        self._check(session, actor)
+        if not words.strip():
+            raise Refusal("an answered question with no owner words", "pass the owner's answer verbatim with `--answered` (or `--answered-file`); a question still waiting on the owner takes none")
+        if not title.strip():
+            raise Refusal("an answered question with no decision title", "name the decision the answer makes with `--decision-title`, as `ask answer --title` does")
+        self._answer_decision("<the new question>", words, title, ruling, ruled_by, session, actor)  # refuse before anything is written
+        extra: dict[str, Any] = {"last_asked": None}
+        if blocks:
+            extra["blocks"] = list(blocks)
+        text = body if body.strip() else f"**Question:** {question}\n\nAsked in chat and answered there, so it was never open on the board; recorded with `ask new --answered`.\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
+        rec = self.new(self._role("question"), question, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid, capped=False)
+        out = self.ask_answer(rec.id, words, title=title, ruling=ruling, ruled_by=ruled_by, session=session, actor=actor)
+        return out.replace(f"{rec.id}: answered", f"{rec.id}: filed as answered in chat, recorded", 1)
+
+    def _answer_decision(self, rid: str, words: str, title: str, ruling: str, ruled_by: str, session: str, actor: str) -> tuple[dict[str, Any], str]:
+        """The decision ``ask_answer`` writes for ``rid``, as (fields, body), or the refusal of
+        what it refuses in the owner's words, the ruling and G-I3. ``ask_answered`` calls it too,
+        before it writes its question."""
+        ruling, ruled_by = ruling.strip("\n"), ruled_by.strip()
+        if not words.strip():
+            raise Refusal("no owner words", "pass the owner's answer verbatim" + ("; for a delegated ruling, the words in which the owner delegated it" if ruling.strip() else ""))
+        if bool(ruling.strip()) != bool(ruled_by):
+            given, missing = ("a ruling", "`ruled_by`") if ruling.strip() else ("`ruled_by`", "a ruling")
+            raise Refusal(f"{given} without {missing}: a ruling made on the owner's delegation is recorded with both (FRAMEWORK §5.3)",
+                          f"pass the ruling (`--ruling` or `--ruling-file`) and who made it (`--ruled-by`: the agent that ruled, or your own actor `{actor}` if you did), with the owner's delegating words as the words; for the owner's own answer, pass neither")
+        fields: dict[str, Any] = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
+        body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
+        if ruled_by:
+            fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
+            body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
+                    f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
+        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
+            raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
+                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading, and neither part holds a `## Amendments` line (a later note goes in with `record amend`)")
+        return fields, body
+
     def _is_question(self, rid: str) -> None:
         if self.store.config.kind_for_id(rid).name != self._role("question"):
             raise Refusal(f"{rid} is not an owner question", f"use an id from the {self.w.question} series")
@@ -1018,13 +1068,8 @@ class Engine:
         Ruling` section holding the ruling, so the ruling never reads as the owner's own."""
         self._check(session, actor)
         self._is_question(rid)
-        ruling, ruled_by = ruling.strip("\n"), ruled_by.strip()
-        if not words.strip():
-            raise Refusal("no owner words", "pass the owner's answer verbatim" + ("; for a delegated ruling, the words in which the owner delegated it" if ruling.strip() else ""))
-        if bool(ruling.strip()) != bool(ruled_by):
-            given, missing = ("a ruling", "`ruled_by`") if ruling.strip() else ("`ruled_by`", "a ruling")
-            raise Refusal(f"{given} without {missing}: a ruling made on the owner's delegation is recorded with both (FRAMEWORK §5.3)",
-                          f"pass the ruling (`--ruling` or `--ruling-file`) and who made it (`--ruled-by`: the agent that ruled, or your own actor `{actor}` if you did), with the owner's delegating words as the words; for the owner's own answer, pass neither")
+        ruled_by = ruled_by.strip()
+        fields, body = self._answer_decision(rid, words, title, ruling, ruled_by, session, actor)
         q = self.store.get(rid)
         if q.doc.get("state") != "open":
             raise Refusal(f"{rid} is already closed", "record a new decision instead")
@@ -1034,15 +1079,6 @@ class Engine:
             raise Refusal(f"{rid} was already answered by the owner ({_answered_by(q.doc.get('answered'))}), so it takes no second answer (FRAMEWORK §5.3)",
                           f"restore `state: closed` and `status: deprecated` from git; {self._answered_remedy(rid, q.doc.get('answered'))}")
         self._plans_frozen(rid)  # CE-95: the answer closes the question, so a plan naming it freezes first
-        fields = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
-        body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
-        if ruled_by:
-            fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
-            body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
-                    f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
-        if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body, new=True)):
-            raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
-                          "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading, and neither part holds a `## Amendments` line (a later note goes in with `record amend`)")
         dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
         answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
         was: list[str] = []

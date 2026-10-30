@@ -85,7 +85,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | any new record (task, question, decision, baton, pause) | `new` | the record | every frontmatter key, `type`, `id` and `body_sha` included |
 | task set, promote, dep, comment, touch, close, reopen, section | `set`, `promote`, `dep`, `comment`, `touch`, `close`, `reopen`, `section` | the item | the changed keys, then `updated`, then `body` if the body changed |
 | ask raised | `ask.raised` | one line per question, then one with id = session key, path = the ledger | `["last_asked", "updated"]`; the ledger line `["asked"]` |
-| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `D-n`) | the question | the changed keys, `updated`, `body` |
+| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `D-n`; `ask new --answered` writes the question's `new` line first) | the question | the changed keys, `updated`, `body` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | session start, close, pause, abandon | `session.start`, `session.close`, `session.pause`, `session.abandon` | id = session key (for abandon, the abandoned stub's), path = the ledger | `["kind"]` |
@@ -802,11 +802,33 @@ As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null)
 Then raise it in chat this session. Ids in `blocks` are not checked to exist (deps are), so
 check them yourself.
 
+**Already answered in chat** (`--answered <words>` or `--answered-file <words.md>`, with
+`--decision-title <title>`): a question put to the owner through a chat question tool, with no
+ask record behind it, that the owner has answered. Check first what § context-engine ask answer
+step 1 and 2 check (the words, and for a delegated ruling `--ruling` with `--ruled-by`), and stop
+before writing anything if one fails. Then file the question as above, with this default body:
+
+```
+**Question:** <title>
+
+Asked in chat and answered there, so it was never open on the board; recorded with `ask new --answered`.
+
+**Blocks:** <ids or none>
+
+## Log
+```
+
+and answer it at once, as § context-engine ask answer does, steps 2 to 4, in the same commit. Its
+tier cap is not checked: it is closed before the commit, so it never holds a place there.
+
 **Why:** a question waiting on the owner is a board item, so it is ranked and gets raised, never
 buried in prose (FRAMEWORK §5.3). "Why owner-only" makes the asker check that it really is the
 owner's call (P8). A question whose recommendation is cheap to undo is not: record it instead as
 your own decision, with your own actor and `decision_status: PROVISIONAL` (§ context-engine
-record new), and flag it in the close digest.
+record new), and flag it in the close digest. An answer given in chat to a question with no record
+is still the owner's words: `--answered` keeps it on the rails `ask answer` uses (a stamped
+decision with `actor: owner` and `answers:`, the question closed with `answered:`), where a
+decision built by hand needs five keys and a body written right.
 
 ### context-engine ask raised
 

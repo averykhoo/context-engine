@@ -244,8 +244,10 @@ def id_reserve(e: Engine, c: Caller, kind: str, count: int = 1) -> tuple[int, st
 
 
 @op(write=True)
-def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "") -> tuple[int, str]:
-    """File an owner question (ASK-n); raise it in chat this session. `id` is one this session reserved (`id_reserve`), or keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8])."""
+def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "", answered: str = "", decision_title: str = "", ruling: str = "", ruled_by: str = "") -> tuple[int, str]:
+    """File an owner question (ASK-n); raise it in chat this session. `id` is one this session reserved (`id_reserve`), or keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8]). `answered`: the owner already answered it in chat (a question with no ask record behind it): their words, verbatim; the question is filed closed and the words recorded as a decision titled `decision_title`, as ask_answer does (with `ruling` and `ruled_by` for a delegated ruling), in one milestone."""
+    if answered or decision_title or ruling or ruled_by:
+        return 0, e.ask_answered(title, answered, title=decision_title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, ruling=ruling, ruled_by=ruled_by, **c.kw)
     rec = e.ask_new(title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, **c.kw)
     return 0, f"{rec.id}: question created at {pri}; raise it in chat this session"
 

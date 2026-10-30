@@ -824,7 +824,13 @@ into the flat directory once the schema carries `state` (§11.4).
   tasks it unblocked. **An answer that delegates the ruling** ("you decide") is the owner's answer
   too, but the ruling is not their words: `ask.answer(id, words, title, ruling, ruled_by)` quotes
   only the delegating words, puts the ruling under `## Ruling`, and records `actor: owner asked`
-  with `ruled_by` (§6.5); `ruling` and `ruled_by` come both or neither.
+  with `ruled_by` (§6.5); `ruling` and `ruled_by` come both or neither. **A question put to the
+  owner in chat with no ask record** (a chat question tool), once answered there, is recorded by
+  `ask.new(title, answered=words, decision_title)`: one milestone that files the question and
+  answers it as `ask.answer` does, so the answer lands on the same rails (a stamped decision with
+  `actor: owner` and `answers:`), never as a decision built by hand. What `ask.answer` would refuse
+  is refused before anything is written; the question, closed before the commit, takes no place
+  in its tier.
 - **The agent never answers its own question.** If the agent can decide, it was not an owner
   question.
 - **A reversible recommendation is the agent's decision, not a question.** Where the

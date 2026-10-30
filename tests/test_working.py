@@ -462,6 +462,77 @@ def test_answer_records_the_owner_words_as_a_decision_and_unblocks(eng):
     assert out.endswith(f"unblocked {t.id}")
 
 
+@pytest.mark.criterion("AC-120")
+def test_ask_new_answered_files_the_question_closed_with_the_owners_decision(eng, capsys, tmp_path):
+    """CE-111 (adhoc AAR entry 14): a question put through the chat tool, with no ask record,
+    was answered there; `ask new --answered` records the question and the answer in one op, the
+    decision being the one `ask answer` writes, so no decision is built by hand."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    for n in range(5):  # NEXT is full; an answered question never holds a place in it
+        task(eng, key, title=f"Next {n}", pri="NEXT")
+    with pytest.raises(Refusal, match="NEXT already holds 5"):
+        eng.ask_new("Still open?", **kw(key))
+    t = task(eng, key, title="Waits on the colour")
+    words = tmp_path / "words.md"
+    words.write_text('blue, "obviously"\n\nnot red\n', encoding="utf-8")
+    argv = ["ask", "new", "Red or blue?", "--answered-file", str(words), "--decision-title", "Blue", "--blocks", t.id]
+    assert main([*base, *argv]) == 0, capsys.readouterr().err
+    out = capsys.readouterr().out
+    q = eng.store.get(next(r for r in eng.store.heads("question")).id)
+    assert out.startswith(f"{q.id}: filed as answered in chat, recorded as DEC-1") and f"unblocked {t.id}" in out, out
+    assert q.doc.get("state") == "closed" and q.doc.get("status") == "deprecated" and q.doc.get("pri") == "NEXT"
+    assert q.doc.get("answered")["decision"] == "DEC-1" and q.doc.get("last_asked") == key
+    assert "**Question:** Red or blue?" in q.doc.body and f"answered by the owner: DEC-1" in q.doc.body
+    dec = eng.store.get("DEC-1")
+    assert dec.doc.get("actor") == "owner" and dec.doc.get("answers") == q.id and dec.doc.get("title") == "Blue"
+    assert f'Owner, answering {q.id}: *"blue, "obviously"\n\nnot red"*' in dec.doc.body
+    assert not [f for f in eng.lint() if f.guard in ("G-W4", "G-I3", "schema")], eng.lint()
+
+
+@pytest.mark.criterion("AC-120")
+def test_ask_new_answered_with_a_delegated_ruling_records_who_ruled(eng):
+    """CE-111 with CE-113: the owner said "you decide" in chat; the ruling is not their words."""
+    key = started(eng)
+    out = eng.ask_answered("Which shade?", "you pick", title="Navy", ruling="Navy: it prints well.", ruled_by="claude-code/opus", **kw(key))
+    assert "ruled by claude-code/opus on the owner's delegation" in out
+    dec = eng.store.get("DEC-1")
+    assert dec.doc.get("actor") == "owner asked" and dec.doc.get("ruled_by") == "claude-code/opus"
+    assert '*"you pick"*' in dec.doc.body and "## Ruling" in dec.doc.body
+
+
+@pytest.mark.criterion("AC-120")
+@pytest.mark.parametrize("args, says", [
+    ({"words": "", "title": "Blue"}, "no owner words"),
+    ({"words": "   \n", "title": "Blue"}, "no owner words"),
+    ({"words": "blue", "title": " "}, "no decision title"),
+    ({"words": "blue", "title": "Blue", "ruling": "Blue."}, "a ruling without `ruled_by`"),
+    ({"words": "blue", "title": "Blue", "ruled_by": "claude-code/opus"}, "`ruled_by` without a ruling"),
+    ({"words": "you decide", "title": "Blue", "ruling": "Blue.", "ruled_by": "owner"}, "ruled_by: owner"),
+    ({"words": "blue\n\n## Ruling\n\nmine", "title": "Blue"}, "has a `## Ruling` section but no `ruled_by`"),
+])
+def test_ask_new_answered_refuses_before_writing_anything(eng, args, says):
+    """CE-111: what `ask answer` would refuse is refused before the question is written, so a
+    refused `--answered` leaves no open question (nor a closed one with no decision) behind."""
+    key = started(eng)
+    words, title = args.pop("words"), args.pop("title")
+    with pytest.raises(Refusal, match=re.escape(says)):
+        eng.ask_answered("Red or blue?", words, title=title, **args, **kw(key))
+    assert list(eng.store.heads("question")) == [] and list(eng.store.records("decision")) == []
+
+
+@pytest.mark.criterion("AC-120")
+def test_ask_new_answered_options_without_the_words_are_refused_through_the_cli(eng, capsys):
+    """CE-111: a decision title or a ruling with no `--answered` is an answer with no words, not
+    an open question with stray options."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    for extra in (["--decision-title", "Blue"], ["--ruling", "Blue.", "--ruled-by", "claude-code/opus"], ["--answered", "", "--decision-title", "Blue"]):
+        assert main([*base, "ask", "new", "Red or blue?", *extra]) == 2, extra
+        assert "no owner words" in capsys.readouterr().err, extra
+    assert list(eng.store.heads("question")) == []
+
+
 def test_task_close_refuses_a_question_and_names_ask_answer(eng):
     """FRAMEWORK §5.3: a question closes only on an owner answer (CE-20, audit finding A20)."""
     key = started(eng)

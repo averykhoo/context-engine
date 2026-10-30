@@ -145,6 +145,14 @@ def build() -> argparse.ArgumentParser:
     an.add_argument("--blocks", default="", help="the ids it blocks, comma- or space-separated")
     an.add_argument("--body", default="", help="the question's body (default: a Question, Options, Recommendation skeleton)")
     an.add_argument("--id", default="", help="an id this session reserved (`id reserve`), or keep an imported number, e.g. ASK-8 for Q8 (default: the next free one)")
+    aw = an.add_mutually_exclusive_group()
+    aw.add_argument("--answered", default="", help="the owner already answered it in chat (no ask record behind it): their words, verbatim; files the question closed and records the words as a decision, as `ask answer` does")
+    aw.add_argument("--answered-file", type=Path, help="read --answered from a file (the owner's words keep their line breaks)")
+    an.add_argument("--decision-title", default="", help="with --answered: the decision's title, as `ask answer --title`")
+    an.add_argument("--ruled-by", default="", help="with --answered, when the owner delegated the ruling: who made it; needs --ruling, as `ask answer --ruled-by`")
+    anr = an.add_mutually_exclusive_group()
+    anr.add_argument("--ruling", default="", help="with --answered: the ruling made on the owner's delegation (needs --ruled-by), as `ask answer --ruling`")
+    anr.add_argument("--ruling-file", type=Path, help="read --ruling from a file")
     ar = _sub(a, "raised", "record that these questions were raised in chat this session")
     ar.add_argument("ids", nargs="+", help="the question ids, comma- or space-separated")
     al = _sub(a, "later", "the owner deferred the question: stop it counting as overdue for now")
@@ -347,6 +355,8 @@ def _params(args: argparse.Namespace) -> dict:
         a["body"] = _read(a["body_file"])
     if a.get("ruling_file") is not None:
         a["ruling"] = _read(a["ruling_file"])
+    if a.get("answered_file") is not None:
+        a["answered"] = _read(a["answered_file"])
     words = WORDS.get((args.group, a.get("op")))
     if words and (a[words] is None) == (a.get("file") is None):  # CE-73: the words come one way, exactly
         raise Refusal(f"`{args.group} {a['op']}` got its {words} {'both as an argument and with --file' if a[words] is not None else 'neither as an argument nor with --file'}", f"give the {words} one way: as the argument, or written to a file and passed with --file")

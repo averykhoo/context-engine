@@ -166,6 +166,19 @@ def test_one_operation_that_writes_twice_makes_one_commit(repo):
     assert git(repo, "log", "-1", "--format=%s").strip() == "engine: new DEC-1, ask.answer ASK-1"
 
 
+@pytest.mark.criterion("AC-120")
+def test_ask_new_answered_is_one_operation_and_one_commit(repo):
+    """CE-111: `ask new --answered` files the question, writes the decision and closes the
+    question: one milestone, so one commit carrying all three writes."""
+    c = start(repo)
+    before = count(repo)
+    _, line = run(repo, "ask_new", c, title="Red or blue?", answered="blue", decision_title="Blue it is")
+    assert count(repo) == before + 1, line
+    names = files_at(repo)
+    assert "ops.jsonl" in names and any(n.startswith("decisions/DEC-1") for n in names) and any(n.startswith("tasks/ASK-1") for n in names)
+    assert git(repo, "log", "-1", "--format=%s").strip() == "engine: new ASK-1, new DEC-1, ask.answer ASK-1"
+
+
 def test_an_operation_that_writes_twice_and_is_no_milestone_makes_one_commit(repo):
     """`record stamp` of two ids is two writes, each under its own lock, and no milestone (no
     batch of its own): the one commit is `Op.call`'s batch, which the milestone `ask answer`

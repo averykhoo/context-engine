@@ -41,7 +41,7 @@ CALLS = {
     "task_section": (["CE-1", "Traps", "t"], {"id": "CE-1", "name": "Traps", "text": "t"}),
     "task_list": (["--state", "all", "--pri", "NOW", "--label", "l"], {"state": "all", "pri": "NOW", "label": "l"}),
     "task_show": (["CE-1", "--section", "Log", "--head", "0"], {"id": "CE-1", "section": "Log", "head": 0}),
-    "ask_new": (["Q", "--pri", "LATER", "--brief", "b", "--blocks", "CE-1", "--body", "x", "--id", "ASK-8"], {"title": "Q", "pri": "LATER", "brief": "b", "blocks": ["CE-1"], "body": "x", "id": "ASK-8"}),
+    "ask_new": (["Q", "--pri", "LATER", "--brief", "b", "--blocks", "CE-1", "--body", "x", "--id", "ASK-8", "--answered", "w", "--decision-title", "D", "--ruling", "r", "--ruled-by", "claude-code/fable"], {"title": "Q", "pri": "LATER", "brief": "b", "blocks": ["CE-1"], "body": "x", "id": "ASK-8", "answered": "w", "decision_title": "D", "ruling": "r", "ruled_by": "claude-code/fable"}),
     "ask_raised": (["ASK-1", "ASK-2,ASK-3"], {"ids": ["ASK-1", "ASK-2", "ASK-3"]}),
     "ask_later": (["ASK-1"], {"id": "ASK-1"}),
     "ask_answer": (["ASK-1", "the words", "--title", "T", "--ruling", "r", "--ruled-by", "claude-code/fable"], {"id": "ASK-1", "words": "the words", "title": "T", "ruling": "r", "ruled_by": "claude-code/fable"}),
