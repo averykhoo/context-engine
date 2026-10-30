@@ -158,6 +158,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-108](DEC-108-task-close-asks-about-residual-risk-through-an.md): task close asks about residual risk through an optional statement plus a reply nudge, not a mandatory flag *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-109](DEC-109-a-residual-stated-at-close-uses-the-design.md): A residual stated at close uses the design-review residual line format plus a required affects field *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-110](DEC-110-task-close-refuses-residual-none-when-the.md): task close refuses --residual none when the design review lists a residual, and its Log names every INV id the close files *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-111](DEC-111-a-kill-bar-lives-in-a-board-item-s-kill-bar.md): A kill bar lives in a board item's Kill bar section, and task close --verdict is KILL, PASS or VOID with evidence *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
