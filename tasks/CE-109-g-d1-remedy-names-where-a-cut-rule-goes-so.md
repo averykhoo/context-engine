@@ -3,14 +3,14 @@ type: Task
 id: CE-109
 title: G-D1 remedy names where a cut rule goes, so rules are not lost
 brief: G-D1's remedy must say where a cut rule goes (CLAUDE.md to contract/runbook), not just cut
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 G-D1 remedy names where a cut rule goes, so rules are not lost
