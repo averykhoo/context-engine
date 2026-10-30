@@ -4,13 +4,15 @@ id: CE-117
 title: 'sabotage.md Traps: never sabotage a file a running job imports'
 brief: Sabotage runs must not edit a file a running job imports; add the trap to sabotage.md
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-21b
+moved: 2026-10-30a
+updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 sabotage.md Traps: never sabotage a file a running job imports
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 29, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in c115218: sabotage.md Traps: never edit a file a running job may import; check for running jobs first; break in memory or in a copy. Kit copy byte-equal.
