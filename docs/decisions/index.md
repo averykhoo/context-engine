@@ -171,6 +171,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-121](DEC-121-doc-archive-names-the-pointers-g-d3-newly.md): doc archive names the pointers G-D3 newly reports after a move and rewrites none of them *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-122](DEC-122-archiving-a-doc-whose-frontmatter-declares.md): Archiving a doc whose frontmatter declares liveness turns that key FROZEN, keeping the old value in a comment *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-123](DEC-123-a-partial-prune-is-doc-archive-lines-a-b-into.md): A partial prune is doc archive --lines A-B, into one <stem>-pruned.md per source with one redirect row per prune *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-124](DEC-124-the-plugin-launcher-judges-a-settings-orient.md): The plugin launcher judges a settings orient hook stale by its program and --root, not by running it *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 

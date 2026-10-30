@@ -3,7 +3,7 @@ type: Task
 id: CE-146
 title: Plugin launcher stays quiet when any settings hook mentions orient, even a stale one with another machine's path that fails silently
 brief: From CE-77's review (LOW), split out of CE-85 on 2026-10-30a
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-4]
