@@ -740,6 +740,7 @@ def test_ask_new_answered_with_a_delegated_ruling_records_who_ruled(eng):
     ({"words": "blue", "title": "Blue", "ruled_by": "claude-code/opus"}, "`ruled_by` without a ruling"),
     ({"words": "you decide", "title": "Blue", "ruling": "Blue.", "ruled_by": "owner"}, "ruled_by: owner"),
     ({"words": "blue\n\n## Ruling\n\nmine", "title": "Blue"}, "has a `## Ruling` section but no `ruled_by`"),
+    ({"words": "blue\n\n## Amendments\n\nlater", "title": "Blue"}, "holds a `## Amendments` line"),  # CE-147
 ])
 def test_ask_new_answered_refuses_before_writing_anything(eng, args, says):
     """CE-111: what `ask answer` would refuse is refused before the question is written, so a
