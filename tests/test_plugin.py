@@ -175,6 +175,56 @@ def test_orient_never_runs_twice_beside_a_settings_hook(tmp_path):
     assert p.returncode == 0 and p.stdout == b"", p
 
 
+def _hook_json(command: str) -> str:
+    return json.dumps({"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": command}]}]}}, indent=2)
+
+
+@pytest.mark.criterion("AC-145")
+def test_beside_only_a_stale_settings_hook_the_plugin_runs_orient_and_names_it(tmp_path):
+    """A settings hook that cannot run here (another machine's interpreter, a moved repo, a program
+    not on PATH) fails silently, so the plugin runs orient beside it and says which hook and why
+    (CE-146); beside one that can run, it stays quiet, whatever else the settings hold."""
+    root = _framework_repo(tmp_path / "repo")
+    other = tmp_path / "other"
+    other.mkdir()
+    (root / ".claude").mkdir()
+    py, gone = Path(sys.executable).as_posix(), (tmp_path / "gone" / "python").as_posix()
+    stale = {
+        f'"{gone}" -m context_engine --root "{root.as_posix()}" orient': f"its program {gone} is not a file on this machine",
+        f'"{py}" -m context_engine --root "{other.as_posix()}" orient': f"its --root {other.as_posix()} is not this repo",
+        "no-such-program-ce146 -m context_engine orient": "its program no-such-program-ce146 is not on PATH",
+    }
+    for name in ("settings.json", "settings.local.json"):
+        settings = root / ".claude" / name
+        for command, why in stale.items():
+            settings.write_text(_hook_json(command), encoding="utf-8")
+            p = _run(_argv(_hook(), root), cwd=tmp_path)
+            first, _, rest = _out(p).partition("\n")
+            assert p.returncode == 0 and first == (
+                f"context-engine plugin: the SessionStart hook in .claude/{name} runs the engine's orient, but {why}; "
+                "a failing SessionStart hook is silent, so the plugin runs orient instead: have the owner fix or remove that hook (kit README § Hook)."
+            ), (command, p)
+            assert rest.startswith("# orient"), rest
+        settings.unlink()
+    # one hook that can run is enough, beside a stale one; the command's own spelling of a path
+    # (backslashes on Windows, a relative --root) and a program naming a variable are taken as is
+    (root / ".claude" / "settings.json").write_text(_hook_json(next(iter(stale))), encoding="utf-8")
+    for command in (
+        f'"{py}" -m context_engine --root "{root.as_posix()}" orient',
+        f'"{Path(sys.executable)}" -m context_engine --root "{root}" orient',
+        f'"{py}" -m context_engine --root . orient',
+        '"$CE_PYTHON" -m context_engine orient',
+    ):
+        (root / B.SETTINGS).write_text(_hook_json(command), encoding="utf-8")
+        p = _run(_argv(_hook(), root), cwd=tmp_path)
+        assert p.returncode == 0 and p.stdout == b"", (command, p)
+    # a bare program name is looked up on PATH, as the hook's shell would
+    exe = Path(sys.executable)
+    (root / B.SETTINGS).write_text(_hook_json(f"{exe.stem} -m context_engine orient"), encoding="utf-8")
+    p = _run(_argv(_hook(), root), cwd=tmp_path, PATH=os.pathsep.join([str(exe.parent), os.environ["PATH"]]))
+    assert p.returncode == 0 and p.stdout == b"", p
+
+
 def test_the_launcher_hands_the_engine_a_clean_git_environment(tmp_path):
     """Started from inside a linked worktree, git exports that worktree's GIT_DIR into an alias
     (a plain checkout does not) and runs it from the worktree's top level: the engine still sees

@@ -228,6 +228,12 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-150 | Lint (G-D4) is red on a live item whose `stale_after` has passed, and on one whose `stale_after` is not an absolute instant (a timestamp with its offset; a bare date or a time without an offset is red): a record that is not `status: deprecated` and whose `state` is not closed, done or expired; a criterion that is not `retired`, in its table's `stale_after` column; and an entry of `[working] register` by its `- **stale_after:**` line. It runs whatever `[guards] liveness` and `history` hold, and only `[guards] off` naming G-D4 silences it | US-6, US-14 | tested |
 | AC-151 | Lint (G-I1) is red on a charter whose frontmatter carries a `charter_status` other than `confirmed` or `unconfirmed`, or an OKF `status` other than `draft`, `stable` or `deprecated`; a charter without frontmatter, or without those keys, passes; orient asks the owner to review a charter that is `charter_status: unconfirmed`, and says nothing of one that is `confirmed` or while G-I1 is off | US-6 | tested |
 
+## Claude Code plugin (CE-77, CE-146)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-145 | The plugin's `SessionStart` hook stays quiet only beside a hook in the repo's `.claude/settings.local.json` or `.claude/settings.json` whose `command` runs the engine's orient and can run here: its program is a file on this machine (a bare name: one on `PATH`; one naming a variable is not judged) and its `--root`, when it names one, is this repo. Beside only stale ones (another machine's path, a moved repo or interpreter) it runs orient, its first line naming the settings file and why that hook cannot run | US-17 | tested |
+
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

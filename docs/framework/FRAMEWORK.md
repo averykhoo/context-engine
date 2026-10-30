@@ -1489,7 +1489,10 @@ A `SessionStart` hook runs `orient`, so the session-start read does not rest on 
 obeying a rule; its command names the machine's engine interpreter, so it lives in the
 machine-local `.claude/settings.local.json`. That file holds the owner's permission grants, so
 an existing one gains the hook only with the owner's yes (`init --merge-settings`), and nothing
-else in it changes. **Standing permissions stay in owner-loaded files**
+else in it changes. The engine's Claude Code plugin (§11.2) carries the same hook with no machine
+paths; it stays quiet beside a settings hook that can run here, so orient never runs twice, and
+beside only a stale one (another machine's interpreter, a moved repo) it runs orient and names
+that hook, since a failing hook is silent. **Standing permissions stay in owner-loaded files**
 (`CLAUDE.md` and what it imports; harness permissions in the settings files), never in MCP
 instructions or `orient` output: an agent rightly discounts a grant that arrives as tool output.
 Working instructions may come from any of these three sources; a grant may not.

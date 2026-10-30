@@ -183,7 +183,11 @@ by-hand fallback: no orient output in the context means run `orient` and tell th
 The Claude Code plugin (next section) carries the same hook with no machine paths in the repo:
 with it, run `init --skip-settings`, which then writes no hook. A hook init wrote earlier stays in
 charge: the plugin's stays quiet in a repo whose settings already run orient, so orient never runs
-twice.
+twice. It stays quiet only beside a hook that can run on this machine: one whose program is a file
+here (a bare name: on `PATH`; one naming a variable is not judged) and whose `--root`, when it
+names one, is this repo. A stale one (another machine's path in a committed `.claude/settings.json`,
+a moved repo or interpreter) would fail silently, so beside only stale ones the plugin runs orient,
+its first line naming the settings file and why that hook cannot run: fix or remove that hook.
 
 ## Claude Code plugin
 

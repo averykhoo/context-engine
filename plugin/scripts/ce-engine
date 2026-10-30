@@ -36,14 +36,90 @@ if [ ! -f "$root/context.toml" ]; then
   exit 0
 fi
 
-# Orient never runs twice: a SessionStart hook in the repo's own settings that runs the engine's
-# orient (init writes one) wins, and this one stays quiet.
+# Every hook `command` in a settings file that runs the engine's orient (`context_engine`, then
+# `orient`), one line each: its program, a unit separator, its --root (empty when it names none).
+# The JSON strings are read with their escapes undone; a permission grant is not a `command`.
+orient_hooks() {
+  awk '
+    function word(t,   q, j) {
+      sub(/^[ \t]+/, "", t)
+      q = substr(t, 1, 1)
+      if (q == "\"" || q == "\047") {
+        t = substr(t, 2); j = index(t, q)
+        return j ? substr(t, 1, j - 1) : t
+      }
+      if (match(t, /^[^ \t]+/)) return substr(t, 1, RLENGTH)
+      return ""
+    }
+    function emit(s,   p, j, r) {
+      p = index(s, "context_engine")
+      if (!p || !index(substr(s, p), "orient")) return
+      p = s; sub(/^[ \t]+/, "", p)
+      if (substr(p, 1, 2) == "& ") p = substr(p, 3)
+      r = ""; j = index(s, "--root")
+      if (j) { r = substr(s, j + 6); if (substr(r, 1, 1) == "=") r = substr(r, 2); r = word(r) }
+      printf "%s\037%s\n", word(p), r
+    }
+    { buf = buf $0 "\n" }
+    END {
+      n = length(buf); i = 1; key = ""; last = ""; value = 0
+      while (i <= n) {
+        c = substr(buf, i, 1)
+        if (c == "\"") {
+          s = ""; i++
+          while (i <= n) {
+            c = substr(buf, i, 1)
+            if (c == "\\") {
+              d = substr(buf, i + 1, 1)
+              s = s ((d == "\"" || d == "\\" || d == "/") ? d : c d); i += 2; continue
+            }
+            if (c == "\"") break
+            s = s c; i++
+          }
+          i++
+          if (value) { if (key == "command") emit(s); value = 0; key = "" } else last = s
+          continue
+        }
+        if (c == ":") { key = last; value = 1 }
+        else if (c !~ /[ \t\r\n]/) { value = 0; last = "" }
+        i++
+      }
+    }
+  ' "$1"
+}
+
+# Orient never runs twice: Claude Code runs a plugin's hook and a settings file's both, so this one
+# stays quiet beside a SessionStart hook in the repo's own settings that runs the engine's orient
+# (init writes one) and can run here: its program is a file on this machine (a bare name: one on
+# PATH; one naming a variable is not judged) and its --root, when it names one, is this repo. A
+# stale one (another machine's path, a moved repo or interpreter) fails silently, so beside only
+# stale ones this one runs orient and says which hook it stood in for (CE-146).
+stale=
 if [ "$mode" = orient ]; then
+  us=$(printf '\037')
   for s in "$root/.claude/settings.local.json" "$root/.claude/settings.json"; do
-    if [ -f "$s" ] && grep -Eq '"command"[[:space:]]*:[[:space:]]*".*context_engine.*orient' "$s"; then
-      exit 0
-    fi
+    [ -f "$s" ] || continue
+    hooks=$(orient_hooks "$s") || hooks=
+    while IFS=$us read -r prog r; do
+      [ -n "$prog" ] || continue
+      why=
+      case $prog in
+        *'$'*|*%*) ;;
+        */*|*\\*) (cd "$root" && [ -f "$prog" ]) || why="its program $prog is not a file on this machine" ;;
+        *) command -v "$prog" >/dev/null 2>&1 || why="its program $prog is not on PATH" ;;
+      esac
+      if [ -z "$why" ] && [ -n "$r" ] && ! (cd "$root" && [ -d "$r" ] && [ "$r" -ef . ]); then
+        why="its --root $r is not this repo"
+      fi
+      [ -n "$why" ] || exit 0
+      stale=${stale:-"the SessionStart hook in ${s#"$root"/} runs the engine's orient, but $why"}
+    done <<EOF
+$hooks
+EOF
   done
+fi
+if [ -n "$stale" ]; then
+  say "$stale; a failing SessionStart hook is silent, so the plugin runs orient instead: have the owner fix or remove that hook (kit README § Hook)."
 fi
 
 # The interpreter: the pointer file if the repo has one, else the pinned env's (DEC-41), in its
