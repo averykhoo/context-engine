@@ -3,10 +3,12 @@ type: Decision
 id: DEC-91
 title: Linked batches reserve their ids with an id-reserve op, not a batch task new
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: SUPERSEDED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:3b10f5ea8a32576839e012241729f346b9da34597f52b8b65c822d5a34389e3c
+status: deprecated
+superseded_by: [DEC-92]
 ---
 
 The agent's call on CE-105 (with CE-119), made while building it in session 2026-10-30a: how a batch of linked records gets ids it can cite before they are written.

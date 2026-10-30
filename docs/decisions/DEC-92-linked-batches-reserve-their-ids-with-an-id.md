@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:1dc1d2636821e7e8742403e231e035adb715b5ac4c731039204e77487a4739e7
+supersedes: [DEC-91]
 ---
 
 The agent's call on CE-105 (with CE-119), made while building it in session 2026-10-30a: how a batch of linked records gets ids it can cite before they are written.
