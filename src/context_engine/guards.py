@@ -402,7 +402,7 @@ def ids(e: Engine) -> list[Failure]:
                 out.append(Failure("G-D2", paths[0], f"id {rid} is carried by {len(paths)} files ({', '.join(paths)})", "give the newer record the next free id by hand (ids are never reused), then fix what cites it"))
     created: dict[str, str] = {}
     for n, op in _ops(e):
-        if isinstance(op, dict) and op.get("op") in ("new", "import") and op.get("id"):
+        if isinstance(op, dict) and op.get("op") in ("new", "import", "criterion.new") and op.get("id"):  # a criterion row too (CE-42)
             rid = str(op["id"])
             if rid in created:
                 out.append(Failure("G-D2", e.store.config.oplog, f"{rid} was created twice (sessions {created[rid]} and {op.get('session')}, op log line {n}): an id was reused", "renumber the newer record by hand to the next free id; ids are never reused"))
@@ -1683,29 +1683,57 @@ def goal_id(text: str) -> str | None:
     return f"G-{m.group(1)}" if m else None
 
 
-def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]:
-    """Each markdown table outside fenced code: (its header cells, lower-cased; its body rows as
-    (line number, stripped cells)). The `|---|` separator is skipped."""
+def row_cells(line: str) -> list[str]:
+    """A table row's cells, stripped: split on the pipes that are not GFM-escaped (`\\|`)."""
+    row = line.strip()
+    inner = row[1:-1] if len(row) > 1 and row.endswith("|") and not row.endswith("\\|") else row[1:]
+    return [c.strip() for c in PIPE_RE.split(inner)]
+
+
+@dataclass(frozen=True)
+class Table:
+    """One markdown table outside fenced code: its header's line number, its header cells
+    (lower-cased), its body rows as (line number, stripped cells) with the `|---|` separator
+    skipped, and its last line's number. The one table parser: the guards read it, and so does the
+    criterion write op (criteria.py), which needs the spans to write one row in place (CE-42)."""
+
+    head: int
+    header: list[str]
+    body: list[tuple[int, list[str]]]
+    last: int
+
+
+def table_blocks(text: str) -> Iterator[Table]:
+    """Each markdown table outside fenced code (``Table``), in file order: a run of consecutive
+    lines led by `|`, its first line the header."""
     header: list[str] | None = None
     body: list[tuple[int, list[str]]] = []
+    head = end = 0
     last = -2
     for n, line in prose(text):
         row = line.strip()
         if not row.startswith("|") or n != last + 1:
             if header is not None:
-                yield header, body
+                yield Table(head, header, body, end)
             header, body = None, []
         last = n
         if not row.startswith("|"):
             continue
-        inner = row[1:-1] if len(row) > 1 and row.endswith("|") and not row.endswith("\\|") else row[1:]
-        cells = [c.strip() for c in PIPE_RE.split(inner)]
+        end = n
+        cells = row_cells(row)
         if header is None:
-            header = [c.lower() for c in cells]
+            head, header = n, [c.lower() for c in cells]
         elif not all(set(c) <= set("-: ") for c in cells):
             body.append((n, cells))
     if header is not None:
-        yield header, body
+        yield Table(head, header, body, end)
+
+
+def tables(text: str) -> Iterator[tuple[list[str], list[tuple[int, list[str]]]]]:
+    """Each markdown table outside fenced code: (its header cells, lower-cased; its body rows as
+    (line number, stripped cells)). The `|---|` separator is skipped."""
+    for t in table_blocks(text):
+        yield t.header, t.body
 
 
 def charter_goals(text: str) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
@@ -1732,11 +1760,19 @@ class Criterion:
     status: str
 
 
+def criteria_columns(header: list[str]) -> tuple[int | None, int | None]:
+    """The index of a criteria table's source column (`from`, `story` or `source`, the first the
+    header has) and of its `status` column, each None when the header lacks it."""
+    src = next((header.index(c) for c in SOURCE_COLUMNS if c in header), None)
+    return src, (header.index("status") if "status" in header else None)
+
+
 def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
     """The criterion rows (a table row whose whole first cell is an id, `ROW_ID_RE`), and the
     problems, as (message, remedy), that stop a row being read: a table of criteria with no
     `status` column or no source column (`from`, `story` or `source`), and a row of a table of
-    criteria not led by a plain id (`**AC-4**`, `AC 6`), which would otherwise pass unread."""
+    criteria not led by a plain id (`**AC-4**`, `AC 6`), which would otherwise pass unread; and an
+    id leading two rows (CE-42), whose claims and links would be traced to either."""
     rows: list[Criterion] = []
     problems: list[tuple[str, str]] = []
     for header, body in tables(text):
@@ -1746,8 +1782,7 @@ def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
         for n, cells in body:
             if not ROW_ID_RE.fullmatch(cells[0]):
                 problems.append((f"line {n}: a row of a table of criteria is led by `{cells[0]}`, which is not an id, so the row is not read", "lead the row with its id alone and plain (`| AC-4 | ...`), or move the line out of the table (FRAMEWORK §3.3)"))
-        src = next((header.index(c) for c in SOURCE_COLUMNS if c in header), None)
-        status = header.index("status") if "status" in header else None
+        src, status = criteria_columns(header)
         if src is None or status is None:
             missing = "source column (`from`, `story` or `source`)" if src is None else "`status` column"
             problems.append((f"line {mine[0][0]}: a table of criteria has no {missing}, so its {len(mine)} rows cannot be read", "give the table its `status` and `from` columns (FRAMEWORK §3.3)"))
@@ -1756,6 +1791,11 @@ def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
             src_cell = cells[src] if src < len(cells) else ""
             status_cell = cells[status] if status < len(cells) else ""
             rows.append(Criterion(cells[0], n, src_cell, status_cell.strip("`*").strip().lower()))
+    seen: dict[str, int] = {}
+    for r in rows:  # CE-42: the rest-time twin of `criterion set`'s refusal of an id leading two rows
+        if r.id in seen:
+            problems.append((f"line {r.line}: {r.id} leads a second row (the first is line {seen[r.id]}), so its claims and links are traced to one of two criteria", "ids are never reused (P3): give the newer row the next free id by hand (`criterion new` hands it out), and move its claims"))
+        seen.setdefault(r.id, r.line)
     return rows, problems
 
 
@@ -2224,6 +2264,29 @@ def specified(e: Engine) -> list[Failure]:
     return out
 
 
+def claim_sites(e: Engine) -> tuple[dict[str, tuple[str, int]], list[Failure]]:
+    """G-T2's claim scan: each criterion id the `[guards] claim` pattern finds in the files under
+    `[guards] tests` -> (repo-relative path, line) of its first claim; and a G-T2 failure for each
+    listed path that does not exist. `claims` reads it at rest, and `criterion new` and `criterion
+    set` at the write, before a row is made `tested` or `manual` (CE-42). Empty while `tests` is
+    unset."""
+    g = e.store.config.guards
+    pattern = re.compile(g.claim)
+    found: dict[str, tuple[str, int]] = {}
+    out: list[Failure] = []
+    for rel in g.tests:
+        p = e.root / rel
+        if not p.exists():
+            out.append(Failure("G-T2", CONFIG_NAME, f"[guards] tests names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}"))
+            continue
+        files = [p] if p.is_file() else sorted(f for f in p.rglob("*") if f.is_file() and f.suffix != ".pyc" and not SKIP_DIRS.intersection(f.relative_to(e.root).parts))
+        for f in files:
+            for n, line in enumerate(_text(f).split("\n"), 1):
+                for m in pattern.finditer(line):
+                    found.setdefault(m.group(1), (f.relative_to(e.root).as_posix(), n))
+    return found, out
+
+
 def claims(e: Engine) -> list[Failure]:
     """G-T2: every `tested` or `manual` criterion is claimed by a test or driver (the `[guards]
     claim` pattern, in the files under `[guards] tests`), every claim names a criterion row, and
@@ -2241,18 +2304,8 @@ def claims(e: Engine) -> list[Failure]:
     if not (g.tests and e.w.criteria):
         return []
     rows, out = _criteria(e, "G-T2")
-    pattern = re.compile(g.claim)
-    found: dict[str, tuple[str, int]] = {}
-    for rel in g.tests:
-        p = e.root / rel
-        if not p.exists():
-            out.append(Failure("G-T2", CONFIG_NAME, f"[guards] tests names {rel}, which does not exist", f"fix the path, or {INTENT_OFF}"))
-            continue
-        files = [p] if p.is_file() else sorted(f for f in p.rglob("*") if f.is_file() and f.suffix != ".pyc" and not SKIP_DIRS.intersection(f.relative_to(e.root).parts))
-        for f in files:
-            for n, line in enumerate(_text(f).split("\n"), 1):
-                for m in pattern.finditer(line):
-                    found.setdefault(m.group(1), (f.relative_to(e.root).as_posix(), n))
+    found, missing = claim_sites(e)
+    out += missing
     if not found and not out:
         out.append(Failure("G-T2", CONFIG_NAME, f"[guards] claim matched nothing under {', '.join(g.tests)}, so no test is traced", "fit the pattern to the repo's test syntax (one group: the criterion id), or fix the paths"))
     ids = {r.id for r in rows}
@@ -2278,18 +2331,32 @@ def sources(e: Engine) -> list[Failure]:
     if not (e.store.config.guards.stories and e.w.criteria):
         return []
     rows, out = _criteria(e, "G-T6")
-    st = e.store
-    kinds = [st.config.kind(st.config.guards.stories)] + ([st.config.kind(e.w.decision)] if e.w.decision else [])
-    known = {rid for k in kinds for p in st._files(k) if (rid := st._id_of(k, p))}
-    names = " or ".join(f"{k.prefix}-n" for k in kinds)
+    known, names = source_ids(e)
     for r in rows:
-        refs = ID_RE.findall(r.source)
-        if not refs:
-            out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} names no source (`{r.source}`)", f"name the story or decision it comes from ({names}) in its `from` cell"))
-        for ref in refs:
-            if ref not in known:
-                out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {r.id} comes from {ref}, which is neither a story nor a decision", f"name a {names} that exists"))
+        for msg, remedy in source_problems(r.id, r.source, known, names):
+            out.append(Failure("G-T6", e.w.criteria, f"line {r.line}: {msg}", remedy))
     return out
+
+
+def source_ids(e: Engine) -> tuple[set[str], str]:
+    """The ids a criterion's source may name: every story (`[guards] stories`) and decision
+    (`[working] decision`); and their series, for a remedy (`US-n or DEC-n`). Empty while
+    `stories` is unset."""
+    st = e.store
+    if not st.config.guards.stories:
+        return set(), ""
+    kinds = [st.config.kind(st.config.guards.stories)] + ([st.config.kind(e.w.decision)] if e.w.decision else [])
+    return {rid for k in kinds for p in st._files(k) if (rid := st._id_of(k, p))}, " or ".join(f"{k.prefix}-n" for k in kinds)
+
+
+def source_problems(cid: str, source: str, known: set[str], names: str) -> list[tuple[str, str]]:
+    """G-T6 on one criterion's source cell, as (message, remedy): it names at least one id, and
+    each is in ``known`` (``source_ids``). `sources` reads it at rest, and `criterion new` and
+    `criterion set --from` at the write (CE-42)."""
+    refs = ID_RE.findall(source)
+    if not refs:
+        return [(f"{cid} names no source (`{source}`)", f"name the story or decision it comes from ({names}) in its `from` cell")]
+    return [(f"{cid} comes from {ref}, which is neither a story nor a decision", f"name a {names} that exists") for ref in refs if ref not in known]
 
 
 def intent(e: Engine) -> list[Failure]:

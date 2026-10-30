@@ -268,6 +268,19 @@ def build() -> argparse.ArgumentParser:
     gs = _sub(ga, "status", "each scope's id here and whether a green run covers it")
     gs.add_argument("--require", default="", metavar="SCOPE", help="exit 1 unless this scope is covered; <scope>+readers: its readers too")
 
+    cr = _sub(groups, "criterion", "criteria rows of [working] criteria, written one row at a time (FRAMEWORK §3.3, §6.2 step 3)").add_subparsers(dest="op", required=True)
+    crn = _sub(cr, "new", "draft a criterion: append one row to a criteria table, every other byte of the file unchanged")
+    crn.add_argument("text", help="the criterion's words, one line")
+    crn.add_argument("--from", dest="source", required=True, help="the story or decision ids it comes from, e.g. `US-3` or `US-3, DEC-5`")
+    crn.add_argument("--status", default="planned", help="planned (the default); tested or manual only once a test or driver claims it (G-T2)")
+    crn.add_argument("--under", default="", help="the heading of the table the row goes in, its text after the #s (required when the file has several)")
+    crn.add_argument("--id", default="", help="a criterion id never used; none takes the next")
+    crs = _sub(cr, "set", "rewrite cells of one criterion row in place: status, text or source")
+    crs.add_argument("id", help="the criterion's id, e.g. AC-12")
+    crs.add_argument("--status", default="", help="planned, tested, manual, deviates or retired; tested or manual only once a test or driver claims it (G-T2)")
+    crs.add_argument("--text", default="", help="the criterion's new words, one line")
+    crs.add_argument("--from", dest="source", default="", help="the story or decision ids it comes from")
+
     wy = _sub(groups, "why", "the decisions that link a task, criterion or file::symbol")
     wy.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
 
@@ -331,6 +344,8 @@ CLI_OPS = {
     ("commit", None): "commit",
     ("gate", "run"): "gate_run",
     ("gate", "status"): "gate_status",
+    ("criterion", "new"): "criterion_new",
+    ("criterion", "set"): "criterion_set",
     ("why", None): "why",
     ("doc", "freeze"): "doc_freeze",
     ("doc", "archive"): "doc_archive",

@@ -639,6 +639,14 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("record_retire", id="US-1", why="recorded again", by="agent", superseded_by="US-2")
     w("record_new", kind="story", title="Rebuilt", body="the agent's reading", fields={"actor": "agent (x, reconstructed from notes)", "story_status": "unconfirmed"})
     w("record_confirm", id="US-3", words="yes, that is it")
+    crit = copy.deepcopy(MILESTONE_CONFIG)  # a criteria file from here on: set earlier, G-T1 would red the stories' milestones
+    crit["working"]["criteria"] = "criteria.md"
+    (mrepo / "context.toml").write_text(_toml(crit), encoding="utf-8")
+    (mrepo / "criteria.md").write_text("# Criteria\n\n| id | criterion | from | status |\n|---|---|---|---|\n", encoding="utf-8")
+    git(mrepo, "add", "context.toml", "criteria.md")
+    git(mrepo, "commit", "-q", "-m", "a criteria file, to draft into")
+    w("criterion_new", text="It holds", source="US-2")  # not a milestone: agent-drafted, it rides along (CE-42)
+    w("criterion_set", id="AC-1", text="It still holds")
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")
     w("pause_open", in_flight="half done", resume="finish it")

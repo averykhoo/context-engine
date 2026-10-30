@@ -103,6 +103,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
 | doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table | `["moved"]`, `["archived"]`, `["redirect"]` |
+| criterion new, criterion set | `criterion.new`, `criterion.set` | id = the criterion, path = the criteria file | `["row"]`; the header names of the columns changed |
 
 ### Record kinds (the kit's defaults)
 
@@ -1186,6 +1187,58 @@ orientation note), the hash is `none`.
 another session's banner (FRAMEWORK §5.5 rule 2), nor the durable facts in a long one. The
 check before writing is the same one lint runs, so a banner is never stored only for lint to
 reject it, a round of fixes later.
+
+## Criteria
+
+Criteria are rows of the `[working] criteria` file (FRAMEWORK §3.3), not records: lint reads them
+in place (G-T1, G-T2, G-T6). Both operations write one row and leave every other byte of the file
+as it was. Never reflow, re-pad or re-sort the table: a hand-edited table stays as its editor left
+it. Neither is a milestone: the next commit carries the file and the op line.
+
+### context-engine criterion new
+
+1. Choose the table: a table of the criteria file whose header's first column is `id` and which has
+   a `status` column and a source column (`from`, `story` or `source`). With several, the one under
+   the heading you name; the engine refuses to guess. With none there, write the heading, the
+   table's header row and its `|---|` line yourself first: the operation writes rows only.
+2. Choose the id: the next number of the rows' series (`AC-n`; `AC` when there are no rows), above
+   every row of the file and every id a `criterion.new` op line created, so an id is never handed
+   out twice (P3), even after a row was deleted. Sessions drafting at once in separate worktrees do
+   not see each other's rows: take ids from a block handed out for the purpose and pass `--id`.
+   G-D2 and the duplicate-row check (G-T1, G-T2, G-T6) red a clash once the work is merged.
+3. Check what the row will say, as the guards will read it. Its source names at least one story or
+   decision that exists (G-T6). Its status is `planned`, `tested`, `manual`, `deviates` or `retired`.
+   `tested` or `manual` only once a test or driver claims the id under `[guards] tests` (the
+   `[guards] claim` pattern; G-T2), and that test has been seen red with the behaviour broken (P7).
+   Each cell is one line, with no `|` unless escaped as `\|`, and no trailing backslash.
+4. Add the row directly after the table's last row, in that row's line ending, as
+   `| <id> | <criterion> | <from> | <status> |` in the table's own column order, every other cell
+   empty; a `Claimed by` column gets the claiming file when the row is `tested` or `manual`.
+5. Log one op line (§ What every write does).
+
+**Why:** intake step 3 drafts the criteria (FRAMEWORK §6.2); a draft written by hand into a table
+others edit by hand is where a reflowed row, a reused id or an unread row creeps in. One row only,
+and each check the same one lint makes at rest, so a write never stores what the gate then fails.
+Rows only, because where a new section goes and what it is called are choices for the writer.
+
+### context-engine criterion set
+
+1. Find the one row the id leads, in a criteria table (step 1 above). An id leading two rows is
+   resolved first: the later row takes the next free id.
+2. Rewrite only the cells you change: status, criterion or from. Each changed cell becomes
+   ` <value> `; every other cell keeps its bytes (spacing, emphasis, an escaped `\|`, a missing
+   closing pipe), and the row keeps its line ending. A status is compared as lint reads it
+   (`**Planned**` is already `planned`), so nothing is rewritten just to drop formatting.
+3. Make the checks of § criterion new step 3 on the values that change. Moving a row to `tested`
+   or `manual` fills a `Claimed by` column with the claiming file.
+4. Log one op line naming the columns changed.
+
+**Why:** a criteria census (FRAMEWORK §6.2 step 6) rewrites and retires criteria, and a criterion
+becomes `tested` once its claiming test was seen red (P7). Writing those cells and nothing else keeps
+the diff to the change. `tested` is refused without a claim because lint would red it at once.
+Not checked by either operation, nor by lint: that a `retired` row names the decision that
+retired it, a `deviates` row its deviation entry, and that a story marked `sign-off: required`
+keeps its criteria `planned` (FRAMEWORK §3.3).
 
 ## Append-only records (decisions and stories)
 

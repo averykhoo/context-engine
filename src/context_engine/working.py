@@ -29,6 +29,7 @@ from . import archive as A
 from . import decisions as D
 from . import guards as G
 from . import ledger as L
+from . import criteria as CR
 from . import okf
 from . import review as R
 from . import bootstrap as K  # the kit: its block markers, kit block and contract (G-D0)
@@ -1717,6 +1718,207 @@ class Engine:
         if path is None or not path.is_file():
             return set()
         return set(CRITERION_ROW_RE.findall(path.read_bytes().decode("utf-8", errors="replace")))
+
+    # -- criteria rows (FRAMEWORK §3.3, §6.2 step 3, CE-42) ----------------------------------
+
+    def _criteria_file(self) -> tuple[str, Path]:
+        rel = self.w.criteria
+        if not rel:
+            raise Refusal("no `[working] criteria` file is set, so there is no criteria table to write", "set `criteria = \"docs/criteria.md\"` in [working] of context.toml (the kit ships docs/criteria.md)")
+        p = self.root / rel
+        if not p.is_file():
+            raise Refusal(f"[working] criteria names {rel}, which does not exist", "fix the path, or create the file from the kit's docs/criteria.md")
+        return rel, p
+
+    @staticmethod
+    def _cell(value: str, what: str) -> str:
+        value = value.strip()
+        if not value:
+            raise Refusal(f"no {what} given", f"give the {what}")
+        problem = CR.cell_problem(value, what)
+        if problem:
+            raise Refusal(problem, "write it on one line; a `|` is written `\\|`")
+        return value
+
+    def _criterion_checks(self, cid: str, *, status: str | None, source: str | None) -> tuple[str, tuple[str, int] | None]:
+        """The write-time twins of the rest-time guards, calling the same checks (CE-25's design
+        review, M): a status from G-T2's vocabulary, and `tested` or `manual` only for an id G-T2's
+        claim scan finds claimed (``guards.claim_sites``); a source naming a story or decision
+        (G-T6, ``guards.source_problems``). A twin whose guard is off is skipped as the guard is:
+        with `[guards] tests` unset no claim is looked for, and with `[guards] stories` unset the
+        source need only name an id. Returns (a note for the reply on what went unchecked, or '';
+        the claim found, as (path, line), or None)."""
+        g = self.store.config.guards
+        note, claim = "", None
+        if status is not None:
+            if status not in G.CRITERION_STATUSES:
+                raise Refusal(f"`{status}` is not a criterion status", f"use one of {', '.join(G.CRITERION_STATUSES)} (FRAMEWORK §3.3)")
+            if status in G.CLAIMED:
+                if not g.tests:
+                    note = "; claim not checked: [guards] tests is unset, so G-T2 is off"
+                else:
+                    found, _ = G.claim_sites(self)
+                    if cid not in found:
+                        raise Refusal(f"{cid} cannot be `{status}`: no test or driver under {', '.join(g.tests)} claims it (G-T2)",
+                                      f"claim it in the test that checks it (the [guards] claim pattern; in pytest `@pytest.mark.criterion(\"{cid}\")`) once that test has been seen red with the behaviour broken (P7), then run this again; until then leave it `planned`")
+                    claim = found[cid]
+        if source is not None:
+            if not g.stories:
+                if not G.ID_RE.search(source):
+                    raise Refusal(f"{cid}'s source `{source}` names no id", "name the story or decision it comes from (FRAMEWORK §3.3)")
+            else:
+                known, names = G.source_ids(self)
+                problems = G.source_problems(cid, source, known, names)
+                if problems:
+                    raise Refusal(problems[0][0] + " (G-T6)", problems[0][1])
+        return note, claim
+
+    def _criterion_ids(self, raw: str) -> tuple[set[str], set[str]]:
+        """(every id leading a table row of the criteria file, as `decision link` reads them;
+        every id a logged `criterion.new` line created): an id in either is never handed out again (P3)."""
+        logged = {str(op.get("id")) for _, op in G._ops(self) if isinstance(op, dict) and op.get("op") == "criterion.new"}
+        return set(CRITERION_ROW_RE.findall(raw.replace("\r\n", "\n"))), logged
+
+    def _next_criterion(self, raw: str) -> str:
+        rows = [cells[0] for p in CR.places(raw) for _, cells in p.table.body if cells and G.ROW_ID_RE.fullmatch(cells[0])]
+        prefixes = sorted({r.rsplit("-", 1)[0] for r in rows})
+        if len(prefixes) > 1:
+            raise Refusal(f"the criteria rows use {len(prefixes)} id prefixes ({', '.join(prefixes)}), so the next id is not clear", "pass --id with the next free id of the series you mean")
+        prefix = prefixes[0] if prefixes else CR.PREFIX
+        rows_all, logged = self._criterion_ids(raw)
+        nums = [int(i.rsplit("-", 1)[1]) for i in rows_all | logged if i.rsplit("-", 1)[0] == prefix]
+        return f"{prefix}-{max(nums, default=0) + 1}"
+
+    def _free_criterion(self, cid: str, raw: str) -> None:
+        if not re.fullmatch(G.ID_FORM, cid):
+            raise Refusal(f"{cid!r} is not an id (a capital prefix, a dash, a number without a leading zero)", "give an id like AC-12, or leave --id out for the next free one")
+        try:
+            kind = self.store.config.kind_for_id(cid)
+        except Refusal:
+            kind = None
+        if kind is not None:
+            raise Refusal(f"{cid} is in the {kind.name} series ({kind.prefix}-n), not a criterion id", "give a criterion id, or leave --id out for the next free one")
+        rows, logged = self._criterion_ids(raw)
+        if cid in rows:
+            raise Refusal(f"{cid} already leads a row of {self.w.criteria}", "ids are never reused (P3): leave --id out for the next free one; to change that row, `criterion set`")
+        if cid in logged:
+            raise Refusal(f"{cid} was created by an earlier `criterion new` (the op log says so), though no row has it now", "ids are never reused (P3): leave --id out for the next free one, or restore the row from git")
+
+    def _criterion_write(self, p: Path, rel: str, raw: str, new: str, cid: str, want: dict[str, str]) -> None:
+        """Write ``new`` over the criteria file, after reading it back as lint reads it
+        (``guards.criteria_rows``): exactly one row ``cid``, with the cells ``want`` names (`source`,
+        `status`), and every other row as it was; then refuse what G-D1, G-D5 or G-D8 would fail
+        (CE-63). A row the op wrote that lint cannot read is refused, writing nothing."""
+        before = [r for r in G.criteria_rows(raw.replace("\r\n", "\n"))[0] if r.id != cid]
+        after = G.criteria_rows(new.replace("\r\n", "\n"))[0]
+        mine = [r for r in after if r.id == cid]
+        others = [r for r in after if r.id != cid]
+        shift = lambda rows: [(r.id, r.source, r.status) for r in rows]
+        if len(mine) != 1 or shift(others) != shift(before) or any(getattr(mine[0], k) != v for k, v in want.items()):
+            raise Refusal(f"the row {cid} as written would not read back as one criterion row of {rel} with those cells", "nothing was written: write the row by hand (manual-mode.md § context-engine criterion new) and report the table's shape as an engine bug")
+        self._refuse_prose(p, new, f"the row {cid}")
+        self.store.write_text(p, new)
+
+    def criterion_new(self, text: str, source: str, *, status: str = "planned", under: str = "", rid: str = "", session: str, actor: str) -> str:
+        """FRAMEWORK §6.2 step 3: append one criterion row, `| <id> | <text> | <source> | <status> |`
+        in the table's own column order (other columns empty, a `claimed by` column filled with the
+        claim found), to a criteria table of `[working] criteria`: the one under the heading
+        ``under``, or the file's only one. Under the lock, with one `criterion.new` op line; every
+        other byte of the file is unchanged. The id is ``rid``, or the next of the rows' series
+        above every row and every logged `criterion.new` (`--id` from a block handed out by hand
+        when sessions in separate worktrees draft at once: G-D2 and the duplicate-row check catch
+        a clash after the merge). Refused, writing nothing: no criteria table led by an `id`
+        column there (a heading or a table header is written by hand), several tables and no
+        ``under``, a cell that would break the table, a source that is not a story or decision
+        (G-T6), a status outside the vocabulary, `tested` or `manual` with no claim G-T2 finds, an
+        id already used or in a record series, a row that would not read back as one, and what
+        G-D1, G-D5 or G-D8 would fail. Not a milestone: the next commit carries it.
+
+        Not checked: that the criterion follows from its source (judgement, at intake); that a
+        `retired` row names the decision that retired it, a `deviates` row its deviation entry,
+        and that a story marked `sign-off: required` keeps its criteria `planned` (FRAMEWORK
+        §3.3: no guard reads them yet); a `file::symbol` or an id the text cites (G-D3 and G-T3,
+        in lint)."""
+        self._check(session, actor)
+        rel, p = self._criteria_file()
+        text, source = self._cell(text, "criterion"), self._cell(source, "source")
+        status = (status or "planned").strip()
+        with self.store.lock():
+            raw = self._utf8(p, rel)
+            place = CR.target(raw, under)
+            src, st, txt = place.columns
+            if txt in (0, src, st):
+                raise Refusal(f"the table at line {place.table.head} of {rel} has no column for the criterion's words", "give it a `criterion` column by hand, then run it again")
+            if rid.strip():
+                cid = rid.strip()
+                self._free_criterion(cid, raw)
+            else:
+                cid = self._next_criterion(raw)
+            note, claim = self._criterion_checks(cid, status=status, source=source)
+            cells = [""] * len(place.table.header)
+            cells[0], cells[txt], cells[src], cells[st] = cid, text, source, status
+            if claim and CR.CLAIMED_BY in place.table.header:
+                cells[place.table.header.index(CR.CLAIMED_BY)] = claim[0]
+            new = CR.append(raw, place, cells)
+            self._criterion_write(p, rel, raw, new, cid, {"source": source, "status": status})
+            self.store.log("criterion.new", cid, p, session, actor, ["row"])
+        where = f" under `{place.heading}`" if place.heading else ""
+        return f"{cid}: {status} row added to {rel}{where} (from {source}){note}"
+
+    def criterion_set(self, cid: str, *, status: str = "", text: str = "", source: str = "", session: str, actor: str) -> str:
+        """Rewrite the given cells (status, text, source) of the one row ``cid`` leads in a criteria
+        table of `[working] criteria`, under the lock, with one `criterion.set` op line naming the
+        columns changed: only those cells change (and a `claimed by` cell, filled with the claim
+        found when the row becomes `tested` or `manual`), the row keeps its other bytes and its
+        line ending, and every other line is unchanged. The checks are `criterion new`'s, on the
+        values that change; refused too for an id that leads no row or two, and when nothing would
+        change (a status is compared as lint reads it, so `**Planned**` is already `planned`). Not
+        a milestone.
+
+        Not checked: as `criterion new`; and which status moves are sensible (a `retired` row set
+        back to `planned` is not refused: ids are never reused, so the row is the only place it
+        can come back)."""
+        self._check(session, actor)
+        rel, p = self._criteria_file()
+        cid = cid.strip()
+        given: dict[str, str] = {}
+        if status.strip():
+            given["status"] = status.strip()
+        if text.strip():
+            given["text"] = self._cell(text, "criterion")
+        if source.strip():
+            given["source"] = self._cell(source, "source")
+        if not given:
+            raise Refusal("nothing to set", "pass --status, --text or --from")
+        with self.store.lock():
+            raw = self._utf8(p, rel)
+            found = CR.rows_of(raw, cid)
+            if not found:
+                raise Refusal(f"{cid} leads no row of a criteria table in {rel}", "name a criterion that is a row; a new one is `criterion new`")
+            if len(found) > 1:
+                raise Refusal(f"{cid} leads {len(found)} rows of {rel} (lines {', '.join(str(n) for _, n, _ in found)})", "ids are never reused (P3): give the later row the next free id by hand, then run this again")
+            place, n, cells = found[0]
+            src, st, txt = place.columns
+            column = {"status": st, "text": txt, "source": src}
+            changes: dict[int, str] = {}
+            for k, v in given.items():
+                c = column[k]
+                have = cells[c] if c < len(cells) else None
+                same = have is not None and (have.strip("`*").strip().lower() == v if k == "status" else have == v)
+                if not same:
+                    changes[c] = v
+            if not changes:
+                raise Refusal(f"{cid} already says that (line {n})", "nothing to do")
+            note, claim = self._criterion_checks(cid, status=changes.get(st), source=changes.get(src))
+            if claim and CR.CLAIMED_BY in place.table.header:
+                changes[place.table.header.index(CR.CLAIMED_BY)] = claim[0]
+            new = CR.rewrite(raw, n, changes)
+            want = {k: v for k, v in (("status", changes.get(st)), ("source", changes.get(src))) if v is not None}
+            self._criterion_write(p, rel, raw, new, cid, want)
+            self.store.log("criterion.set", cid, p, session, actor, [place.table.header[c] for c in sorted(changes)])
+        was = cells[st].strip("`*").strip().lower() if st < len(cells) else ""
+        said = [f"status {was} -> {changes[st]}" if c == st else f"{CR.CLAIMED_BY} {changes[c]}" if place.table.header[c] == CR.CLAIMED_BY else f"{place.table.header[c]} rewritten" for c in sorted(changes)]
+        return f"{cid}: {'; '.join(said)} ({rel} line {n}){note}"
 
     def link(self, rid: str, target: str, rel: str = "", *, session: str, actor: str) -> str:
         """Link a decision to a task, story, criterion, `file::symbol` or another record

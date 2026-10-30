@@ -1104,7 +1104,10 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
 2. Link it to the charter goal(s). If none fits, ask: it may be a new goal.
 3. Draft the criteria. They are **live by default** (§3.3). Show the owner **a digest of three
    to seven lines**, never files. If the story is `sign-off: required`, the criteria stay
-   `planned` until the owner signs them off.
+   `planned` until the owner signs them off. Engine operations: `criterion new` appends one row
+   to a named table of the criteria doc, and `criterion set` rewrites cells of one row (a
+   census's rewrite or retirement, or `tested` once a claiming test was seen red); every other
+   byte of the doc stays as it was, and each refuses what G-T2 or G-T6 would then fail.
 4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them. One whose
    recommendation is cheap to undo is not owner-only (P8): the agent decides it, PROVISIONAL,
    and flags it in the digest.
@@ -1861,7 +1864,8 @@ modes (P2):
 | **session-stamped** (`mode = "stamped"`) | batons, pause records | a session key on creation; expiry after two sessions; housekeeping converts the expired ones |
 
 **Not record kinds:** criteria (they live in `.feature` files or a criteria doc, plus test
-annotations such as `@pytest.mark.criterion`, and the trace guards read them in place); ledger
+annotations such as `@pytest.mark.criterion`, and the trace guards read them in place; in a
+criteria doc, `criterion.new` and `criterion.set` write one row in place, §6.2); ledger
 entries (one file written only through `session.*` under the lock, receipts checked by G-W6;
 append-only by rule, with no `body_sha`); the charter, contract, residual-risk register,
 runbooks and evidence docs (prose, checked by the doc guards); verification state (owned by the gate's run
@@ -1930,6 +1934,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
 | Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
 | Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why)`: a whole doc into an archive directory with its redirect row (§7.3) |

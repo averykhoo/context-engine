@@ -413,6 +413,21 @@ def decision_import(e: Engine, c: Caller, path: str, dry_run: bool = False) -> t
     return 0, e.import_log(path, dry_run=dry_run, **c.kw)
 
 
+# -- criteria rows (FRAMEWORK §3.3, §6.2 step 3, CE-42) ---------------------------------------
+
+
+@op(write=True)
+def criterion_new(e: Engine, c: Caller, text: str, source: str, status: str = "planned", under: str = "", id: str = "") -> tuple[int, str]:
+    """Draft a criterion (intake step 3): append one row to the criteria table under the heading `under` (required when the file has several), with `text`, `source` (the story or decision ids it comes from) and `status` (default planned); every other byte of the file unchanged. `id` is a criterion id never used (a block handed out by hand when sessions in separate worktrees draft at once); none takes the next. `tested` or `manual` only for a criterion a test or driver already claims (G-T2). Not a milestone: the next commit carries it."""
+    return 0, e.criterion_new(text, source, status=status, under=under, rid=id, **c.kw)
+
+
+@op(write=True)
+def criterion_set(e: Engine, c: Caller, id: str, status: str = "", text: str = "", source: str = "") -> tuple[int, str]:
+    """Rewrite cells of one criterion row in place: `status` (`tested` or `manual` only once a test or driver claims it, G-T2), `text`, `source`; only those cells change. A rewrite or retirement a criteria census finds (§6.2 step 6) is made here."""
+    return 0, e.criterion_set(id, status=status, text=text, source=source, **c.kw)
+
+
 # -- the session's own commits (FRAMEWORK §5.5 rule 4) --------------------------------------
 
 

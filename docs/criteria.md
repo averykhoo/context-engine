@@ -230,3 +230,13 @@ back through the digest (FRAMEWORK §3.3).
 | AC-62 | A session can leave a short after-action review (what worked well, what could be improved), kept where a later stocktake of the framework finds every one | US-12 | planned |
 | AC-63 | Besides a clean close, a session can be rolled back and closed: what it changed is undone and the session ends | US-13 | planned |
 | AC-64 | Rolling a session back leaves the work of other humans and agents in the same checkout (a shared directory, not a worktree) untouched | US-13 | planned |
+
+## Criterion write op (CE-42)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-160 | `criterion new` appends one row to the criteria table under `--under` (or the file's only one), its cells in the table's own column order, under the lock with one `criterion.new` op line, and leaves every other byte of the file as it was (LF, CRLF, a BOM, no final newline); its id is `--id`, one never used, or the next of the rows' series above every row and every logged `criterion.new`; it is not a milestone and replies in one line | US-1, US-2, DEC-33 | tested |
+| AC-161 | `criterion set` rewrites only the cells it is given (status, criterion, from) of the one row the id leads, keeping the row's other cells, spacing, escaped pipes, missing closing pipe and line ending, and every other line; it logs one `criterion.set` line naming the columns changed, and refuses, writing nothing, an id leading no row or two, and a value the row already has as lint reads it | US-1, US-2, DEC-33 | tested |
+| AC-162 | Both writes refuse, writing nothing, `tested` or `manual` for an id G-T2's claim scan finds unclaimed (skipped, and said in the reply, while `[guards] tests` is unset), a source G-T6 would fail (only an id is required while `[guards] stories` is unset), a status outside the vocabulary, and a cell with a line break, an unescaped pipe or a trailing backslash | US-2, DEC-33 | tested |
+| AC-163 | `criterion new` writes rows only: it refuses, writing nothing, a file with several criteria tables and no `--under`, a heading that is missing, doubled or holds no criteria table, a table whose first column is not `id`, and a row that would not read back through `guards.py::criteria_rows` as one criterion with its cells; the kit's empty table takes the first row, and a `claimed by` column is filled with the claim found when a row becomes `tested` or `manual` | US-2, DEC-33 | tested |
+| AC-164 | Lint reds what the writes refuse: G-T1, G-T2 and G-T6 fail an id leading a second row of the criteria tables, and G-D2 fails an id two `criterion.new` op lines created | US-2 | tested |
