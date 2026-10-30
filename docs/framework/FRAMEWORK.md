@@ -2112,7 +2112,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   agree on every task, and the board query reads `state`; no open question carries `answered:`;
   every open question's body states its context, two or more options and a recommendation with
   its reasoning, or says which exemption leaves it without one (§5.3; `ask new` refuses the same
-  at write time). Not checked: whether those parts are any good, and a closed question.
+  at write time); a decision is `status: deprecated` exactly when its `decision_status` is
+  SUPERSEDED, so a current decision is never hidden as history from the guards that skip
+  deprecated records. Not checked: whether a question's parts are any good, and a closed question.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` where it is set (a
@@ -2214,7 +2216,7 @@ are deliberately permissive; our profile is strict on top of conformant files.
 
 | The spec says | What it means for us |
 |---|---|
-| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status`. G-W4 checks the two keys agree for board items, and G-I2 for stories; a decision is `status: deprecated` exactly when it is SUPERSEDED. Not checked: no guard compares a decision's two keys, so a hand-set `status: deprecated` on a current decision passes lint, and the doc guards and G-I3 skip it as history. |
+| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status`. G-W4 checks the two keys agree for board items and decisions (a decision is `status: deprecated` exactly when it is SUPERSEDED), and G-I2 for stories. |
 | **Concept id = the file's path minus `.md`** (§2) | Closing in place (§5.2) and never renaming a file on retitle keep record ids stable as OKF ids. The `id:` extension stays, for series ids that survive a migration. |
 | **Every non-reserved `.md` in a bundle needs frontmatter with a non-empty `type`** (§11) | **A bundle is a chosen set of directories, not the repo root;** otherwise README, CLAUDE.md and HANDOFF would all need frontmatter. Non-record files inside a bundle directory need a `type` too (e.g. `type: Readme`), and the engine filters on `type` rather than excluding files by name. |
 | **`index.md` and `log.md` are reserved at every level; `index.md` has no frontmatter (except `okf_version` at the bundle root) and a fixed list shape** (§3.1, §8) | The component → path mapping lives in `context.toml` (§8.0); `index.md` is a plain generated listing. |

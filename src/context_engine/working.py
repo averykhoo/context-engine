@@ -2577,13 +2577,14 @@ class Engine:
         """G-W1 to G-W6 on the stored files, then G-W12 and G-W13 (``lint_review``): the banner
         key against the newest close (G-W1); the run of pauses since the last close (G-W2); carried
         batons and pause records by age (G-W3); each board item's ``state`` against its OKF
-        ``status``, and an open question carrying ``answered:`` (G-W4); the tier caps (G-W5); and
+        ``status``, an open question carrying ``answered:``, and each decision's ``decision_status``
+        against its ``status`` (G-W4, ``_decision_status_failures``); the tier caps (G-W5); and
         the newest close's ``guards:``, ``read:`` and ``rows:`` lines, and its ``guards:`` line
         against ``[working] gate_receipt`` (G-W6).
 
         Not checked: any close but the newest, and the ``asked:`` receipt, which ``session close``
-        checks when it writes the entry; the state key against ``status`` on decisions, stories
-        (G-I2 checks a retired story) and the charter; and a ledger, orientation note or board that
+        checks when it writes the entry; the state key against ``status`` on stories (G-I2 checks
+        a retired story) and the charter; and a ledger, orientation note or board that
         ``[working]`` does not configure."""
         out: list[Failure] = []
         led = self.read_ledger() if self.w.ledger else None
@@ -2647,6 +2648,34 @@ class Engine:
                     remedy = f"ask the owner {one}, then `task promote <id> NOW`" if fill else "re-rank with `promote`"
                     out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, remedy))
             out += self.lint_review()
+        return out + self._decision_status_failures()
+
+    def _decision_status_failures(self) -> list[Failure]:
+        """G-W4 on decisions (CE-137): a decision is `status: deprecated` exactly when its
+        `decision_status` is SUPERSEDED (FRAMEWORK §9.3.1). `decision supersede` and `decision
+        import` write the two together, so a disagreement is a hand edit; a hand-set
+        `status: deprecated` on a current decision would hide it from the doc guards and G-I3,
+        which read a deprecated decision as history. Off while `[working] decision` is unset.
+
+        Not checked: an unreadable record (the schema check reports it)."""
+        if not self.w.decision:
+            return []
+        st = self.store
+        kind = st.config.kind(self.w.decision)
+        out: list[Failure] = []
+        for path in st._files(kind):
+            try:
+                doc = st.read(path)
+            except Exception:
+                continue  # the schema check reports an unreadable record
+            rid, ds, status = st._id_of(kind, path), str(doc.get(D.STATUS_KEY)), doc.get("status")
+            rel = st._rel(path)
+            if ds != "SUPERSEDED" and status == "deprecated":
+                out.append(Failure("G-W4", rel, f"{rid} is `status: deprecated` but `{D.STATUS_KEY}: {ds}`, so a current decision reads as history and the doc guards and G-I3 skip it",
+                                   f"restore the file's `status` from git (a current decision has none); a decision becomes history only through `decision supersede {rid} <new>`, which sets both keys"))
+            elif ds == "SUPERSEDED" and status != "deprecated":
+                out.append(Failure("G-W4", rel, f"{rid} is SUPERSEDED but its OKF `status` is {status!r}, not `deprecated`",
+                                   "restore `status: deprecated` from git: `decision supersede` writes both keys together"))
         return out
 
 

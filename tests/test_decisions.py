@@ -1299,6 +1299,42 @@ def test_lint_g_i3_fails_a_hand_edited_delegated_ruling_and_its_remedy_clears_it
     assert g_i3(eng) == []
 
 
+@pytest.mark.criterion("AC-106")
+def test_lint_g_w4_fails_a_decision_whose_okf_status_disagrees_with_superseded(eng):
+    """CE-137: a decision is `status: deprecated` exactly when it is SUPERSEDED (FRAMEWORK §9.3.1).
+    A hand-set `status: deprecated` on a current decision hid it from G-I3 and the doc guards, which
+    read a deprecated decision as history; G-W4 now compares the two keys. What `decision import`
+    and `decision supersede` write passes."""
+    def g_w4(e):
+        return [f for f in e.lint() if f.guard == "G-W4"]
+
+    eng.import_log(write_log(eng), **W)  # D-3 arrives SUPERSEDED (superseded before the import)
+    assert eng.store.get("D-3").doc.get("status") == "deprecated" and g_w4(eng) == []
+    rid = delegated(eng)
+    new = dec(eng)
+    eng.supersede("D-1", new, **W)
+    assert g_w4(eng) == [] and g_i3(eng) == []
+    path = eng.store.get(rid).path
+    good = path.read_bytes()
+    assert b"decision_status: PROVISIONAL\n" in good and b"\nstatus:" not in good
+    # a current, broken delegated ruling hand-marked as history: G-I3 skips it, G-W4 does not
+    path.write_bytes(good.replace(b"actor: owner asked", b"actor: owner").replace(b"decision_status: PROVISIONAL\n", b"decision_status: PROVISIONAL\nstatus: deprecated\n"))
+    assert g_i3(eng) == []
+    got = g_w4(eng)
+    assert [(f.path, f.message) for f in got] == [(eng.store._rel(path), f"{rid} is `status: deprecated` but `decision_status: PROVISIONAL`, so a current decision reads as history and the doc guards and G-I3 skip it")]
+    assert f"decision supersede {rid} <new>" in got[0].remedy
+    path.write_bytes(good.replace(b"actor: owner asked", b"actor: owner"))  # following the remedy: G-I3 sees it again
+    assert g_w4(eng) == [] and len(g_i3(eng)) == 1
+    path.write_bytes(good)
+    old = eng.store.get("D-1").path  # a superseded decision whose derived status was dropped by hand
+    was = old.read_bytes()
+    assert b"status: deprecated\n" in was
+    old.write_bytes(was.replace(b"status: deprecated\n", b"", 1))
+    assert [f.message for f in g_w4(eng)] == ["D-1 is SUPERSEDED but its OKF `status` is None, not `deprecated`"]
+    old.write_bytes(was)
+    assert g_w4(eng) == []
+
+
 @pytest.mark.criterion("AC-100")
 def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path):
     """G-I3 is a guard `[guards] off` may name (config.py::LINT_IDS), and naming it switches off the

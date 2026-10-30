@@ -358,11 +358,13 @@ Check every record, then the working state. `--working` does only the second hal
   top-down; G-W1 compares keys).
 - **G-W3**: no open baton or pause from a session with 2 or more closes/pauses after it. *Why:
   work carried over from earlier sessions must be done or become a task, not drift.*
-- **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`; and no
-  open question carries `answered:` (an answered question never reopens, § task reopen); and
-  every open question's body states its context, two or more options and a recommendation
-  with its reasoning, as § ask new says. *Why: the owner answers a question in one line only
-  when it carries what they need to decide.*
+- **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`; no
+  open question carries `answered:` (an answered question never reopens, § task reopen); every
+  open question's body states its context, two or more options and a recommendation with its
+  reasoning, as § ask new says; and on every decision, `decision_status: SUPERSEDED` if and only
+  if `status: deprecated`. *Why: the owner answers a question in one line only when it carries
+  what they need to decide; the doc guards and G-I3 skip a deprecated decision as history, so a
+  hand-set `status` hides one.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt, and its
   `guards:` text matches `[working] gate_receipt` where that is set.
