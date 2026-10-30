@@ -2161,7 +2161,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   its reasoning, or says which exemption leaves it without one (§5.3; `ask new` refuses the same
   at write time); a decision is `status: deprecated` exactly when its `decision_status` is
   SUPERSEDED, so a current decision is never hidden as history from the guards that skip
-  deprecated records. Not checked: whether a question's parts are any good, and a closed question.
+  deprecated records (`record.new` refuses a decision given `status` or
+  `decision_status: SUPERSEDED`, whatever `[guards] off` names: only `decision.supersede` writes
+  them). Not checked: whether a question's parts are any good, and a closed question.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` where it is set (a

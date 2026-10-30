@@ -1335,6 +1335,36 @@ def test_lint_g_w4_fails_a_decision_whose_okf_status_disagrees_with_superseded(e
     assert g_w4(eng) == []
 
 
+@pytest.mark.criterion("AC-141")
+@pytest.mark.parametrize("off", [[], ["G-W4"]], ids=["guards-on", "G-W4-off"])
+@pytest.mark.parametrize(
+    "fields, match",
+    [
+        ({"status": "deprecated"}, "`status`"),
+        ({"status": "stable"}, "`status`"),
+        ({"decision_status": "SUPERSEDED"}, "`decision_status: SUPERSEDED`"),
+        ({"decision_status": "SUPERSEDED", "status": "deprecated"}, "`status`"),
+    ],
+    ids=["status-deprecated", "status-stable", "SUPERSEDED", "both"],
+)
+def test_record_new_refuses_a_decision_preset_as_superseded_or_with_a_status(tmp_path, fields, match, off):
+    """CE-149: `record new decision --set status=...` or `--set decision_status=SUPERSEDED` created
+    a stamped decision that G-W4 then failed. Only `decision supersede` writes those keys, with both
+    links, so `record new` refuses them before any byte, with G-W4 switched off too, its remedy
+    naming `decision supersede`; a decision that stands is still created."""
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": off}}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    with pytest.raises(Refusal, match=re.escape(f"would be created with {match}")) as got:
+        e.record_new("decision", "Gone", WORDS, {"actor": "owner", "decision_status": "BUILT", **fields}, **W)
+    assert "decision supersede <id> <new>" in got.value.remedy
+    with pytest.raises(Refusal, match=re.escape(f"would be created with {match}")):
+        e.record_new("decision", "Gone", WORDS, {"actor": "owner", "decision_status": "BUILT", **fields}, rid="D-9", **W)
+    assert not list(e.store.records("decision")) and not (tmp_path / "decisions").exists()
+    for status in ("BUILT", "PROVISIONAL", "DEFERRED", "REJECTED"):
+        e.record_new("decision", status, WORDS, {"actor": "owner", "decision_status": status}, **W)
+    assert len(list(e.store.records("decision"))) == 4 and [f for f in e.lint() if f.guard == "G-W4"] == []
+
+
 @pytest.mark.criterion("AC-100")
 def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path):
     """G-I3 is a guard `[guards] off` may name (config.py::LINT_IDS), and naming it switches off the

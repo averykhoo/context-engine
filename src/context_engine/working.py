@@ -1444,6 +1444,11 @@ class Engine:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
         if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147)
             raise Refusal(f"the {kind} {amends}", f"record the {kind}'s text without that line; once it exists, a later note goes in with `record amend <id> \"<text>\"`")
+        if kind == self.w.decision:  # G-W4's write-time twin (CE-149): only `decision supersede` makes a decision history
+            preset = "`status`" if "status" in fields else "`decision_status: SUPERSEDED`" if str(fields.get(D.STATUS_KEY)) == "SUPERSEDED" else ""
+            if preset:
+                raise Refusal(f"the decision would be created with {preset}, which only `decision supersede` writes (a decision not superseded has no `status`; G-W4)",
+                              f"record it with a `decision_status` that stands (not SUPERSEDED) and no `status`; then, if a later decision replaces it, `decision supersede <id> <new>` writes `{D.STATUS_KEY}: SUPERSEDED`, `status: deprecated` and both links together")
         if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
             raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
                           f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`, in any case) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`")
@@ -2955,8 +2960,8 @@ class Engine:
     def _decision_status_failures(self) -> list[Failure]:
         """G-W4 on decisions (CE-137, DEC-112): a decision is `status: deprecated` exactly when its
         `decision_status` is SUPERSEDED (FRAMEWORK §9.3.1). `decision supersede` and `decision
-        import` write the two together, so a disagreement is a hand edit or a `record new` that
-        set one of the keys with `--set` (which does not refuse it yet); a `status: deprecated` on
+        import` write the two together, and `record new` refuses either key preset with `--set`
+        (CE-149), so a disagreement is a hand edit; a `status: deprecated` on
         a decision not SUPERSEDED would hide it from the doc guards and G-I3, which read a
         deprecated decision as history. Off while `[working] decision` is unset.
 

@@ -1301,7 +1301,8 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    `owner`, in any case) and an `actor` that is not the owner alone (`owner asked`), and its body
    is the owner's delegating words verbatim, then a `## Ruling` heading with the ruling under it;
    any other decision has no `## Ruling` heading (both checks off while `[guards] off` names
-   G-I3). For every kind, whatever `[guards] off` names, stop if the text holds a `## Amendments`
+   G-I3). Stop too if a decision was given a `status` key or `decision_status: SUPERSEDED`: only
+   § context-engine decision supersede writes those, with both links (G-W4). For every kind, whatever `[guards] off` names, stop if the text holds a `## Amendments`
    line: the text below it would fall outside `body_sha` and read as a later amendment (a later
    note goes in with § context-engine record amend, once the record exists).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
