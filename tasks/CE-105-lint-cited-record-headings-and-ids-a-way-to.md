@@ -4,13 +4,15 @@ id: CE-105
 title: Lint cited record headings and ids; a way to reserve ids before a batch of linked tasks
 brief: 'Cross-refs in records must resolve: lint missing headings, and let a batch cite ids it has reserved'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 Lint cited record headings and ids; a way to reserve ids before a batch of linked tasks
@@ -26,3 +28,4 @@ What went wrong (adhoc AAR entry 2 and 31, docs/evidence/adhoc-feedback-2026-10-
 ## Log
 
 - 2026-10-23a (claude-code/claude-opus-5-5): Lint half landed 20b9c03 (G-D3 record_refs). Id-reserve / batch task new op not built: needs kit runbook steps, held by the kit freeze until the adhoc re-pin commits.
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: Id-reserve half built in 069e198 (id reserve op; task new, ask new and record new --id take a reserved id; AC-130, AC-131) and db4129e (cites DEC-92, which supersedes DEC-91); lint half was 20b9c03
