@@ -1001,6 +1001,28 @@ def test_sweep_takes_every_line_as_ce_45_did(repo):
 
 
 @pytest.mark.criterion("AC-78")
+def test_a_sweep_never_commits_a_record_whose_frontmatter_does_not_parse(repo):
+    """CE-134: the milestone's refusal (CE-133) holds on `commit --sweep` too. A dead session's
+    record left mid-edit by hand would ride in with its op line, and a clean checkout of the
+    commit would not lint. The session commit refuses before git runs (its lint cannot read the
+    record), and the commit under it refuses on its own, naming the file; once the edit is
+    finished, the sweep carries it."""
+    a, b, key, theirs = _two(repo)
+    rec = repo / theirs
+    good = rec.read_bytes()
+    rec.write_bytes(good.replace(b"pri: LATER", b"pri: LATER\nlabels: [half"))  # mid-edit, by hand
+    before = count(repo)
+    with pytest.raises(Refusal, match="frontmatter is not valid YAML"):
+        run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)
+    out = eng(repo).store.commit_paths("Adopt a dead session's lines", [], a.session, sweep=True)  # the commit `commit` runs after its lint
+    assert not out.sha and f"{theirs} does not parse (frontmatter is not valid YAML" in out.note, out
+    assert count(repo) == before and theirs not in git(repo, "ls-files")
+    rec.write_bytes(good)  # the edit is finished (here: undone)
+    _, line = run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)
+    assert line.startswith(f"committed {head(repo)}") and theirs in files_at(repo), line
+
+
+@pytest.mark.criterion("AC-78")
 def test_a_commit_with_only_another_sessions_lines_and_no_path_says_so(repo):
     a, b, key, theirs = _two(repo)
     before = count(repo)
