@@ -629,26 +629,22 @@ LEAK = re.compile(
     r"\b(?:CE|DEC|US|AC|INV)-\d+|spike/|tools/sabotage|(?i:\b[a-z]:[\\/]users\b|/c/users/|anaconda3)"
     r"|context-engine/docs/evidence|docs/evidence/adhoc"
 )
-BOARD_MARK = re.compile(r"\bCE-\d+\)")  # FRAMEWORK's `(CE-n)` build-status marks, explained in its Summary
 # known leaks awaiting their fix, which then removes the entry here (the test fails until it does)
 KNOWN_LEAKS: dict[str, list[str]] = {}
 
 
-def leaks(text: str, allow_marks: bool) -> list[str]:
-    out = []
-    for n, line in enumerate(text.splitlines(), 1):
-        if allow_marks:
-            line = BOARD_MARK.sub("", line)
-        out += [f"{n}: {m.group(0)}" for m in LEAK.finditer(line)]
-    return out
+def leaks(text: str) -> list[str]:
+    """Every leak in ``text``, as ``line: match``. FRAMEWORK gets no allowance either: its `(CE-n)`
+    build marks went to the board (DEC-81), so a mark put back is a leak like any other id."""
+    return [f"{n}: {m.group(0)}" for n, line in enumerate(text.splitlines(), 1) for m in LEAK.finditer(line)]
 
 
 @pytest.mark.criterion("AC-33")
 def test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths():
     kit = sorted(p for p in B.KIT.rglob("*") if p.is_file())
     assert len(kit) >= 7, kit
-    found = {p.relative_to(REPO).as_posix(): leaks(p.read_text(encoding="utf-8"), False) for p in kit}
-    found["FRAMEWORK.md"] = leaks(FRAMEWORK.read_text(encoding="utf-8"), True)
+    found = {p.relative_to(REPO).as_posix(): leaks(p.read_text(encoding="utf-8")) for p in kit}
+    found["FRAMEWORK.md"] = leaks(FRAMEWORK.read_text(encoding="utf-8"))
     found = {k: v for k, v in found.items() if v}
     known = {k: [hit.split(": ", 1)[1] for hit in v] for k, v in found.items() if k in KNOWN_LEAKS}
     assert known == KNOWN_LEAKS, f"a known leak was fixed or changed: update KNOWN_LEAKS to {known}"
@@ -658,8 +654,8 @@ def test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths():
 @pytest.mark.parametrize("planted", ["INV-3", "tools/sabotage_x.py", "C:\\Users\\me", "c:/users/me", "/c/Users/me/x", "anaconda3/envs/x"])
 @pytest.mark.criterion("AC-33")
 def test_the_leak_check_sees_each_form(planted):
-    assert leaks(f"see {planted} here", False), planted
-    assert not leaks("ASK-n, INV-n, G-3, a T-1 task and C:/Program Files", False)
+    assert leaks(f"see {planted} here"), planted
+    assert not leaks("ASK-n, INV-n, G-3, a T-1 task and C:/Program Files")
 
 
 # -- the runbooks ship in the kit (CE-24) ----------------------------------------------------

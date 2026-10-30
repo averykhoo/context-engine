@@ -98,7 +98,7 @@ ROWS = [
      K + "test_the_kit_and_framework_carry_none_of_this_repos_ids_or_paths", "/c/Users/"),
     ("the leak regex loses its machine-path forms",
      [("tests/test_kit.py", r"|(?i:\b[a-z]:[\\/]users\b|/c/users/|anaconda3)", "")],
-     K + "test_the_leak_check_sees_each_form", 'assert leaks(f"see {planted} here", False)',
+     K + "test_the_leak_check_sees_each_form", 'assert leaks(f"see {planted} here")',
      [f"test_the_leak_check_sees_each_form[{form}]" for form in ("C:\\\\Users\\\\me", "c:/users/me", "/c/Users/me/x", "anaconda3/envs/x")]),
     ("the known leak is fixed but still allowed",
      [("tests/test_kit.py", "KNOWN_LEAKS: dict[str, list[str]] = {}",
