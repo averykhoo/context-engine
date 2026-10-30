@@ -2653,9 +2653,10 @@ class Engine:
     def _decision_status_failures(self) -> list[Failure]:
         """G-W4 on decisions (CE-137): a decision is `status: deprecated` exactly when its
         `decision_status` is SUPERSEDED (FRAMEWORK §9.3.1). `decision supersede` and `decision
-        import` write the two together, so a disagreement is a hand edit; a hand-set
-        `status: deprecated` on a current decision would hide it from the doc guards and G-I3,
-        which read a deprecated decision as history. Off while `[working] decision` is unset.
+        import` write the two together, so a disagreement is a hand edit or a `record new` that
+        set one of the keys with `--set` (which does not refuse it yet); a `status: deprecated` on
+        a decision not SUPERSEDED would hide it from the doc guards and G-I3, which read a
+        deprecated decision as history. Off while `[working] decision` is unset.
 
         Not checked: an unreadable record (the schema check reports it)."""
         if not self.w.decision:
@@ -2671,11 +2672,11 @@ class Engine:
             rid, ds, status = st._id_of(kind, path), str(doc.get(D.STATUS_KEY)), doc.get("status")
             rel = st._rel(path)
             if ds != "SUPERSEDED" and status == "deprecated":
-                out.append(Failure("G-W4", rel, f"{rid} is `status: deprecated` but `{D.STATUS_KEY}: {ds}`, so a current decision reads as history and the doc guards and G-I3 skip it",
-                                   f"restore the file's `status` from git (a current decision has none); a decision becomes history only through `decision supersede {rid} <new>`, which sets both keys"))
+                out.append(Failure("G-W4", rel, f"{rid} is `status: deprecated` but `{D.STATUS_KEY}: {ds}`, so a decision not superseded reads as history and the doc guards and G-I3 skip it",
+                                   f"drop the `status` key (`git checkout` the file if a hand edit added it; a decision not superseded has none); a decision becomes history only through `decision supersede {rid} <new>`, which sets both keys"))
             elif ds == "SUPERSEDED" and status != "deprecated":
                 out.append(Failure("G-W4", rel, f"{rid} is SUPERSEDED but its OKF `status` is {status!r}, not `deprecated`",
-                                   "restore `status: deprecated` from git: `decision supersede` writes both keys together"))
+                                   f"set `status: deprecated` (`git checkout` the file if a hand edit dropped it), or, if {rid} was never superseded, set `{D.STATUS_KEY}` back: `decision supersede` writes both keys together"))
         return out
 
 

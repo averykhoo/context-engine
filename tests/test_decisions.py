@@ -1321,7 +1321,7 @@ def test_lint_g_w4_fails_a_decision_whose_okf_status_disagrees_with_superseded(e
     path.write_bytes(good.replace(b"actor: owner asked", b"actor: owner").replace(b"decision_status: PROVISIONAL\n", b"decision_status: PROVISIONAL\nstatus: deprecated\n"))
     assert g_i3(eng) == []
     got = g_w4(eng)
-    assert [(f.path, f.message) for f in got] == [(eng.store._rel(path), f"{rid} is `status: deprecated` but `decision_status: PROVISIONAL`, so a current decision reads as history and the doc guards and G-I3 skip it")]
+    assert [(f.path, f.message) for f in got] == [(eng.store._rel(path), f"{rid} is `status: deprecated` but `decision_status: PROVISIONAL`, so a decision not superseded reads as history and the doc guards and G-I3 skip it")]
     assert f"decision supersede {rid} <new>" in got[0].remedy
     path.write_bytes(good.replace(b"actor: owner asked", b"actor: owner"))  # following the remedy: G-I3 sees it again
     assert g_w4(eng) == [] and len(g_i3(eng)) == 1
