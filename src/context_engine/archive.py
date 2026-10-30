@@ -76,7 +76,7 @@ def archived(text: str, date: str, session: str, was: str) -> str:
     """``text`` opened with its ARCHIVED line (FRAMEWORK §7.3: the first line), then a blank line.
     A doc with frontmatter keeps it on top and takes the ARCHIVED line first after it, where G-D4
     reads it too; a `liveness:` key there, which G-D4 reads before any line below, becomes FROZEN,
-    keeping its old value in a comment. Nothing else in it changes."""
+    keeping its old value in a comment (DEC-122). Nothing else in it changes."""
     bom = "\ufeff" if text.startswith("\ufeff") else ""
     body = text[len(bom):]
     lines = _lines(body)

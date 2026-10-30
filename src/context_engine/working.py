@@ -2289,7 +2289,7 @@ class Engine:
     def _prune(self, rel: str, text: str, span: tuple[int, int], dest: Path, name: str, today: str, session: str) -> tuple[str, str]:
         """`doc archive --lines`: (the doc without the passage, the archive file with the passage
         appended under its dated heading), after every check a prune makes, before any write
-        (AC-148). Refused: a range past the doc's end, the whole doc (archive it whole), a range
+        (AC-148, DEC-123). Refused: a range past the doc's end, the whole doc (archive it whole), a range
         cutting into the frontmatter, a FROZEN doc (never edited, §7.2), a cut that changes what
         G-D4 reads, and a blank passage."""
         first, last = span
@@ -2318,7 +2318,7 @@ class Engine:
 
     def _pointer_reds(self) -> collections.Counter:
         """G-D3's failures as (doc, message), counted; none when `[guards] off` names G-D3. What a
-        write adds to them is what it left pointing at a path or heading that is gone (CE-96)."""
+        write adds to them is what it left pointing at a path or heading that is gone (CE-96, DEC-121)."""
         if "G-D3" in self.store.config.guards.off:
             return collections.Counter()
         return collections.Counter((f.path, f.message) for f in G.links(self))
@@ -3030,7 +3030,7 @@ def _line_span(lines: str, rel: str) -> tuple[int, int]:
 
 def _pointer_note(reds: list[tuple[str, str]], name: str) -> str:
     """What `doc archive` adds to its reply for the G-D3 failures it caused (``reds``, as (doc,
-    message)): each doc and line, never rewritten (CE-96). A living doc's pointer is repointed
+    message)): each doc and line, never rewritten (CE-96, DEC-121). A living doc's pointer is repointed
     by hand; the archived copy's own pointers are never repaired (FRAMEWORK §7.3)."""
 
     def where(items: list[tuple[str, str]]) -> str:
