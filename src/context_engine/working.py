@@ -1416,7 +1416,8 @@ class Engine:
             if now not in ("unconfirmed", *G.CONFIRMED):
                 raise Refusal(f"{rid} is `story_status: {now}`, none of unconfirmed, live, unspecified", "restore `story_status` from git (`git log -p` on the file)")
             # a successor is re-confirmed by asking the owner again, never by quoting the words that
-            # confirmed a story it replaces, however far back the `supersedes` chain (DEC-66, CE-102)
+            # confirmed a story it replaces, however far back the `supersedes` chain (DEC-66, CE-102);
+            # the guard and its remedy for an owner who repeats themselves are DEC-98
             said = " ".join(words.split())
             seen, todo = {rid}, [str(s) for s in D.as_list(d.get("supersedes"))]
             while todo:
