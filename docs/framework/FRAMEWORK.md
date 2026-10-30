@@ -724,7 +724,7 @@ a single revertible cutover commit.
 - `brief`: ≤120 characters, **a constraint, not a summary**;
 - body: summary, `## Traps`, and `## Read first`, whose relative links and `file::symbol`
   pointers G-D3 resolves on an open item when the board directory is among the docs `[guards]
-  links` lists (not checked: how many links there are, so an empty list passes); and `## Log`,
+  links` lists (Not checked: how many links there are, so an empty list passes); and `## Log`,
   which `comment` and `close` append to and which is never replaced.
   Sessions keep reading the orientation note for item detail until items carry these sections.
 - **`## Design review`** (P17, P18), required before a task above the threshold is promoted to

@@ -5,8 +5,8 @@ the notes from your pinned version on before moving the engine's pin (FRAMEWORK 
 procedure). Each line says what changed, the FRAMEWORK section that now holds the rule, and the
 decision (`DEC-n`) or, where no decision was recorded, the engine task (`CE-n`) that says why;
 both are in this repo (`context-engine why <id>`, `context-engine task show <id>`). Newest
-first. A version's notes are added on top; earlier notes are not rewritten. Build status is not
-here: it is on the board.
+first. A version's notes are added on top; an earlier version's notes are not rewritten. Build
+status is not here: it is on the board.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
