@@ -134,6 +134,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-83](DEC-83-framework-5-5-rule-5-keeps-the-tree-hash-lock.md): FRAMEWORK 5.5 rule 5 keeps the tree-hash lock standard; the per-repo lock is a deviation filed as CE-135 *(claude-code/claude-opus-5-5, 2026-10-24)*
 - [DEC-84](DEC-84-ce-126-fix-subagent-op-line-mis-filing-with-a.md): CE-126: fix subagent op-line mis-filing with a lane field (option B), kept at LATER *(owner, 2026-10-26)*
 - [DEC-85](DEC-85-session-2026-10-30a-work-the-board-unattended.md): Session 2026-10-30a: work the board unattended through ultracode, fable's opinion on the rerank, then push *(owner, 2026-10-30)*
+- [DEC-86](DEC-86-raise-the-fan-out-runbook-s-g-d1-max-lines-from.md): Raise the Fan-out runbook's G-D1 max_lines from 90 to 110 *(agent (claude-opus-5-5), 2026-10-30)*
 
 ## REJECTED
 
