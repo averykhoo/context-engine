@@ -3,14 +3,14 @@ type: Task
 id: CE-123
 title: A guards receipt without a gate pass count is refused
 brief: A close receipt must carry the gate pass count; refuse a guards receipt that omits it
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
-moved: 2026-10-21b
-updated: 2026-10-23a
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 A guards receipt without a gate pass count is refused
