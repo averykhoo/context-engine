@@ -2033,7 +2033,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   pointer from an example (a runbook's `docs/invariants.md` is an adopter's file), so only docs
   that cite no example or other repo's paths are listed. A bare name not at the repo root that
   matches files whose texts differ (line endings ignored) is red: which one is meant is a
-  guess. Byte-equal copies, such as the kit's runbooks beside the repo's, are one text and pass.
+  guess. Byte-equal copies, such as the kit's runbooks beside the repo's, are one text and pass,
+  and so does a name in a `paths` doc whose own directory holds a file of that name. A file
+  deleted but not staged, which git still lists, counts as gone, as it will once committed.
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
   (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is not a liveness
   word is red), or a line that opens a block (the first, or one after a blank line, a heading or

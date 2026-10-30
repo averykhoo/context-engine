@@ -163,12 +163,15 @@ class Files:
         return here
 
     def named(self, name: str) -> list[str]:
-        """Every repo path whose file name is ``name``, less what git ignores (CE-41: a stale copy
-        under `build/` is no answer). Outside a git work tree, a walk that skips `build/` and `dist/`."""
+        """Every repo file whose file name is ``name``, less what git ignores (CE-41: a stale copy
+        under `build/` is no answer). Outside a git work tree, a walk that skips `build/` and `dist/`.
+        Git still lists a file deleted from the work tree but not staged, and a submodule's gitlink;
+        neither is a file here, so neither is listed (as once the deletion is committed: CI's view)."""
         if self._by_name is None:
             self._by_name = {}
             try:
-                paths = [r for r in GATE.files(self.root) if not SKIP_DIRS.intersection(r.split("/"))]
+                paths = [r for r in GATE.files(self.root)
+                         if not SKIP_DIRS.intersection(r.split("/")) and (self.root / r).is_file()]
             except Refusal:
                 paths = []
                 for d, dirs, files in os.walk(self.root):
@@ -198,8 +201,13 @@ class Files:
         paths = self.named(name)
         if len(paths) < 2:
             return []
-        texts = {(self.root / p).read_bytes().replace(b"\r\n", b"\n") for p in paths}
-        return paths if len(texts) > 1 else []
+        texts = set()
+        for p in paths:
+            try:
+                texts.add((self.root / p).read_bytes().replace(b"\r\n", b"\n"))
+            except OSError:
+                return []  # gone or unreadable since the listing: no text to compare, so no claim
+        return sorted(paths) if len(texts) > 1 else []
 
 
 AMBIGUOUS_REMEDY = "write the path from the repo root, so it names one file (or make the copies byte-equal, if they are meant to be one text)"
@@ -208,7 +216,7 @@ AMBIGUOUS_REMEDY = "write the path from the repo root, so it names one file (or 
 def ambiguous_problem(files: Files, name: str) -> str | None:
     """G-D3 on a bare file name matching files that differ (``Files.differing``), or None."""
     paths = files.differing(name)
-    return f"`{name}` names {len(paths)} different files ({', '.join(paths)}), so which one is meant is a guess" if paths else None
+    return f"`{name}` names {len(paths)} files whose texts are not all one ({', '.join(paths)}), so which one is meant is a guess" if paths else None
 
 
 def symbol_missing(path: Path, symbol: str) -> str | None:
@@ -526,7 +534,8 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
     shaped like a file name or a repo path (G-T3's shape, `PATH_SPAN_RE`: a name with a text file's
     extension, or a path with a `/`) resolves case-exact, from the repo root or from the doc's own
     directory; a bare file name resolves to any file of that name that git does not ignore, and is
-    red when those files differ (``Files.differing``, CE-144). Listing
+    red when those files differ (``Files.differing``, CE-144) unless the doc's own directory holds
+    a file of that name, which is then the one meant. Listing
     a doc says every such span in it is a pointer into this repo, so the list holds docs that cite
     no example paths, other repos' files or files not written yet: syntax cannot tell a pointer
     from an example (`docs/invariants.md`, the kit's default, is an example in a runbook).
@@ -551,9 +560,13 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
                 if files.find(span) is None and files.case_exact(span.rstrip("/"), path.parent) is None:
                     out.append(Failure("G-D3", rel, f"line {n}: `{span}` names no file or directory of this repo (case-exact)",
                                        "point it at the path that exists (grep it first); if the span is an example or another repo's path, write it without backticks, or drop the doc from [guards] paths"))
-                elif p := ambiguous_problem(files, span):
+                elif not _is_file(files.case_exact(span, path.parent)) and (p := ambiguous_problem(files, span)):
                     out.append(Failure("G-D3", rel, f"line {n}: {p}", AMBIGUOUS_REMEDY))
     return out
+
+
+def _is_file(p: Path | None) -> bool:
+    return p is not None and p.is_file()
 
 
 MIRROR = {"supersedes": "superseded_by", "superseded_by": "supersedes"}

@@ -269,12 +269,43 @@ def test_g_d3_fails_an_ambiguous_bare_name_only_when_the_files_it_matches_differ
     e = make(tmp_path, links=["docs/guide.md"], paths=["docs/notes.md"])
     got = [f for f in e.lint() if f.guard == "G-D3"]
     assert [f"{f.path}: {f.message}" for f in got] == [
-        "docs/guide.md: line 1: `guide.py` names 2 different files (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
-        "docs/notes.md: line 1: `guide.py` names 2 different files (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
+        "docs/guide.md: line 1: `guide.py` names 2 files whose texts are not all one (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
+        "docs/notes.md: line 1: `guide.py` names 2 files whose texts are not all one (docs/a/guide.py, docs/b/guide.py), so which one is meant is a guess",
     ]
     assert all("write the path from the repo root" in f.remedy for f in got)
+    write(tmp_path, "docs/guide.py", "class Thing: ...\nclass Mine: ...\n")  # beside notes.md: the one it means
+    assert reds(e, "G-D3") == [
+        "docs/guide.md: line 1: `guide.py` names 3 files whose texts are not all one (docs/a/guide.py, docs/b/guide.py, docs/guide.py), so which one is meant is a guess",
+    ]
+    (tmp_path / "docs/guide.py").unlink()
     write(tmp_path, "docs/b/guide.py", "class Thing: ...\n")  # the copies agree again: one text
     assert reds(e, "G-D3") == []
+
+
+@pytest.mark.criterion("AC-108")
+def test_g_d3_ambiguity_skips_a_copy_deleted_but_not_staged(tmp_path):
+    """CE-144 review: git still lists a file deleted from the work tree until the deletion is
+    staged. Lint read every match to compare them, and raised FileNotFoundError instead of
+    reporting. A copy that is gone is no match, as in CI's clean checkout once it is committed."""
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True, capture_output=True)
+    write(tmp_path, "a/guide.py", "class Thing: ...\n")
+    write(tmp_path, "b/guide.py", "class Thing: ...\nclass Other: ...\n")
+    write(tmp_path, "docs/guide.md", "`guide.py::Thing`\n")
+    write(tmp_path, "docs/notes.md", "Read `guide.py`.\n")
+    e = make(tmp_path, links=["docs/guide.md"], paths=["docs/notes.md"])
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True)
+    assert len(reds(e, "G-D3")) == 2
+    (tmp_path / "b/guide.py").unlink()  # deleted, not staged: `git ls-files --cached` still lists it
+    e = Engine(tmp_path)
+    assert reds(e, "G-D3") == []
+    (tmp_path / "a/guide.py").unlink()  # both gone: the name points at nothing
+    e = Engine(tmp_path)
+    assert reds(e, "G-D3") == [
+        "docs/guide.md: line 1: `guide.py` does not exist (case-exact)",
+        "docs/notes.md: line 1: `guide.py` names no file or directory of this repo (case-exact)",
+    ]
 
 
 def linked(tmp_path) -> Engine:

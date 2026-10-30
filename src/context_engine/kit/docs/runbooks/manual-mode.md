@@ -414,7 +414,9 @@ Check every record, then the working state. `--working` does only the second hal
   lists, also every backticked file name or path (as G-T3 reads them, history notes skipped)
   names a file or directory that exists case-exact, from the repo root or the doc's directory
   (a bare name anywhere). A bare name not at the repo root that matches two or more files whose
-  texts differ, line endings aside, is red (`git diff --no-index --ignore-cr-at-eol` tells).
+  texts differ, line endings aside, is red (`git diff --no-index --ignore-cr-at-eol` tells),
+  unless it is in a `paths` doc whose own directory holds that name. A file deleted but not
+  staged counts as gone.
   *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
