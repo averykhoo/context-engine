@@ -32,6 +32,11 @@ framework's mutation guard (G-T5) is built and run there, this file is its fallb
   and pass: a false green.
 - **Sabotage where no other session can commit the broken file:** a worktree or a scratch copy,
   not a tree other sessions share (P12).
+- **Never edit a file a running job may import.** A worktree keeps other sessions off the broken
+  file but not your own jobs, which import from that same tree: a run that starts or imports while
+  the file is broken is corrupted, and one stopped mid-break can leave the break in place. Check
+  for running jobs first; then break the file only when none can import it, or break it in memory
+  or in a copy the job never reads (a tracked runner that edits in memory is the pattern).
 - **A guard must not pass by finding nothing.** Sabotage its input as well as its logic: an empty
   source, a renamed section or a pattern that matches nothing has to turn it red, not green.
 - **A check that cannot be made to fail is a finding:** fix it or remove it, never keep it as
