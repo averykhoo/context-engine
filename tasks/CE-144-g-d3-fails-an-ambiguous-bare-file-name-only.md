@@ -4,13 +4,15 @@ id: CE-144
 title: G-D3 fails an ambiguous bare file name only when the matching files differ (CE-89 item 3)
 brief: Optional (owner may drop it); byte-equal kit and repo copies cited by bare name (AC-71) must keep passing
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-30a
+updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 G-D3 fails an ambiguous bare file name only when the matching files differ
@@ -29,3 +31,6 @@ CE-89's item 3, refiled on its own (items 1 and 2 landed in c5b812f). Optional. 
 - `.scratch/ce-93/build.md` (§ CE-89; gitignored, so the item is restated above)
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 1a6a059 (review fixes 4ca385f; lane b5adfb3, 339091e), cite in 78ed041: G-D3 fails a bare file name not at the repo root that matches several files whose texts differ (line endings ignored), naming them (guards.py::Files.differing, ambiguous_problem, AMBIGUOUS_REMEDY); byte-equal copies, root files and a name the doc's own directory holds pass; Files.named lists only files, so a copy deleted but not staged no longer crashes lint; FRAMEWORK §8.3 and manual-mode G-D3 updated; AC-108 tested; DEC-114
+  residual risk: none
