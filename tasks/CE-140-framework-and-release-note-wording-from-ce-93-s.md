@@ -4,13 +4,15 @@ id: CE-140
 title: "FRAMEWORK and release-note wording from CE-93's review: G-D5 generated blocks, 5.2 links floor, 3.2 retire and confirm, No rule changed"
 brief: Text only; a cut status marker returns as a Not checked line or a board item, never as build status
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-23f
 created: 2026-10-24
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 FRAMEWORK and release-note wording from CE-93's review
@@ -32,3 +34,5 @@ Three non-blocking findings of CE-93's second verifier (verify-2, N1, N2 and N4)
 - FRAMEWORK §3.2, §5.2, §8.3 G-D5; `docs/framework/RELEASE-NOTES.md`; DEC-79, DEC-81
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: Done in dc11225 and 5b614a8 (lane 8b0562e, 1dd386b): FRAMEWORK §8.3 G-D5's Not checked sentence covers generated blocks inside a hand-written doc; §5.2's Read first gets a Not checked clause on how many links it holds (DEC-96); §3.2's retire and confirm wording says a hand edit is red (G-I2) until the operation is run on the right person's call, and names unspecified. RELEASE-NOTES reads 'No existing rule changed; one was added', and its header says an earlier version's notes are not rewritten.
