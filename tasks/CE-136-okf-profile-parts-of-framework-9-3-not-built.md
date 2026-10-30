@@ -3,14 +3,14 @@ type: Task
 id: CE-136
 title: 'OKF profile parts of FRAMEWORK §9.3 not built: generated log.md, generated.by, stale_after refusal, charter_status read'
 brief: §9.3 states each as the profile; none exists in src/ (2026-10-24)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7, G-5]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 FRAMEWORK §9.3's table states our OKF profile. Four parts of it do not exist (grep of `src/context_engine/`, 2026-10-24). Filed by CE-93's fix round, which dropped the spec's *Not built yet* cells; no open item tracked them.
