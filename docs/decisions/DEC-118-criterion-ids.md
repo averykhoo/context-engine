@@ -7,6 +7,8 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:c18dbc77ef5cee2453bef14a8d46759256526b557d47e9ad96d6c99f7822dd2f
+tasks: [CE-42]
+code: [src/context_engine/working.py::Engine._next_criterion]
 ---
 
 Criterion ids (CE-42): the prefix comes from the rows (AC when there are none); the next id is above every row and every logged `criterion.new`; `--id` is for blocks handed out by hand across worktrees.

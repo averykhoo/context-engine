@@ -1746,7 +1746,7 @@ class Engine:
         claim scan finds claimed (``guards.claim_sites``); a source naming a story or decision
         (G-T6, ``guards.source_problems``). A twin whose guard is off is skipped as the guard is:
         with `[guards] tests` unset no claim is looked for, and with `[guards] stories` unset the
-        source need only name an id. Returns (a note for the reply on what went unchecked, or '';
+        source need only name an id (DEC-119). Returns (a note for the reply on what went unchecked, or '';
         the claim found, as (path, line), or None)."""
         g = self.store.config.guards
         note, claim = "", None
@@ -1780,6 +1780,8 @@ class Engine:
         return set(CRITERION_ROW_RE.findall(raw.replace("\r\n", "\n"))), logged
 
     def _next_criterion(self, raw: str) -> str:
+        """The next criterion id: the rows' prefix (AC with none), above every row and every logged
+        `criterion.new` (DEC-118)."""
         rows = [cells[0] for p in CR.places(raw) for _, cells in p.table.body if cells and G.ROW_ID_RE.fullmatch(cells[0])]
         prefixes = sorted({r.rsplit("-", 1)[0] for r in rows})
         if len(prefixes) > 1:
@@ -1823,7 +1825,7 @@ class Engine:
         """FRAMEWORK §6.2 step 3: append one criterion row, `| <id> | <text> | <source> | <status> |`
         in the table's own column order (other columns empty, a `claimed by` column filled with the
         claim found), to a criteria table of `[working] criteria`: the one under the heading
-        ``under``, or the file's only one. Under the lock, with one `criterion.new` op line; every
+        ``under``, or the file's only one (never guessed, and rows only: DEC-117). Under the lock, with one `criterion.new` op line; every
         other byte of the file is unchanged. The id is ``rid``, or the next of the rows' series
         above every row and every logged `criterion.new` (`--id` from a block handed out by hand
         when sessions in separate worktrees draft at once: G-D2 and the duplicate-row check catch
@@ -1832,7 +1834,7 @@ class Engine:
         ``under``, a cell that would break the table, a source that is not a story or decision
         (G-T6), a status outside the vocabulary, `tested` or `manual` with no claim G-T2 finds, an
         id already used or in a record series, a row that would not read back as one, and what
-        G-D1, G-D5 or G-D8 would fail. Not a milestone: the next commit carries it.
+        G-D1, G-D5 or G-D8 would fail. Not a milestone: the next commit carries it (DEC-116).
 
         Not checked: that the criterion follows from its source (judgement, at intake); that a
         `retired` row names the decision that retired it, a `deviates` row its deviation entry,

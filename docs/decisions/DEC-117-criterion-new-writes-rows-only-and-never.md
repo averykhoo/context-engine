@@ -7,6 +7,8 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:0406e452689b41bc1eba3dd913ddc53af64f9635d22181bcad6d3e688cdfe479
+tasks: [CE-42]
+code: [src/context_engine/criteria.py::target]
 ---
 
 CE-42's `criterion new` writes rows only and never guesses the table.
