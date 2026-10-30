@@ -567,9 +567,10 @@ Check every record, then the working state. `--working` does only the second hal
 A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed), and
 the write-time stops that check the same rule are off with it (among them G-I1 and G-I2 in
 § context-engine record new for a story, G-I3 there and in § context-engine ask answer for a
-decision, G-W4 in § context-engine ask new). The `## Amendments` stop of record new and ask
-answer is no guard's twin and stays on. A path listed in `[guards]` that does not exist is itself
-a failure.
+decision, G-W4 in § context-engine ask new). Two stops are no guard's twin and stay on: the
+`## Amendments` stop of record new and ask answer, and record new's stop on a decision given a
+`status` key or `decision_status: SUPERSEDED`. A path listed in `[guards]` that does not exist is
+itself a failure.
 
 **Why:** lint is the check on the stored files. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).
@@ -1301,10 +1302,12 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    `owner`, in any case) and an `actor` that is not the owner alone (`owner asked`), and its body
    is the owner's delegating words verbatim, then a `## Ruling` heading with the ruling under it;
    any other decision has no `## Ruling` heading (both checks off while `[guards] off` names
-   G-I3). Stop too if a decision was given a `status` key or `decision_status: SUPERSEDED`: only
-   § context-engine decision supersede writes those, with both links (G-W4). For every kind, whatever `[guards] off` names, stop if the text holds a `## Amendments`
-   line: the text below it would fall outside `body_sha` and read as a later amendment (a later
-   note goes in with § context-engine record amend, once the record exists).
+   G-I3). Stop too, whatever `[guards] off` names, if a decision was given a `status` key or
+   `decision_status: SUPERSEDED`: only § context-engine decision supersede writes those, with
+   both links (G-W4 checks them at rest, but this stop is not behind its off switch). For every
+   kind, whatever `[guards] off` names, stop if the text holds a `## Amendments` line: the text
+   below it would fall outside `body_sha` and read as a later amendment (a later note goes in with
+   § context-engine record amend, once the record exists).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
