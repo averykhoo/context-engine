@@ -75,6 +75,13 @@ The steps are FRAMEWORK §6.6's, in its order and with its numbers.
 
 - One worktree and one branch per builder; the task agent merges, and a verifier agent checks
   the merge.
+- **Create each worktree from current main,** not `origin/main`, which can be many commits behind
+  the last push; a stale base is rebased before any edit.
+- **Gitignored inputs (models, data, fixtures) are absent in a worktree:** point the env vars that
+  name them at the main tree, or expect skipped tests and say which in the report.
+- **A builder's Write tool can be confined to its worktree:** it persists its report in the
+  worktree's `.scratch/`, copied out after each append, since a copy goes stale after a restart.
+  Each worktree's `.scratch/` needs its own sweep before the worktree goes.
 - The gate in a worktree imports that worktree's code, and the worktree is checked out with the
   line endings the byte checks expect ([gate.md](gate.md)).
 - Board, ledger and other working-state writes stay with the session, in the main tree.
