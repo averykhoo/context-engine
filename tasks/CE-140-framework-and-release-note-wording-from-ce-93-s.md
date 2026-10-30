@@ -3,14 +3,14 @@ type: Task
 id: CE-140
 title: "FRAMEWORK and release-note wording from CE-93's review: G-D5 generated blocks, 5.2 links floor, 3.2 retire and confirm, No rule changed"
 brief: Text only; a cut status marker returns as a Not checked line or a board item, never as build status
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-23f
 created: 2026-10-24
-moved: 2026-10-23f
-updated: 2026-10-23f
+moved: 2026-10-30a
+updated: 2026-10-30a
 ---
 
 FRAMEWORK and release-note wording from CE-93's review

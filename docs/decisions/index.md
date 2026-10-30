@@ -143,6 +143,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-93](DEC-93-ac-33-drops-its-allowance-for-ce-n-build-marks.md): AC-33 drops its allowance for (CE-n) build marks in FRAMEWORK.md *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-94](DEC-94-adopting-repos-get-no-eol-lf-attribute-from-init.md): Adopting repos get no eol=lf attribute from init *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-95](DEC-95-init-appends-the-op-log-merge-union-line-to.md): init appends the op log merge=union line to .gitattributes without asking *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-96](DEC-96-the-5-2-read-first-link-floor-dropped-by-ce-93.md): The §5.2 Read-first link floor dropped by CE-93 returns as a Not checked clause, not as a board item *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## SUPERSEDED
 
