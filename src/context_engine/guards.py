@@ -10,6 +10,8 @@ G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while 
 G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records. G-D4
 reads ``[guards] liveness`` and ``history`` (with ``liveness_given`` for docs whose opening lines
 the repo may not edit), and G-D5 reads ``[guards] numbers``; each is off while its lists are empty.
+G-D4's freshness half (``stale``, CE-136) reads every record, ``[working] criteria`` and
+``[working] register`` whatever those lists hold: an expired ``stale_after`` on a live item is red.
 
 The correctness chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] charter``, ``stories``,
 ``tests`` and ``claim`` with ``[working] criteria``: a guard is off while a source it needs is unset,
@@ -27,6 +29,7 @@ G-V3 (the run ledger).
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
@@ -38,10 +41,11 @@ from . import decisions as D
 from . import gate as GATE
 from . import ledger as L
 from . import okf
+from . import review as R
 from .bootstrap import ENGINE_DIR
 from .config import CONFIG_NAME, LIVENESS
 from .errors import Refusal
-from .store import ALIASES, Failure, key_order
+from .store import ALIASES, OKF_STATUS, Failure, key_order
 
 if TYPE_CHECKING:
     from .working import Engine
@@ -70,7 +74,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e)
+    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + coverage(e) + intent(e) + stale(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -963,6 +967,74 @@ def liveness(e: Engine) -> list[Failure]:
     return out
 
 
+STALE_AFTER = "stale_after"  # OKF §5.5: the absolute instant after which a concept is stale (FRAMEWORK §9.3)
+DONE_STATES = ("closed", "done", "expired")  # a record's own `state` once it is no longer live (tasks, questions, batons, pause records)
+
+
+def instant(value: object) -> dt.datetime | None:
+    """``value`` as an absolute instant (OKF §5.5: a timestamp with its offset,
+    `2026-12-01T00:00:00Z`), else None: a bare date, a time without an offset, and anything that
+    does not parse are not instants, so none of them can be compared with the clock."""
+    if isinstance(value, dt.datetime):  # YAML reads an unquoted timestamp as one; check it before date, its base class
+        return value if value.tzinfo is not None else None
+    if isinstance(value, dt.date):
+        return None
+    try:
+        when = dt.datetime.fromisoformat(str(value).strip().strip("`").strip())
+    except ValueError:
+        return None
+    return when if when.tzinfo is not None else None
+
+
+def stale(e: Engine) -> list[Failure]:
+    """G-D4's freshness half (FRAMEWORK §9.3, CE-136): no live item carries an expired
+    `stale_after`. Read in three places: the frontmatter of every record of every kind that is
+    live (not `status: deprecated`, and its `state`, where it has one, not closed, done or
+    expired); the `stale_after` cell of each criterion of `[working] criteria` that is not
+    `retired`, in a criteria table with a `stale_after` column; and the `- **stale_after:**` line
+    of an entry of `[working] register`. A value that is not an absolute instant (a timestamp
+    with its offset, OKF §5.5) is red too, since it cannot be compared with the clock
+    (`Engine.now`). Runs whatever `[guards] liveness` and `history` hold; off only with G-D4.
+
+    Not checked: whether an item that should carry one does (`manual` criteria and register
+    entries about something external, §7.4: the author's call), a doc that is not a record (the
+    charter, a `type: Readme`), a retired criterion or a record no longer live (history), and a
+    `stale_after` far in the future."""
+    now = e.now()
+    out: list[Failure] = []
+
+    def check(rel: str, what: str, value: object) -> None:
+        when = instant(value)
+        if when is None:
+            out.append(Failure("G-D4", rel, f"{what}: `stale_after: {value}` is not an absolute instant", "write it as a timestamp with its offset, e.g. `2026-12-01T00:00:00Z` (OKF §5.5)"))
+        elif now > when:
+            out.append(Failure("G-D4", rel, f"{what} is live and went stale at {when.isoformat()} (`stale_after`)", "re-check what it rests on (re-run a manual criterion's driver; confirm the external fact a register entry is about), then move `stale_after` forward; or retire or close the item (FRAMEWORK §9.3)"))
+
+    st = e.store
+    for kind in st.config.kinds.values():
+        for path in st._files(kind):
+            rid = st._id_of(kind, path)
+            if rid is None:
+                continue
+            try:
+                doc = okf.read_head(path)
+            except Exception:
+                continue  # the schema check reports an unreadable record
+            if STALE_AFTER not in doc.data or doc.get("status") == "deprecated" or str(doc.get("state")) in DONE_STATES:
+                continue
+            check(st._rel(path), rid, doc.get(STALE_AFTER))
+    if e.w.criteria and (path := e.root / e.w.criteria).is_file():
+        rows, _ = criteria_rows(_text(path))  # a table that cannot be read is G-T2's and G-T6's to report
+        for r in rows:
+            if r.stale_after and r.status != "retired":
+                check(e.w.criteria, f"line {r.line}: {r.id}", r.stale_after)
+    if e.w.register and (path := e.root / e.w.register).is_file():
+        for entry in R.entries(_text(path)):
+            if entry.fields.get(STALE_AFTER):
+                check(e.w.register, entry.id, entry.fields[STALE_AFTER])
+    return out
+
+
 def _named(text: str, window: int, board: dict[str, bool]) -> dict[str, bool]:
     """The board items an ACTIVE-PLAN doc names in its window, each -> whether it is open."""
     top = "\n".join(text.lstrip("\ufeff").split("\n")[:window])
@@ -1752,12 +1824,14 @@ def charter_goals(text: str) -> tuple[list[tuple[int, str, str]], list[tuple[int
 
 @dataclass(frozen=True)
 class Criterion:
-    """One row of the criteria file: its id, line, source cell (`from`) and status, lower-cased."""
+    """One row of the criteria file: its id, line, source cell (`from`) and status, lower-cased,
+    and its `stale_after` cell where the table has that column (FRAMEWORK §9.3, CE-136)."""
 
     id: str
     line: int
     source: str
     status: str
+    stale_after: str = ""
 
 
 def criteria_columns(header: list[str]) -> tuple[int | None, int | None]:
@@ -1787,10 +1861,12 @@ def criteria_rows(text: str) -> tuple[list[Criterion], list[tuple[str, str]]]:
             missing = "source column (`from`, `story` or `source`)" if src is None else "`status` column"
             problems.append((f"line {mine[0][0]}: a table of criteria has no {missing}, so its {len(mine)} rows cannot be read", "give the table its `status` and `from` columns (FRAMEWORK §3.3)"))
             continue
+        stale_col = next((i for i, c in enumerate(header) if c.strip("`") == STALE_AFTER), None)  # optional (§9.3)
         for n, cells in mine:
             src_cell = cells[src] if src < len(cells) else ""
             status_cell = cells[status] if status < len(cells) else ""
-            rows.append(Criterion(cells[0], n, src_cell, status_cell.strip("`*").strip().lower()))
+            stale_cell = cells[stale_col].strip() if stale_col is not None and stale_col < len(cells) else ""
+            rows.append(Criterion(cells[0], n, src_cell, status_cell.strip("`*").strip().lower(), stale_cell))
     seen: dict[str, int] = {}
     for r in rows:  # CE-42: the rest-time twin of `criterion set`'s refusal of an id leading two rows
         if r.id in seen:
@@ -1859,7 +1935,7 @@ def _stories(e: Engine) -> list[tuple[str, str, object]]:
 def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
     """The charter's goal ids (None when `[guards] charter` is unset), and G-I1's failures on the
     charter itself: missing, no goal rows (the table changed under the pattern), a legacy id, a
-    goal id leading two rows."""
+    goal id leading two rows, and its lifecycle keys (`charter_problems`), listed last."""
     rel = e.store.config.guards.charter
     if not rel:
         return None, []
@@ -1879,7 +1955,43 @@ def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
         if gid in seen:
             out.append(Failure("G-I1", rel, f"line {n}: goal id {gid} leads two rows", "give the newer goal the next free id (ids are never reused, P3)"))
         seen.add(gid)
+    out += [Failure("G-I1", rel, m, rem) for m, rem in charter_problems(_text(path))]
     return seen, out
+
+
+CHARTER_STATUS = "charter_status"  # the charter's own lifecycle key (FRAMEWORK §9.3.1): its state never goes in OKF `status`
+CHARTER_STATUSES = ("confirmed", "unconfirmed")  # FRAMEWORK §3.1, §11.4: a reconstruction is `unconfirmed` until the owner reviews it
+
+
+def charter_head(text: str) -> okf.Document | None:
+    """The charter's frontmatter, or None when it has none or it does not parse."""
+    try:
+        doc = okf.parse(text.lstrip("\ufeff"))
+    except Refusal:
+        return None
+    return doc if okf.has_frontmatter(doc) else None
+
+
+def charter_problems(text: str) -> list[tuple[str, str]]:
+    """G-I1 on the charter's lifecycle keys (FRAMEWORK §9.3.1, CE-136), as (message, remedy):
+    where it has frontmatter, a `charter_status` from the vocabulary (`CHARTER_STATUSES`) and an
+    OKF `status`, where present, of `draft`, `stable` or `deprecated` only, since the charter's own
+    state goes in `charter_status`. A charter with no frontmatter (the kit's) or none of these
+    keys passes.
+
+    Not checked: whether `charter_status` is true (the owner's review is in the transcript and the
+    decision that records it), and frontmatter that does not parse (nothing else reads it)."""
+    doc = charter_head(text)
+    if doc is None:
+        return []
+    out = []
+    cs = doc.get(CHARTER_STATUS)
+    if cs is not None and str(cs) not in CHARTER_STATUSES:
+        out.append((f"`{CHARTER_STATUS}: {cs}` is none of {', '.join(CHARTER_STATUSES)}", f"use `confirmed` once the owner has reviewed it, `unconfirmed` for an agent's reconstruction awaiting review (FRAMEWORK §3.1, §11.4)"))
+    status = doc.get("status")
+    if status is not None and str(status) not in OKF_STATUS:
+        out.append((f"has OKF status {status!r}", f"use one of {', '.join(OKF_STATUS)}; the charter's own state goes in `{CHARTER_STATUS}` (FRAMEWORK §9.3.1)"))
+    return out
 
 
 def goals(e: Engine) -> list[Failure]:

@@ -218,6 +218,13 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-170 | `coverage` (CLI and MCP, a read that writes nothing) gives every component, procedure and G-id G-D12 extracts from `[guards] coverage_spec` exactly one status, the first that holds: `built` (a G-id lint reports, whatever the map says), `deferred` or `prose-only` (the newest map's row class, its note the row's `Reason` or `Home`), `open work` (the item the row's class names is open, or an open board item names it as G-D12 reads a mention), `done` (only closed such items), `map only` (a row naming no item the board holds, its note the class), `unowned`; each row names the map's item with its state and at most five open items naming it, then `+n more`; G-ids sort by letter then number; the text heads the tables with the totals per status and the rules | DEC-81, US-9 | tested |
 | AC-171 | `coverage` refuses, with a remedy, while `[guards]` sets neither `coverage_spec` nor `coverage_maps`, and while G-D12 fails on its own config, spec, maps or floors (its first such failure the reason, its remedy the remedy) | DEC-81, US-9 | tested |
 
+## OKF profile (CE-136)
+
+| id | criterion | from | status |
+|---|---|---|---|
+| AC-150 | Lint (G-D4) is red on a live item whose `stale_after` has passed, and on one whose `stale_after` is not an absolute instant (a timestamp with its offset; a bare date or a time without an offset is red): a record that is not `status: deprecated` and whose `state` is not closed, done or expired; a criterion that is not `retired`, in its table's `stale_after` column; and an entry of `[working] register` by its `- **stale_after:**` line. It runs whatever `[guards] liveness` and `history` hold, and only `[guards] off` naming G-D4 silences it | US-6, US-14 | tested |
+| AC-151 | Lint (G-I1) is red on a charter whose frontmatter carries a `charter_status` other than `confirmed` or `unconfirmed`, or an OKF `status` other than `draft`, `stable` or `deprecated`; a charter without frontmatter, or without those keys, passes; orient asks the owner to review a charter that is `charter_status: unconfirmed`, and says nothing of one that is `confirmed` or while G-I1 is off | US-6 | tested |
+
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
 Planned, drafted by the agent from each story's own words so G-T1 lands green; the owner may push

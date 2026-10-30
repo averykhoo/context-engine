@@ -199,11 +199,12 @@ def _same_words(a: okf.Document, b: okf.Document) -> bool:
 
 
 class Engine:
-    def __init__(self, root: Path | str, config: Config | None = None, today: Callable[[], dt.date] | None = None):
+    def __init__(self, root: Path | str, config: Config | None = None, today: Callable[[], dt.date] | None = None, now: Callable[[], dt.datetime] | None = None):
         self.store = Store(root, config)
         self.root = self.store.root
         self.w = self.store.config.working
         self.today = today or dt.date.today
+        self.now = now or (lambda: dt.datetime.now(dt.timezone.utc))  # an aware instant: what `stale_after` is compared with (G-D4, §9.3)
 
     # -- configuration -----------------------------------------------------------------
 
@@ -2355,6 +2356,9 @@ class Engine:
         templates = self.unfilled_templates()
         if templates:  # CE-121
             sections.append(Part("Templates still unfilled: ask the owner", "\n".join(templates), "kit README § 2a", rank=2))
+        charter = self.unconfirmed_charter()
+        if charter:  # CE-136
+            sections.append(Part("Charter unconfirmed: ask the owner", "\n".join(charter), "FRAMEWORK §11.4", rank=2))
         upstream = self.upstream_lines()
         if upstream:  # CE-114
             sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))
@@ -2550,6 +2554,23 @@ class Engine:
             elif left:
                 out.append(f"- {rel} still holds the template's {_one([f'`{x}`' for x in left])}: replace {'it' if len(left) == 1 else 'them'} with the owner's words")
         return out
+
+    def unconfirmed_charter(self) -> list[str]:
+        """The charter (`[guards] charter`) when its `charter_status` is `unconfirmed`: an agent's
+        reconstruction the owner has not reviewed (FRAMEWORK §3.1, §11.4; CE-136). Orient asks at
+        every session start until it is confirmed; lint does not fail it, since a migrated repo
+        starts there. Off while `charter` is unset or G-I1 is off.
+
+        Not checked: a value outside the vocabulary (G-I1 reports it), and a charter with no
+        frontmatter (the kit's: the owner gives its words in chat, §6.9)."""
+        g = self.store.config.guards
+        path = self.root / g.charter if g.charter else None
+        if path is None or "G-I1" in g.off or not path.is_file():
+            return []
+        doc = G.charter_head(path.read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n"))
+        if doc is None or str(doc.get(G.CHARTER_STATUS)) != "unconfirmed":
+            return []
+        return [f"- {g.charter} is `{G.CHARTER_STATUS}: unconfirmed`, an agent's reconstruction: bring it to the owner for review as an owner question, record their answer as a decision, then set `{G.CHARTER_STATUS}: confirmed` (FRAMEWORK §3.1)"]
 
     def _session_windows(self) -> list[tuple[dt.datetime, dt.datetime | None]]:
         """When each session in the op log was open: its `session.start` to its close, pause or

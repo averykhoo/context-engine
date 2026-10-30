@@ -1,6 +1,7 @@
 """The guard catalogue as lint guards (CE-14, FRAMEWORK §8.2 to §8.4): each guard is red on
 what it protects, green otherwise, and `[guards] off` is the only way to silence one."""
 
+import datetime as dt
 import json
 import shutil
 import tomllib
@@ -827,6 +828,58 @@ def test_g_d4_is_off_while_both_lists_are_empty_and_red_on_a_missing_path_or_a_l
         "context.toml: [guards] liveness (empty, nowhere.md) holds no doc, so G-D4 checks nothing there",
     ]
     assert reds(make(tmp_path, history=["empty"]), "G-D4") == []  # an empty history directory is a fresh repo's
+
+
+# -- G-D4 freshness: `stale_after` (CE-136, FRAMEWORK §9.3) ---------------------------------
+
+NOW = dt.datetime(2026, 11, 1, 12, 0, tzinfo=dt.timezone.utc)
+PAST, FUTURE = "2026-11-01T11:59:00Z", "2026-11-01T20:00:00+08:00"  # a minute before NOW; NOW is 20:00 at +08:00 exactly, so it is not yet past
+
+
+def fresh(tmp_path, **guards) -> Engine:
+    cfg = config(**guards)
+    cfg["working"].update(criteria="docs/criteria.md", register="docs/register.md")
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    return Engine(tmp_path, now=lambda: NOW)
+
+
+def task_file(tmp_path, tid: str, extra: str, state: str = "open") -> None:
+    status = "status: deprecated\n" if state == "closed" else ""
+    write(tmp_path, f"tasks/{tid}-x.md", f"---\ntype: Task\nid: {tid}\ntitle: t\npri: LATER\nstate: {state}\n{status}created: 2026-10-08\n{extra}---\n\nbody\n")
+
+
+@pytest.mark.criterion("AC-150")
+def test_g_d4_an_expired_stale_after_on_a_live_record_criterion_or_register_entry_is_red(tmp_path):
+    task_file(tmp_path, "CE-1", f"stale_after: {PAST}\n")
+    task_file(tmp_path, "CE-2", f"stale_after: {FUTURE}\n")
+    task_file(tmp_path, "CE-3", f"stale_after: {PAST}\n", state="closed")  # history: not live
+    task_file(tmp_path, "CE-4", "stale_after: 2026-10-01\n")  # a date is not an instant
+    task_file(tmp_path, "CE-5", 'stale_after: "2026-10-01T00:00:00"\n')  # no offset: not an instant
+    task_file(tmp_path, "CE-6", f'stale_after: "{PAST}"\n')  # quoted, still an instant
+    task_file(tmp_path, "CE-7", "")
+    write(tmp_path, "docs/criteria.md", (
+        "# Criteria\n\n| id | criterion | from | status | `stale_after` |\n|---|---|---|---|---|\n"
+        f"| AC-1 | a | US-1 | manual | {PAST} |\n| AC-2 | b | US-1 | retired | {PAST} |\n"
+        f"| AC-3 | c | US-1 | manual | `{FUTURE}` |\n| AC-4 | d | US-1 | tested | |\n\n"
+        "| id | criterion | from | status |\n|---|---|---|---|\n| AC-5 | e | US-1 | manual |\n"
+    ))
+    entry = "## {}: r\n\n- **affects:** a\n- **why not eliminated:** w\n- **control:** c\n- **from:** CE-1, session 2026-10-08a\n{}\n"
+    write(tmp_path, "docs/register.md", "# Register\n\n" + entry.format("INV-1", f"- **stale_after:** {PAST}") + entry.format("INV-2", f"- **stale_after:** {FUTURE}") + entry.format("INV-3", ""))
+    went = "is live and went stale at 2026-11-01T11:59:00+00:00 (`stale_after`)"
+    assert reds(fresh(tmp_path), "G-D4") == [  # G-D4's liveness lists are empty: freshness runs anyway
+        f"tasks/CE-1-x.md: CE-1 {went}",
+        "tasks/CE-4-x.md: CE-4: `stale_after: 2026-10-01` is not an absolute instant",
+        "tasks/CE-5-x.md: CE-5: `stale_after: 2026-10-01T00:00:00` is not an absolute instant",
+        f"tasks/CE-6-x.md: CE-6 {went}",
+        f"docs/criteria.md: line 5: AC-1 {went}",
+        f"docs/register.md: INV-1 {went}",
+    ]
+    [red] = [f for f in fresh(tmp_path).lint() if f.guard == "G-D4" and f.path == "docs/register.md"]
+    assert red.remedy.startswith("re-check what it rests on")
+    assert reds(fresh(tmp_path, off=["G-D4"]), "G-D4") == []  # off only with G-D4
+    later = fresh(tmp_path)
+    later.now = lambda: NOW - dt.timedelta(minutes=2)
+    assert [f.path for f in later.lint() if f.guard == "G-D4"] == ["tasks/CE-4-x.md", "tasks/CE-5-x.md"]  # before the instant, nothing is stale
 
 
 # -- G-D5 typed numbers (CE-33) ------------------------------------------------------------

@@ -130,6 +130,34 @@ def test_g_i1_reds_a_charter_goal_id_not_in_the_one_form_twice_or_missing_and_a_
     assert all_reds(make(chain, stories="", charter="", tests=[])) == {}  # all unset: off
 
 
+def charter_with(head: str) -> str:
+    return f"---\ntype: Charter\ntitle: c\n{head}---\n\n{CHARTER}"
+
+
+@pytest.mark.criterion("AC-151")
+def test_g_i1_reads_the_charters_lifecycle_keys_and_orient_asks_for_an_unconfirmed_one(chain):
+    """CE-136 (FRAMEWORK §9.3.1): the charter's own state is `charter_status`, from its
+    vocabulary, never OKF `status`; orient asks the owner to review an `unconfirmed` one (§11.4)."""
+    heading = "## Charter unconfirmed: ask the owner\n"
+    working = {"ledger": "ledger.md", "handoff": "HANDOFF.md"}
+    assert all_reds(make(chain)) == {}  # no frontmatter (the kit's charter): nothing to read
+    assert heading not in make(chain, working).orient("2026-10-13a")
+    for head in ("charter_status: confirmed\n", "charter_status: unconfirmed\nstatus: draft\n", ""):
+        write(chain, "docs/charter.md", charter_with(head))
+        assert all_reds(make(chain)) == {}, head
+    write(chain, "docs/charter.md", charter_with("charter_status: signed\nstatus: confirmed\n"))
+    assert reds(make(chain), "G-I1") == [
+        "docs/charter.md: `charter_status: signed` is none of confirmed, unconfirmed",
+        "docs/charter.md: has OKF status 'confirmed'",
+    ]
+    write(chain, "docs/charter.md", charter_with("charter_status: unconfirmed\n"))
+    section = make(chain, working).orient("2026-10-13a").split(heading, 1)[1].split("\n## ", 1)[0]
+    assert section.splitlines()[0].startswith("- docs/charter.md is `charter_status: unconfirmed`, an agent's reconstruction: bring it to the owner for review"), section
+    assert heading not in make(chain, working, off=["G-I1"]).orient("2026-10-13a")  # off with G-I1
+    write(chain, "docs/charter.md", charter_with("charter_status: confirmed\n"))
+    assert heading not in make(chain, working).orient("2026-10-13a")
+
+
 # -- G-I2 and the write-time twins ---------------------------------------------------------
 
 

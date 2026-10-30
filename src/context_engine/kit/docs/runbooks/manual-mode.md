@@ -458,8 +458,14 @@ Check every record, then the working state. `--working` does only the second hal
   its entry; a glob that matches no file is red. Under a `history` directory a doc is FROZEN or
   ACTIVE-PLAN, never LIVING. With `[working] board` set, an ACTIVE-PLAN doc names a board item in
   those lines, and at least one item it names there is open. A `liveness` list holding no doc is
-  red. *Why: a reader cannot tell whether a doc's status lines are still true unless it says
-  whether it is kept current (its liveness), and a plan left ACTIVE-PLAN after its item landed reads as work in progress.*
+  red. Whatever those lists hold, also grep for `stale_after` in every record (skip one with
+  `status: deprecated`, or a `state` of closed, done or expired), in the criteria file's
+  `stale_after` column (skip a `retired` row) and in the register's `- **stale_after:**` lines:
+  each value is a timestamp with its offset (`2026-12-01T00:00:00Z`; a bare date is red), and
+  none has passed (compare with `date -u +%FT%TZ`). *Why: a reader cannot tell whether a doc's
+  status lines are still true unless it says whether it is kept current (its liveness), a plan
+  left ACTIVE-PLAN after its item landed reads as work in progress, and an item past its
+  `stale_after` is relied on after the date it said to re-check it by (FRAMEWORK §9.3).*
 - **G-D5** (only when `[guards] numbers` lists paths): in each `.md` there whose liveness, read as
   for G-D4, is not FROZEN or ACTIVE-PLAN, outside fenced code and frontmatter, skipping every line
   with a `YYYY-MM-DD` anywhere on it (a date, a session key, a dated file name) and blanking every
@@ -491,7 +497,10 @@ Check every record, then the working state. `--working` does only the second hal
   every file under `[guards] tests`). No goal row, no criterion row, a table of criteria missing
   its `status` or source column, or no claim at all is red: the format changed under the pattern.
   Then: **G-I1**, every story that is not `retired` names at least one goal and only goals of the
-  charter, and every goal is named by one such story; no goal id leads two rows. **G-I2**, every
+  charter, and every goal is named by one such story; no goal id leads two rows; where the
+  charter has frontmatter, its `charter_status` is `confirmed` or `unconfirmed` and its
+  `status`, if any, is `draft`, `stable` or `deprecated` (an `unconfirmed` charter is not red,
+  but tell the owner it awaits their review, as orient does). **G-I2**, every
   story that is not `retired` has an `actor` of `owner`, `human:<id>` or `agent (reconstructed
   from ...)`, a `date` of YYYY-MM-DD, a `story_status` of live, unspecified or unconfirmed, and
   `unconfirmed` goes with an agent's actor only; every story with an agent's actor that is `live`

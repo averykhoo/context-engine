@@ -535,6 +535,9 @@ Each criterion has:
 | `deviates` | deliberately not met | references a deviation-register entry (G-T7) |
 | `retired` | no longer intended | references the decision that retired it |
 
+A `manual` criterion whose driver is re-run by date carries that date in an optional
+`stale_after` column of its table, as an absolute instant; G-D4 is red once it passes (§9.3).
+
 **Owner sign-off** is separate from test status:
 - `verified:` in OKF terms, naming `human:owner` and when (its shape is not settled, §9.3);
 - **inform and proceed:** agent-drafted criteria are live as soon as they are created. The
@@ -1262,7 +1265,7 @@ tags: [working-state]
 answers: ASK-12                   # set by `ask answer` when the decision answers a question
 ruled_by: agent (<model-id>)      # only on a ruling made on the owner's delegation (above)
 reopen_if:                        # REJECTED only: what would justify reopening it
-generated: { by: claude-code/<model-id>, at: 2026-10-08T14:02:00Z }
+generated: { by: claude-code/<model-id>, at: 2026-10-08T14:02:00Z }  # OKF; kept if written by hand, never written by the engine (§9.3)
 verified: ...                     # optional: the owner explicitly endorsed it; shape not settled (§9.3)
 sources: [{ id: ev1, resource: /docs/evidence/<file>.md }]
 body_sha: <hash>                  # covers everything above "## Amendments"
@@ -1736,7 +1739,8 @@ cite for each item.
 
 - **Residual-risk register:** the risks left after their controls, the traps a session must
   know; not a second set of rules. Its entries change only when the code does. LIVING, part of
-  the rules layer. An entry carries `stale_after` only if it is about something external.
+  the rules layer. An entry carries `stale_after` only if it is about something external, as a
+  `- **stale_after:** <instant>` line; G-D4 is red once it passes (§9.3).
 - **It is P17's register of residual risks.** Each entry says what the risk is and whom it
   affects, why it was not eliminated, how it is controlled (the P17 rung, and the guard or rule
   by name), and where it came from (task, decision or incident). Entries arrive
@@ -1961,7 +1965,10 @@ doc measured before the trial starts.
 ### 8.1 Intent guards
 - **G-I1:** every charter goal has at least one story; every story names at least one goal,
   and only goals of the charter. Retired stories are history and are not read. Each goal id
-  leads exactly one row, always written in the standard form (P3).
+  leads exactly one row, always written in the standard form (P3). Where the charter has
+  frontmatter, its `charter_status` is `confirmed` or `unconfirmed` and its OKF `status`, where
+  set, is `draft`, `stable` or `deprecated` (§9.3.1); orient asks the owner to review an
+  `unconfirmed` charter at every session start (§11.4).
 - **G-I2:** every story that is not retired has an actor, a date and a status from the
   vocabulary, and `unconfirmed` requires `actor: agent (reconstructed from …)`. Every retired
   story was retired by a logged `record.retire` and is still `retired` with `status: deprecated`;
@@ -2058,6 +2065,12 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   Config: `[guards] liveness` and `history` (paths; both empty is off),
   `liveness_given` (a repo-relative glob to a liveness; one that matches no file is red) and
   `liveness_lines`. A listed path that is missing, and a `liveness` list holding no doc, are red.
+  **Freshness** (§9.3), whatever those lists hold: no live item carries a `stale_after`
+  that has passed, or one that is not an absolute instant (a timestamp with its offset, OKF §5.5).
+  It reads the frontmatter of every record that is not `status: deprecated` and whose `state`,
+  where it has one, is not closed, done or expired; the `stale_after` column of a criteria table,
+  for a criterion that is not `retired`; and a register entry's `- **stale_after:**` line. Not
+  checked: whether an item that should carry one does, and a doc that is not a record.
 - **G-D5:** derivable counts appear only in generated blocks, so a count of things in the tree
   typed in prose is red: a number (a numeral, or a spelled one from three to twenty) directly before a
   counted noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the
@@ -2218,11 +2231,11 @@ OKF v0.2 (`GoogleCloudPlatform/open-knowledge-format`, `SPEC.md`):
 | component type | required `type:` (`Story`, `Criterion`, `Decision`, `Evidence`, `Invariant`, `Deviation`, `Runbook`, `Charter`) | — |
 | identity | concept id = path minus `.md` | **`id:`** extension: stable series ids that survive moves (P3) |
 | routing map / progressive loading | `index.md` per directory | **generated**, and checked by G-D6; the component → path mapping lives in `context.toml`, because `index.md`'s shape is fixed (§9.3.1) |
-| concept changelog | `log.md` | **generated** from decisions' `creates/amends/retires`; this is *not* the session ledger |
-| who and when | `generated: {by, at}`; actors `human:<id>` / `<producer>/<version>` | `actor:` in our vocabulary (§6.5); the writing agent (`claude-code/<model-id>`) goes into the op log per write, and into `generated.by` |
+| concept changelog | `log.md` | **none is written**: OKF does not require one, and what changed when is already in the op log, per write, and in the decision index; decisions' `creates/amends/retires` feed the census and trace-check (§6.5). `log.md` stays reserved, and G-D11 skips it. The session ledger is *not* an OKF `log.md` (§9.3.1) |
+| who and when | `generated: {by, at}`; actors `human:<id>` / `<producer>/<version>` | `actor:` in our vocabulary (§6.5); the writing agent (`claude-code/<model-id>`) goes into the op log, per write, and only there: the engine writes no `generated`, so who wrote a record is never kept in two places that can disagree. A hand-written `generated` is round-tripped like any unknown key |
 | owner sign-off | `verified:`, by `human:owner` at a time → "human-reviewed" tier | distinct from `criterion_status: tested`. **Not settled:** whether it is one mapping or a list of them is fixed when the first owner endorsement is recorded; until then no operation writes it (`decision.set` refuses it, §6.5) |
 | no longer current | `status: deprecated` | **one mapping:** SUPERSEDED decision, `retired` story or criterion, FROZEN archive item, closed task → all carry `status: deprecated`, derived by the engine from the record's own state |
-| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item. Bound to `manual` criteria (re-run the driver by date) and register entries about something external |
+| freshness | `stale_after:` (the spec defines when a concept is stale; it does not prescribe what a reader does) | **our profile refuses** an expired `stale_after` on a live item, and one that is not an absolute instant: lint G-D4 reads it on a record that is live, in a criteria table's `stale_after` column and on a register entry's `- **stale_after:**` line. Bound to `manual` criteria (re-run the driver by date) and register entries about something external |
 | provenance | `sources:` with ids, cited as footnotes | evidence docs cite their runs |
 | extensions | readers SHOULD preserve unknown keys and MUST NOT reject them | `supersedes`, `relaxes`, `retires`, `criterion_status`, `test`, `liveness`, `sign-off` |
 | attested results (later) | `type: Attested Computation`: a deterministic attester checks a receipt | candidate format for G-V1 run-ledger rows |
@@ -2235,7 +2248,7 @@ are deliberately permissive; our profile is strict on top of conformant files.
 
 | The spec says | What it means for us |
 |---|---|
-| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status`. G-W4 checks the two keys agree for board items and decisions (a decision is `status: deprecated` exactly when it is SUPERSEDED), and G-I2 for stories. |
+| **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status` (`confirmed`, or `unconfirmed` for an agent's reconstruction until the owner reviews it, §11.4). G-W4 checks the two keys agree for board items and decisions (a decision is `status: deprecated` exactly when it is SUPERSEDED), and G-I2 for stories; G-I1 checks the charter's `charter_status` is from its vocabulary and its `status`, where set, is OKF's, and orient asks the owner about an `unconfirmed` charter. |
 | **Concept id = the file's path minus `.md`** (§2) | Closing in place (§5.2) and never renaming a file on retitle keep record ids stable as OKF ids. The `id:` extension stays, for series ids that survive a migration. |
 | **Every non-reserved `.md` in a bundle needs frontmatter with a non-empty `type`** (§11) | **A bundle is a chosen set of directories, not the repo root;** otherwise README, CLAUDE.md and HANDOFF would all need frontmatter. Non-record files inside a bundle directory need a `type` too (e.g. `type: Readme`), and the engine filters on `type` rather than excluding files by name. |
 | **`index.md` and `log.md` are reserved at every level; `index.md` has no frontmatter (except `okf_version` at the bundle root) and a fixed list shape** (§3.1, §8) | The component → path mapping lives in `context.toml` (§8.0); `index.md` is a plain generated listing. |
@@ -2361,7 +2374,8 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 
 - **Charters are reconstructed by an agent and brought to the human for review**, from what
   exists (a project brief, mandates in the contract, goal-shaped decisions). Tagged
-  `unconfirmed` until reviewed.
+  `charter_status: unconfirmed` until reviewed, and orient asks the owner about it at every
+  session start (§9.3.1).
 - **Map, don't move.** The routing map in `context.toml` maps each component onto the repo's
   existing files. Existing ids are not renumbered: they take the framework's form at import,
   keeping each number where there is one (`D-27` becomes number 27 of the decision series, `Q8`
