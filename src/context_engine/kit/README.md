@@ -184,8 +184,9 @@ The Claude Code plugin (next section) carries the same hook with no machine path
 with it, run `init --skip-settings`, which then writes no hook. A hook init wrote earlier stays in
 charge: the plugin's stays quiet in a repo whose settings already run orient, so orient never runs
 twice. It stays quiet only beside a hook that can run on this machine: one whose program is a file
-here (a bare name: on `PATH`; one naming a variable is not judged) and whose `--root`, when it
-names one, is this repo. A stale one (another machine's path in a committed `.claude/settings.json`,
+here (a bare name: on `PATH`) and whose `--root`, when it names one, is this repo; a program or
+`--root` naming a variable (`$CLAUDE_PROJECT_DIR`) or starting with `~` is not judged, since the
+hook's shell expands it. A stale one (another machine's path in a committed `.claude/settings.json`,
 a moved repo or interpreter) would fail silently, so beside only stale ones the plugin runs orient,
 its first line naming the settings file and why that hook cannot run: fix or remove that hook.
 

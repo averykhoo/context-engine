@@ -207,13 +207,20 @@ def test_beside_only_a_stale_settings_hook_the_plugin_runs_orient_and_names_it(t
             assert rest.startswith("# orient"), rest
         settings.unlink()
     # one hook that can run is enough, beside a stale one; the command's own spelling of a path
-    # (backslashes on Windows, a relative --root) and a program naming a variable are taken as is
+    # (backslashes on Windows, a relative --root) and a program or --root naming a variable or
+    # starting with ~ are taken as is: the hook's shell expands them (the portable committed form
+    # is --root "$CLAUDE_PROJECT_DIR")
     (root / ".claude" / "settings.json").write_text(_hook_json(next(iter(stale))), encoding="utf-8")
     for command in (
         f'"{py}" -m context_engine --root "{root.as_posix()}" orient',
         f'"{Path(sys.executable)}" -m context_engine --root "{root}" orient',
         f'"{py}" -m context_engine --root . orient',
         '"$CE_PYTHON" -m context_engine orient',
+        f'"{py}" -m context_engine --root "$CLAUDE_PROJECT_DIR" orient',
+        f'"{py}" -m context_engine --root "${{CLAUDE_PROJECT_DIR}}" orient',
+        f'"{py}" -m context_engine --root=%CLAUDE_PROJECT_DIR% orient',
+        f'"{py}" -m context_engine --root ~/elsewhere orient',
+        "~/no-such-env-ce146/bin/python -m context_engine orient",
     ):
         (root / B.SETTINGS).write_text(_hook_json(command), encoding="utf-8")
         p = _run(_argv(_hook(), root), cwd=tmp_path)

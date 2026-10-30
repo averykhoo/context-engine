@@ -91,7 +91,8 @@ orient_hooks() {
 # Orient never runs twice: Claude Code runs a plugin's hook and a settings file's both, so this one
 # stays quiet beside a SessionStart hook in the repo's own settings that runs the engine's orient
 # (init writes one) and can run here: its program is a file on this machine (a bare name: one on
-# PATH; one naming a variable is not judged) and its --root, when it names one, is this repo. A
+# PATH) and its --root, when it names one, is this repo. A program or --root that names a variable
+# ($, %) or starts with ~ is not judged: the hook's shell expands it, this one cannot. A
 # stale one (another machine's path, a moved repo or interpreter) fails silently, so beside only
 # stale ones this one runs orient and says which hook it stood in for (CE-146).
 stale=
@@ -104,9 +105,12 @@ if [ "$mode" = orient ]; then
       [ -n "$prog" ] || continue
       why=
       case $prog in
-        *'$'*|*%*) ;;
+        *'$'*|*%*|'~'*) ;;
         */*|*\\*) (cd "$root" && [ -f "$prog" ]) || why="its program $prog is not a file on this machine" ;;
         *) command -v "$prog" >/dev/null 2>&1 || why="its program $prog is not on PATH" ;;
+      esac
+      case $r in
+        *'$'*|*%*|'~'*) r= ;;
       esac
       if [ -z "$why" ] && [ -n "$r" ] && ! (cd "$root" && [ -d "$r" ] && [ "$r" -ef . ]); then
         why="its --root $r is not this repo"

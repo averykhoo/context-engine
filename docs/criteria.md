@@ -232,7 +232,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 
 | id | criterion | from | status |
 |---|---|---|---|
-| AC-145 | The plugin's `SessionStart` hook stays quiet only beside a hook in the repo's `.claude/settings.local.json` or `.claude/settings.json` whose `command` runs the engine's orient and can run here: its program is a file on this machine (a bare name: one on `PATH`; one naming a variable is not judged) and its `--root`, when it names one, is this repo. Beside only stale ones (another machine's path, a moved repo or interpreter) it runs orient, its first line naming the settings file and why that hook cannot run | US-17 | tested |
+| AC-145 | The plugin's `SessionStart` hook stays quiet only beside a hook in the repo's `.claude/settings.local.json` or `.claude/settings.json` whose `command` runs the engine's orient and can run here: its program is a file on this machine (a bare name: one on `PATH`) and its `--root`, when it names one, is this repo; a program or `--root` naming a variable (`$`, `%`) or starting with `~` is not judged, so a hook with `--root "$CLAUDE_PROJECT_DIR"` keeps it quiet. Beside only stale ones (another machine's path, a moved repo or interpreter) it runs orient, its first line naming the settings file and why that hook cannot run | US-17 | tested |
 
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 
