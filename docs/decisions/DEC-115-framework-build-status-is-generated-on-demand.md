@@ -7,6 +7,9 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:10d0792fbf5deff0f3361c5d9a5c7a0ae8ceff0cc9b6ac5244ddd99b60cf88dc
+tasks: [CE-141]
+refs: [DEC-81]
+code: [src/context_engine/guards.py::framework_status]
 ---
 
 The agent's call on CE-141, made while building it in session 2026-10-30a. The brief asked for a table "generated with a guard that it is current", and DEC-81 said a generated status table "needs a generator and a guard". This call builds the generator and stores nothing, so there is nothing to keep current and no guard.

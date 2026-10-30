@@ -1532,7 +1532,8 @@ def framework_status(e: Engine) -> tuple[str, dict[str, list[ItemStatus]]]:
     an open board item that owns it (the item the map row's class names, or any naming it as
     G-D12 reads a mention) makes it open work; else a closed one makes it done; else a map row
     alone leaves it map only, and nothing at all unowned. Refused while G-D12's own config, spec
-    or maps are off or broken (its failure is the reason).
+    or maps are off or broken (its failure is the reason). Built at read time and never stored,
+    so it needs no guard that it is current (DEC-115).
 
     Not checked: whether a closed item built what it names (a close is the board's word, as
     G-D12 takes a mention as ownership), what an open item does with it (a passing mention reads
