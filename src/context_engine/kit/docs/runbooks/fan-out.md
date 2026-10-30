@@ -10,9 +10,9 @@ liveness: LIVING
 # Fan-out
 
 How a session hands work to agents and builds in rounds. The rules are FRAMEWORK §6.6 and the
-framework contract § Rules (when to use a workflow, the coordinator, model choice);
-this file is how to follow them. The repo's values (its default and cheaper models, for one) are
-in its `CLAUDE.md`.
+framework contract § Rules (when to use a workflow, the coordinator, model choice), and who is
+sent for what is §6.6's roster; this file is how to follow them. The repo's values (its default
+and cheaper models, for one) are in its `CLAUDE.md`.
 
 ## Delegating reading and auditing
 

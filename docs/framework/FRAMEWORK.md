@@ -1368,6 +1368,29 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
   least, bulk reading and a census a little more, code and review the most. The repo's
   contract names the models.
 
+**The roster:** every role the session delegates, one row each. *Model* is a tier of the rule
+above (least, reading, most), and the repo's contract names each tier's model. Every role but the
+coordinator is a subagent, and every subagent but an `Explore` scout persists to its own file as
+it goes; *Writes* is what it may change beyond that file.
+
+| Role | Runs as | Model | Writes | Returns |
+|---|---|---|---|---|
+| coordinator | the top-level session itself, for every request (above) | the session's | owner words verbatim (§6.2), trivial bookkeeping, and what a verified report carries | progress, blockers and delays, then the digest (§5.6) |
+| task owner | one agent per task, through a workflow | most | its task's files, under disjoint ownership | its commits, its own calls (PROVISIONAL, P8) and what is left |
+| builder, fixer | an agent a task owner sends, one per set of files | most | the files it owns | what it changed, and each new check seen to fail (P7) |
+| verifier | another agent than the one that did the work; a skeptic by default | most | nothing | a verdict per claim, with `file::symbol` evidence |
+| adversarial reviewer | one agent per lens (build round 6) | most | nothing; probes in scratch | findings, each with its evidence |
+| scout, auditor | `Explore` when its answer is acted on in the same turn, since it cannot persist; otherwise an agent that can write | reading | nothing | verdicts plus `file::symbol` evidence, never dumps |
+| ranking agent | one agent proposing the full re-rank (§6.14), checked by a verifier | most | nothing | the proposed moves, each with its reason |
+| watcher | a background agent keyed on a commit hash (§6.8) | least; reading when it must read logs | nothing: no fix, re-run, cancel or push | a verdict per run, and for a failure the failing step and the lines around its first error |
+| install trial | a background agent in a blank environment outside the repo (`release.md`) | reading | only its environment and probes, removed when done | each finding as broken, confusing or working |
+| `.scratch/` sweep auditor | an agent that reads `.scratch/` and deletes nothing (P11) | reading | nothing | a class per entry, naming the tracked file each finding worth keeping belongs in (P10) |
+| housekeeping agent | §6.11 tier 1: its only tools are the engine's `hk_` operations | least | only through `hk_` operations, each logged as mechanical | its operation list, for the digest |
+| arbiter | one agent, never a fan-out | `fable` where the owner asked for it for this role (a standing ask counts); otherwise most | nothing | its calls against the repo's goals (the agent's own, P8, recorded PROVISIONAL), each open question thought through, and a recommendation for each call that stays the owner's |
+
+Each role runs on the harness's own agent types, with its row's limits in its prompt; the kit
+ships no named agent definitions (Claude Code's `.claude/agents/`), and a repo may add its own.
+
 ### 6.7 Promotion and demotion
 
 | From | To | When |

@@ -8,6 +8,12 @@ both are in this repo (`context-engine why <id>`, `context-engine task show <id>
 first. A version's notes are added on top; earlier notes are not rewritten. Build status is not
 here: it is on the board.
 
+## 0.5, from 2026-10-30: changes since the cut
+
+- The roster: every role the session delegates, with what it runs as, its model tier, what it
+  writes and what it returns, the arbiter on `fable` where the owner asked for it; the kit
+  ships the roster as text, not as named agents (§6.6) — DEC-18, CE-39.
+
 ## 0.5, 2026-10-23: FRAMEWORK.md cut to what a user needs (CE-93)
 
 **No existing rule changed; one was added** (these release notes, the last line below). The
