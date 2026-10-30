@@ -140,6 +140,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-89](DEC-89-new-criterion-ac-101-for-ce-138-s-refusals-not.md): New criterion AC-101 for CE-138's refusals, not a rewrite of AC-98, AC-99 or AC-100 *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-90](DEC-90-g-i3-s-blind-spot-gets-a-register-entry.md): G-I3's blind spot gets a register entry *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-91](DEC-91-linked-batches-reserve-their-ids-with-an-id.md): Linked batches reserve their ids with an id-reserve op, not a batch task new *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-92](DEC-92-linked-batches-reserve-their-ids-with-an-id.md): Linked batches reserve their ids with an id-reserve op, not a batch task new *(agent (claude-opus-5-5), 2026-10-31)*
 
 ## REJECTED
 
