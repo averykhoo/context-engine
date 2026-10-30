@@ -605,3 +605,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the engine cannot tell a correction before the run from a change after it
 - **control:** individual: the op log's section lines; the reviewer reads them (FRAMEWORK §5.2, manual-mode § task close)
 - **from:** CE-108, session 2026-10-30a
+
+## INV-86: a guards receipt passes gate_receipt on the words 'not run' anywhere in it (e.g. 'lint not run'), with no gate result
+
+- **affects:** owners reading a close's guards receipt as proof the gate ran
+- **why not eliminated:** the check is a presence check by design; it cannot tell whether the statement is true or about the gate
+- **control:** individual: the receipt is verbatim in the ledger and the close digest, read by the owner; docstring Not checked
+- **from:** CE-123, session 2026-10-30a
