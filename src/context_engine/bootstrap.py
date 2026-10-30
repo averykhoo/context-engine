@@ -4,8 +4,10 @@ The kit is text in ``kit/`` beside this module, shipped as package data, so a pl
 ``pip install`` of the engine carries it and anyone can read it in the engine repo. ``init``
 copies the files a repo is missing and creates the empty record directories. It only ever
 creates: an existing file is never touched, except that ``CLAUDE.md`` gets the kit block
-appended when no kit block (of any version) is in it yet, and the repo's ``.gitignore`` gets the
-engine env's line appended when it does not ignore that yet (DEC-41). An existing ``context.toml`` is kept,
+appended when no kit block (of any version) is in it yet, the repo's ``.gitignore`` gets the
+engine env's line appended when it does not ignore that yet (DEC-41), and the repo's
+``.gitattributes`` gets the op log's ``merge=union`` line appended when it does not give the op
+log that yet (CE-53). An existing ``context.toml`` is kept,
 so init can be re-run after it is edited to fill in what is still missing.
 
 The kit block (CE-38, US-17) is a few lines between the kit markers: the ``framework:`` pin and
@@ -55,7 +57,12 @@ ENGINE_DIR = ".context-engine"
 ENGINE_ENV = f"{ENGINE_DIR}/env"
 REPO_IGNORE = ".gitignore"
 ENGINE_IGNORE = f"# context-engine: the engine's pinned env (kit README § 1)\n{ENGINE_DIR}/\n"
-APPENDED = (CONTRACT_TARGET, REPO_IGNORE)  # files init appends to in place, never replaces
+# CE-53: two branches that both wrote op lines merge them without a conflict only on git's union
+# merge driver, so the repo's own .gitattributes gives the op log one (FRAMEWORK §5.5 rule 4)
+REPO_ATTRIBUTES = ".gitattributes"
+UNION_COMMENT = "# context-engine: two branches' op lines merge line by line (FRAMEWORK §5.5 rule 4)"
+ATTR_SPECIAL = set(" \t\"\\*?[")  # an op log path holding one needs quoting or escaping in .gitattributes
+APPENDED = (CONTRACT_TARGET, REPO_IGNORE, REPO_ATTRIBUTES)  # files init appends to in place, never replaces
 # what --skip-settings says when there is no settings file: init writes no hook (CE-77)
 SKIP_ABSENT = "--skip-settings: no hook written; the Claude Code plugin's hook runs orient, or add it by hand, kit README § Hook"
 IMPORT_RE = re.compile(r"^@(\S+)[ \t]*$", re.MULTILINE)  # a CLAUDE.md import: `@path` on a line of its own
@@ -370,6 +377,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
         else:
             writes[f"{d}/.gitignore"] = "*\n"
     _plan_engine_ignore(root, writes, skipped, seen, labels, warnings)
+    _plan_union(root, cfg.oplog, writes, skipped, seen, labels, warnings)
     return writes, [labels.get(k, k) for k in writes], skipped, seen, warnings
 
 
@@ -397,6 +405,70 @@ def _plan_engine_ignore(root: Path, writes: dict[str, str], skipped: list[str], 
     writes[REPO_IGNORE] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
     seen[REPO_IGNORE] = old
     labels[REPO_IGNORE] = f"{REPO_IGNORE} ({ENGINE_DIR}/ appended)"
+
+
+def union_line(oplog: str) -> str:
+    """What init puts in the repo's ``.gitattributes`` for the op log: a comment and the line."""
+    return f"{UNION_COMMENT}\n{oplog} merge=union\n"
+
+
+def _plan_union(root: Path, oplog: str, writes: dict[str, str], skipped: list[str], seen: dict[str, str], labels: dict[str, str], warnings: list[str]) -> None:
+    """The repo's own ``.gitattributes`` gives the op log git's union merge driver (CE-53): created
+    holding the line when absent, the line appended (in the file's line endings, after a blank
+    line) when the file does not give the op log `merge=union` yet, and left alone when it does.
+    No question first: the line names only the engine's own file, as the ``.gitignore`` line does
+    (DEC-41). An op log path that git would need quoted there gets a warning instead."""
+    if not oplog:
+        return
+    line = f"{oplog} merge=union"
+    if oplog[0] in "#!" or ATTR_SPECIAL & set(oplog):
+        skipped.append(REPO_ATTRIBUTES)
+        warnings.append(f"{REPO_ATTRIBUTES}: the op log's path ({oplog}) needs quoting there, so init left it alone: give it `merge=union` by hand (FRAMEWORK §5.5 rule 4)")
+        return
+    path = root / REPO_ATTRIBUTES
+    if not path.exists():
+        writes[REPO_ATTRIBUTES] = union_line(oplog)
+        labels[REPO_ATTRIBUTES] = f"{REPO_ATTRIBUTES} ({line})"
+        return
+    try:
+        old = path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        skipped.append(REPO_ATTRIBUTES)
+        warnings.append(f"{REPO_ATTRIBUTES} is not UTF-8, so init left it alone: add the line `{line}` to it, or two branches that both wrote op lines conflict at every merge")
+        return
+    if _union_merged(old, oplog):
+        skipped.append(f"{REPO_ATTRIBUTES} (merges {oplog} by union)")
+        return
+    norm = old.replace("\r\n", "\n")
+    sep = "" if not norm or norm.endswith("\n\n") else ("\n" if norm.endswith("\n") else "\n\n")
+    add = sep + union_line(oplog)
+    writes[REPO_ATTRIBUTES] = old + (add.replace("\n", "\r\n") if "\r\n" in old else add)
+    seen[REPO_ATTRIBUTES] = old
+    labels[REPO_ATTRIBUTES] = f"{REPO_ATTRIBUTES} ({line} appended)"
+
+
+def _union_merged(text: str, oplog: str) -> bool:
+    """Whether a root ``.gitattributes`` holding ``text`` gives ``oplog`` `merge=union`, the last
+    line setting `merge` for it winning, as in git. An approximation of ``git check-attr`` that
+    errs only toward appending the line, which is harmless (the appended line comes last, so a
+    re-run finds it): only a pattern naming the op log exactly (its path, or its bare file name)
+    gives it union, and a wildcard pattern that sets `merge` to anything else undoes that, since
+    it may match."""
+    base = oplog.rsplit("/", 1)[-1]
+    state = False
+    for ln in text.splitlines():
+        words = ln.split()
+        if not words or words[0].startswith("#") or words[0].startswith("[attr]"):
+            continue
+        merge = [a for a in words[1:] if a in ("merge", "-merge", "!merge") or a.startswith("merge=")]
+        if not merge:
+            continue
+        union = merge[-1] == "merge=union"
+        if words[0].lstrip("/") == oplog or words[0] == base:
+            state = union
+        elif set("*?[") & set(words[0]) and not union:
+            state = False
+    return state
 
 
 def _engine_ignored(text: str) -> bool:
@@ -553,7 +625,7 @@ def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str
     so_far = f"created so far: {', '.join(done) or 'none'}; run init again, it skips what exists"
     if rel in APPENDED and rel in seen:
         if _current(path) != seen[rel]:
-            what = "the kit block" if rel == CONTRACT_TARGET else f"{ENGINE_DIR}/"
+            what = {CONTRACT_TARGET: "the kit block", REPO_IGNORE: f"{ENGINE_DIR}/"}.get(rel, "the op log's merge=union line")
             raise Refusal(f"{rel} changed while init ran, so {what} was not appended", so_far)
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(text)

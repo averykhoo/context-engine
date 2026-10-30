@@ -1597,7 +1597,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    line of the repo's `.gitignore` ignores `.context-engine/` (the engine's environment, kit
    README § 1), append `# context-engine: the engine's pinned env (kit README § 1)` and
    `.context-engine/` after a blank line, keeping the file's line endings (create the file if it
-   is absent).
+   is absent). If no line of the repo's `.gitattributes` gives the op log (`oplog` in
+   `context.toml`) `merge=union`, append `# context-engine: two branches' op lines merge line by
+   line (FRAMEWORK §5.5 rule 4)` and `<op log> merge=union` the same way; a path with a space or a
+   wildcard needs quoting there, so write that line with care, or warn and leave it.
 6. Report in one line what you created, what you skipped, and a warning for each thing the
    owner must act on (the settings file's ignore line; on a dry run, the settings question), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's

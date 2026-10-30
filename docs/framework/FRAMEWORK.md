@@ -934,8 +934,8 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      that refuses after a write still commits that write, and a refused close never claims the
      item closed.
    - **Branches merge the op log line by line:** a repo keeps the op log on git's union merge
-     driver (`<op log> merge=union` in `.gitattributes`), or two branches that both wrote op
-     lines conflict at every merge.
+     driver (`<op log> merge=union` in `.gitattributes`, which `init` writes), or two branches
+     that both wrote op lines conflict at every merge.
 
    How the engine builds a commit that leaves some lines out, and what an operation that fails
    part-way leaves behind: `docs/engine.md` in the engine repo.
@@ -1436,7 +1436,8 @@ Working instructions may come from any of these three sources; a grant may not.
    operation, and a repo that wants the server registers it here.
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
    runbooks, the kit block appended to `CLAUDE.md`, the contract it imports, the hook, and
-   `.context-engine/` appended to the repo's `.gitignore` when nothing there ignores it. It
+   `.context-engine/` appended to the repo's `.gitignore` when nothing there ignores it, and the
+   op log's `merge=union` line to its `.gitattributes` when nothing there gives it that. It
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The agent then fills the charter and the
    config, with a provenance note on every cap, and checks the id prefixes against ids the
@@ -2166,6 +2167,7 @@ CLAUDE.md                * # product contract: the kit block (framework: <versio
 HANDOFF.md               * # orientation note: banner (one key), next session, generated pointer to open batons/pauses
 context.toml             * # framework config: guards, routes (component → path), record kinds, caps (+ provenance), cutoffs, models
 .gitignore               * # the repo's own; init creates it, or appends `.context-engine/` to it when it does not ignore that yet
+.gitattributes           * # the repo's own; init creates it, or appends `<op log> merge=union` to it when it does not give the op log that yet
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
   index.md                 # generated OKF listing (no frontmatter, list shape)

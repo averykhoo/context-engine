@@ -24,7 +24,8 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 `tasks/` (each with an empty `.gitkeep`), and `.context/` and `.scratch/`
 (each carrying its own `.gitignore`, holding `*`). It appends `.context-engine/` (the engine's
 environment, § 1) to the repo's own `.gitignore`, creating that file if it is absent, unless a
-line there already ignores it.
+line there already ignores it. It appends the op log's `merge=union` line to the repo's own
+`.gitattributes` the same way, so two branches' op lines merge without a conflict.
 
 ## 1. Install and pin the engine
 
@@ -97,7 +98,9 @@ It writes every kit file the repo is missing and prints one line naming what it 
 it skipped. It never overwrites a file, and a file it creates is LF whatever the engine's
 checkout. A checkout of the repo with CRLF line endings (Git for Windows' `core.autocrlf=true`)
 is fine: lint and init compare the kit's text line endings aside. It appends `.context-engine/`
-to the repo's `.gitignore` unless that already ignores it (§ 1), keeping the file's line endings. It appends
+to the repo's `.gitignore` unless that already ignores it (§ 1), and `<op log> merge=union` (the op log
+`context.toml` names) to its `.gitattributes` unless that already gives the op log `merge=union`,
+keeping each file's line endings. It appends
 the kit block (`bootloader.md`) to an existing `CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
 block from an older kit, or the inline block of a kit from before `bootloader.md` (a block that
 holds the rules themselves), is left for the upgrade to replace (§4), never doubled. A `CLAUDE.md`
@@ -135,7 +138,8 @@ Copy each kit file to where the table above says, with `bootloader.md` appended 
 (create it if absent) and `contract.md` copied to `docs/framework/contract.md`; add the hook
 (§ Hook). Create the empty directories with a `.gitkeep`, and `.context/.gitignore`
 and `.scratch/.gitignore` each holding the single line `*`, and add `.context-engine/` to the
-repo's `.gitignore` (§ 1) if no line there ignores it. To change an id prefix, edit `prefix`
+repo's `.gitignore` (§ 1) if no line there ignores it, and `<op log> merge=union` to its
+`.gitattributes` (created if absent) if no line there gives the op log that. To change an id prefix, edit `prefix`
 in that kind's `[kinds.<name>]` table; no two kinds may share one. Then follow steps 1 to 4
 above, in the order `docs/runbooks/procedures.md` gives, doing each operation by hand from
 `docs/runbooks/manual-mode.md` (both copied with the kit).

@@ -878,7 +878,7 @@ def test_g_d0_fails_a_contract_that_keeps_the_gate_stubs_placeholder(tmp_path):
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 23")
+    assert _cli(tmp_path, "init").startswith("init: created 24")
     _fill_gate(tmp_path)
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
@@ -1152,6 +1152,121 @@ def test_init_refuses_a_gitignore_edited_after_its_plan_and_leaves_a_non_utf8_on
     (tmp_path / B.REPO_IGNORE).write_bytes(latin)
     out = B.init(tmp_path)
     assert (tmp_path / B.REPO_IGNORE).read_bytes() == latin and f"; warning: {B.REPO_IGNORE} is not UTF-8" in out, out
+
+
+# -- CE-53: the repo's .gitattributes merges the op log by union -------------------------------
+
+OPLOG = C.Config.oplog
+
+
+def _merge_attr(root: Path, rel: str = OPLOG) -> str:
+    """What git itself says the op log's `merge` attribute is in ``root`` (a repo is made if absent)."""
+    import subprocess
+
+    if not (root / ".git").exists():
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+    out = subprocess.run(["git", "check-attr", "merge", "--", rel], cwd=root, check=True, capture_output=True, text=True).stdout
+    return out.strip().rsplit(": ", 1)[1]
+
+
+@pytest.mark.criterion("AC-116")
+def test_init_writes_a_gitattributes_whose_union_merge_lets_two_branches_append_op_lines(tmp_path):
+    """Without the line, two branches that both wrote op lines conflict at every merge, since
+    both append at the op log's end; with it, git keeps both sides' lines."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "core.autocrlf=false", *args],
+                              cwd=tmp_path, capture_output=True, text=True)
+
+    out = B.init(tmp_path)
+    assert (tmp_path / B.REPO_ATTRIBUTES).read_text(encoding="utf-8") == B.union_line(OPLOG)
+    assert f"{B.REPO_ATTRIBUTES} ({OPLOG} merge=union)" in out.split("; skipped")[0], out
+    assert _merge_attr(tmp_path) == "union"
+    before = snapshot(tmp_path)
+    again = B.init(tmp_path)
+    assert again.startswith("init: created 0 (none)") and f"{B.REPO_ATTRIBUTES} (merges {OPLOG} by union)" in again, again
+    assert snapshot(tmp_path) == before
+    log = tmp_path / OPLOG
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_bytes(b'{"op": "base"}\n')
+    assert git("init", "-q").returncode == 0 and git("add", "-A").returncode == 0 and git("commit", "-q", "-m", "base").returncode == 0
+    git("branch", "other")
+    log.write_bytes(b'{"op": "base"}\n{"op": "ours"}\n')
+    git("commit", "-q", "-am", "ours")
+    git("checkout", "-q", "other")
+    log.write_bytes(b'{"op": "base"}\n{"op": "theirs"}\n')
+    git("commit", "-q", "-am", "theirs")
+    merged = git("merge", "-q", "--no-edit", "-")
+    assert merged.returncode == 0, merged.stdout + merged.stderr
+    assert sorted(log.read_bytes().splitlines()) == [b'{"op": "base"}', b'{"op": "ours"}', b'{"op": "theirs"}']
+
+
+@pytest.mark.criterion("AC-116")
+@pytest.mark.parametrize("old", [b"*.png binary\r\n*.sh text eol=lf", b"* text=auto\n", b"*.png binary\n\n", b"", b"\xef\xbb\xbf# ours\r\n*.bat eol=crlf\r\n"])
+def test_init_appends_the_union_line_to_an_existing_gitattributes_keeping_every_byte_and_its_line_endings(tmp_path, old):
+    (tmp_path / B.REPO_ATTRIBUTES).write_bytes(old)
+    out = B.init(tmp_path)
+    new = (tmp_path / B.REPO_ATTRIBUTES).read_bytes()
+    assert new.startswith(old) and f"{B.REPO_ATTRIBUTES} ({OPLOG} merge=union appended)" in out, (new, out)
+    added = new[len(old) :]
+    if b"\r\n" in old:
+        assert b"\n" not in added.replace(b"\r\n", b""), "the appended lines keep the file's CRLF"
+    assert added.replace(b"\r\n", b"\n").lstrip(b"\n") == B.union_line(OPLOG).encode()
+    assert not old or b"\n\n" + B.union_line(OPLOG).encode() in new.replace(b"\r\n", b"\n"), "a blank line before the appended lines"
+    before = snapshot(tmp_path)
+    assert B.init(tmp_path).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
+    assert _merge_attr(tmp_path) == "union"
+
+
+@pytest.mark.criterion("AC-116")
+@pytest.mark.parametrize("lines,union", [
+    (f"{OPLOG} merge=union", True), (f"/{OPLOG} merge=union", True), ("ops.jsonl  -diff merge=union", True),
+    (f"{OPLOG} merge=union\n*.jsonl merge=binary", False), (f"{OPLOG} merge=union\n{OPLOG} -merge", False),
+    (f"{OPLOG} merge=union\n**/ops.jsonl !merge", False), (f"{OPLOG} merge=union\n* text=auto", True),
+    (f"{OPLOG} text", False), ("docs/ledger/ops.json merge=union", False), (f"# {OPLOG} merge=union", False),
+])
+def test_init_leaves_a_gitattributes_that_already_merges_the_op_log_by_union_untouched(tmp_path, lines, union):
+    """Left alone only when git itself gives the op log union: init errs toward appending, which
+    is harmless, since the appended line comes last and wins."""
+    old = f"# ours\n{lines}\n".encode()
+    git = tmp_path / "git"
+    git.mkdir()
+    (git / B.REPO_ATTRIBUTES).write_bytes(old)
+    assert not union or _merge_attr(git) == "union", "a case init leaves alone is one git merges by union"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / B.REPO_ATTRIBUTES).write_bytes(old)
+    out = B.init(repo)
+    assert ((repo / B.REPO_ATTRIBUTES).read_bytes() == old) == union, out
+    assert (f"{B.REPO_ATTRIBUTES} (merges {OPLOG} by union)" in out) == union, out
+    assert _merge_attr(repo) == "union", "after init, git merges the op log by union"
+
+
+@pytest.mark.criterion("AC-116")
+def test_init_refuses_a_gitattributes_edited_after_its_plan_and_warns_where_it_cannot_write_the_line(tmp_path, monkeypatch):
+    (tmp_path / B.REPO_ATTRIBUTES).write_bytes(b"*.png binary\n")
+    edited = b"*.png binary\n*.jpg binary\n"
+    with monkeypatch.context() as m:
+        _plan_then(m, lambda root: (root / B.REPO_ATTRIBUTES).write_bytes(edited))
+        with pytest.raises(Refusal, match=r"\.gitattributes changed while init ran, so the op log's merge=union line was not appended"):
+            B.init(tmp_path)
+    assert (tmp_path / B.REPO_ATTRIBUTES).read_bytes() == edited
+    latin = b"# caf\xe9\n*.png binary\n"
+    (tmp_path / B.REPO_ATTRIBUTES).write_bytes(latin)
+    out = B.init(tmp_path)
+    assert (tmp_path / B.REPO_ATTRIBUTES).read_bytes() == latin and f"; warning: {B.REPO_ATTRIBUTES} is not UTF-8" in out, out
+    spaced = tmp_path / "spaced"
+    spaced.mkdir()
+    (spaced / C.CONFIG_NAME).write_text(B.config_text().replace(f'oplog = "{OPLOG}"', 'oplog = "docs/my ledger/ops.jsonl"'), encoding="utf-8")
+    out = B.init(spaced)
+    assert not (spaced / B.REPO_ATTRIBUTES).exists(), out
+    assert f"; warning: {B.REPO_ATTRIBUTES}: the op log's path (docs/my ledger/ops.jsonl) needs quoting" in out, out
+    moved = tmp_path / "moved"
+    moved.mkdir()
+    (moved / C.CONFIG_NAME).write_text(B.config_text().replace(f'oplog = "{OPLOG}"', 'oplog = "records/ops.jsonl"'), encoding="utf-8")
+    B.init(moved)
+    assert _merge_attr(moved, "records/ops.jsonl") == "union", "the line names the op log the config maps"
 
 
 def test_the_kit_text_names_the_engine_env_convention():

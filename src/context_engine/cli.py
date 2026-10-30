@@ -54,7 +54,7 @@ def build() -> argparse.ArgumentParser:
     ap.add_argument("--actor", default=os.environ.get("CE_ACTOR"), help="the OKF actor, e.g. claude-code/<model> (or CE_ACTOR)")
     groups = ap.add_subparsers(dest="group", required=True)
 
-    ini = _sub(groups, "init", "write the adoption kit's missing files into the repo (FRAMEWORK §6.9) and gitignore .context-engine/; never overwrites")
+    ini = _sub(groups, "init", "write the adoption kit's missing files into the repo (FRAMEWORK §6.9) gitignore .context-engine/ and merge the op log by union; never overwrites")
     ini.add_argument("--prefix", action="append", default=[], metavar="KIND=PREFIX", help="a kind's id prefix, e.g. task=PRJ; repeat for each")
     ini.add_argument("--dry-run", action="store_true", help="say what would be written, write nothing")
     ini.add_argument("--merge-settings", action="store_true", help="the owner said yes: add the SessionStart hook to an existing .claude/settings.local.json")
