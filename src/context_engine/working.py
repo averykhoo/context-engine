@@ -399,7 +399,7 @@ class Engine:
 
     @staticmethod
     def _unsaid_tasks(tasks: str | None, rows: str) -> list[str]:
-        """The named tasks (a `tasks:` line) that ``rows`` does not name (CE-112)."""
+        """The named tasks (a `tasks:` line) that ``rows`` does not name (CE-112, DEC-127; at rest DEC-128)."""
         said = set(ID_RE.findall(rows))
         return [rid for rid in dict.fromkeys(ID_RE.findall(tasks or "")) if rid not in said]
 
@@ -414,7 +414,7 @@ class Engine:
         return out
 
     def session_tasks(self, ids: list[str], *, session: str, actor: str) -> str:
-        """Name the board items the owner asked this session for (FRAMEWORK §6.2 item 7, CE-112):
+        """Name the board items the owner asked this session for (FRAMEWORK §6.2 item 7, CE-112, DEC-127):
         each must be an existing item of a board kind; they are added to the stub's `tasks:` line
         (a union, first-named first), so "every task asked for is done" is read from the record,
         not from memory. With no ids, only reports. Either way the reply says each one's state and
@@ -2997,7 +2997,7 @@ class Engine:
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}): {bad}", "add the gate's pass count to the `guards:` line, or say the gate was not run and why"))
                 if not last.field("rows"):
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `rows:` line", "name the items the session touched"))
-                elif unsaid := self._unsaid_tasks(last.field(L.TASKS), last.field("rows")):  # CE-112
+                elif unsaid := self._unsaid_tasks(last.field(L.TASKS), last.field("rows")):  # CE-112, DEC-128
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) names {_one(unsaid)} in its `{L.TASKS}:` line (what the owner asked for) but not in its `rows:` line",
                                        "add each to `rows:` with how it ended"))
             for r in self._carried():
