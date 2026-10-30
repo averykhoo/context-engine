@@ -417,7 +417,7 @@ def _plan_union(root: Path, oplog: str, writes: dict[str, str], skipped: list[st
     holding the line when absent, the line appended (in the file's line endings, after a blank
     line) when the file does not give the op log `merge=union` yet, and left alone when it does.
     No question first: the line names only the engine's own file, as the ``.gitignore`` line does
-    (DEC-41). An op log path that git would need quoted there gets a warning instead."""
+    (DEC-41, DEC-95). An op log path that git would need quoted there gets a warning instead."""
     if not oplog:
         return
     line = f"{oplog} merge=union"

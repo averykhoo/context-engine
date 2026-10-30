@@ -3,13 +3,13 @@ type: Task
 id: CE-53
 title: init writes .gitattributes with merge=union for the op log
 brief: Every adopting repo merges branches that both append op lines; never overwrite an owner's .gitattributes
-pri: LATER
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-13c
 created: 2026-10-13
-moved: 2026-10-13c
-updated: 2026-10-20e
+moved: 2026-10-30a
+updated: 2026-10-30a
 goals: [G-5, G-6]
 ---
 
