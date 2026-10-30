@@ -4,13 +4,15 @@ id: CE-148
 title: "CE-138 verifier nits: G-I3 off switch also drops the Amendments refusal, unstated; record new remedy lacks 'in any case'"
 brief: Docs and remedy wording only, unless the off-switch coupling is changed by a recorded call
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 CE-138 verifier nits (non-blocking), session 2026-10-30a, on main 9700437
@@ -29,3 +31,5 @@ CE-138 verifier nits (non-blocking), session 2026-10-30a, on main 9700437
 - DEC-88
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: done in 5c84775 (items 1-2), with items 3-4 in CE-147's 7b5a75e (lane wt/2026-10-30a-amend: 3facfca, 9b5f35d): FRAMEWORK G-I3 and manual-mode § lint say what G-I3's off switch turns off; record new's remedy says 'in any case' and its test asserts it
