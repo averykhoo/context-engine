@@ -392,8 +392,10 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-D1**: for each `[[routes]]` entry with `max_lines`, `max_bytes` or `max_width`, the routed
   file (or each `.md` under a routed directory) has at most that many lines and bytes, and no
   line wider than that many characters except table rows (lines starting `|`). *Why: a place
-  with no cap bloats (FRAMEWORK P6); once the cap is reached, the way out (archive, ledger, a
-  decision) is due.*
+  with no cap bloats (FRAMEWORK P6); once the cap is reached, the way out is due: move the text,
+  never just cut it (a rule to the contract or a runbook, a ruling to a decision, owed work to a
+  task, what has gone stale to the archive, the ledger or an evidence doc), and delete it only
+  once it has landed there, or rules are lost in the trimming.*
 - **G-D2**: in each kind's directories no two files carry the same id, by file name or by `id:`;
   and no id appears in two `new` or `import` lines of the op log. Every alias (`aliases:`, a
   record's earlier ids) is one word of printable ASCII with no quote, comma, bracket, brace, `/`

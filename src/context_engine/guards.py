@@ -258,9 +258,12 @@ def anchors(text: str) -> set[str]:
 
 def caps(e: Engine) -> list[Failure]:
     """G-D1: every routed component under its caps (`max_lines`, `max_bytes`, `max_width` on its
-    `[[routes]]` entry): the routed file, or each `.md` under a routed directory.
+    `[[routes]]` entry): the routed file, or each `.md` under a routed directory. The remedy for
+    a line or byte cap names where text cut to fit goes (a rule to the contract or a runbook, a
+    ruling to a decision, owed work to a task), and to delete it only once it has landed (CE-109).
 
-    Not checked: table rows against `max_width` (a table cannot wrap), files other than `.md`
+    Not checked: whether cut text did land anywhere (the remedy says to; nothing compares the
+    texts), table rows against `max_width` (a table cannot wrap), files other than `.md`
     under a routed directory, and a route with no caps (it has none to break)."""
     out: list[Failure] = []
     for r in e.store.config.routes:
@@ -279,7 +282,9 @@ def cap_failures(r, rel: str, text: str) -> list[Failure]:
     lines = text.split("\n")
     if text.endswith("\n"):
         lines = lines[:-1]
-    remedy = f"move what has gone stale out (archive, the ledger, a decision or an evidence doc); raise the cap in [[routes]] {r.component!r} only with a new provenance note"
+    remedy = (f"move text out, never just cut it: a rule to the contract or a runbook, a ruling to a decision, owed work to a task, "
+              f"what has gone stale to the archive, the ledger or an evidence doc; delete it here only once it has landed there; "
+              f"raise the cap in [[routes]] {r.component!r} only with a new provenance note")
     if r.max_lines and len(lines) > r.max_lines:
         out.append(Failure("G-D1", rel, f"{len(lines)} lines, over the {r.component} cap of {r.max_lines}", remedy))
     size = len(text.encode("utf-8"))

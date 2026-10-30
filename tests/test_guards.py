@@ -91,6 +91,21 @@ def test_g_d1_caps_lines_bytes_and_width_of_a_routed_file_and_each_md_under_a_ro
     assert [r for r in reds(e, "G-D1") if r.startswith("docs")] == ["docs/sub/b.md: 4 lines, over the Docs cap of 3"]
 
 
+@pytest.mark.criterion("AC-105")
+def test_g_d1_remedy_names_where_cut_text_goes_and_to_delete_it_only_once_it_landed(tmp_path):
+    """CE-109: G-D1 caught a full contract at once, but its remedy said only to cut, and rules were
+    lost in the trimming (adhoc AAR entry 10). A line or byte cap's remedy names each destination
+    and the order: land it there, then delete it here."""
+    e = make(tmp_path)
+    write(tmp_path, "HANDOFF.md", "# Note\n\n" + "y" * 400 + "\n1\n2\n3\n4\n")
+    got = [f for f in e.lint() if f.guard == "G-D1" and f.path == "HANDOFF.md" and "cap of" in f.message]
+    assert len(got) == 2  # the line cap and the byte cap
+    for f in got:
+        for where in ("a rule to the contract or a runbook", "a ruling to a decision", "owed work to a task", "never just cut it"):
+            assert where in f.remedy, (where, f.remedy)
+        assert "delete it here only once it has landed there" in f.remedy, f.remedy
+
+
 # -- G-D2 ----------------------------------------------------------------------------------
 
 
