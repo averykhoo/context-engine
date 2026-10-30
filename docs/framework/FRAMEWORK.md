@@ -752,13 +752,16 @@ a single revertible cutover commit.
     refuses an unready review, and residuals with no register configured. G-W13 re-checks the
     stored files.
 - **`## Kill bar`**, when a task's fate rests on a run: the bar written down before the run (the
-  measure, the threshold, what fires it), so the result cannot choose its own bar. Its close must
+  measure, the threshold, what fires it), so the bar is on record before the result is known. Its close must
   give a verdict against it, `task.close` with `verdict`: `KILL` (the bar fired), `PASS` (it did
   not) or `VOID` (the run cannot judge it, e.g. an invalid measurement), then a colon and the
   evidence. The close refuses a bar with no verdict and a verdict with no bar, and writes the
   verdict into the item's `## Log` and the close's commit message, so the bar and the verdict are
-  linked where an audit reads them; a closed item's bar is not rewritten. Whether the verdict
-  follows from the evidence stays the reviewer's call.
+  linked where an audit reads them; a closed item's bar is not rewritten, and a heading that
+  differs from `## Kill bar` only in case or spacing is refused, not passed by. While the item is
+  open its bar can still be rewritten or emptied (a bar is corrected before its run); only the
+  op log's `section` lines show when, so whether the bar predates the run, and whether the
+  verdict follows from the evidence, stay the reviewer's call.
 
 **Edit rules (task tree):**
 - frontmatter changes only through operations carrying the session key;

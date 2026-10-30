@@ -797,9 +797,18 @@ class Engine:
         run, so the close refuses a verdict with no ``## Kill bar``, and an item whose bar is
         written closes only with a verdict against it.
 
-        Not checked: that the bar was written before the run (its `section` op line, in the op
-        log, says when), and whether the verdict follows from the evidence: that is the reviewer's."""
-        bar = (okf.get_section(rec.doc.body, KILL_BAR) or "").strip()
+        A bar under a heading that differs only in case or spacing (``## Kill Bar``) is refused,
+        not read as no bar, so a close cannot pass it by unseen.
+
+        Not checked: that the bar was written before the run, or left alone after it: an open
+        item's bar may be rewritten or emptied, and only its `section` op lines, in the op log,
+        say when; and whether the verdict follows from the evidence. Both are the reviewer's."""
+        found = okf.get_section(rec.doc.body, KILL_BAR)
+        bar = (found or "").strip()
+        if found is None:
+            near = [h for h in re.findall(r"^##[ \t]+(.+?)[ \t]*$", rec.doc.body.replace("\r\n", "\n"), re.MULTILINE) if " ".join(h.split()).lower() == KILL_BAR.lower()]
+            if near:
+                raise Refusal(f"{rec.id} has a `## {near[0]}` heading, which is not `## {KILL_BAR}`, so the close cannot judge it as the kill bar", f"write the bar under `## {KILL_BAR}` with `task section {rec.id} \"{KILL_BAR}\" \"<the bar>\"`, and take the other heading out by hand; then close with `--verdict`")
         if verdict and not bar:
             raise Refusal(f"{rec.id} has no `## {KILL_BAR}`, so there is no pre-registered bar to judge the verdict against", f"write the bar before the run with `task section {rec.id} \"{KILL_BAR}\" \"<the measure, the threshold, what fires it>\"`; or close without `--verdict`")
         if bar and not verdict:

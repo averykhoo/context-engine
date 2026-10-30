@@ -730,7 +730,9 @@ which threshold fires it), the close must give a verdict against it, `--verdict 
 <evidence>"`, its outcome one of `KILL` (the bar fired), `PASS` (it did not) or `VOID` (the run
 cannot judge the bar, e.g. an invalid measurement), then a colon and the evidence (a results
 file and its section). Without a bar, or with an empty one, refuse a verdict: write the bar first
-(§ task section), before the run, so its op line shows it came first. Add the verdict to the
+(§ task section), before the run, so its op line shows it came first. A heading that differs
+from `## Kill bar` only in case or spacing (`## Kill Bar`) is not read as no bar: stop, and move
+the bar under `## Kill bar`. Add the verdict to the
 close's `## Log` line as a second line, indented two spaces, `verdict against the kill bar:
 <verdict>` (before any `residual risk:` line), and to the close commit's body as a paragraph
 `Verdict: <verdict> (against <id>'s ## Kill bar)`, before the `--body` text.
@@ -768,8 +770,10 @@ The residuals move to the register at close because that is when the design is f
 register is what the next owner of the work reads (P17, FRAMEWORK §7.4; G-W13 checks it).
 Every close states its residual risk, `none` included, so the record tells a risk judged absent
 from a question never asked (an adopter's six closes filed none, and nobody could say which).
-A verdict is linked to the bar written before the run, so a bar cannot be chosen, or quietly
-skipped, after the result is known.
+A verdict is linked to the bar written before the run, so a bar on record cannot be quietly
+skipped at the close. A bar rewritten or emptied after the run is not refused (an open item's bar
+is corrected before its run, and the engine cannot tell before from after); its `section` op line
+shows when, and the reviewer reads it.
 A plan that names the item is frozen before the close, not after: G-D4 turns red on an
 ACTIVE-PLAN doc once every item it names is closed (FRAMEWORK §6.7: it freezes when its item
 closes), and a freeze is the session's own step with no owner call in it, so the close refuses

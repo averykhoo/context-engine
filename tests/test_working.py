@@ -454,6 +454,19 @@ def test_a_close_refuses_a_verdict_without_a_kill_bar_and_a_kill_bar_without_a_v
 
 
 @pytest.mark.criterion("AC-126")
+@pytest.mark.parametrize("heading, verdict", [("Kill Bar", ""), ("KILL  BAR", ""), ("kill bar", "PASS: AUC 0.8")])
+def test_a_kill_bar_under_a_miscased_heading_is_refused_not_skipped(eng, heading, verdict):
+    """Review of CE-108: `## Kill Bar` was not seen, so the item closed with no verdict."""
+    key = started(eng)
+    rec = task(eng, key)
+    eng.section(rec.id, heading, "KILL if AUC < 0.7", **kw(key))
+    before = eng.store.find(rec.id).read_bytes()
+    with pytest.raises(Refusal, match=re.escape(f"has a `## {heading}` heading, which is not `## Kill bar`")):
+        eng.close(rec.id, "ran it", verdict=verdict, **kw(key))
+    assert eng.store.find(rec.id).read_bytes() == before
+
+
+@pytest.mark.criterion("AC-126")
 def test_a_judged_kill_bar_is_not_rewritten_after_the_close(eng):
     key = started(eng)
     rec = task(eng, key)
