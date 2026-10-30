@@ -4,13 +4,15 @@ id: CE-111
 title: "ask new --answered: record an owner's chat answer to a question that had no ask record"
 brief: 'Recording a chat answer must not need a hand-built decision: ask new --answered'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-30a
 updated: 2026-10-30a
+status: deprecated
+closed: 2026-10-30a
 ---
 
 ask new --answered: record an owner's chat answer to a question that had no ask record
@@ -24,3 +26,5 @@ What went wrong (adhoc AAR entry 14, docs/evidence/adhoc-feedback-2026-10-21.md)
 - docs/evidence/adhoc-feedback-2026-10-21.md
 
 ## Log
+
+- 2026-10-30a (claude-code/claude-opus-5-5): closed: Done in 3247ca7 (lane 530bc18), cite in 037aa94: ask new "<question>" --answered <words>|--answered-file <f> --decision-title "<t>" (MCP answered/decision_title, ruling/ruled_by) files the question closed and records the owner's words as the decision ask answer writes, in one milestone commit; refusals write nothing. AC-120 tested; DEC-99, DEC-100, DEC-101.
