@@ -76,6 +76,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-32 | The kit's `context.toml.template` is the config schema: it sets every key the engine reads and parses as a config, every tuned value in it carries a provenance note, and loading a config refuses an unknown key in `[engine]`, `[working]` or `[kinds.*]`, naming the allowed keys | US-15 | tested |
 | AC-33 | The kit's contract carries FRAMEWORK §6.6 'Ultracode', 'The coordinator' and the fable rule verbatim and a `framework:` pin, and the kit block is marked, pins the engine's major.minor and imports the contract, and neither the kit nor FRAMEWORK carries this repo's ids (a `(CE-n)` build mark included: DEC-81) or paths | US-9, US-15 | tested |
 | AC-34 | `banner show` on an orientation note with no banner gives hash `none`; `banner set --seen none` writes the first banner just before the orientation note's first `## ` section (creating the orientation note if absent), and refuses any other hash while there is no banner | US-15 | tested |
+| AC-115 | Line endings change nothing init writes or lint checks in an adopting repo: init run from a kit checked out CRLF writes the same bytes as from an LF one, and a checkout of an initialised repo whose text files are CRLF (core.autocrlf=true) lints clean and a re-run of init creates nothing and changes no byte, so an adopting repo needs no `eol=lf` attribute (CE-46) | US-9 | tested |
 
 ## Versioning (CE-21)
 

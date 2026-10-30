@@ -94,8 +94,10 @@ From the repo root:
 ```
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
-it skipped. It never overwrites a file. It appends `.context-engine/` to the repo's
-`.gitignore` unless that already ignores it (§ 1), keeping the file's line endings. It appends
+it skipped. It never overwrites a file, and a file it creates is LF whatever the engine's
+checkout. A checkout of the repo with CRLF line endings (Git for Windows' `core.autocrlf=true`)
+is fine: lint and init compare the kit's text line endings aside. It appends `.context-engine/`
+to the repo's `.gitignore` unless that already ignores it (§ 1), keeping the file's line endings. It appends
 the kit block (`bootloader.md`) to an existing `CLAUDE.md` only when no kit block is there (`<!-- context-engine kit <version> begin -->`); a
 block from an older kit, or the inline block of a kit from before `bootloader.md` (a block that
 holds the rules themselves), is left for the upgrade to replace (§4), never doubled. A `CLAUDE.md`

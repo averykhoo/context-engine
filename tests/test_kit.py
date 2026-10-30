@@ -708,6 +708,54 @@ def test_the_kit_and_its_byte_compared_copies_check_out_lf_on_every_machine(tmp_
     assert unpinned == [], f"not pinned `text eol=lf` in .gitattributes: {unpinned}"
 
 
+def _crlf(root: Path) -> list[str]:
+    """Every text file under ``root`` rewritten CRLF, as a checkout with core.autocrlf=true writes it."""
+    done = []
+    for p in sorted(root.rglob("*")):
+        b = p.read_bytes() if p.is_file() else b""
+        if b"\n" in b and b"\r\n" not in b:
+            p.write_bytes(b.replace(b"\n", b"\r\n"))
+            done.append(p.relative_to(root).as_posix())
+    return done
+
+
+@pytest.mark.criterion("AC-115")
+def test_line_endings_change_nothing_init_writes_or_lint_checks_in_an_adopting_repo(tmp_path, monkeypatch):
+    """CE-46, the init half: an adopting repo on Windows checks the kit out CRLF (Git for Windows'
+    core.autocrlf=true), and the engine itself may be installed from a CRLF checkout. Neither
+    changes a byte init writes, and lint and a re-run of init read a CRLF checkout as they read an
+    LF one: every check they make against the kit's text (G-D0's kit block and contract, init's
+    kit-block and ignore-line checks) compares line endings aside. So an adopting repo needs no
+    `eol=lf` in its .gitattributes; only this repo, whose tests compare kit files byte for byte,
+    pins it (above)."""
+    import shutil
+
+    from context_engine.cli import run
+
+    lf, crlf_kit = tmp_path / "a" / "repo", tmp_path / "kit"  # one folder name: CLAUDE.md's heading names it
+    lf.mkdir(parents=True)
+    B.init(lf)
+    shutil.copytree(B.KIT, crlf_kit, ignore=shutil.ignore_patterns("__pycache__"))
+    assert "contract.md" in _crlf(crlf_kit)
+    monkeypatch.setattr(B, "KIT", crlf_kit)  # an engine installed from a CRLF checkout
+    other = tmp_path / "b" / "repo"
+    other.mkdir(parents=True)
+    B.init(other)
+    monkeypatch.undo()
+    written = sorted(p.relative_to(lf).as_posix() for p in lf.rglob("*") if p.is_file() and p.name != "settings.local.json")
+    differ = [rel for rel in written if (other / rel).read_bytes() != (lf / rel).read_bytes()]
+    assert differ == [], f"init wrote these differently from a CRLF kit: {differ}"
+    _fill_gate(lf)
+    assert run(["--root", str(lf), "lint"])[1].strip() == "lint: clean"
+    _crlf(lf)  # CLAUDE.md may be CRLF already: _fill_gate writes it in text mode
+    assert all(b"\r\n" in (lf / rel).read_bytes() for rel in ("CLAUDE.md", "docs/framework/contract.md", ".gitignore", "docs/runbooks/manual-mode.md"))
+    before = {p: p.read_bytes() for p in lf.rglob("*") if p.is_file()}
+    assert run(["--root", str(lf), "lint"])[1].strip() == "lint: clean"
+    out = B.init(lf)
+    assert out.startswith("init: created 0 (none); skipped"), out
+    assert {p: p.read_bytes() for p in lf.rglob("*") if p.is_file()} == before
+
+
 @pytest.mark.criterion("AC-37")
 def test_the_wheel_carries_every_kit_file(tmp_path):
     """Build the wheel from a copy of the source and check every kit file is in it (package-data
