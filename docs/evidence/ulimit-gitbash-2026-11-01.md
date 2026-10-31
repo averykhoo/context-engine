@@ -1,5 +1,7 @@
 # Does `ulimit -u 200` cap processes in Git Bash on this machine? (2026-11-01, CE-110, DEC-131)
 
+FROZEN 2026-11-01. The probe as it ran in session 2026-10-31a; it decided that rule 3 stays out of the owner's global CLAUDE.md (DEC-131).
+
 Verdict: **ERRORS** (it cannot even be set; the readable value 256 is also not enforced, so there is no working cap).
 
 Machine: Windows 11 Pro 10.0.26200, Git Bash (MSYS2). Measured 2026-11-01 through the Bash tool.
