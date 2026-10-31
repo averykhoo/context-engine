@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-30a)
+## Banner (2026-10-31a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -14,8 +14,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   skeptic review per lane, serial integration): CE-138, 139, 85, 106, 107, 117, 118, 105, 119, 134, 143, 46, 53, 140, 39,
   102, 111, 44, 84, 123, 120, 108, 109, 137, 142, 144, 141, 42, 136, 96, 146, 147, 148, 149, 112. Agent calls DEC-86..DEC-130
   are PROVISIONAL (owner to review); residual follow-ups filed as CE-150..CE-166; register INV-84..INV-90.
-- **Owner questions open:** ASK-22 (drop CE-110 or paste its rules into the global CLAUDE.md), ASK-23 (retire CE-145 into INV-31).
-- **Owner-held, not done:** CE-40, CE-47, CE-56 (rename half), CE-110, CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
+- **Owner questions open:** none. ASK-22 -> DEC-131 (paste rules 1+2; rule 3 out, `ulimit -u` errors in Git Bash), ASK-23 -> DEC-132
+  (CE-145 folded into INV-31, closed); DEC-133 PROVISIONAL (2026-10-31a).
+- **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
+  half), CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
 - **Pushed through 296202c** (2026-10-31; local gate 1346 passed, Linux gate 1346 passed; CI green, run 41133267123).
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each

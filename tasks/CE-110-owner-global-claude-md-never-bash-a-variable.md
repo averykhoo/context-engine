@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-10-21b
 created: 2026-10-21
 moved: 2026-10-30a
-updated: 2026-10-30a
+updated: 2026-10-31a
 ---
 
 Owner global CLAUDE.md: never bash a variable path, never background an && chain, set ulimit -u 200
@@ -26,3 +26,4 @@ What went wrong (adhoc AAR entry 13 and 20, docs/evidence/adhoc-feedback-2026-10
 ## Log
 
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: Serves no G-n (an owner preference for ~/.claude/CLAUDE.md, outside the repo). The drop is not applied; it is an owner question.
+- 2026-10-31a (claude-code/claude-opus-5-5): DEC-131: rule 3 out (ulimit -u errors in Git Bash, docs/evidence/ulimit-gitbash-2026-11-01.md); waiting on the owner to paste rules 1 and 2 (draft text in session 2026-10-31a's chat), then close
