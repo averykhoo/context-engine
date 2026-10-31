@@ -225,8 +225,8 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 - **affects:** every adopting repo (CE-7's is the first) and its owner, whose CLAUDE.md init appends to and whose machine gets a local settings file; every agent session there, whose rules now load through one import and whose orient arrives by a hook; this repo's gate, through G-D0 and the kit tests
 - **why not eliminated:** a probe needs an interactive Claude Code session, which an agent cannot launch
-- **control:** individual: G-D0 and orient make a missing target loud regardless; the owner runs the probes (task log, CE-38 close)
-- **from:** CE-38, session 2026-10-13b
+- **control:** individual: G-D0 and orient make a missing target loud regardless; the owner runs the probes (task log, CE-38 close). After a compaction (G-6; folded in from CE-145 by DEC-132): the hook half was seen in adhoc on 2026-10-26a (CE-79 log); the agent half waits for a natural compaction in adhoc, not a forced one. It counts as seen when the agent's first turn after that compaction keeps its old session key and adhoc's ledger shows no second `session start`; whoever sees it writes a new dated evidence doc, `docs/evidence/inv31-compaction-<date>.md` (FROZEN, citing the 2026-10-23 probe), with transcript, line and key (DEC-133)
+- **from:** CE-38, session 2026-10-13b; amended by CE-145 (DEC-132), session 2026-10-31a
 
 ## INV-32: G-D0 reds an adopted repo after an engine reinstall whose kit contract changed within the same major.minor
 
