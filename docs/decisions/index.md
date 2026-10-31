@@ -181,6 +181,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-131](DEC-131-ce-110-owner-pastes-shell-rules-1-and-2-rule-3.md): CE-110: owner pastes shell rules 1 and 2; rule 3 only if ulimit -u is shown to work in Git Bash *(owner, 2026-11-01)*
 - [DEC-132](DEC-132-ce-145-amend-inv-31-with-the-compaction-clause.md): CE-145: amend INV-31 with the compaction clause first, then retire CE-145 *(owner, 2026-11-01)*
 - [DEC-133](DEC-133-inv-31-s-compaction-observation-goes-to-a-new.md): INV-31's compaction observation goes to a new dated evidence doc, not the frozen 2026-10-23 probe *(claude-code/claude-opus-5-5, 2026-11-01)*
+- [DEC-134](DEC-134-adopt-intervals-before-zanzibar-zanzibar-gets.md): Adopt intervals before zanzibar; zanzibar gets its own task (CE-167) *(owner, 2026-11-01)*
 
 ## SUPERSEDED
 
