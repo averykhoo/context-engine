@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-10-31a · kind: open
+## 2026-10-31a · kind: close
 
-- **opened:** 2026-10-31T20:51:44+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-22 (answered, DEC-131); ASK-23 (answered, DEC-132); CE-110 (open, owner pastes rules
+  1+2); CE-145 (closed, folded into INV-31); DEC-133 (PROVISIONAL)
+- **receipts:**
+  - guards: 1349 passed (gate run 2026-11-01 01:22 by the CE-145 agent); lint clean after 317c158
+    and the evidence commit
+  - read: orient; .scratch/asks-22-23/context.md and fable.md; agent reports
+- **summary** (the owner digest):
+  - ASK-22 and ASK-23 answered after a sonnet brief and fable's opinion
+    (docs/evidence/asks-22-23-2026-11-01.md)
+  - CE-110: ulimit -u errors in Git Bash and caps nothing, so rule 3 stays out; owner pastes rules 1
+    and 2
+  - CE-145 closed: INV-31 now carries the compaction observation (6c31b41)
+  - DEC-133 PROVISIONAL: the observation goes to a new dated evidence doc, since the 2026-10-23
+    probe is FROZEN
+  - Lesson: 37eec53 was committed without lint and turned the gate red; run lint before committing
+    any new evidence doc
+- **Still owed:**
+  - Owner: paste CE-110 rules 1 and 2 into ~/.claude/CLAUDE.md, then say so to close CE-110
+  - Owner: review DEC-133 (PROVISIONAL)
+  - Push: 11 local commits ahead of origin; ask before pushing (gate, linux_gate, CI watcher)
 - **start head:** 27d14ce55b7d84a49717e599338b6732d3e75861
 
 ---
