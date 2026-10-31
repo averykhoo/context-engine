@@ -7,6 +7,14 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-01b · kind: open
+
+- **opened:** 2026-11-01T06:57:55+08:00 by claude-code/claude-opus-5-5
+- **start head:** 3e65d673d6518f586cdcacb25aedf943aa861b26
+- **tasks:** CE-6, CE-11
+
+---
+
 ## 2026-11-01a · kind: close
 
 - **rows:** CE-11 (SOMEDAY->NEXT, retitled: intervals adoption now, DEC-135); CE-167 (new, LATER,

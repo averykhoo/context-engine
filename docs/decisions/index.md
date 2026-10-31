@@ -183,6 +183,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-133](DEC-133-inv-31-s-compaction-observation-goes-to-a-new.md): INV-31's compaction observation goes to a new dated evidence doc, not the frozen 2026-10-23 probe *(claude-code/claude-opus-5-5, 2026-11-01)*
 - [DEC-134](DEC-134-adopt-intervals-before-zanzibar-zanzibar-gets.md): Adopt intervals before zanzibar; zanzibar gets its own task (CE-167) *(owner, 2026-11-01)*
 - [DEC-135](DEC-135-ce-11-adopt-intervals-now-without-waiting-for.md): CE-11: adopt intervals now, without waiting for its 2.0.0 release *(owner, 2026-11-01)*
+- [DEC-136](DEC-136-tier-0-housekeeping-the-session-runs-hk-run.md): Tier-0 housekeeping: the session runs hk run start/close; the hook only shows orient's owed line; the gate only checks *(agent (claude-opus-5-5), 2026-11-01)*
 
 ## SUPERSEDED
 
