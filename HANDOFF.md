@@ -3,12 +3,12 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-10-31a)
+## Banner (2026-11-01a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **CE-6 is NOW** (rerank 2026-10-30a): housekeeping ops, partial (hk close, G-W9, hk stamp, derived digest landed); split
-  hk.ratchet out first. NEXT: CE-18, CE-156, CE-161, CE-164, CE-165. Opus ranked, fable gave the owner-asked second opinion,
+  hk.ratchet out first. NEXT: CE-11, CE-18, CE-156, CE-161, CE-164. Opus ranked, fable gave the owner-asked second opinion,
   a verifier reconciled (`docs/evidence/rerank-2026-10-30a.md`); Last rerank: 2026-10-30a.
 - **Just landed (2026-10-30a, owner away, DEC-85):** 35 tasks closed through two ultracode build waves (worktree builders, a
   skeptic review per lane, serial integration): CE-138, 139, 85, 106, 107, 117, 118, 105, 119, 134, 143, 46, 53, 140, 39,
@@ -16,6 +16,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   are PROVISIONAL (owner to review); residual follow-ups filed as CE-150..CE-166; register INV-84..INV-90.
 - **Owner questions open:** none. ASK-22 -> DEC-131 (paste rules 1+2; rule 3 out, `ulimit -u` errors in Git Bash), ASK-23 -> DEC-132
   (CE-145 folded into INV-31, closed); DEC-133 PROVISIONAL (2026-10-31a).
+- **Adoptions (2026-11-01a, owner):** intervals next, now, without waiting for its 2.0.0 (CE-11, DEC-134, DEC-135); zanzibar
+  after it (CE-167, LATER, deps CE-11). audio-workspace is done (CE-43).
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
   half), CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
 - **Pushed through 296202c** (2026-10-31; local gate 1346 passed, Linux gate 1346 passed; CI green, run 41133267123).
