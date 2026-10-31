@@ -277,3 +277,42 @@ def test_a_digest_without_git_says_no_commits(eng):
     me = started(eng)
     eng.session_abandon(dead, **kw(me))
     assert eng.read_ledger().get(dead).field("derived digest") == f"0 commits with `Session: {dead}`; `Closes:` none; 1 op log line"
+
+
+# -- session touch: a live session that only reads resets its staleness (AC-172) --------------
+
+
+@pytest.mark.criterion("AC-172")
+def test_session_touch_logs_one_line_writes_no_file_and_resets_staleness(eng, capsys):
+    reader = started(eng)
+    _closes(eng, 3)
+    me = started(eng)
+    assert [k for k, *_ in eng.stale_stubs(me)] == [reader]
+    ledger = (eng.root / "ledger.md").read_bytes()
+    lines = len(_ops(eng))
+    assert main(["--root", str(eng.root), "--session", reader, "--actor", ACTOR, "session", "touch"]) == 0
+    assert capsys.readouterr().out.startswith(f"{reader}: touched; last active ")
+    assert (eng.root / "ledger.md").read_bytes() == ledger  # no file but the op log
+    new = _ops(eng)[lines:]
+    assert [(o["op"], o["id"], o["session"], o["path"], o["fields"], o["mechanical"]) for o in new] == [("session.touch", reader, reader, "ledger.md", [], False)], new
+    assert eng.staleness([reader])[reader][0] == 0
+    assert eng.stale_stubs(me) == []
+    assert eng.session_abandon(stale=True, **kw(me)).startswith("no stale stubs")
+    assert eng.read_ledger().get(reader).kind == "open"
+
+
+@pytest.mark.criterion("AC-172")
+def test_session_touch_is_refused_on_a_stub_that_is_not_open(eng):
+    dead = started(eng)
+    _closes(eng, 3)
+    me = started(eng)
+    eng.session_abandon(dead, **kw(me))
+    lines = len(_ops(eng))
+    with pytest.raises(Refusal, match="this session's stub is `kind: abandoned`") as r:
+        eng.session_touch(**kw(dead))
+    assert "do the baton it was abandoned with" in r.value.remedy
+    eng.session_close(me, actor=ACTOR, rows="none", summary=["done"], receipts=receipts())
+    with pytest.raises(Refusal, match=r"`kind: close`") as r:
+        eng.session_touch(**kw(me))
+    assert f"session start --follows {me}" in r.value.remedy
+    assert len(_ops(eng)) == lines + 1  # only the close: a refused touch logs nothing

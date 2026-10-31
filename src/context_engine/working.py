@@ -532,6 +532,32 @@ class Engine:
         st = self.staleness(others)
         return [(k, *st[k]) for k in others if k in st and st[k][0] >= ABANDON_AFTER]
 
+    def session_touch(self, *, session: str, actor: str) -> str:
+        """A live session that only reads says it is alive (DEC-29's owner words: "reset the last
+        seen timer"; CE-6): one `session.touch` op line, its id and session this session's key,
+        its path the ledger, no fields, and no file written. ``staleness`` counts closes after a
+        session's newest op line, so the touch resets it to 0, and neither `session abandon
+        --stale` nor G-W11 takes the stub. Refused unless this session's stub is `kind: open`.
+
+        Not checked: the line is committed only with the session's next commit (the commit policy:
+        it is no milestone), so another clone or CI does not see it until then; a read-only
+        session that wants it seen commits the op log (`context-engine commit -m ...`)."""
+        self._check(session, actor)
+        path = self._path("ledger")
+        with self.store.lock():
+            entry = self.read_ledger().get(session)
+            if entry is None or entry.kind != "open":
+                what = f"`kind: {entry.kind}`" if entry is not None else f"not in {self.w.ledger}"
+                how = {
+                    "close": f"it is closed: for more work, `session start --follows {session}`",
+                    "pause": "it is paused: `session start`, then resume its pause record (`pause resume <id>`, orient lists it)",
+                    "abandoned": "it was abandoned: `session start`, then do the baton it was abandoned with (orient lists it)",
+                }.get(entry.kind if entry is not None else "", "`session start`, and work in the session it opens")
+                raise Refusal(f"this session's stub is {what}, so there is no live stub to touch", how)
+            self.store.log("session.touch", session, path, session, actor, [])
+        at = self.last_active([session]).get(session, ("?", ""))[0]
+        return f"{session}: touched; last active {at}"
+
     @_milestone
     def session_abandon(self, key: str = "", *, session: str, actor: str, force: bool = False, stale: bool = False) -> str:
         """Mark another session's stale stub `kind: abandoned` (CE-124, DEC-69 amending DEC-29):

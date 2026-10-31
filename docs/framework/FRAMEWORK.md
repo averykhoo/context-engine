@@ -1730,7 +1730,9 @@ cite for each item.
   `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
   its last activity (the owner's window), adds a `derived digest:` line (G-W11), and files a
   baton for the op lines it left uncommitted; a stub short of the window is abandoned only on
-  the owner's word (`--force`).
+  the owner's word (`--force`). A live session that only reads writes no op line, so it runs
+  `session touch` to reset its count: one `session.touch` op line and no file written (the
+  owner's rule: a live session resets its last-seen timer).
 - **Written by the engine:** `session.start`, `session.close`, `session.pause`, `session.abandon`, and
   a line in the session's own stub by `ask.raised` (`asked:`) and `session.tasks` (`tasks:`). The receipts
   are checked when the entry is written, as well as by the gate (G-W6).
@@ -1968,7 +1970,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 
 | Group | Tools |
 |---|---|
-| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7) |
+| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7); `session.touch` (a live session that only reads resets its staleness, §7.1) |
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |

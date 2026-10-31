@@ -304,6 +304,23 @@ without a close loses only its prose judgement. By the time a stub is stale it w
 housekeeping abandons it without asking again; the reply lists each one, so the close digest
 can say so.
 
+### context-engine session touch
+
+`context-engine session touch` (over MCP `session_touch`), from the live session itself. By hand:
+
+1. Your session's stub must be `kind: open`. If it is not, there is nothing to touch: after a
+   close, `session start --follows <key>`; after a pause, `session start` and resume its pause
+   record; after an abandon, `session start` and do the baton it was abandoned with.
+2. Log one `session.touch` line with your key as the id and the session, the ledger as the
+   path and `[]` as the fields. Write no file. It is not a milestone: it goes with your next
+   commit.
+
+**Why:** a stub is stale when 3 or more other sessions closed or paused after its newest op line
+or commit (§ context-engine session abandon, step 2), and a session that only reads writes
+neither, so a live one could be abandoned under it. The owner's rule for the window is that a live
+session resets it to zero. Until the line is committed, another
+clone or CI does not see it; to make it seen, commit the op log (§ context-engine commit).
+
 ### context-engine session tasks
 
 `context-engine session tasks <ids>` (over MCP `session_tasks(ids)`), at intake (procedures.md §

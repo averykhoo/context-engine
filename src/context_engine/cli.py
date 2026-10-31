@@ -76,6 +76,7 @@ def build() -> argparse.ArgumentParser:
     ab.add_argument("key", nargs="?", default="", help="the stub's session key, as orient lists it")
     ab.add_argument("--stale", action="store_true", help="every other stub with 3 or more closes or pauses since its last activity")
     ab.add_argument("--force", action="store_true", help="abandon a stub short of that window, on the owner's word")
+    _sub(s, "touch", "a live session that only reads says it is alive: one op line, no file, so its stub is not stale (DEC-29)")
     p = _sub(s, "pause", "pause: write a pause entry over this session's stub instead of a clean close")
     p.add_argument("--rows", required=True, help="the items this session touched")
     p.add_argument("--deferred", required=True, help="the steps skipped (the gate, the commit, ...)")
@@ -326,6 +327,7 @@ CLI_OPS = {
     ("session", "pause"): "session_pause",
     ("session", "abandon"): "session_abandon",
     ("session", "tasks"): "session_tasks",
+    ("session", "touch"): "session_touch",
     ("orient", None): "orient",
     ("routes", None): "routes",
     ("coverage", None): "coverage",

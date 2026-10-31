@@ -145,6 +145,12 @@ def session_abandon(e: Engine, c: Caller, key: str = "", force: bool = False, st
     return 0, e.session_abandon(key, session=c.session, actor=c.actor, force=force, stale=stale)
 
 
+@op(write=True)
+def session_touch(e: Engine, c: Caller) -> tuple[int, str]:
+    """A live session that only reads says it is alive: one `session.touch` op line and no file written, so its staleness is 0 and neither `session abandon --stale` nor G-W11 takes its stub (DEC-29). Refused unless this session's stub is `kind: open`. The line is committed with the session's next commit."""
+    return 0, e.session_touch(**c.kw)
+
+
 # -- reads ------------------------------------------------------------------------------
 
 
