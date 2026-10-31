@@ -3,14 +3,14 @@ type: Task
 id: CE-165
 title: Pin the tests the 2026-10-30a verifiers found loose
 brief: Each pin is sabotaged before it is believed (DEC-11)
-pri: NEXT
+pri: LATER
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-01a
+updated: 2026-11-01a
 ---
 
 Pin the tests the 2026-10-30a verifiers found loose.
@@ -39,3 +39,4 @@ Source: verifier residuals in the close commits named per line. Each is a claime
 ## Log
 
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-2, DEC-11: ten loose tests, several claiming CE-6's just-landed criteria. Can be fanned out per file.
+- 2026-11-01a (claude-code/claude-opus-5-5): Moved NEXT->LATER (agent's call, PROVISIONAL, 2026-11-01a): room for CE-11 in NEXT on the owner's DEC-135; this was the last NEXT item.
