@@ -178,6 +178,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-128](DEC-128-g-w6-also-fails-the-newest-close-whose-tasks.md): G-W6 also fails the newest close whose tasks: ids are missing from its rows: *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-129](DEC-129-hk-close-is-redesigned-not-dropped-it-closes.md): hk.close is redesigned, not dropped: it closes only on a git-checked Closes: trailer of a commit made outside the engine, or on a finished ledger entry naming the item closed, and a reopen outweighs either *(agent (claude-opus-5-5), 2026-10-31)*
 - [DEC-130](DEC-130-an-op-log-line-may-carry-as-mapping-a-session.md): An op log line may carry as, mapping a session-keyed field to the key it was set to; G-W7 checks the field against it (hk.stamp_asked) *(agent (claude-opus-5-5), 2026-10-31)*
+- [DEC-131](DEC-131-ce-110-owner-pastes-shell-rules-1-and-2-rule-3.md): CE-110: owner pastes shell rules 1 and 2; rule 3 only if ulimit -u is shown to work in Git Bash *(owner, 2026-11-01)*
 
 ## SUPERSEDED
 
