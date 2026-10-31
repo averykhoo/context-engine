@@ -54,6 +54,20 @@ def test_the_workflow_installs_dev_and_runs_exactly_the_gate():
     assert runs == ['python -m pip install -e ".[dev]"', gate], runs
 
 
+
+@pytest.mark.criterion("AC-180")
+def test_the_workflow_checks_out_full_history_for_the_guards_that_read_it():
+    """G-W9 checks each cited commit against git and G-W11 counts closes in the history: in a
+    shallow clone (actions/checkout's default depth is 1) G-W9 trusts a commit it lacks and G-W11
+    skips, so CI would pass what a full clone fails. tools/linux_gate.py, CI's job here, clones
+    the whole history too."""
+    checkouts = [s for s in _steps() if str(s.get("uses", "")).startswith("actions/checkout@")]
+    assert len(checkouts) == 1, checkouts
+    depth = (checkouts[0].get("with") or {}).get("fetch-depth")
+    assert depth == 0, f"the checkout fetches depth {depth!r}, not full history (`fetch-depth: 0`)"
+    script = _linux_gate().script("0" * 40, "3.12")
+    assert "clone" in script and "--depth" not in script and "--shallow" not in script, script
+
 @pytest.mark.criterion("AC-79")
 def test_the_local_linux_gate_runs_the_workflow_s_steps_on_its_runner_s_shape():
     """tools/linux_gate.py (CE-67) is CI's job on this machine: the same two steps, the floor's

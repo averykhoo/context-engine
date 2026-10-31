@@ -245,6 +245,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-165 | G-W9 fails a mechanical `close` op line whose item's log has no close line from that session citing evidence, or cites a commit whose trailers git reads without `Closes: <id>` or that is not in HEAD's history, or a ledger entry whose `rows:` does not name the item closed or that a close from its session or a later reopen, in the log before that close line, outweighs, or (in a full clone) a commit git does not know; a shallow clone trusts a commit it lacks | US-3 | tested |
 | AC-166 | `hk stamp` sets each open question's `last_asked` to the newest finished ledger entry whose `asked` receipt names it, only where that is newer, as a mechanical write whose op line records the stamped key under `as`; G-W7 checks `last_asked` against that key, so the stamp passes and a hand edit still fails | US-3 | tested |
 | AC-167 | An abandoned stub carries a `derived digest:` line: the commits in HEAD's history whose `Session:` trailer is exactly its key, the ids their `Closes:` trailers name, and the count of its op log lines | DEC-69 | tested |
+| AC-180 | Given the CI workflow, when `tests/test_ci.py` runs, then it fails unless the checkout fetches full history (`fetch-depth: 0`), so G-W9 and G-W11 check every cited commit in CI as they do locally | US-18, DEC-129 | tested |
 
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
 

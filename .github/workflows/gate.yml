@@ -19,6 +19,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # Full history: lint's G-W9 and G-W11 read git history, and a shallow clone makes G-W9
+          # trust a cited commit it lacks and G-W11 skip (tests/test_ci.py pins this).
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
