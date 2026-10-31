@@ -7,9 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-01a · kind: open
+## 2026-11-01a · kind: close
 
-- **opened:** 2026-11-01T02:29:48+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-11 (SOMEDAY->NEXT, retitled: intervals adoption now, DEC-135); CE-167 (new, LATER,
+  zanzibar adoption, deps CE-11); CE-165 (NEXT->LATER, agent's call); ASK-24 (answered in chat ->
+  DEC-135)
+- **receipts:**
+  - guards: lint: clean; gate status --require code: green (no code changed; covered by the all run
+    of 2026-11-01T01:22:13)
+  - read: orient; ledger and CE-43, CE-11, DEC-5, DEC-6; audio-workspace
+    docs/context-engine-feedback.md; intervals and zanzibar repo state (read-only)
+  - asked: ASK-24
+- **summary** (the owner digest):
+  - No adoption waits on audio-workspace feedback: CE-43 closed and pushed 2026-10-22
+  - DEC-134 (owner): intervals before zanzibar; zanzibar filed as CE-167 (LATER, deps CE-11)
+  - DEC-135 (owner, ASK-24): adopt intervals now, no 2.0.0 wait; CE-11 promoted to NEXT
+  - Agent's call (PROVISIONAL): CE-165 NEXT->LATER to make room in NEXT
+  - CE-167 should bring over audio-workspace's one open feedback item (setup registers the MCP
+    server)
+  - Nothing pushed; this repo is ahead of origin (owner's call)
+- **Still owed:**
+  - Owner: push when you choose; promote CE-11 to NOW when you want intervals started
 - **start head:** 466947e19a9c8da84ab9ab68c8a75a334a08c914
 
 ---
