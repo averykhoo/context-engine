@@ -891,14 +891,33 @@ class Engine:
         # `_milestone` commits when the operation ends)
         title = f"{rid}: close; " + _short(msg, C.TITLE_MAX - len(rid) - 9)
         whole = msg.strip()
-        self.store.commit_title = title
-        self.store.commit_body = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", f"Verdict: {verdict} (against {rid}'s ## {KILL_BAR})" if verdict else "", body.strip()) if x)
-        self.store.commit_trailers = [f"Closes: {rid}"]
-        moved = f"; residuals filed as {', '.join(filed)}" if filed else ""
+        said = "\n\n".join(x for x in (whole if len(whole.splitlines()) > 1 or whole.splitlines()[0].strip() not in title else "", f"Verdict: {verdict} (against {rid}'s ## {KILL_BAR})" if verdict else "", body.strip()) if x)
+        self._close_message(rid, title, said)
+        moved =f"; residuals filed as {', '.join(filed)}" if filed else ""
         if not none and not stated and self.w.register and not self.store.get(rid).doc.get("review"):
             moved = f"; residual risk not stated: say `--residual none` at a close, or file each risk with `--residual \"{RESIDUAL_FORM}\"` (one missed now goes in by hand, manual-mode.md § context-engine task close)"
         judged = f"; verdict {verdict.split(':')[0]} against its {KILL_BAR.lower()}" if verdict else ""
         return f"{rid}: closed ({msg.strip().splitlines()[0][:80]}){judged}{moved}{self._now_left(was)}"
+
+    def _close_message(self, rid: str, title: str, body: str) -> None:
+        """Set the batch's commit message for a close of ``rid``. One close titles the commit
+        ``<id>: close; <msg>``; a second close in the same batch (a housekeeping run closing
+        several items, whose ops each run in one batch that commits once) makes it
+        ``housekeeping: close <id>, <id>``, keeps each close's title and body as a paragraph,
+        and adds its own `Closes:` trailer to the ones already there, so the one commit names
+        every item it closed (CE-6, AC-169)."""
+        st = self.store
+        trailer = f"Closes: {rid}"
+        closed = [t.split(": ", 1)[1] for t in st.commit_trailers if t.startswith("Closes: ")]
+        if not closed or not st.commit_title:
+            st.commit_title, st.commit_body, st.commit_trailers = title, body, [trailer]
+            return
+        if rid in closed:
+            return
+        first = [] if len(closed) > 1 else [st.commit_title]  # the first close's title becomes a paragraph
+        st.commit_body = "\n\n".join(x for x in (*first, st.commit_body, title, body) if x and x.strip())
+        st.commit_title = C._fit("housekeeping: close ", [*closed, rid], C.TITLE_MAX)
+        st.commit_trailers = [*st.commit_trailers, trailer]
 
     def _against_bar(self, rec: Record, verdict: str) -> None:
         """CE-108 (adhoc AAR entry 7, DEC-111): a verdict is judged against a bar written down before the

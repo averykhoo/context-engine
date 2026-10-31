@@ -138,6 +138,27 @@ def test_hk_close_through_the_cli_defaults_its_actor_to_housekeeping(eng, capsys
     assert [o["actor"] for o in _ops(eng) if o["op"] == "close"] == ["process:housekeep"]
 
 
+@pytest.mark.criterion("AC-169")
+def test_one_scan_closing_two_items_commits_once_with_a_closes_trailer_for_each(eng, capsys):
+    """Every operation runs in one store batch that commits once (ops.py::Op.call), so a scan
+    that closes two items makes one commit, and it must name both: a later close overwrote the
+    first one's trailer (the 2026-11-01b plan critic's finding #4)."""
+    me, a, b = _board(eng)
+    _commit(eng.root, f"by hand\n\nCloses: {a.id}\n")
+    _commit(eng.root, f"more by hand\n\nCloses: {b.id}\n", "other.txt")
+    assert main(["--root", str(eng.root), "--session", me, "--actor", ACTOR, "hk", "close", "--scan"]) == 0
+    out = capsys.readouterr().out
+    assert f"{a.id}: closed" in out and f"{b.id}: closed" in out, out
+    assert {eng.store.get(a.id).doc.get("state"), eng.store.get(b.id).doc.get("state")} == {"closed"}
+    msg = _git(eng.root, "log", "-1", "--format=%B")
+    said = _git(eng.root, "log", "-1", "--format=%(trailers:key=Closes,valueonly,separator=%x2C)").strip()
+    assert sorted(x.strip() for x in said.split(",")) == sorted([a.id, b.id]), msg  # git reads both as trailers
+    assert msg.splitlines()[0] in (f"housekeeping: close {a.id}, {b.id}", f"housekeeping: close {b.id}, {a.id}"), msg
+    assert f"{a.id}: close; done in" in msg and f"{b.id}: close; done in" in msg, msg  # each close's own title is kept
+    assert _git(eng.root, "status", "--porcelain", "--", "tasks").strip() == ""  # both closes are in that one commit
+    assert _g(eng, "G-W9") == []
+
+
 # -- G-W9: every mechanical close cites evidence that holds (AC-165) --------------------------
 
 

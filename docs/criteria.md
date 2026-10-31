@@ -246,6 +246,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-166 | `hk stamp` sets each open question's `last_asked` to the newest finished ledger entry whose `asked` receipt names it, only where that is newer, as a mechanical write whose op line records the stamped key under `as`; G-W7 checks `last_asked` against that key, so the stamp passes and a hand edit still fails | US-3 | tested |
 | AC-167 | An abandoned stub carries a `derived digest:` line: the commits in HEAD's history whose `Session:` trailer is exactly its key, the ids their `Closes:` trailers name, and the count of its op log lines | DEC-69 | tested |
 | AC-168 | Every guard id a lint `Failure` in the engine's source can carry is in `config.LINT_IDS`, so `[guards] off` can name it and `coverage` reads it as built | DEC-129, DEC-138 | tested |
+| AC-169 | Given one housekeeping operation that closes two or more items, when its batch commits, then the one commit carries a `Closes:` trailer for every item it closed, in its last paragraph, and is titled `housekeeping: close <id>, <id>`; a single close keeps its `<id>: close; <msg>` title | DEC-129 | tested |
 | AC-180 | Given the CI workflow, when `tests/test_ci.py` runs, then it fails unless the checkout fetches full history (`fetch-depth: 0`), so G-W9 and G-W11 check every cited commit in CI as they do locally | US-18, DEC-129 | tested |
 
 ## Drafted for live stories that had no criteria (CE-25, DEC-33)
