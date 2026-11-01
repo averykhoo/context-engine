@@ -1509,30 +1509,53 @@ class Engine:
                     *([("decision index", self._hk_reindex)] if self.w.decision_index else [])]
         raise Refusal(f"no housekeeping phase {phase!r}", "`hk run start` (after `session start`) or `hk run close` (before `session close`)")
 
-    def hk_run(self, phase: str, *, check: bool = False, session: str, actor: str) -> str:
+    def hk_run(self, phase: str, *, check: bool = False, anyway: bool = False, session: str, actor: str) -> str:
         """Tier-0 housekeeping in one call (FRAMEWORK §6.11, CE-6, DEC-136): `start`, after `session
         start`, runs `session abandon --stale`, `hk stamp` and `hk comment --scan`; `close`, before
         `session close`, runs `baton expire`, `hk close --scan` and `decision index` (where
         `[working] decision_index` is set). Each sub-operation is the one its own command runs,
         with its actor (the caller's, else `process:housekeep`) and its marks (an abandon is not
         mechanical; the rest are). ``check`` lists the plan, one line per operation, and writes
-        nothing; the run lists what it did, the same way. The reply ends with the rows of
-        procedures § Housekeeping that `hk run` does not do. A run that writes commits once, at
-        its end, as a milestone.
+        nothing; the run lists what it did, the same way. Then the rows of procedures §
+        Housekeeping that `hk run` does not do, and last G-W10's count: the operations it made and
+        the op log lines it added (no model is called, so no tokens). Where `[housekeeping]
+        max_writes` is set, a run whose plan makes more operations refuses before any write,
+        unless ``anyway`` (the owner's word). A run that writes commits once, at its end, as a
+        milestone.
 
         Not checked, with ``check``: what a sub-operation's write would refuse once its evidence
         is checked (`hk close` on a plan that is not frozen); and, between the plan and the run,
         another session's write (the run takes the lock; the plan is a read)."""
         self._check(session, actor)
         steps = self._hk_steps(phase)
+        cap = self.store.config.housekeeping.max_writes
+        log = self.root / self.store.config.oplog
+
+        def lines() -> int:
+            return log.read_bytes().count(b"\n") if log.is_file() else 0
+
         out = [f"hk run {phase}{' --check' if check else ''}:"]
         with self.store.batch() if check else self.store.milestone():
+            if cap and not check and not anyway:  # G-W10: the plan is counted before any write
+                planned = sum(len(fn(session=session, actor=actor, dry=True)[0]) for _, fn in steps)
+                if planned > cap:
+                    raise Refusal(f"hk run {phase} would make {planned} writes, cap {cap} (`[housekeeping] max_writes`, G-W10)",
+                                  f"show the owner the plan (`hk run {phase} --check`); on the owner's word, `hk run {phase} --anyway`; or raise `[housekeeping] max_writes`")
+            before = lines()
+            made = 0
             for name, fn in steps:
                 acts, notes = fn(session=session, actor=actor, dry=check)
+                made += len(acts)
                 out.append(f"- {name}: {len(acts)} operation{'s' if len(acts) != 1 else ''}" + ("" if acts else " (nothing owed)"))
                 out += [f"  - {op}: {line}" for op, line in acts]
                 out += [f"  - not done: {n}" for n in notes]
+            added = lines() - before
         out.append(f"not done by hk run (do these rows of procedures § Housekeeping yourself): {'; '.join(HK_NOT_RUN[phase])}")
+        w = f"{made} write{'s' if made != 1 else ''}"
+        if check:
+            out.append(f"hk run {phase} --check: {w} planned" + (f", cap {cap}" if cap else "") + "; nothing written; no model (0 tokens)")
+        else:
+            out.append(f"hk run {phase}: {w}, {added} op log line{'s' if added != 1 else ''}; no model (0 tokens)")
         return "\n".join(out)
 
     def housekeeping_owed(self) -> list[str]:

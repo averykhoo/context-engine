@@ -500,7 +500,7 @@ def test_hk_run_start_then_close_runs_each_sub_operation_in_order_with_the_hk_ac
     assert heads == ["- session abandon --stale", "- hk stamp", "- hk comment --scan"], out
     assert _ops_listed(out) == [f"session abandon {x['dead']}", f"hk stamp {x['q']}", f"hk comment {x['b']} {x['step'][:7]}"], out
     assert f"  - not done: {x['fin'][:7]} {x['a']}: skipped ({x['fin'][:7]} carries `Closes: {x['a']}`: left for hk close" in out, out
-    assert out.splitlines()[-1].startswith("not done by hk run (do these rows of procedures § Housekeeping yourself): foreign commits"), out
+    assert out.splitlines()[-2].startswith("not done by hk run (do these rows of procedures § Housekeeping yourself): foreign commits"), out
     new = _ops(eng)[before:]
     assert [(o["op"], o["mechanical"]) for o in new] == [("session.abandon", False), ("hk.stamp_asked", True), ("comment", True)], new
     assert {o["actor"] for o in new} == {ACTOR} and {o["session"] for o in new} == {now}
@@ -509,7 +509,7 @@ def test_hk_run_start_then_close_runs_each_sub_operation_in_order_with_the_hk_ac
     assert [ln.split(":")[0] for ln in out.splitlines() if ln.startswith("- ")] == ["- baton expire", "- hk close --scan"], out
     assert _ops_listed(out) == [f"baton expire {x['baton']}", f"hk close {x['a']}"], out
     assert eng.store.get(x["a"]).doc.get("state") == "closed"  # the comment pass left its `Closes:` commit for hk close
-    assert "record stamp" in out.splitlines()[-1] and "task touch --mechanical" in out.splitlines()[-1]
+    assert "record stamp" in out.splitlines()[-2] and "task touch --mechanical" in out.splitlines()[-2]
     closes = [o for o in _ops(eng) if o["op"] == "close" and o["id"] == x["a"]]
     assert closes[-1]["mechanical"] is True and closes[-1]["actor"] == ACTOR
     assert _g(eng, "G-W9") == [] and _w11(eng) == []
@@ -556,3 +556,54 @@ def test_orient_without_a_key_shows_what_housekeeping_is_owed_and_nothing_once_i
         k = started(eng)
         eng.session_close(k, actor=ACTOR, rows="none", summary=["nothing"], receipts=receipts(asked=x["q"]))
     assert f"1 stale stub ({now};" in eng.orient()
+
+
+# -- G-W10: every hk run counts its writes; an optional cap stops it and asks (AC-177) ----------
+
+
+def _capped(eng, cap):
+    cfg = json.loads(json.dumps(CONFIG))
+    cfg["housekeeping"] = {"max_writes": cap}
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    return Engine(eng.root, today=eng.today)
+
+
+@pytest.mark.criterion("AC-177")
+def test_hk_run_ends_with_its_writes_and_the_op_log_lines_it_added(eng):
+    _repo(eng.root)
+    dead = started(eng)
+    task(eng, dead, "Left uncommitted")  # so its abandon files a baton too: two op log lines
+    _closes(eng, 3)
+    me = started(eng)
+    before = len(_ops(eng))
+    out = eng.hk_run("start", **kw(me))
+    gained = len(_ops(eng)) - before
+    assert gained == 2 and [o["op"] for o in _ops(eng)[before:]] == ["session.abandon", "new"], _ops(eng)[before:]
+    assert out.splitlines()[-1] == f"hk run start: 1 write, {gained} op log lines; no model (0 tokens)", out
+    plan = eng.hk_run("close", check=True, **kw(me))
+    assert plan.splitlines()[-1] == "hk run close --check: 0 writes planned; nothing written; no model (0 tokens)", plan
+
+
+@pytest.mark.criterion("AC-177")
+def test_a_max_writes_cap_below_the_plan_refuses_before_any_write_and_anyway_runs_it(eng):
+    now, x = _owed(eng)
+    capped = _capped(eng, 2)
+    before = _state(capped)
+    with pytest.raises(Refusal, match=r"hk run start would make 3 writes, cap 2 \(`\[housekeeping\] max_writes`, G-W10\)") as r:
+        capped.hk_run("start", **kw(now))
+    assert "--anyway" in r.value.remedy and "max_writes" in r.value.remedy
+    assert _state(capped) == before  # nothing written
+    assert capped.hk_run("start", check=True, **kw(now)).splitlines()[-1] == "hk run start --check: 3 writes planned, cap 2; nothing written; no model (0 tokens)"
+    out = capped.hk_run("start", anyway=True, **kw(now))  # on the owner's word
+    assert out.splitlines()[-1].startswith("hk run start: 3 writes, "), out
+    assert _capped(eng, 2).hk_run("close", **kw(now)).splitlines()[-1].startswith("hk run close: 2 writes, ")  # within the cap
+
+
+@pytest.mark.criterion("AC-177")
+@pytest.mark.parametrize("table, match", [({"max_write": 1}, "unknown key 'max_write'"), ({"max_writes": "5"}, "is str"), ({"max_writes": -1}, "`max_writes` is -1")])
+def test_a_bad_housekeeping_table_fails_the_config(eng, table, match):
+    cfg = json.loads(json.dumps(CONFIG))
+    cfg["housekeeping"] = table
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    with pytest.raises(Refusal, match=match):
+        Engine(eng.root)

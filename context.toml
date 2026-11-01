@@ -294,6 +294,10 @@ path = ".scratch"
 mode = "throwaway and gitignored; anything only there is lost"
 optional = true  # absent on a fresh clone
 
+# Housekeeping (FRAMEWORK §6.11, G-W10, CE-6): `hk run` counts its writes into its reply.
+[housekeeping]
+max_writes = 0   # no cap; provenance: JUDGEMENT, the engine default (DEC-136: off by default); wrong if the writes of a run go unread because there are too many
+
 # The doc guards (FRAMEWORK §8.2, §8.3; G-D1's caps are on [[routes]] above). Each list names
 # what its guard reads; `off` names guards lint does not report (none here).
 [guards]

@@ -130,6 +130,13 @@ class Guards:
 
 
 @dataclass(frozen=True)
+class Housekeeping:
+    """``[housekeeping]``: G-W10's optional cap on one `hk run` (FRAMEWORK §8.4, CE-6, DEC-136)."""
+
+    max_writes: int = 0  # the most operations one `hk run` may make before it refuses and asks (`--anyway`); 0 is no cap
+
+
+@dataclass(frozen=True)
 class Config:
     kinds: dict[str, Kind]
     oplog: str = "docs/ledger/ops.jsonl"
@@ -142,6 +149,7 @@ class Config:
     routes: tuple[Route, ...] = ()
     guards: Guards = field(default_factory=Guards)
     gate: G.Gate = field(default_factory=G.Gate)  # [gate]: the gate command, its run ledger and scopes (FRAMEWORK §8.5 G-V1, CE-78)
+    housekeeping: Housekeeping = field(default_factory=Housekeeping)  # [housekeeping]: G-W10's optional cap (CE-6)
 
     def kind_for_id(self, record_id: str) -> Kind:
         for k in self.kinds.values():
@@ -183,7 +191,7 @@ def _typed(table: str, got: dict, spec: dict[str, type | tuple[type, ...]]) -> N
             raise Refusal(f"{table} `{key}` is {type(v).__name__} {v!r}, not {names}", "fix its type (the kit's context.toml.template shows each)")
 
 
-TOP_KEYS = ("engine", "kinds", "working", "routes", "guards", "gate")
+TOP_KEYS = ("engine", "kinds", "working", "routes", "guards", "gate", "housekeeping")
 ENGINE_KEYS = ("oplog", "lockfile", "bundles", "lock_timeout", "contract", "commit")
 ENGINE_TYPES = {"oplog": str, "lockfile": str, "bundles": list, "lock_timeout": (int, float), "contract": str, "commit": (str, bool)}
 # FRAMEWORK §5.5 rule 4 (DEC-36): commit at milestones (task close, owner words, batons and pauses,
@@ -299,6 +307,11 @@ def from_dict(raw: dict) -> Config:
     if not nouns or bad:
         raise Refusal(f"[guards] `count_nouns` {'is empty' if not nouns else f'holds {bad[0]!r}, which is not a word'}", "list the plural nouns a typed count may name (`tests`, `checks`, ...); to switch G-D5 off, empty `numbers` instead")
     guards = Guards(**{k: (tuple(v) if isinstance(v, list) else v) for k, v in g.items()})
+    h = raw.get("housekeeping", {})
+    _known("[housekeeping]", h, Housekeeping.__dataclass_fields__)
+    _typed("[housekeeping]", h, {"max_writes": int})
+    if h.get("max_writes", 0) < 0:
+        raise Refusal(f"[housekeeping] `max_writes` is {h['max_writes']}", "give the cap as a count of operations, or 0 for no cap (G-W10)")
     commit = engine.get("commit", Config.commit)
     commit = COMMIT_BOOLS.get(commit, commit) if isinstance(commit, bool) else commit
     if commit not in COMMIT_POLICIES:
@@ -315,6 +328,7 @@ def from_dict(raw: dict) -> Config:
         routes=tuple(routes),
         guards=guards,
         gate=replace(G.from_dict(raw.get("gate", {})), skip=(engine.get("lockfile", Config.lockfile),)),
+        housekeeping=Housekeeping(**h),
     )
 
 

@@ -1222,6 +1222,9 @@ procedures.md § Housekeeping in order:
 4. List every operation you did, one line each, then the rows `hk run` does not do, which you do
    next: at start, foreign commits and pause records whose paths are committed; at close, `record
    stamp`, ratchets and other generated files, and `task touch --mechanical`.
+5. Count them (G-W10): the operations, and the op log lines the run added (`wc -l` on the op log
+   before and after). Where `[housekeeping] max_writes` is set and the plan has more operations,
+   stop before the first write and ask the owner; go on only on the owner's word.
 
 **Why:** housekeeping that is a row in a table is forgotten; one call per procedure point does every
 tier-0 row in order, and its reply is the operation list the digest needs. The SessionStart hook

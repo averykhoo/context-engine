@@ -72,7 +72,7 @@ CALLS = {
     "commit": (["a.py", "src/b.py", "-m", "CE-1: title", "-m", "the body"], {"paths": ["a.py", "src/b.py"], "message": "CE-1: title\n\nthe body"}),
     "why": (["CE-1"], {"target": "CE-1"}),
     "hk_regen_index": ([], {}),
-    "hk_run": (["close", "--check"], {"phase": "close", "check": True}),
+    "hk_run": (["close", "--check", "--anyway"], {"phase": "close", "check": True, "anyway": True}),
     "hk_comment": (["CE-1", "--commit", "abc1234", "--text", "t", "--since", "HEAD~1"], {"id": "CE-1", "commit": "abc1234", "text": "t", "since": "HEAD~1"}),
     "decision_import": (["log.md", "--dry-run"], {"path": "log.md", "dry_run": True}),
     "doc_freeze": (["docs/plan.md", "--note", "CE-1 closed"], {"path": "docs/plan.md", "note": "CE-1 closed"}),

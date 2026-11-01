@@ -329,9 +329,9 @@ def hk_comment(e: Engine, c: Caller, id: str = "", commit: str = "", text: str =
 
 
 @op(write=True)
-def hk_run(e: Engine, c: Caller, phase: str, check: bool = False) -> tuple[int, str]:
-    """Housekeeping's tier-0 run in one call: `phase` `start` (after session_start: session_abandon stale, hk_stamp_asked, hk_comment scan) or `close` (before session_close: hk_expire_batons, hk_close scan, hk_regen_index where configured), each sub-operation as its own tool does it, with the hk_ actor rule. `check`: the plan, one line per operation, and nothing written. The reply lists every operation, then the procedures rows it does not do."""
-    return 0, e.hk_run(phase, check=check, session=c.session, actor=c.actor or "process:housekeep")
+def hk_run(e: Engine, c: Caller, phase: str, check: bool = False, anyway: bool = False) -> tuple[int, str]:
+    """Housekeeping's tier-0 run in one call: `phase` `start` (after session_start: session_abandon stale, hk_stamp_asked, hk_comment scan) or `close` (before session_close: hk_expire_batons, hk_close scan, hk_regen_index where configured), each sub-operation as its own tool does it, with the hk_ actor rule. `check`: the plan, one line per operation, and nothing written. The reply lists every operation, the procedures rows it does not do, then its writes and op log lines (G-W10). Where `[housekeeping] max_writes` is set, a bigger plan is refused before any write unless `anyway` (the owner's word)."""
+    return 0, e.hk_run(phase, check=check, anyway=anyway, session=c.session, actor=c.actor or "process:housekeep")
 
 
 @op(write=True)

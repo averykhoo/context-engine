@@ -2221,11 +2221,13 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   `rows:` names it closed with no reopen since in the log before that line. A cited commit git
   does not know fails in a full clone; a shallow one (CI's checkout) trusts it.
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
-  and the count goes into the run's report. **No budget by default:** change sizes vary by
-  session, so a cap that suits a large session would be unreasonably large for most, and a
-  smaller one would most likely be overridden. A repo may still configure a cap, with
-  provenance (G-D9); hitting it stops the run and asks, and the owner may tell it to write
-  anyway.
+  and the count goes into the run's report: `hk run` ends its reply with the operations it made
+  and the op log lines it added (tier 0 calls no model, so it spends no tokens). **No budget by
+  default:** change sizes vary by session, so a cap that suits a large session would be
+  unreasonably large for most, and a smaller one would most likely be overridden. A repo may
+  still configure a cap, `[housekeeping] max_writes`, with provenance (G-D9); a run whose plan
+  is over it stops before any write and asks, and the owner may tell it to write anyway
+  (`--anyway`). Not checked: a tier-1 agent's token count, which no tier-1 agent reports yet.
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
   from the stub's last activity (an owner judgement, not yet measured; a measurement gives it

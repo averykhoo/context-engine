@@ -121,6 +121,10 @@ gate_receipt = '(?i)\d+ passed|passed \d+|not run'   # a regex the close's `guar
 NOW = 1                      # provenance: JUDGEMENT, FRAMEWORK §5.2 (one thing at a time); wrong if the work never fits one item at a time
 NEXT = 5                     # provenance: JUDGEMENT, engine default; wrong if NEXT routinely overflows with work that is really next
 
+# -- housekeeping (FRAMEWORK §6.11, G-W10): `hk run` counts its writes into its reply ----------
+[housekeeping]
+max_writes = 0               # the most operations one `hk run` may make before it refuses and asks (`--anyway` on the word of the owner); 0 is no cap; provenance: JUDGEMENT, engine default (G-W10: change sizes vary by session, so no budget by default); wrong if the writes of a run go unread because there are too many
+
 # -- guards (FRAMEWORK §8): which guards lint reports, and what the doc guards read ----------
 # A doc guard whose list is empty checks nothing; a listed path that does not exist fails.
 [guards]

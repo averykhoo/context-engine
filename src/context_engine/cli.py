@@ -91,6 +91,7 @@ def build() -> argparse.ArgumentParser:
     hr = _sub(hk, "run", "tier-0 housekeeping in one call: `start` after session start, `close` before session close; lists every operation")
     hr.add_argument("phase", choices=("start", "close"), help="start: stale stubs, asked stamps, commit comments; close: batons, Closes: trailers, the decision index")
     hr.add_argument("--check", action="store_true", help="list the plan, one line per operation; write nothing")
+    hr.add_argument("--anyway", action="store_true", help="run a plan bigger than `[housekeeping] max_writes`, on the owner's word (G-W10)")
     hm = _sub(hk, "comment", "a commit becomes a dated mechanical comment on the open task its title leads with")
     hm.add_argument("id", nargs="?", default="", help="the task's id (none with --scan)")
     hm.add_argument("--commit", default="", help="a commit in HEAD's history whose title leads with the id")

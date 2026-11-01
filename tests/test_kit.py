@@ -553,7 +553,8 @@ def _keys(cls, drop=()) -> set[str]:
 def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     raw = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
     cfg = C.from_dict(raw)
-    assert _keys(C.Config, ("kinds", "working", "routes", "guards", "gate")) <= set(raw["engine"])
+    assert _keys(C.Config, ("kinds", "working", "routes", "guards", "gate", "housekeeping")) <= set(raw["engine"])
+    assert _keys(C.Housekeeping) <= set(raw["housekeeping"]) and cfg.housekeeping.max_writes == 0, "the kit's cap is off (G-W10)"
     assert _keys(GATE.Gate, ("skip",)) <= set(raw["gate"]) and _keys(GATE.Scope, ("name",)) <= set(raw["gate"]["scopes"]["all"])
     assert cfg.gate.scopes and not cfg.gate.command and not cfg.gate.require, "the kit's gate is off until a repo sets its command"
     assert _keys(C.Working) <= set(raw["working"])
