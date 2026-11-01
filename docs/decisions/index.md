@@ -189,6 +189,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-139](DEC-139-session-touch-on-a-stub-that-is-not-open-names.md): session touch on a stub that is not open names a remedy per stub kind, not one --follows remedy *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-140](DEC-140-g-w11-skips-only-when-git-says-the-clone-is.md): G-W11 skips only when git says the clone is shallow; a repo without git is still checked *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-141](DEC-141-hk-comment-s-no-key-case-is-a-caller-key-with.md): hk comment's no-key case is a caller key with no ledger entry, refused with the remedy --since <rev> *(agent (claude-opus-5-5), 2026-11-01)*
+- [DEC-142](DEC-142-single-item-hk-comment-needs-no-session-line.md): Single-item hk comment needs no Session: line; the scan lists untrailered id-led commits as foreign and skips closed ids silently *(agent (claude-opus-5-5), 2026-11-01)*
 
 ## SUPERSEDED
 
