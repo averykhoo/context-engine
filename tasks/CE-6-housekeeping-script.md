@@ -4,14 +4,15 @@ id: CE-6
 title: "Tier-0 housekeeping script and the hk_ operations"
 brief: "No model. Carries out recorded intent only; hk.close needs a verified Closes: trailer"
 pri: NOW
-state: open
+state: closed
 deps: [CE-2]
 source: session 2026-10-08a
 created: 2026-10-08
-moved: 2026-10-30a
+moved: 2026-11-01b
 updated: 2026-11-01b
-closed:
+closed: 2026-11-01b
 goals: [G-3]
+status: deprecated
 ---
 
 Build step 5 (FRAMEWORK §6.11): baton expiry into tasks; stale `kind: open` stubs into
@@ -34,3 +35,5 @@ Build step 5 (FRAMEWORK §6.11): baton expiry into tasks; stale `kind: open` stu
 - 2026-11-01b (claude-code/claude-opus-5-5): Owner, 2026-11-01b: "Finish ce6 now then push up ce11". Read as: finish CE-6 this session, then promote CE-11 to NOW.
 - 2026-11-01b (claude-code/claude-opus-5-5): Lane ci integrated as 5858302 (cherry-pick of b97e93b): gate.yml checkout fetch-depth: 0 so G-W9/G-W11 read full history; tests/test_ci.py::test_the_workflow_checks_out_full_history_for_the_guards_that_read_it pins it (and linux_gate.py's full clone); AC-180 tested; gate.md + kit row. Live only on a push. Gate green on main (1359 passed). Left: guards.py::mechanical_closes docstring and FRAMEWORK §8.4 G-W9 still say a shallow clone is CI's checkout.
 - 2026-11-01b (claude-code/claude-opus-5-5): Lane engine integrated on main (gate run green, 1382 passed, g1/code:6648aad35a101c86): d1984c7 LINT_IDS has every lint guard id, G-W9 (AC-168); 1624b6d one Closes: trailer per close in a multi-close batch (AC-169); 29eb511 session touch (AC-172); 9bdb909 G-W11 stale-stub lint (AC-173); 92c56bc hk comment (AC-174); 3ae496a hk run start|close and orient's Housekeeping owed (AC-175, AC-176); 80e9407 G-W10 counts and [housekeeping] max_writes (AC-177); dfe3848 adopt-and-close sentence in manual-mode; d14d51f FRAMEWORK 8.4 G-W9 full-history sentence; 87621ad FRAMEWORK names hk.ratchet and rotation not built; b16384a hk run commits only on a milestone write. Agent calls DEC-139..DEC-145. Open before close: coverage still reads G-W10 as deferred (frozen 2026-10-12 coverage map; G-W10 is not a lint id), so a newer coverage map or a recorded residual is owed.
+- 2026-11-01b (claude-code/claude-opus-5-5): closed: Tier-0 housekeeping finished: hk run start|close, hk comment, session touch, G-W11 lint, G-W10 counts, multi-close trailers, LINT_IDS; CI full history (5858302; engine d1984c7..b16384a; integration d3ecf3b, ee44e68)
+  residual risk: INV-91, INV-92, INV-93

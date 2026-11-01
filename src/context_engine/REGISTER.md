@@ -640,3 +640,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the hook's shell expands it and the launcher cannot (DEC-124)
 - **control:** individual: contract § Session start: a failing hook is silent, so the agent says so when orient is missing from its context
 - **from:** CE-146, session 2026-10-30a
+
+## INV-91: In an adopting repo's shallow CI checkout, G-W9 trusts history it cannot see and G-W11 skips
+
+- **affects:** adopting repos whose CI clones shallow
+- **why not eliminated:** a depth-1 clone lacks the cited commits, and a guard cannot fetch them
+- **control:** reduce: this repo's CI fetches full history (fetch-depth: 0, test_ci.py); docs/runbooks/gate.md says so for adopters
+- **from:** CE-6, session 2026-11-01b
+
+## INV-92: G-W11 can turn another session's gate red while a live but idle session has not run session touch; its window of 3 is unmeasured
+
+- **affects:** repos running concurrent sessions
+- **why not eliminated:** DEC-138 un-deferred it without a measurement, since CE-7 closed without one
+- **control:** individual: the remedy tells the agent to ask the owner before abandoning; session touch resets it (DEC-29, DEC-138)
+- **from:** CE-6, session 2026-11-01b
+
+## INV-93: hk comment's window rests on the session's start head (ledger.py::foreign_range), so a session that never runs hk run leaves its commits uncommented
+
+- **affects:** every repo running the engine
+- **why not eliminated:** tier 0 has no other cheap anchor (DEC-137)
+- **control:** collective: orient's Housekeeping owed line and procedures § Housekeeping, shown to every session
+- **from:** CE-6, session 2026-11-01b
