@@ -7,11 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-01b · kind: open
+## 2026-11-01b · kind: close
 
-- **opened:** 2026-11-01T06:57:55+08:00 by claude-code/claude-opus-5-5
-- **start head:** 3e65d673d6518f586cdcacb25aedf943aa861b26
 - **tasks:** CE-6, CE-11
+- **rows:** CE-6 (closed b756f65: tier-0 housekeeping finished; INV-91..93); CE-11 (NEXT->NOW);
+  CE-168, CE-169 (new SOMEDAY, split by DEC-138); CE-170 (new LATER, review nits); CE-164
+  (commented: G-W10 coverage reading, DEC-146)
+- **receipts:**
+  - guards: gate PASSED in 657.7s (1391 passed in 656.16s (0:10:56)) on g1/all:d9af8e493cfa6fb9;
+    lint: clean; tools/linux_gate.py green on ee44e68 (1389 passed)
+  - read: orient; CE-6; plan, review, verify reports (.scratch/2026-11-01b, via workflow agents)
+- **summary** (the owner digest):
+  - CE-6 closed: hk run start|close (tier 0), hk comment, session touch, G-W11 lint, G-W10 counts,
+    multi-close trailers, CI full history
+  - Run hk run start after session start and hk run close before close (DEC-136); restart Claude
+    Code for the new MCP tools
+  - Agent calls DEC-136..DEC-146 PROVISIONAL (owner to review); verifier's HOLD on G-W10 coverage
+    handed to CE-164 (DEC-146)
+  - Split out CE-168 (hk.ratchet) and CE-169 (ledger rotation); reviewer nits filed as CE-170;
+    residuals INV-91..INV-93
+  - CE-11 (intervals adoption) is NOW, per 'push up ce11' read as a promotion
+  - Not pushed: 46 commits ahead of origin; a push needs your word, then linux gate and a CI watcher
+- **Still owed:**
+  - Owner: say whether to push (46 commits; CI full-history change goes live only on push)
+  - Owner: review PROVISIONAL DEC-136..DEC-146
+- **start head:** 3e65d673d6518f586cdcacb25aedf943aa861b26
 
 ---
 
