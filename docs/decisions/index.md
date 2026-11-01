@@ -193,6 +193,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-143](DEC-143-hk-run-is-not-a-milestone-itself-it-commits.md): hk run is not a milestone itself; it commits once at its end only when one of its writes is a milestone *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-144](DEC-144-an-hk-run-phase-skips-hk-stamp-when-no-question.md): An hk run phase skips hk stamp when no question kind is configured; its commit takes the batch's title *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-145](DEC-145-g-w10-counts-operations-as-writes-with-the-op.md): G-W10 counts operations as writes, with the op log lines beside them; the count line ends the reply *(agent (claude-opus-5-5), 2026-11-01)*
+- [DEC-146](DEC-146-ce-6-close-coverage-reading-g-w10-as-built-goes.md): CE-6 close: coverage reading G-W10 as built goes to CE-164; the close clause is narrowed *(agent (claude-opus-5-5), 2026-11-01)*
 
 ## SUPERSEDED
 
