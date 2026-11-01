@@ -3,13 +3,15 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-01a)
+## Banner (2026-11-01b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **CE-6 is NOW** (rerank 2026-10-30a): housekeeping ops, partial (hk close, G-W9, hk stamp, derived digest landed); split
-  hk.ratchet out first. NEXT: CE-11, CE-18, CE-156, CE-161, CE-164. Opus ranked, fable gave the owner-asked second opinion,
-  a verifier reconciled (`docs/evidence/rerank-2026-10-30a.md`); Last rerank: 2026-10-30a.
+- **CE-11 is NOW** (owner, 2026-11-01b): adopt the engine in intervals, no 2.0.0 wait (DEC-135); zanzibar after it (CE-167).
+  NEXT: CE-18, CE-156, CE-161, CE-164 (one slot free). Last rerank: 2026-10-30a (`docs/evidence/rerank-2026-10-30a.md`).
+- **CE-6 closed (2026-11-01b, b756f65):** tier-0 housekeeping is `hk run start` after session start and `hk run close` before
+  close (DEC-136); also hk comment, session touch, G-W11 lint, G-W10 counts; CI fetches full history. Agent calls
+  DEC-136..DEC-146 PROVISIONAL; split CE-168, CE-169; nits CE-170; INV-91..93. MCP needs a restart for the new tools.
 - **Just landed (2026-10-30a, owner away, DEC-85):** 35 tasks closed through two ultracode build waves (worktree builders, a
   skeptic review per lane, serial integration): CE-138, 139, 85, 106, 107, 117, 118, 105, 119, 134, 143, 46, 53, 140, 39,
   102, 111, 44, 84, 123, 120, 108, 109, 137, 142, 144, 141, 42, 136, 96, 146, 147, 148, 149, 112. Agent calls DEC-86..DEC-130
