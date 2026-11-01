@@ -2218,11 +2218,17 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   anyway.
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
-  from the stub's last activity (an owner judgement); the trial measures it (§8.0.3) and gives it
-  provenance (G-D9). `session abandon --stale` (§7.1) is what housekeeping runs to keep it
-  green; the `abandoned` entry carries a `derived digest:` (the commits whose `Session:` trailer
-  names it, the ids their `Closes:` trailers name, its op log line count), so a dead
-  conversation loses only its prose judgement.
+  from the stub's last activity (an owner judgement, not yet measured; a measurement gives it
+  provenance, G-D9). The lint names each stale stub's key, its last activity and the count, and
+  its remedy asks the owner whether the session is live: a live one runs `session touch` (§7.1),
+  and a dead one is abandoned by `session abandon --stale` (§7.1), which housekeeping runs to
+  keep it green; the `abandoned` entry carries a `derived digest:` (the commits whose `Session:`
+  trailer names it, the ids their `Closes:` trailers name, its op log line count), so a dead
+  conversation loses only its prose judgement. Lint runs in every session's gate, so a live
+  session past the window that has not touched turns other sessions' gates red: at the same
+  moment housekeeping may abandon it, so only its visibility is new. Not checked: a shallow
+  clone (CI's checkout), whose cut-off commits could make a live session look stale; there it
+  reports nothing.
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.

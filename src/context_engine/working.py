@@ -8,10 +8,8 @@ lock and logged with the session key and the actor. Every write returns one line
 Which kinds play which part is configured in ``[working]`` of ``context.toml``; an operation
 whose part is not configured refuses and says so.
 
-Deliberately not handled here: the G-W11 guard itself (a stale stub is abandoned by
-``session_abandon``, CE-124, which housekeeping runs), rotating the ledger, and the `hk_`
-operations not built yet (``hk.comment``, ``hk.ratchet``: no ratcheting floor exists until
-G-V2's, CE-6).
+Deliberately not handled here: rotating the ledger (CE-169), and the `hk_` operations not
+built yet (``hk.comment``, ``hk.ratchet``: no ratcheting floor exists until G-V2's, CE-168).
 """
 
 from __future__ import annotations
@@ -3170,9 +3168,10 @@ class Engine:
         return out
 
     def lint_working(self) -> list[Failure]:
-        """G-W1 to G-W6 on the stored files, then G-W12 and G-W13 (``lint_review``): the banner
+        """G-W1 to G-W6 and G-W11 on the stored files, then G-W12 and G-W13 (``lint_review``): the banner
         key against the newest close (G-W1); the run of pauses since the last close (G-W2); carried
-        batons and pause records by age (G-W3); each board item's ``state`` against its OKF
+        batons and pause records by age (G-W3); stale `kind: open` stubs (G-W11,
+        ``_stale_stub_failures``); each board item's ``state`` against its OKF
         ``status``, an open question carrying ``answered:``, and each decision's ``decision_status``
         against its ``status`` (G-W4, ``_decision_status_failures``); the tier caps (G-W5); and
         the newest close's ``guards:``, ``read:`` and ``rows:`` lines, and its ``guards:`` line
@@ -3217,6 +3216,7 @@ class Engine:
             for r in self._carried():
                 if self._age(led, r.doc.get("session")) >= self.w.baton_max_age:
                     out.append(Failure("G-W3", r.path.relative_to(self.root).as_posix(), f"{r.id} from {r.doc.get('session')} has outlived {self.w.baton_max_age} sessions", "do it and mark it done, or let housekeeping turn it into a task (`baton expire`)"))
+            out += self._stale_stub_failures(led)
         if self.w.board:
             open_ = []
             for r in self.board_heads():
@@ -3248,6 +3248,24 @@ class Engine:
                     out.append(Failure("G-W5", self.store.config.kind(self.w.board[0]).dir, short, remedy))
             out += self.lint_review()
         return out + self._decision_status_failures()
+
+    def _stale_stub_failures(self, led: L.Ledger) -> list[Failure]:
+        """G-W11 (FRAMEWORK §8.4; DEC-29, DEC-69, DEC-138): one failure per `kind: open` stub, any
+        session's, with ``ABANDON_AFTER`` or more closes or pauses after its last activity
+        (``stale_stubs``, the window `session abandon --stale` uses). Its remedy asks the owner first,
+        since a live session that only reads looks the same until it runs `session touch`.
+
+        Not checked: a shallow clone (CI's checkout at depth 1), where the commits that are a
+        session's last activity may be cut off, so a live session would look stale: there G-W11
+        reports nothing. The window of 3 is provisional and unmeasured."""
+        if not any(e.kind == "open" for e in led.entries):
+            return []
+        if (L._git(self.root, "rev-parse", "--is-shallow-repository") or "").strip() == "true":
+            return []
+        return [Failure("G-W11", self.w.ledger,
+                        f"{k} never closed or paused; last active {at}, {n} closes or pauses since (window {ABANDON_AFTER}, DEC-29/DEC-69)",
+                        f"ask the owner whether {k} is live: if it is, `session touch` from its own conversation; otherwise `session abandon --stale`")
+                for k, n, at in self.stale_stubs(None)]
 
     def _decision_status_failures(self) -> list[Failure]:
         """G-W4 on decisions (CE-137, DEC-112): a decision is `status: deprecated` exactly when its

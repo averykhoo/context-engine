@@ -23,7 +23,7 @@ delegation names who ruled (`ruled_by`) and keeps the owner's words apart from i
 ``framework_status`` (CE-141) is no guard: it reads what G-D12 reads, the board and the guard ids lint
 reports, and gives each item of the spec one build status, on demand (`context-engine coverage`).
 
-Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W10 and G-W11 (housekeeping), G-V1 to
+Not here (FRAMEWORK §8, with their homes): G-T5 mutation per criterion, G-T4 structural anchors, G-T7 deviations, G-W10 (housekeeping's run), G-W11 (working.py::Engine.lint_working), G-V1 to
 G-V3 (the run ledger).
 """
 

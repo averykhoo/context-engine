@@ -13,8 +13,8 @@ from context_engine.cli import main
 from context_engine.errors import Refusal
 from context_engine.working import Engine
 
-from conftest import ASK_BODY
-from test_working import ACTOR, _closes, _git, _repo, eng, kw, receipts, started, task  # noqa: F401  (eng is a fixture)
+from conftest import ASK_BODY, _toml
+from test_working import ACTOR, CONFIG, _closes, _git, _repo, eng, kw, receipts, started, task  # noqa: F401  (eng is a fixture)
 
 
 def _commit(root, message, name="work.txt", text="x\n"):
@@ -316,3 +316,59 @@ def test_session_touch_is_refused_on_a_stub_that_is_not_open(eng):
         eng.session_touch(**kw(me))
     assert f"session start --follows {me}" in r.value.remedy
     assert len(_ops(eng)) == lines + 1  # only the close: a refused touch logs nothing
+
+
+# -- G-W11: no stale `kind: open` stub (AC-173) -------------------------------------------------
+
+
+def _w11(e):
+    return [f for f in e.lint(working=True) if f.guard == "G-W11"]
+
+
+@pytest.mark.criterion("AC-173")
+def test_g_w11_fails_a_stub_with_3_closes_since_its_last_activity_and_passes_with_2(eng):
+    quiet = started(eng)
+    _closes(eng, 2)
+    assert _w11(eng) == []
+    _closes(eng, 1)
+    red = _w11(eng)
+    assert len(red) == 1 and red[0].path == "ledger.md", red
+    assert red[0].message.startswith(f"{quiet} never closed or paused; last active ") and "3 closes or pauses since (window 3" in red[0].message, red
+    assert "session touch" in red[0].remedy and "session abandon --stale" in red[0].remedy and f"whether {quiet} is live" in red[0].remedy
+    assert [f.guard for f in eng.lint() if f.guard == "G-W11"] == ["G-W11"]  # the full lint runs it too
+
+
+@pytest.mark.criterion("AC-173")
+def test_g_w11_passes_after_session_touch_and_after_session_abandon(eng):
+    live, dead = started(eng), started(eng)
+    _closes(eng, 3)
+    assert sorted(f.message.split()[0] for f in _w11(eng)) == sorted([live, dead])
+    eng.session_touch(**kw(live))
+    assert [f.message.split()[0] for f in _w11(eng)] == [dead]
+    me = started(eng)
+    eng.session_abandon(stale=True, **kw(me))
+    assert _w11(eng) == []
+
+
+@pytest.mark.criterion("AC-173")
+def test_g_w11_reports_nothing_in_a_shallow_clone(eng):
+    started(eng)
+    _closes(eng, 3)
+    _repo(eng.root)
+    assert len(_w11(eng)) == 1  # a full clone
+    _commit(eng.root, "a second commit, so a depth-1 clone is cut off\n")
+    shallow = eng.root.parent / f"{eng.root.name}-shallow"  # the basetemp is shared: G-W9's test clones to `shallow`
+    subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{eng.root.as_posix()}", str(shallow)], check=True, capture_output=True)
+    assert _git(shallow, "rev-parse", "--is-shallow-repository").strip() == "true"
+    assert _w11(Engine(shallow)) == []
+
+
+@pytest.mark.criterion("AC-173")
+def test_guards_off_silences_g_w11(eng):
+    started(eng)
+    _closes(eng, 3)
+    assert len(_w11(eng)) == 1
+    cfg = json.loads(json.dumps(CONFIG))
+    cfg["guards"]["off"] = [*cfg["guards"].get("off", []), "G-W11"]
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    assert _w11(Engine(eng.root)) == []

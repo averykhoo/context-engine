@@ -451,6 +451,12 @@ Check every record, then the working state. `--working` does only the second hal
   `- **tasks:**` line, its `rows:` names every id on that line. *Why: the close's refusal of
   rows that miss a named task (§ context-engine session close) does not cover a close written or
   edited by hand.*
+- **G-W11**: no `kind: open` stub, any session's, is stale as § context-engine session abandon
+  step 2 counts it (3 or more closes or pauses of other sessions after its last activity). In a
+  shallow clone (`git rev-parse --is-shallow-repository` says `true`) report nothing: the commits
+  that are a session's last activity may be cut off. *Why: a dead session must not look live;
+  the remedy asks the owner first, since a live session that only reads looks the same until it
+  runs § context-engine session touch.*
 - **G-W12**: an open item at NOW that carries `review:` passes the design-review checks of
   `task promote`. *Why: the promotion refused it, so a failing review there was edited by hand.*
 - **G-W13**: every `- residual:` line of a closed item carrying `review:` has a register entry
