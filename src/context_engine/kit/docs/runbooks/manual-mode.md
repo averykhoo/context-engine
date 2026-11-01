@@ -302,7 +302,8 @@ stub; over MCP `session_abandon(key, force, stale)`). By hand, for each stub:
 The derived digest keeps what git and the op log can say about it, so a conversation that died
 without a close loses only its prose judgement. By the time a stub is stale it was shown to the owner at the start of each of those sessions, so
 housekeeping abandons it without asking again; the reply lists each one, so the close digest
-can say so.
+can say so. If the owner says a stub's conversation continues here, adopt its key instead (set it
+as `CE_SESSION`, or pass it as `session=`) and close it, rather than abandoning it.
 
 ### context-engine session touch
 
