@@ -1596,7 +1596,7 @@ any edit agent.
 
 | Tier | Who | Does | Example operations |
 |---|---|---|---|
-| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton and a derived digest; stamping `last_asked` from `asked:` receipts that stamped nothing (`hk.stamp_asked`); closing what a commit's `Closes:` trailer names (`hk.close`); a dated task comment from each commit that carries a `Session:` trailer and whose title leads with the task's id (`hk.comment`; a commit whose `Closes:` names the task is left for `hk.close`) |
+| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets (`hk.ratchet`, not built until G-V2's floors, §8.5); regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton and a derived digest; stamping `last_asked` from `asked:` receipts that stamped nothing (`hk.stamp_asked`); closing what a commit's `Closes:` trailer names (`hk.close`); a dated task comment from each commit that carries a `Session:` trailer and whose title leads with the task's id (`hk.comment`; a commit whose `Closes:` names the task is left for `hk.close`) |
 | 1 | **small agents restricted to the engine's `hk.*` operations (MCP tools `hk_*`)** | reading unstructured text, writing through typed operations | commits since the last session that name a task other than by leading with its id → dated task comments (`hk.comment` with its `text`); clearing a pause record whose paths are now committed; reconciling foreign commits (§6.10); spotting owner words not yet recorded (reported, not written) |
 | 2 | **the main session** | every judgement | ranking, criteria, task bodies, answers, closes without evidence |
 
@@ -1749,7 +1749,9 @@ cite for each item.
 - Append-only, newest first, **in its own file**, keyed by session key: **one file under the
   engine lock**, not one file per entry, until a trial shows append collisions.
 - Rotate by period when it passes its cap; the current file indexes the periods. Rotation is
-  adopted by trial (§11.4) once a ledger cap is set.
+  adopted by trial (§11.4) once a ledger cap is set. Not built: no ledger cap is set yet, and
+  rotation waits on the board as its own item (every ledger reader would follow it; the op log
+  is not covered here).
 - **Not an OKF `log.md`** (§9.3): it is a session journal, not a concept changelog.
 
 ### 7.2 Evidence and plan docs
@@ -1995,7 +1997,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's) |
+| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's; it waits on the board as its own item, with G-V2's floors) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
