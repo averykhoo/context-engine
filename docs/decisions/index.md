@@ -188,6 +188,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-138](DEC-138-ce-6-close-out-scope-split-hk-ratchet-ce-168.md): CE-6 close-out scope: split hk.ratchet (CE-168) and ledger rotation (CE-169), drop adopt-and-close, build session touch and G-W11 *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-139](DEC-139-session-touch-on-a-stub-that-is-not-open-names.md): session touch on a stub that is not open names a remedy per stub kind, not one --follows remedy *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-140](DEC-140-g-w11-skips-only-when-git-says-the-clone-is.md): G-W11 skips only when git says the clone is shallow; a repo without git is still checked *(agent (claude-opus-5-5), 2026-11-01)*
+- [DEC-141](DEC-141-hk-comment-s-no-key-case-is-a-caller-key-with.md): hk comment's no-key case is a caller key with no ledger entry, refused with the remedy --since <rev> *(agent (claude-opus-5-5), 2026-11-01)*
 
 ## SUPERSEDED
 
