@@ -7,9 +7,20 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-01c · kind: open
+## 2026-11-01c · kind: close
 
-- **opened:** 2026-11-01T23:43:07+08:00 by claude-code/claude-opus-5-5
+- **rows:** none
+- **receipts:**
+  - guards: lint: clean; gate status --require code: green; tools/linux_gate.py: 1391 passed, green
+    on 309641bd8483; CI gate run 41322960103: success
+  - read: procedures § Push and CI
+- **summary** (the owner digest):
+  - Pushed main 27d14ce..309641b on the owner's word; CI green (run 41322960103)
+  - Before the push: local gate and Linux gate green (1391 passed each), lint clean
+  - CI now fetches full history, so G-W9 and G-W11 check cited commits there
+  - CE-11 (intervals adoption) is NOW for the next session
+- **Still owed:**
+  - nothing
 - **start head:** 309641bd84837277ef9ddc7251b851a4e815dbe5
 
 ---
