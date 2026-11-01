@@ -571,7 +571,7 @@ class Engine:
         if stale and force:
             raise Refusal("--force with --stale", "--stale takes only stubs past the window; to abandon one short of it on the owner's word, name it: `session abandon <key> --force`")
         if stale:
-            done = [self._abandon(k, n, last, session=session, actor=actor, forced=False) for k, n, last in self.stale_stubs(session)]
+            done = [line for _, line in self._hk_abandon_stale(session=session, actor=actor)[0]]
             return "\n".join(done) if done else f"no stale stubs (none has {ABANDON_AFTER} or more closes or pauses since its last activity)"
         if key == session:
             raise Refusal(f"{key} is this session's own key", "close or pause this session instead (`session close`, `session pause`)")
@@ -583,6 +583,15 @@ class Engine:
             raise Refusal(f"{key} is not stale: it last did anything at {last}, and {n} closes or pauses came after (the window is {ABANDON_AFTER}, DEC-29)",
                           "show it to the owner; abandon it now only on the owner's word, with --force")
         return self._abandon(key, n, last, session=session, actor=actor, forced=n < ABANDON_AFTER)
+
+    def _hk_abandon_stale(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
+        """`session abandon --stale` as housekeeping's plan and its run (``hk_run``): ``([(the
+        operation, its line)], [notes])``; with ``dry``, the plan alone, nothing written."""
+        acts = []
+        for k, n, last in self.stale_stubs(session):
+            line = f"{k}: {n} closes or pauses since its last activity, {last}" if dry else self._abandon(k, n, last, session=session, actor=actor, forced=False)
+            acts.append((f"session abandon {k}", line))
+        return acts, []
 
     def derived_digest(self, key: str) -> str:
         """What a dead session left, derived from git and the op log (CE-6, the 2026-10-13b
@@ -1258,7 +1267,9 @@ class Engine:
         if scan:
             if rid or commit or ledger:
                 raise Refusal("--scan with an item or evidence", "`hk close --scan` alone, or `hk close <id> --commit <sha>` (or `--ledger <key>`)")
-            return self._hk_close_scan(session=session, actor=actor)
+            acts, skipped = self._hk_close_scan(session=session, actor=actor)
+            lines = [line for _, line in acts] + skipped
+            return "\n".join(lines) if lines else "no open task is named by a `Closes:` trailer in HEAD's history"
         if not rid or bool(commit) == bool(ledger):
             raise Refusal("name the item and exactly one piece of evidence", "`hk close <id> --commit <sha>` (a commit carrying `Closes: <id>`) or `hk close <id> --ledger <key>` (a session whose rows name it closed); `hk close --scan` for every trailer")
         rec = self.store.get(rid)
@@ -1268,7 +1279,14 @@ class Engine:
             msg = self._ledger_evidence(rec, ledger)
         return self.close(rid, msg, session=session, actor=actor, mechanical=True)
 
-    def _hk_close_scan(self, *, session: str, actor: str) -> str:
+    def _hk_close_scan(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
+        """`hk close --scan` as housekeeping's plan and its run: each open task a `Closes:` trailer
+        in HEAD's history names, closed on its newest commit that is evidence
+        (``_commit_evidence``), and each one no commit could close, with why. With ``dry``, the
+        plan alone: the evidence is checked, nothing is written.
+
+        Not checked, with ``dry``: a close that the evidence allows but `close` itself would refuse
+        (a plan not frozen, a kill bar's verdict owed), which the run then lists as not closed."""
         out = L._git(self.root, "log", "-F", "--grep=Closes:", "--format=%H%x1f%(trailers:key=Closes,valueonly,separator=%x2C)%x1e", "HEAD")
         if out is None:
             raise Refusal("git cannot read this repo's history", "run it in a git checkout with at least one commit")
@@ -1279,20 +1297,21 @@ class Engine:
             for i in (x.strip() for x in ids.replace("\n", ",").split(",")):
                 if i in open_tasks and sha:
                     named.setdefault(i, []).append(sha)  # newest first
-        done: list[str] = []
+        done: list[tuple[str, str]] = []
         skipped: list[str] = []
         for i, shas in named.items():
             why = ""
+            rec = self.store.get(i)
             for sha in shas:
                 try:
-                    done.append(self.hk_close(i, sha, session=session, actor=actor))
+                    msg = self._commit_evidence(rec, sha)
+                    done.append((f"hk close {i}", f"{i}: would close ({msg})" if dry else self.close(i, msg, session=session, actor=actor, mechanical=True)))
                     break
                 except Refusal as r:
                     why = r.message
             else:
                 skipped.append(f"{i}: not closed ({why})")
-        lines = done + skipped
-        return "\n".join(lines) if lines else "no open task is named by a `Closes:` trailer in HEAD's history"
+        return done, skipped
 
     def stamp_asked(self, *, session: str, actor: str) -> str:
         """Housekeeping (FRAMEWORK §6.11 tier 0, CE-6, DEC-130): stamp each open question's `last_asked`
@@ -1304,6 +1323,11 @@ class Engine:
         Not checked: whether the question really was raised in that session (the receipt is that
         session's word); open stubs (a live session's `ask raised` stamps as it goes)."""
         self._check(session, actor)
+        done = [line for _, line in self._hk_stamp(session=session, actor=actor)[0]]
+        return "\n".join(done) if done else "no open question is named by an `asked` receipt newer than its `last_asked`"
+
+    def _hk_stamp(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
+        """`hk stamp` as housekeeping's plan and its run; with ``dry``, the plan alone."""
         role = self._role("question")
         newest: dict[str, str] = {}
         for e in self.read_ledger().entries:
@@ -1320,9 +1344,10 @@ class Engine:
             cur = str(r.doc.get("last_asked") or "")
             if cur and key_order(cur) >= key_order(k):
                 continue
-            self._board_set(r.id, {"last_asked": k}, session=session, actor=actor, mechanical=True, op="hk.stamp_asked", as_={"last_asked": k})
-            done.append(f"{r.id}: last_asked {k} (was {cur or 'empty'})")
-        return "\n".join(done) if done else "no open question is named by an `asked` receipt newer than its `last_asked`"
+            if not dry:
+                self._board_set(r.id, {"last_asked": k}, session=session, actor=actor, mechanical=True, op="hk.stamp_asked", as_={"last_asked": k})
+            done.append((f"hk stamp {r.id}", f"{r.id}: last_asked {k} (was {cur or 'empty'})"))
+        return done, []
 
     # -- hk comment: commits become dated task comments (FRAMEWORK §6.11, CE-6, DEC-137) --------
 
@@ -1438,9 +1463,8 @@ class Engine:
         if scan:
             if rid or commit or text:
                 raise Refusal("--scan with an item, a commit or a text", "`hk comment --scan [--since <rev>]` alone, or `hk comment <id> --commit <sha> [--text ...]`")
-            todo, skipped = self.hk_comment_plan(session=session, actor=actor, since=since)
-            done = [self._hk_comment_write(r, s, t, session=session, actor=actor) for r, s, t in todo]
-            lines = done + skipped
+            acts, skipped = self._hk_comment_scan(session=session, actor=actor, since=since)
+            lines = [line for _, line in acts] + skipped
             return "\n".join(lines) if lines else "no commit in this session's range leads with an open task's id"
         if since:
             raise Refusal("--since without --scan", "`hk comment --scan --since <rev>`, or `hk comment <id> --commit <sha>`")
@@ -1462,9 +1486,70 @@ class Engine:
             raise Refusal(f"not commenting on {rid}: {why}", remedy)
         return self._hk_comment_write(rid, full[:7], text.strip(), session=session, actor=actor)
 
+    def _hk_comment_scan(self, *, session: str, actor: str, dry: bool = False, since: str = "") -> tuple[list[tuple[str, str]], list[str]]:
+        """`hk comment --scan` as housekeeping's plan and its run; with ``dry``, the plan alone."""
+        todo, skipped = self.hk_comment_plan(session=session, actor=actor, since=since)
+        return [(f"hk comment {r} {s}", f"{r}: would comment {_short(t, 100)}" if dry else self._hk_comment_write(r, s, t, session=session, actor=actor)) for r, s, t in todo], skipped
+
     def _hk_comment_write(self, rid: str, short: str, text: str, *, session: str, actor: str) -> str:
         self.comment(rid, text, session=session, actor=actor, mechanical=True)
         return f"{rid}: comment {_short(text, 100)}"
+
+    # -- hk run: tier-0 housekeeping in one entry point (FRAMEWORK §6.11, CE-6, DEC-136) ----------
+
+    def _hk_steps(self, phase: str) -> list[tuple[str, Callable[..., tuple[list[tuple[str, str]], list[str]]]]]:
+        """The sub-operations `hk run <phase>` runs, in order (procedures § Housekeeping): each one
+        `(name, fn)`, ``fn(session=, actor=, dry=)`` returning ``([(operation, line)], [notes])``."""
+        if phase == "start":
+            return [("session abandon --stale", self._hk_abandon_stale),
+                    *([("hk stamp", self._hk_stamp)] if self.w.question else []),
+                    ("hk comment --scan", self._hk_comment_scan)]
+        if phase == "close":
+            return [("baton expire", self._hk_expire), ("hk close --scan", self._hk_close_scan),
+                    *([("decision index", self._hk_reindex)] if self.w.decision_index else [])]
+        raise Refusal(f"no housekeeping phase {phase!r}", "`hk run start` (after `session start`) or `hk run close` (before `session close`)")
+
+    def hk_run(self, phase: str, *, check: bool = False, session: str, actor: str) -> str:
+        """Tier-0 housekeeping in one call (FRAMEWORK §6.11, CE-6, DEC-136): `start`, after `session
+        start`, runs `session abandon --stale`, `hk stamp` and `hk comment --scan`; `close`, before
+        `session close`, runs `baton expire`, `hk close --scan` and `decision index` (where
+        `[working] decision_index` is set). Each sub-operation is the one its own command runs,
+        with its actor (the caller's, else `process:housekeep`) and its marks (an abandon is not
+        mechanical; the rest are). ``check`` lists the plan, one line per operation, and writes
+        nothing; the run lists what it did, the same way. The reply ends with the rows of
+        procedures § Housekeeping that `hk run` does not do. A run that writes commits once, at
+        its end, as a milestone.
+
+        Not checked, with ``check``: what a sub-operation's write would refuse once its evidence
+        is checked (`hk close` on a plan that is not frozen); and, between the plan and the run,
+        another session's write (the run takes the lock; the plan is a read)."""
+        self._check(session, actor)
+        steps = self._hk_steps(phase)
+        out = [f"hk run {phase}{' --check' if check else ''}:"]
+        with self.store.batch() if check else self.store.milestone():
+            for name, fn in steps:
+                acts, notes = fn(session=session, actor=actor, dry=check)
+                out.append(f"- {name}: {len(acts)} operation{'s' if len(acts) != 1 else ''}" + ("" if acts else " (nothing owed)"))
+                out += [f"  - {op}: {line}" for op, line in acts]
+                out += [f"  - not done: {n}" for n in notes]
+        out.append(f"not done by hk run (do these rows of procedures § Housekeeping yourself): {'; '.join(HK_NOT_RUN[phase])}")
+        return "\n".join(out)
+
+    def housekeeping_owed(self) -> list[str]:
+        """Orient's keyless "Housekeeping owed" lines (DEC-136): every stale `kind: open` stub, the
+        caller's own included (orient from the SessionStart hook holds no key), and every open
+        question an `asked` receipt names more newly than its `last_asked`. Cheap: no commit
+        range and no `Closes:` scan, which need a key and git. [] when nothing is owed."""
+        out = []
+        stale = self.stale_stubs(None)
+        if stale:
+            keys = ", ".join(k for k, *_ in stale)
+            out.append(f"- {len(stale)} stale stub{'s' if len(stale) != 1 else ''} ({keys}; if one is yours, `session touch`)")
+        if self.w.question:
+            stamps = [op.split()[-1] for op, _ in self._hk_stamp(session="", actor="", dry=True)[0]]
+            if stamps:
+                out.append(f"- {len(stamps)} unstamped asked receipt{'s' if len(stamps) != 1 else ''} ({', '.join(stamps)})")
+        return out + ["run `hk run start`"] if out else []
 
     def section(self, rid: str, name: str, text: str, *, session: str, actor: str) -> str:
         """Replace one named body section (`section.set`, FRAMEWORK §8.0.2)."""
@@ -1831,16 +1916,25 @@ class Engine:
     def expire_batons(self, *, session: str, actor: str = HOUSEKEEPER) -> str:
         """Housekeeping: turn every baton or pause older than the configured age into a task (G-W3, AC-15)."""
         self._check(session, actor)
+        made = [line for _, line in self._hk_expire(session=session, actor=actor)[0]]
+        return f"expired {len(made)}: {_one(made)}"
+
+    def _hk_expire(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
+        """`baton expire` as housekeeping's plan and its run (each line `<baton>-><task>`); with
+        ``dry``, the plan alone."""
         led = self.read_ledger()
         made = []
         for r in self._carried():
             if self._age(led, r.doc.get("session")) < self.w.baton_max_age:
                 continue
+            if dry:
+                made.append((f"baton expire {r.id}", f"{r.id}->a new LATER task"))
+                continue
             body = TASK_BODY.format(summary=f"Expired {r.id} from session {r.doc.get('session')}: {r.doc.get('title')}. Converted by housekeeping (G-W3); read {r.path.relative_to(self.root).as_posix()}.")
             task = self.store.new(self._role("task"), {"title": f"Expired {r.id}: {r.doc.get('title')}"[:120], "pri": "LATER", "state": "open", "deps": [], "source": r.id, "created": self.today(), "moved": session, "updated": session}, body, session=session, actor=actor, mechanical=True)
             self._end(r.id, "baton" if r.kind.name == self.w.baton else "pause", "expired", {"expired_to": task.id}, session=session, actor=actor, op="hk.expire_batons", mechanical=True)
-            made.append(f"{r.id}->{task.id}")
-        return f"expired {len(made)}: {_one(made)}"
+            made.append((f"baton expire {r.id}", f"{r.id}->{task.id}"))
+        return made, []
 
     # -- append-only records (G-D10) ----------------------------------------------------
 
@@ -2528,6 +2622,22 @@ class Engine:
         changed = self.store.reindex(session=session, actor=actor)
         return f"{self.w.decision_index}: {'regenerated' if changed else 'already current'}"
 
+    def _hk_reindex(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
+        """`decision index` as housekeeping's plan and its run, where `[working] decision_index` is
+        set: one operation when the index on disk is not what a regeneration writes."""
+        if not self.w.decision_index:
+            return [], []
+        if dry:
+            path = self.root / self.w.decision_index
+            try:
+                text = self.store.render_index()
+            except Refusal:
+                return [], []  # a broken record: a regeneration writes nothing, and lint reports it
+            now = path.read_bytes().decode("utf-8").replace("\r\n", "\n") if path.exists() else None
+            return ([("decision index", f"{self.w.decision_index}: would regenerate")] if text is not None and now != text else []), []
+        changed = self.store.reindex(session=session, actor=actor)
+        return ([("decision index", f"{self.w.decision_index}: regenerated")] if changed else []), []
+
     def import_log(self, path: str, *, session: str, actor: str, dry_run: bool = False) -> str:
         """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its number and
         its text, stamped, an id in another prefix taking the kind's with its old id as an alias;
@@ -2861,6 +2971,9 @@ class Engine:
         stories = self.unspecified_stories()
         if stories:  # CE-48
             sections.append(Part("Unspecified stories and the items G-T1 counts", "\n".join(stories), "`context-engine lint` (G-T1)", rank=2))
+        owed = self.housekeeping_owed()
+        if owed:  # CE-6, DEC-136: the hook only shows what is owed; the session runs it
+            sections.append(Part("Housekeeping owed", "\n".join(owed), "`context-engine hk run start --check`", rank=1))
         foreign = self.foreign_lines(session)
         if foreign:  # CE-101
             sections.append(Part("Foreign commits to reconcile", "\n".join(foreign), "procedures.md § Reconciling foreign commits", rank=2))
@@ -3406,7 +3519,7 @@ class Engine:
             return []
         return [Failure("G-W11", self.w.ledger,
                         f"{k} never closed or paused; last active {at}, {n} closes or pauses since (window {ABANDON_AFTER}, DEC-29/DEC-69)",
-                        f"ask the owner whether {k} is live: if it is, `session touch` from its own conversation; otherwise `session abandon --stale`")
+                        f"ask the owner whether {k} is live: if it is, `session touch` from its own conversation; otherwise `session abandon --stale` (`hk run start`)")
                 for k, n, at in self.stale_stubs(None)]
 
     def _decision_status_failures(self) -> list[Failure]:
@@ -3442,6 +3555,11 @@ class Engine:
 # DEC-29 (owner, 2026-10-13a), amended by DEC-69: a stub is stale after this many closes or pauses
 # since its last activity. Provenance: JUDGEMENT, the owner's; wrong if a live session idles that long.
 ABANDON_AFTER = 3
+# the rows of procedures § Housekeeping that `hk run <phase>` leaves to the session (CE-6)
+HK_NOT_RUN = {
+    "start": ("foreign commits (§ Reconciling foreign commits)", "a pause record whose paths are all committed (`pause resume <id>`)"),
+    "close": ("stamp final append-only records (`record stamp <ids>`)", "raise ratcheting floors and regenerate other generated files", "mark what housekeeping updated (`task touch --mechanical <id>`)"),
+}
 
 
 class Part(NamedTuple):

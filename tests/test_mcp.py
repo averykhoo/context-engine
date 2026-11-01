@@ -72,6 +72,7 @@ CALLS = {
     "commit": (["a.py", "src/b.py", "-m", "CE-1: title", "-m", "the body"], {"paths": ["a.py", "src/b.py"], "message": "CE-1: title\n\nthe body"}),
     "why": (["CE-1"], {"target": "CE-1"}),
     "hk_regen_index": ([], {}),
+    "hk_run": (["close", "--check"], {"phase": "close", "check": True}),
     "hk_comment": (["CE-1", "--commit", "abc1234", "--text", "t", "--since", "HEAD~1"], {"id": "CE-1", "commit": "abc1234", "text": "t", "since": "HEAD~1"}),
     "decision_import": (["log.md", "--dry-run"], {"path": "log.md", "dry_run": True}),
     "doc_freeze": (["docs/plan.md", "--note", "CE-1 closed"], {"path": "docs/plan.md", "note": "CE-1 closed"}),
@@ -214,8 +215,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close and hk_comment, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
-    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "hk_close", "hk_comment", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
+    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
+    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_regen_index", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
 
 
 @pytest.mark.criterion("AC-19")

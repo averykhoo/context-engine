@@ -19,6 +19,8 @@ What sessions miss here, word for word from the runbook (the engine's gate check
 - committed by path with a `Session: <key>` trailer, so `git revert` undoes it ... The operation
   list goes into the owner digest.
 - anything else housekeeping would close is proposed to the session, never closed by it
+- Run the rows below that `hk run start` does
+- Run the rows below that `hk run close` does
 
 If that section is missing, the repo's runbooks predate this plugin: read the runbook's headings
 and use the one for FRAMEWORK §6.11.

@@ -456,3 +456,103 @@ def test_hk_comment_scan_without_a_ledger_entry_needs_since_and_the_cli_signs_as
     assert main(["--root", str(eng.root), "--session", me, "hk", "comment", "--scan", "--since", f"{sha}~1"]) == 0
     assert capsys.readouterr().out.startswith(f"{a.id}: comment {sha[:7]}: {a.id}: a step")
     assert [o["actor"] for o in _comments(eng, a.id)] == ["process:housekeep"]
+
+
+# -- hk run: tier-0 housekeeping in one call, and orient's owed line (AC-175, AC-176) ----------
+
+
+def _owed(eng):
+    """A repo where every sub-operation of `hk run` has one thing to do: a stale stub, an `asked`
+    receipt that stamped nothing, an expired baton, a commit whose title leads with an open task's
+    id, and one carrying `Closes:` for another. Returns (the session that runs it, the ids)."""
+    me, a, b = _board(eng)
+    dead = started(eng)
+    eng.session_close(me, actor=ACTOR, rows="none", summary=["filed"], receipts=receipts())
+    bt = started(eng)
+    baton = eng.baton_add("a skipped step", "no time", **kw(bt)).split(":")[0]
+    eng.session_close(bt, actor=ACTOR, rows="none", summary=["left a baton"], receipts=receipts())
+    _closes(eng, 2)
+    worker = started(eng)
+    q = eng.ask_new("Which way?", body=ASK_BODY, pri="LATER", **kw(worker))
+    step = _agent_commit(eng.root, f"{b.id}: a step", worker, "step.txt")
+    fin = _agent_commit(eng.root, f"{a.id}: finish it", worker, "fin.txt", closes=a.id)  # the objection-1 commit
+    eng.session_close(worker, actor=ACTOR, rows="none", summary=["worked"], receipts=receipts(asked=q.id))  # no `ask raised`
+    now = started(eng)
+    return now, {"a": a.id, "b": b.id, "q": q.id, "dead": dead, "baton": baton, "step": step, "fin": fin}
+
+
+def _ops_listed(out):
+    """The operations a `hk run` reply lists, in order (`  - <operation>: <line>`)."""
+    return [ln[4:].split(": ", 1)[0] for ln in out.splitlines() if ln.startswith("  - ") and not ln.startswith("  - not done:")]
+
+
+def _state(eng):
+    files = sorted(p for p in eng.root.rglob("*") if p.is_file() and ".git" not in p.parts and ".context" not in p.parts)
+    return {p.relative_to(eng.root).as_posix(): p.read_bytes() for p in files}
+
+
+@pytest.mark.criterion("AC-175")
+def test_hk_run_start_then_close_runs_each_sub_operation_in_order_with_the_hk_actor_rule(eng):
+    now, x = _owed(eng)
+    before = len(_ops(eng))
+    out = eng.hk_run("start", **kw(now))
+    heads = [ln.split(":")[0] for ln in out.splitlines() if ln.startswith("- ")]
+    assert heads == ["- session abandon --stale", "- hk stamp", "- hk comment --scan"], out
+    assert _ops_listed(out) == [f"session abandon {x['dead']}", f"hk stamp {x['q']}", f"hk comment {x['b']} {x['step'][:7]}"], out
+    assert f"  - not done: {x['fin'][:7]} {x['a']}: skipped ({x['fin'][:7]} carries `Closes: {x['a']}`: left for hk close" in out, out
+    assert out.splitlines()[-1].startswith("not done by hk run (do these rows of procedures § Housekeeping yourself): foreign commits"), out
+    new = _ops(eng)[before:]
+    assert [(o["op"], o["mechanical"]) for o in new] == [("session.abandon", False), ("hk.stamp_asked", True), ("comment", True)], new
+    assert {o["actor"] for o in new} == {ACTOR} and {o["session"] for o in new} == {now}
+    assert eng.read_ledger().get(x["dead"]).kind == "abandoned"
+    out = eng.hk_run("close", **kw(now))
+    assert [ln.split(":")[0] for ln in out.splitlines() if ln.startswith("- ")] == ["- baton expire", "- hk close --scan"], out
+    assert _ops_listed(out) == [f"baton expire {x['baton']}", f"hk close {x['a']}"], out
+    assert eng.store.get(x["a"]).doc.get("state") == "closed"  # the comment pass left its `Closes:` commit for hk close
+    assert "record stamp" in out.splitlines()[-1] and "task touch --mechanical" in out.splitlines()[-1]
+    closes = [o for o in _ops(eng) if o["op"] == "close" and o["id"] == x["a"]]
+    assert closes[-1]["mechanical"] is True and closes[-1]["actor"] == ACTOR
+    assert _g(eng, "G-W9") == [] and _w11(eng) == []
+    with pytest.raises(Refusal, match="no housekeeping phase 'middle'"):
+        eng.hk_run("middle", **kw(now))
+
+
+@pytest.mark.criterion("AC-175")
+def test_hk_run_through_the_cli_signs_as_housekeeping_and_commits_once(eng, capsys, monkeypatch):
+    monkeypatch.delenv("CE_ACTOR", raising=False)
+    now, x = _owed(eng)
+    head = _git(eng.root, "rev-parse", "HEAD").strip()
+    assert main(["--root", str(eng.root), "--session", now, "hk", "run", "start"]) == 0
+    assert capsys.readouterr().out.startswith("hk run start:\n- session abandon --stale: 1 operation")
+    assert {o["actor"] for o in _ops(eng) if o["session"] == now and o["op"] != "session.start"} == {"process:housekeep"}
+    assert _git(eng.root, "rev-list", "--count", f"{head}..HEAD").strip() == "1"  # the abandon is a milestone: one commit for the run
+    assert _git(eng.root, "log", "-1", "--format=%s").startswith("engine: ")
+
+
+@pytest.mark.criterion("AC-176")
+def test_hk_run_check_writes_nothing_and_lists_what_the_run_then_does(eng):
+    now, x = _owed(eng)
+    for phase in ("start", "close"):
+        before = _state(eng)
+        plan = eng.hk_run(phase, check=True, **kw(now))
+        assert _state(eng) == before, phase  # the op log, the ledger and the board are byte-equal
+        assert plan.startswith(f"hk run {phase} --check:"), plan
+        done = eng.hk_run(phase, **kw(now))
+        assert _ops_listed(plan) == _ops_listed(done) and _ops_listed(done), (plan, done)
+    assert _ops_listed(eng.hk_run("start", check=True, **kw(now))) == []  # nothing is owed now
+
+
+@pytest.mark.criterion("AC-176")
+def test_orient_without_a_key_shows_what_housekeeping_is_owed_and_nothing_once_it_is_done(eng):
+    now, x = _owed(eng)
+    text = eng.orient()  # as the SessionStart hook runs it: no key
+    assert "## Housekeeping owed" in text, text
+    part = text.split("## Housekeeping owed", 1)[1].split("\n## ", 1)[0]
+    assert f"1 stale stub ({x['dead']}; if one is yours, `session touch`)" in part, part
+    assert f"1 unstamped asked receipt ({x['q']})" in part and "run `hk run start`" in part, part
+    eng.hk_run("start", **kw(now))
+    assert "Housekeeping owed" not in eng.orient() and "Housekeeping owed" not in eng.orient(now)
+    for _ in range(3):  # now its own stub is stale too: orient with no key names it
+        k = started(eng)
+        eng.session_close(k, actor=ACTOR, rows="none", summary=["nothing"], receipts=receipts(asked=x["q"]))
+    assert f"1 stale stub ({now};" in eng.orient()

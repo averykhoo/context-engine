@@ -1055,8 +1055,11 @@ letter suffix); none is renumbered.
 pause records, then other sessions'; the other sessions still open; the NEXT tier; owner
 questions to raise; and the top item's brief, Traps and Read first. Step 1 is unchanged, and
 item 6 is still on demand (the order: `procedures.md` § Session start). A **SessionStart
-hook** can run start-of-session housekeeping (§6.11) and inject `orient()`'s output, so
-orientation costs no tool call: a hook's output reaches the model's context.
+hook** injects `orient()`'s output, so orientation costs no tool call: a hook's output reaches
+the model's context. The hook holds no session key and writes nothing, so it only shows what
+housekeeping is owed (orient's keyless `Housekeeping owed` part: stale stubs and `asked` receipts
+that stamped nothing); the session then runs start-of-session housekeeping itself, `hk run start`
+(§6.11).
 
 **Resume** (an open pause record of your own, or the owner says "continue"): re-check the tree
 against the record, then continue.
@@ -1621,10 +1624,17 @@ the session approves the batch.
 
 **When:**
 - **At session start: reconcile** what happened since the last session: foreign commits,
-  other sessions' leftovers, stale open stubs, overdue questions. A SessionStart hook can run
-  tier 0 (§6.1).
+  other sessions' leftovers, stale open stubs, overdue questions. The session runs tier 0 as
+  `hk run start` after `session start`; the SessionStart hook only shows what is owed (§6.1),
+  and `session start` does not run it by itself.
 - **Just before close: carry out** what this session recorded but did not finish (§6.3 step
-  6a).
+  6a): `hk run close`.
+- `hk run <phase>` runs that phase's tier-0 operations in order (start: `session abandon
+  --stale`, `hk.stamp_asked`, `hk.comment` with `scan`; close: `hk.expire_batons`, `hk.close`
+  with `scan`, `hk.regen_index`), each with the `hk_` actor rule (the caller's actor, else
+  `process:housekeep`), lists every operation, and ends with the rows it does not do; `--check`
+  lists the plan and writes nothing. The gate only checks, through lint (G-W3, G-W9, G-W11,
+  G-D6), and never writes.
 
 **Safety:**
 - every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in a
@@ -1928,7 +1938,7 @@ reads as a series' or a criterion's id, or is another record's alias.
 |---|---|---|
 | **CLI** | humans, Bash, the gate | `context-engine <noun> <verb>` |
 | **MCP server** | agents | a thin wrapper: each MCP tool calls the function its CLI subcommand calls (`python -m context_engine.mcp`) |
-| **Housekeeping script** | the gate, hooks, §6.11 tier 0 | no model; actor `process:housekeep` |
+| **Housekeeping script** | the session, at its start and before its close (§6.11 tier 0) | `hk run <start\|close>`; no model; actor the caller's, else `process:housekeep` |
 
 **The MCP server is local and per session; nothing has to be run by hand.** It uses the
 **stdio** transport: Claude Code starts it as a child process when a session opens in the repo,
@@ -1985,7 +1995,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's) |
+| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).

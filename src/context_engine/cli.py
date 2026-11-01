@@ -88,6 +88,9 @@ def build() -> argparse.ArgumentParser:
     hc.add_argument("--ledger", default="", metavar="KEY", help="a session whose finished ledger entry's rows name the item closed")
     hc.add_argument("--scan", action="store_true", help="every open task a commit's `Closes:` trailer names; lists each it cannot close, with why")
     _sub(hk, "stamp", "stamp each open question's last_asked from the newest `asked` receipt in the ledger that names it")
+    hr = _sub(hk, "run", "tier-0 housekeeping in one call: `start` after session start, `close` before session close; lists every operation")
+    hr.add_argument("phase", choices=("start", "close"), help="start: stale stubs, asked stamps, commit comments; close: batons, Closes: trailers, the decision index")
+    hr.add_argument("--check", action="store_true", help="list the plan, one line per operation; write nothing")
     hm = _sub(hk, "comment", "a commit becomes a dated mechanical comment on the open task its title leads with")
     hm.add_argument("id", nargs="?", default="", help="the task's id (none with --scan)")
     hm.add_argument("--commit", default="", help="a commit in HEAD's history whose title leads with the id")
@@ -348,6 +351,7 @@ CLI_OPS = {
     ("hk", "close"): "hk_close",
     ("hk", "stamp"): "hk_stamp_asked",
     ("hk", "comment"): "hk_comment",
+    ("hk", "run"): "hk_run",
     ("pause", "open"): "pause_open",
     ("pause", "resume"): "pause_resume",
     ("record", "new"): "record_new",

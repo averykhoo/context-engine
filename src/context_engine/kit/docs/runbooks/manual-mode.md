@@ -1207,6 +1207,28 @@ empty or older than that key, set `last_asked: <that key>` and `updated: <your k
 receipt written by hand, or given to `session close --asked` without `ask raised`, stamps
 nothing, so the question would come back as overdue though the owner saw it.
 
+### context-engine hk run
+
+`context-engine hk run start` after `session start`, and `hk run close` before `session close`
+(MCP `hk_run(phase, check)`; `--check` lists the plan and writes nothing). By hand, do the rows of
+procedures.md § Housekeeping in order:
+
+1. **start:** § context-engine session abandon with `--stale`, § context-engine hk stamp, then §
+   context-engine hk comment with `--scan`.
+2. **close:** § context-engine baton expire, § context-engine hk close with `--scan`, then §
+   context-engine decision index where `[working] decision_index` is set.
+3. Each write as its own section says: the actor is yours, or `process:housekeep`; every line is
+   `"mechanical": true` but an abandon's. Commit them in one commit by path at the end (a milestone).
+4. List every operation you did, one line each, then the rows `hk run` does not do, which you do
+   next: at start, foreign commits and pause records whose paths are committed; at close, `record
+   stamp`, ratchets and other generated files, and `task touch --mechanical`.
+
+**Why:** housekeeping that is a row in a table is forgotten; one call per procedure point does every
+tier-0 row in order, and its reply is the operation list the digest needs. The SessionStart hook
+holds no key, so it only shows what is owed (orient's `Housekeeping owed` part); the session runs
+this, and the gate only checks through lint. The plan and the run are one code path, so `--check`
+lists what the run then does.
+
 ### context-engine hk comment
 
 `context-engine hk comment <id> --commit <sha> [--text "<words>"]`, or `hk comment --scan [--since
