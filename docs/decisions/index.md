@@ -186,6 +186,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-136](DEC-136-tier-0-housekeeping-the-session-runs-hk-run.md): Tier-0 housekeeping: the session runs hk run start/close; the hook only shows orient's owed line; the gate only checks *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-137](DEC-137-hk-comment-is-tier-0-for-session-trailered.md): hk comment is tier 0 for Session-trailered commits whose title leads with ids; the rest stays tier 1 *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-138](DEC-138-ce-6-close-out-scope-split-hk-ratchet-ce-168.md): CE-6 close-out scope: split hk.ratchet (CE-168) and ledger rotation (CE-169), drop adopt-and-close, build session touch and G-W11 *(agent (claude-opus-5-5), 2026-11-01)*
+- [DEC-139](DEC-139-session-touch-on-a-stub-that-is-not-open-names.md): session touch on a stub that is not open names a remedy per stub kind, not one --follows remedy *(agent (claude-opus-5-5), 2026-11-01)*
 
 ## SUPERSEDED
 
