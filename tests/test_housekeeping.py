@@ -372,3 +372,87 @@ def test_guards_off_silences_g_w11(eng):
     cfg["guards"]["off"] = [*cfg["guards"].get("off", []), "G-W11"]
     (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
     assert _w11(Engine(eng.root)) == []
+
+
+# -- hk comment: commits become dated task comments (AC-174) ----------------------------------
+
+
+def _agent_commit(root, title, key, name="work.txt", closes=""):
+    """An agent's commit made outside the engine: its trailer paragraph carries `Session:`."""
+    trailers = (f"Closes: {closes}\n" if closes else "") + f"Session: {key}\nCo-Authored-By: x <x@example.com>\n"
+    return _commit(root, f"{title}\n\nwhat it did\n\n{trailers}", name, text=title + "\n")
+
+
+def _comments(eng, rid):
+    return [o for o in _ops(eng) if o["op"] == "comment" and o["id"] == rid]
+
+
+@pytest.mark.criterion("AC-174")
+def test_hk_comment_writes_one_dated_mechanical_comment_and_refuses_what_is_not_its_to_say(eng):
+    me, a, b = _board(eng)
+    sha = _agent_commit(eng.root, f"{a.id}: the first step", me)
+    out = eng.hk_comment(a.id, sha[:9], **kw(me))
+    assert out == f"{a.id}: comment {sha[:7]}: {a.id}: the first step", out
+    assert f"({ACTOR}): {sha[:7]}: {a.id}: the first step" in eng.store.get(a.id).doc.body
+    line = _comments(eng, a.id)[-1]
+    assert line["mechanical"] is True and line["session"] == me, line
+    with pytest.raises(Refusal, match=rf"{a.id}'s log already cites {sha[:7]}"):
+        eng.hk_comment(a.id, sha, **kw(me))  # the full hash: the log's short one is its prefix
+    other = _agent_commit(eng.root, f"{b.id}: its own step", me, "b.txt")
+    with pytest.raises(Refusal, match=rf"title does not lead with {a.id}"):
+        eng.hk_comment(a.id, other, **kw(me))
+    assert eng.hk_comment(a.id, other, text="this step also unblocked it", **kw(me)).startswith(f"{a.id}: comment this step")  # tier 1's text
+    _git(eng.root, "checkout", "-q", "-b", "side")
+    side = _agent_commit(eng.root, f"{a.id}: on a side branch", me, "side.txt")
+    _git(eng.root, "checkout", "-q", "main")
+    with pytest.raises(Refusal, match=rf"{side[:7]} is not in HEAD's history"):
+        eng.hk_comment(a.id, side, **kw(me))
+    done = _agent_commit(eng.root, f"{a.id}: finish it", me, "done.txt", closes=a.id)
+    with pytest.raises(Refusal, match=rf"carries `Closes: {a.id}`: left for hk close") as r:
+        eng.hk_comment(a.id, done, **kw(me))
+    assert f"hk close {a.id} --commit {done[:7]}" in r.value.remedy
+    eng.close(b.id, "done", **kw(me))
+    with pytest.raises(Refusal, match=rf"{b.id} is closed"):
+        eng.hk_comment(b.id, other, **kw(me))
+    assert len(_comments(eng, a.id)) == 2 and _comments(eng, b.id) == []
+
+
+@pytest.mark.criterion("AC-174")
+def test_hk_comment_scan_comments_its_range_once_and_leaves_closes_to_hk_close(eng):
+    me, a, b = _board(eng)
+    one = _agent_commit(eng.root, f"{a.id}: step one", me, "1.txt")
+    two = _agent_commit(eng.root, f"{a.id}, {b.id}: step two", me, "2.txt")
+    foreign = _commit(eng.root, f"{b.id}: by hand\n", "3.txt")
+    fin = _agent_commit(eng.root, f"{b.id}: finish it", me, "4.txt", closes=b.id)
+    eng.session_close(me, actor=ACTOR, rows="none", summary=["worked"], receipts=receipts())
+    nxt = started(eng)  # its range: after me's start head, up to its own
+    later = _agent_commit(eng.root, f"{a.id}: after nxt started", nxt, "5.txt")  # the next session's range
+    out = eng.hk_comment(scan=True, **kw(nxt)).splitlines()
+    assert out[:3] == [f"{a.id}: comment {one[:7]}: {a.id}: step one", f"{a.id}: comment {two[:7]}: {a.id}, {b.id}: step two",
+                       f"{b.id}: comment {two[:7]}: {a.id}, {b.id}: step two"], out
+    assert f"{foreign[:7]}: foreign: reconcile (no `Session:` line; procedures § Reconciling foreign commits)" in out
+    assert f"{fin[:7]} {b.id}: skipped ({fin[:7]} carries `Closes: {b.id}`: left for hk close (`hk close {b.id} --commit {fin[:7]}`))" in out
+    assert not any(later[:7] in ln for ln in out)
+    assert {o["mechanical"] for o in _comments(eng, a.id) + _comments(eng, b.id)} == {True}
+    log = (eng.root / "ops.jsonl").read_bytes()
+    again = eng.hk_comment(scan=True, **kw(nxt))
+    assert (eng.root / "ops.jsonl").read_bytes() == log, again  # a second run writes nothing
+    assert f"{one[:7]} {a.id}: skipped ({a.id}'s log already cites {one[:7]})" in again
+    assert eng.hk_close(scan=True, **kw(nxt)).startswith(f"{b.id}: closed (done in {fin[:7]}")  # the comment did not block it
+    eng.session_close(nxt, actor=ACTOR, rows="none", summary=["housekept"], receipts=receipts())
+    third = started(eng)
+    out = eng.hk_comment(scan=True, **kw(third))
+    assert out == f"{a.id}: comment {later[:7]}: {a.id}: after nxt started", out  # nothing from before its baseline
+
+
+@pytest.mark.criterion("AC-174")
+def test_hk_comment_scan_without_a_ledger_entry_needs_since_and_the_cli_signs_as_housekeeping(eng, capsys, monkeypatch):
+    monkeypatch.delenv("CE_ACTOR", raising=False)
+    me, a, _ = _board(eng)
+    sha = _agent_commit(eng.root, f"{a.id}: a step", me)
+    with pytest.raises(Refusal, match="has no ledger entry") as r:
+        eng.hk_comment(scan=True, **kw("2026-10-09a"))
+    assert "--since <rev>" in r.value.remedy
+    assert main(["--root", str(eng.root), "--session", me, "hk", "comment", "--scan", "--since", f"{sha}~1"]) == 0
+    assert capsys.readouterr().out.startswith(f"{a.id}: comment {sha[:7]}: {a.id}: a step")
+    assert [o["actor"] for o in _comments(eng, a.id)] == ["process:housekeep"]

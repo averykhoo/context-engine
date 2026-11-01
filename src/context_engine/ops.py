@@ -323,6 +323,12 @@ def hk_close(e: Engine, c: Caller, id: str = "", commit: str = "", ledger: str =
 
 
 @op(write=True)
+def hk_comment(e: Engine, c: Caller, id: str = "", commit: str = "", text: str = "", scan: bool = False, since: str = "") -> tuple[int, str]:
+    """Housekeeping: a commit becomes a dated, mechanical comment on the open task its title leads with (`CE-n: ...`): `id` and `commit` (in HEAD's history; the comment is `<short sha>: <subject>`, or `text` when given), or `scan`: every commit with a `Session:` line in this session's range (or `since`..HEAD), listing what it skipped. A commit whose `Closes:` names the item is left for `hk_close`; a hash the item's log cites is not commented twice."""
+    return 0, e.hk_comment(id, commit, text=text, scan=scan, since=since, session=c.session, actor=c.actor or "process:housekeep")
+
+
+@op(write=True)
 def hk_stamp_asked(e: Engine, c: Caller) -> tuple[int, str]:
     """Housekeeping: stamp each open question's `last_asked` from the newest finished ledger entry whose `asked` receipt names it, where that is newer (a receipt written by hand, or given to `session close` without `ask raised`)."""
     return 0, e.stamp_asked(session=c.session, actor=c.actor or "process:housekeep")

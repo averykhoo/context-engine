@@ -15,9 +15,9 @@ a tool error carrying its remedy.
 later tool uses them unless it is passed ``session`` or ``actor`` itself (a subagent passes its
 own ``actor``). Before any ``session_start``, ``CE_SESSION`` and ``CE_ACTOR`` are the fallback.
 
-Deliberately not here: the ``hk_`` operations FRAMEWORK §8.0.2 names that are not built
-(``hk.comment``, ``hk.ratchet``; CE-6), and any judgement: a tool carries out what the caller
-decided.
+Deliberately not here: the ``hk_`` operation FRAMEWORK §8.0.2 names that is not built
+(``hk.ratchet``: no ratcheting floor exists until G-V2's; CE-168), and any judgement: a tool
+carries out what the caller decided.
 """
 
 from __future__ import annotations

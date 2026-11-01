@@ -1207,6 +1207,33 @@ empty or older than that key, set `last_asked: <that key>` and `updated: <your k
 receipt written by hand, or given to `session close --asked` without `ask raised`, stamps
 nothing, so the question would come back as overdue though the owner saw it.
 
+### context-engine hk comment
+
+`context-engine hk comment <id> --commit <sha> [--text "<words>"]`, or `hk comment --scan [--since
+<rev>]` (MCP `hk_comment(id, commit, text, scan, since)`). A commit becomes a dated comment on the
+open task its title leads with. By hand:
+
+1. **The range** (`--scan`): your session's range of § Reconciling foreign commits (procedures.md),
+   `<baseline>..<your start head>`, or `<rev>..HEAD` with `--since`. List it oldest first:
+   `git log --reverse --format='%H %s [%(trailers:key=Session,valueonly)] [%(trailers:key=Closes,valueonly,separator=%x2C)]' <baseline>..<end>`.
+2. For each commit whose title leads with ids (`T-3: ...`, `T-3, T-4: ...`: the comma-separated
+   ids before the first colon) naming an open task (never a question): skip it if its message has no
+   `Session:` line (it is foreign: reconcile it, and say so), if its `Closes:` trailers name the item
+   (leave it for § context-engine hk close), or if the item's `## Log` already cites the hash (a
+   hash in the log that the commit's full hash starts with).
+3. Otherwise add `- <your key> (<actor>): <short sha>: <subject>` to the item's `## Log` (§
+   context-engine task comment) and log `comment` with `"mechanical": true`. One item by hand is
+   the same with that commit, which must be in HEAD's history (`git merge-base --is-ancestor <sha>
+   HEAD`); with words of your own (`--text`) the title need not lead with the id.
+4. List what you commented and what you skipped, with why.
+
+**Why:** the item's log should show its history without reading git, and a title that leads with
+the id (the commit rule) parses without a model, so it is tier 0; any other mention of an item is
+a judgement (tier 1). A commit that closes the item is `hk close`'s evidence, and a log citing it
+would make `hk close` refuse it as not new, so the comment leaves it alone. The range partitions
+HEAD's history, so no commit is commented twice by two sessions, and the cited-hash check makes a
+second run write nothing.
+
 ## The residual-risk register
 
 ### context-engine register show

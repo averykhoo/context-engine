@@ -1593,8 +1593,8 @@ any edit agent.
 
 | Tier | Who | Does | Example operations |
 |---|---|---|---|
-| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton and a derived digest; stamping `last_asked` from `asked:` receipts that stamped nothing (`hk.stamp_asked`); closing what a commit's `Closes:` trailer names (`hk.close`) |
-| 1 | **small agents restricted to the engine's `hk.*` operations (MCP tools `hk_*`)** | reading unstructured text, writing through typed operations | commits since the last session → dated task comments; clearing a pause record whose paths are now committed; reconciling foreign commits (§6.10); spotting owner words not yet recorded (reported, not written) |
+| 0 | **a script that calls no model** (`process:housekeep`) | deterministic repairs | stamps; floor ratchets; regenerated indexes; flagging and converting expired batons; turning stale `kind: open` stubs into `kind: abandoned` plus a baton and a derived digest; stamping `last_asked` from `asked:` receipts that stamped nothing (`hk.stamp_asked`); closing what a commit's `Closes:` trailer names (`hk.close`); a dated task comment from each commit that carries a `Session:` trailer and whose title leads with the task's id (`hk.comment`; a commit whose `Closes:` names the task is left for `hk.close`) |
+| 1 | **small agents restricted to the engine's `hk.*` operations (MCP tools `hk_*`)** | reading unstructured text, writing through typed operations | commits since the last session that name a task other than by leading with its id → dated task comments (`hk.comment` with its `text`); clearing a pause record whose paths are now committed; reconciling foreign commits (§6.10); spotting owner words not yet recorded (reported, not written) |
 | 2 | **the main session** | every judgement | ranking, criteria, task bodies, answers, closes without evidence |
 
 **The rule: housekeeping carries out intent that is already recorded somewhere; it never forms
@@ -1985,7 +1985,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); not built: `hk.comment(id, text, commit)`, `hk.ratchet` (no ratcheting floor exists until G-V2's) |
+| **Housekeeping (`hk_`)** | `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
@@ -2419,7 +2419,7 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
 | cross-cutting NFRs or data law | NFR doc with an invariant → test map |
 | parallel building | build-round protocol (§6.6), tracked workflows |
 | sessions spend context reading files in order to edit them | the engine's MCP server (§8.0.2), after the §8.0.3 trial |
-| housekeeping needs judgement from reading, not just fixed rules (commit → task comments, foreign commits) | tier-1 housekeeping agents restricted to `hk_` tools (§6.11); G-W9, G-W10 |
+| housekeeping needs judgement from reading, not just fixed rules (commits that name a task other than by leading with its id → task comments, foreign commits) | tier-1 housekeeping agents restricted to `hk_` tools (§6.11); G-W9, G-W10 |
 | `session.start` stubs are in use | G-W11 |
 | a task is above the design-review threshold (§5.2) | `review_triggers` and `register` in `[working]`; G-W12, G-W13 |
 | a bundle directory is declared OKF | G-D11 |

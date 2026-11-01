@@ -88,6 +88,12 @@ def build() -> argparse.ArgumentParser:
     hc.add_argument("--ledger", default="", metavar="KEY", help="a session whose finished ledger entry's rows name the item closed")
     hc.add_argument("--scan", action="store_true", help="every open task a commit's `Closes:` trailer names; lists each it cannot close, with why")
     _sub(hk, "stamp", "stamp each open question's last_asked from the newest `asked` receipt in the ledger that names it")
+    hm = _sub(hk, "comment", "a commit becomes a dated mechanical comment on the open task its title leads with")
+    hm.add_argument("id", nargs="?", default="", help="the task's id (none with --scan)")
+    hm.add_argument("--commit", default="", help="a commit in HEAD's history whose title leads with the id")
+    hm.add_argument("--text", default="", help="the comment, when it is not `<short sha>: <subject>` (a judgement: tier 1)")
+    hm.add_argument("--scan", action="store_true", help="every commit with a `Session:` line in this session's range; lists what it skipped")
+    hm.add_argument("--since", default="", metavar="REV", help="with --scan: read REV..HEAD instead of this session's range")
 
     _sub(groups, "orient", "the session-start read in one capped response: banner, batons and pauses, the board's NOW and NEXT, questions to raise, the top item")
     _sub(groups, "routes", "where each framework component lives ([[routes]] in context.toml)")
@@ -341,6 +347,7 @@ CLI_OPS = {
     ("baton", "expire"): "hk_expire_batons",
     ("hk", "close"): "hk_close",
     ("hk", "stamp"): "hk_stamp_asked",
+    ("hk", "comment"): "hk_comment",
     ("pause", "open"): "pause_open",
     ("pause", "resume"): "pause_resume",
     ("record", "new"): "record_new",
