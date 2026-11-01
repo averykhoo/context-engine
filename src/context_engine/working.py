@@ -589,7 +589,11 @@ class Engine:
         operation, its line)], [notes])``; with ``dry``, the plan alone, nothing written."""
         acts = []
         for k, n, last in self.stale_stubs(session):
-            line = f"{k}: {n} closes or pauses since its last activity, {last}" if dry else self._abandon(k, n, last, session=session, actor=actor, forced=False)
+            if dry:
+                line = f"{k}: {n} closes or pauses since its last activity, {last}"
+            else:
+                with self.store.milestone():  # another session's stub abandoned is a milestone (DEC-36), as `session abandon` is
+                    line = self._abandon(k, n, last, session=session, actor=actor, forced=False)
             acts.append((f"session abandon {k}", line))
         return acts, []
 
@@ -1520,8 +1524,9 @@ class Engine:
         Housekeeping that `hk run` does not do, and last G-W10's count: the operations it made and
         the op log lines it added (no model is called, so no tokens). Where `[housekeeping]
         max_writes` is set, a run whose plan makes more operations refuses before any write,
-        unless ``anyway`` (the owner's word). A run that writes commits once, at its end, as a
-        milestone.
+        unless ``anyway`` (the owner's word). The run is one batch, so it commits once, at its
+        end, when one of its writes is a milestone (an abandon, a close: DEC-36); otherwise its
+        writes go with the session's next commit.
 
         Not checked, with ``check``: what a sub-operation's write would refuse once its evidence
         is checked (`hk close` on a plan that is not frozen); and, between the plan and the run,
@@ -1535,7 +1540,7 @@ class Engine:
             return log.read_bytes().count(b"\n") if log.is_file() else 0
 
         out = [f"hk run {phase}{' --check' if check else ''}:"]
-        with self.store.batch() if check else self.store.milestone():
+        with self.store.batch():
             if cap and not check and not anyway:  # G-W10: the plan is counted before any write
                 planned = sum(len(fn(session=session, actor=actor, dry=True)[0]) for _, fn in steps)
                 if planned > cap:

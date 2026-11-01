@@ -601,6 +601,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
         return line
 
     w("session_start")
+    w("session_touch")  # a live session that only reads says so (CE-6): not a milestone
     w("task_new", title="One", pri="NOW")
     w("task_new", title="Two")
     w("session_tasks", ids=["CE-1", "CE-2"])  # not a milestone: its line rides along (CE-112)
@@ -614,6 +615,8 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("task_reopen", id="CE-2", msg="not yet")
     git(mrepo, "commit", "-q", "--allow-empty", "-m", "finished by hand", "-m", "Closes: CE-1")
     w("hk_close", id="CE-1", commit=git(mrepo, "rev-parse", "HEAD").strip())  # housekeeping's close is a task close (CE-6)
+    git(mrepo, "commit", "-q", "--allow-empty", "-m", "CE-2: a step by hand", "-m", "Session: x")
+    w("hk_comment", id="CE-2", commit=git(mrepo, "rev-parse", "HEAD").strip())  # a mechanical comment (CE-6): not a milestone
     w("id_reserve", kind="task", count=2)  # not a milestone: its lines ride along (CE-105)
     (mrepo / "notes.md").write_text("# Notes\n\nACTIVE-PLAN until the trial ends.\n", encoding="utf-8")
     w("doc_freeze", path="notes.md")
@@ -656,6 +659,8 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("pause_resume", id="PAU-1")
     w("baton_add", step="left open", why="for the expiry")
     w("hk_expire_batons")
+    w("baton_add", step="left for the run", why="for hk run")
+    w("hk_run", phase="close")  # it expires the baton: no milestone among its writes, so they ride along (CE-6)
     sha = run(mrepo, "banner_show", c)[1].split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
     w("ask_new", title="And this?", body=ASK_BODY, pri="LATER")

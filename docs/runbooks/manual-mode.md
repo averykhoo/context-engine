@@ -1219,7 +1219,8 @@ procedures.md § Housekeeping in order:
 2. **close:** § context-engine baton expire, § context-engine hk close with `--scan`, then §
    context-engine decision index where `[working] decision_index` is set.
 3. Each write as its own section says: the actor is yours, or `process:housekeep`; every line is
-   `"mechanical": true` but an abandon's. Commit them in one commit by path at the end (a milestone).
+   `"mechanical": true` but an abandon's. When the run abandoned or closed anything (milestones),
+   commit all its writes in one commit by path at the end; otherwise they go with your next commit.
 4. List every operation you did, one line each, then the rows `hk run` does not do, which you do
    next: at start, foreign commits and pause records whose paths are committed; at close, `record
    stamp`, ratchets and other generated files, and `task touch --mechanical`.
