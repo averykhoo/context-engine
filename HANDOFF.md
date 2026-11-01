@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-01b)
+## Banner (2026-11-01c)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -22,7 +22,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   after it (CE-167, LATER, deps CE-11). audio-workspace is done (CE-43).
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
   half), CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
-- **Pushed through 296202c** (2026-10-31; local gate 1346 passed, Linux gate 1346 passed; CI green, run 41133267123).
+- **Pushed through 309641b** (2026-11-01; local gate 1391 passed, Linux gate 1391 passed; CI green, run 41322960103).
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each
   parallel lane a reserved AC-id range; an integrator that closes the NOW item empties NOW (G-W5) until the next promote.
