@@ -2219,7 +2219,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   lint re-checks it in the stored files: the item's log line from that session cites a commit in
   HEAD's history whose trailers git reads as `Closes: <id>`, or a finished ledger entry whose
   `rows:` names it closed with no reopen since in the log before that line. A cited commit git
-  does not know fails in a full clone; a shallow one (CI's checkout) trusts it.
+  does not know fails in a full clone; a shallow one trusts it, so CI checks out full history
+  (`fetch-depth: 0` on `actions/checkout`), or G-W9 trusts, and G-W11 skips, what a shallow
+  clone lacks.
 - **G-W10:** housekeeping writes per run are **counted and measured** (writes, token counts),
   and the count goes into the run's report: `hk run` ends its reply with the operations it made
   and the op log lines it added (tier 0 calls no model, so it spends no tokens). **No budget by
