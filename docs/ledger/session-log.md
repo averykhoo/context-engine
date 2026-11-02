@@ -7,6 +7,41 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-02a · kind: close
+
+- **tasks:** CE-11
+- **rows:** CE-11 (open: cutover done locally on intervals ce-cutover, verified 10/10; waits on
+  ASK-25, ASK-27, ASK-28); ASK-25, ASK-26, ASK-27, ASK-28 (raised); CE-171, CE-172, CE-173, CE-174
+  (filed)
+- **receipts:**
+  - guards: gate readers PASSED (372 passed) on g1/code+readers:59537ead65a05eda; code covered by
+    2026-11-01 run; lint: clean; no code changed
+  - read: orient; CE-11, CE-43 task show; procedures.md Clean close; builder and verifier reports in
+    .scratch/ce-11/
+  - asked: ASK-25, ASK-26, ASK-27, ASK-28
+- **summary** (the owner digest):
+  - CE-11: intervals adopted on local branch ce-cutover (8f1cbab, 7 commits on master fa4cf12);
+    master untouched, nothing pushed.
+  - Verified independently 10/10: full gate itf 27798 + rest 7188 passed, lint clean, 87 decisions 0
+    lost 0 extra, HANDOFF 22/22 on board.
+  - Backup: C:/Users/user/intervals-backup-2026-11-02 (bundle verified, fsck clean). Engine pin
+    309641b (origin/main).
+  - Owner: ASK-25 merge+push, ASK-27 CI prose paths (commit A), ASK-28 D-37..D-87 numbering, ASK-26
+    rehearsal cleanup (458 MB, private).
+  - Engine findings filed LATER: CE-171 import silent, CE-172 freeze liveness, CE-173 docs-only CI,
+    CE-174 task new --body-file.
+  - Intervals nits for the merge session: CLAUDE.md engine section omits docs/archive/ as prose;
+    commits titled CE-11:; IV-23 statuses all BUILT; charter+stories empty.
+  - Lesson: adoption = survey, verified backup, scripted rehearsal on a clone, same script live on a
+    branch, independent verifier.
+- **Still owed:**
+  - Owner: answer ASK-25 (merge+push), ASK-27, ASK-28, ASK-26
+  - Owner: restart Claude Code in intervals after the merge (hook and env point at the worktree
+    until then)
+- **start head:** 57b0e90a57d33ef1452bcdce43ee3e945df0b26f
+
+---
+
 ## 2026-11-01c · kind: close
 
 - **rows:** none
