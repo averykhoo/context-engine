@@ -1375,3 +1375,4 @@
 {"at": "2026-11-02T16:47:28+08:00", "session": "2026-11-02a", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "ASK-28", "path": "tasks/ASK-28-keep-d-37-d-87-minted-for-intervals-unnumbered.md", "fields": ["last_asked", "updated"], "mechanical": false}
 {"at": "2026-11-02T16:47:28+08:00", "session": "2026-11-02a", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "2026-11-02a", "path": "docs/ledger/session-log.md", "fields": ["asked"], "mechanical": false}
 {"at": "2026-11-02T16:49:05+08:00", "session": "2026-11-02a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-11-02a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
+{"at": "2026-11-02T16:49:32+08:00", "session": "2026-11-02a", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-11-02a", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}

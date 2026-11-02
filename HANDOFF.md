@@ -3,29 +3,30 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-01c)
+## Banner (2026-11-02a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **CE-11 is NOW** (owner, 2026-11-01b): adopt the engine in intervals, no 2.0.0 wait (DEC-135); zanzibar after it (CE-167).
-  NEXT: CE-18, CE-156, CE-161, CE-164 (one slot free). Last rerank: 2026-10-30a (`docs/evidence/rerank-2026-10-30a.md`).
+- **CE-11 is NOW, cutover done locally, waiting on the owner (2026-11-02a):** intervals branch `ce-cutover` (worktree
+  `C:/Users/user/PycharmProjects/intervals-ce-cutover`, head 8f1cbab, 7 commits on master fa4cf12), engine pin 309641b;
+  verified independently 10/10; intervals master untouched, nothing pushed; backup `C:/Users/user/intervals-backup-2026-11-02`.
+  Blocked on ASK-25 (merge + push), ASK-27 (CI prose paths), ASK-28 (D-37..D-87); ASK-26 (cleanup). Zanzibar after (CE-167).
+  NEXT: CE-18, CE-156, CE-161, CE-164, ASK-25. Last rerank: 2026-10-30a (`docs/evidence/rerank-2026-10-30a.md`).
+- **Engine findings from the intervals cutover:** CE-171 (decision import silent on an unparseable log), CE-172 (doc freeze
+  needs a liveness line), CE-173 (engine writes defeat docs-only CI filters), CE-174 (task new lacks --body-file); all LATER.
 - **CE-6 closed (2026-11-01b, b756f65):** tier-0 housekeeping is `hk run start` after session start and `hk run close` before
-  close (DEC-136); also hk comment, session touch, G-W11 lint, G-W10 counts; CI fetches full history. Agent calls
-  DEC-136..DEC-146 PROVISIONAL; split CE-168, CE-169; nits CE-170; INV-91..93. MCP needs a restart for the new tools.
-- **Just landed (2026-10-30a, owner away, DEC-85):** 35 tasks closed through two ultracode build waves (worktree builders, a
-  skeptic review per lane, serial integration): CE-138, 139, 85, 106, 107, 117, 118, 105, 119, 134, 143, 46, 53, 140, 39,
-  102, 111, 44, 84, 123, 120, 108, 109, 137, 142, 144, 141, 42, 136, 96, 146, 147, 148, 149, 112. Agent calls DEC-86..DEC-130
-  are PROVISIONAL (owner to review); residual follow-ups filed as CE-150..CE-166; register INV-84..INV-90.
-- **Owner questions open:** none. ASK-22 -> DEC-131 (paste rules 1+2; rule 3 out, `ulimit -u` errors in Git Bash), ASK-23 -> DEC-132
-  (CE-145 folded into INV-31, closed); DEC-133 PROVISIONAL (2026-10-31a).
-- **Adoptions (2026-11-01a, owner):** intervals next, now, without waiting for its 2.0.0 (CE-11, DEC-134, DEC-135); zanzibar
-  after it (CE-167, LATER, deps CE-11). audio-workspace is done (CE-43).
+  close (DEC-136); agent calls DEC-136..DEC-146 PROVISIONAL; split CE-168, CE-169; nits CE-170; INV-91..93.
+- **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves (35 tasks closed); residual
+  follow-ups CE-150..CE-166; register INV-84..INV-90.
+- **Owner questions open:** ASK-25..ASK-28 (raised 2026-11-02a). DEC-133 PROVISIONAL (2026-10-31a).
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
   half), CE-132 (contract bump), CE-166 (adhoc), CE-11, CE-28.
 - **Pushed through 309641b** (2026-11-01; local gate 1391 passed, Linux gate 1391 passed; CI green, run 41322960103).
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each
   parallel lane a reserved AC-id range; an integrator that closes the NOW item empties NOW (G-W5) until the next promote.
+- **Lesson (2026-11-02a):** an adoption runs as survey, verified bundle backup, scripted rehearsal on a clone, the same script
+  live on a local branch, then an independent verifier; CE-43 and CE-11 both took this shape.
 - **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
