@@ -196,6 +196,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-146](DEC-146-ce-6-close-coverage-reading-g-w10-as-built-goes.md): CE-6 close: coverage reading G-W10 as built goes to CE-164; the close clause is narrowed *(agent (claude-opus-5-5), 2026-11-01)*
 - [DEC-147](DEC-147-merge-intervals-ce-cutover-into-master-and-push.md): Merge intervals ce-cutover into master and push after prepush *(owner, 2026-11-03)*
 - [DEC-148](DEC-148-keep-intervals-commit-a-engine-records-are.md): Keep intervals commit A: engine records are prose to gate.py and fuzz CI *(owner asked, ruled by claude-code/claude-opus-5-5, 2026-11-03)*
+- [DEC-149](DEC-149-keep-d-37-d-87-as-minted-for-intervals.md): Keep D-37..D-87 as minted for intervals' unnumbered log entries *(owner asked, ruled by claude-code/claude-opus-5-5, 2026-11-03)*
 
 ## SUPERSEDED
 

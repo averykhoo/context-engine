@@ -4,14 +4,17 @@ id: ASK-28
 title: Keep D-37..D-87 minted for intervals' unnumbered log entries?
 brief: Recommend keep; IV-23 fixes statuses
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-02a
 created: 2026-11-02
 moved: 2026-11-02a
-updated: 2026-11-02a
-last_asked: 2026-11-02a
+updated: 2026-11-03a
+last_asked: 2026-11-03a
 blocks: [CE-11]
+status: deprecated
+closed: 2026-11-03a
+answered: {on: 2026-11-03, session: 2026-11-03a, decision: DEC-149, ruled_by: claude-code/claude-opus-5-5}
 ---
 
 ## Context
@@ -32,3 +35,7 @@ records rather than decisions. This replaces the log's own "D37 is next" rule. A
 
 Keep them as minted: nothing is lost, the series is in date order, and re-importing costs a second
 cutover. IV-23 can set the right status on each.
+
+## Log
+
+- 2026-11-03a (claude-code/claude-opus-5-5): answered on the owner's delegation, ruled by claude-code/claude-opus-5-5: DEC-149
