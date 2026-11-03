@@ -7,9 +7,37 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-03a · kind: open
+## 2026-11-03a · kind: close
 
-- **opened:** 2026-11-03T15:35:46+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-11 (closed); ASK-25 (answered, DEC-147); ASK-27 (ruled, DEC-148); ASK-28 (ruled,
+  DEC-149); CE-175 (new, LATER); CE-176 (new, LATER)
+- **receipts:**
+  - guards: gate: not run (no code change this session); lint: only G-W5 red (NOW holds 0, owner to
+    pick)
+  - read: orient, ASK-25..ASK-28, CE-11, CE-167, DEC-134; builder, verifier, CI watcher and
+    intervals-records reports
+  - asked: none
+- **summary** (the owner digest):
+  - CE-11 closed: intervals master fast-forwarded fa4cf12 -> 8f1cbab and pushed 478654a..8f1cbab on
+    the owner's go (DEC-147); gate itf 27798 + rest 7188 and prepush fuzz-x10 green; CI green (ci
+    41601384313, fuzz 41601384275).
+  - Agent rulings on the owner's 'finish the cutover': DEC-148 keeps intervals commit A, DEC-149
+    keeps D-37..D-87; both PROVISIONAL, flagged for review.
+  - Independent verifier 7/7 PASS: ff only, pushed level, engine env pin 309641b and SessionStart
+    hook in the main checkout, gate recorded, backup bundle verifies, conservation 87/87 and
+    IV-1..IV-23.
+  - intervals' own records refreshed in its session 2026-11-03a (b89bf97, 594ef0f): banner and
+    HANDOFF Pushed state; local, 2 commits ahead of origin.
+  - Engine findings filed: CE-175 (banner set commits all of HANDOFF.md), CE-176 (orient's
+    push-outside-a-session notice cannot be cleared); not reproduced first-hand.
+  - NOW is empty (G-W5 red, the only lint red): CE-167 zanzibar is unblocked; asked the owner
+    whether to promote and start it.
+- **Still owed:**
+  - Owner: pick the next NOW; promote CE-167 (zanzibar) and start it?
+  - Owner: ASK-26, delete ce11-rehearsal, the intervals-ce-cutover worktree and branch, and when the
+    intervals backup
+  - Owner: the go to push intervals' 2 records commits and this repo's records-only commits
+  - Owner: review DEC-148, DEC-149 (PROVISIONAL)
 - **start head:** 077c0c20e737a0789b0305368f9eec9fb8d5500a
 
 ---
