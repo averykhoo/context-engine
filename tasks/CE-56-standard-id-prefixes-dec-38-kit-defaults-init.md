@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-13c
 created: 2026-10-13
 moved: 2026-10-13c
-updated: 2026-10-20e
+updated: 2026-11-03b
 goals: [G-6]
 ---
 
@@ -18,3 +18,4 @@ DEC-38 sets one prefix per record kind in every repo, 2 to 5 capitals: DEC, STOR
 ## Log
 
 - 2026-10-14a (claude-code/claude-opus-5-5): Audit 2026-10-14a (spec F6, F7): the engine does not enforce [A-Z]+-[1-9][0-9]* on prefixes; init accepts digits and its remedy suggests T2; G and INV prefixes are hard-coded. Fold into this task's prefix work.
+- 2026-11-03b (claude-code/claude-opus-5-5): From CE-167: the kit's default prefixes D and S collide with ordinary audit labels (zanzibar's D7, S-1..S-7) and init --dry-run gives no warning; zanzibar took DEC/TK/US. Idea: census <prefix>-<n> hits in the tracked tree during the dry run. Evidence: docs/evidence/ce167-zanzibar-cutover-2026-11-03.md § Engine findings
