@@ -7,11 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-03b · kind: open
+## 2026-11-03b · kind: close
 
-- **opened:** 2026-11-03T20:40:15+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-167 (NOW, open: local cutover verified, waits on ASK-35 and ASK-29); CE-177..CE-181
+  (filed); CE-172, CE-174, CE-56 (commented); ASK-29..ASK-36 (filed, raised)
+- **receipts:**
+  - guards: gate: not run (no code change; require code: green on g1/code:82b1aae5ea04135f); lint:
+    clean; zanzibar branch 3e63fd7: ten-phase gate COVERED, engine lint clean (builder and verifier)
+  - read: orient, CE-167, CE-11 log; workflow wf_2cded9d5-24e results (survey-records, survey-gate,
+    builder, verifier)
+  - asked: ASK-29, ASK-30, ASK-31, ASK-32, ASK-33, ASK-34, ASK-35, ASK-36
+- **summary** (the owner digest):
+  - CE-167 promoted to NOW on the owner's go; run as one workflow (2 sonnet surveys, opus builder,
+    opus verifier).
+  - zanzibar cutover built locally: branch ce-cutover 3e63fd7 (7 commits on master 4826a01, worktree
+    zanzibar-ce-cutover), engine pin 309641b; backup bundle verified.
+  - Conservation byte-equal (303 board records, 9 decision sections, checkers sabotaged); zanzibar
+    ten-phase gate green, lint clean; verifier 8/8 PASS.
+  - Nothing pushed, tagged or merged in zanzibar; owner to answer ASK-35 (design calls), then ASK-29
+    (merge+push, no tag).
+  - Engine findings CE-177..CE-181 filed; CE-172, CE-174, CE-56 commented. Evidence:
+    docs/evidence/ce167-zanzibar-cutover-2026-11-03.md.
+  - MCP server ran stale code (refused context.toml's housekeeping key): CLI used all session;
+    restart Claude Code.
+  - Kept on purpose: .scratch/ce-167, C:/Users/user/ce167-rehearsal, the zanzibar worktree and
+    backup (ASK-34); nothing running.
+- **Still owed:**
+  - ASK-35 then ASK-29: owner's confirmation and go for zanzibar merge and push
+  - ASK-36: rotate the credential in zanzibar's local Claude settings (owner only)
+  - context-engine push of records-only commits since 309641b (owner's word)
 - **start head:** 33746a256d9bc5e5884787159e0702236e220344
-- **asked:** ASK-29, ASK-30, ASK-31, ASK-32, ASK-33, ASK-34, ASK-35, ASK-36
 
 ---
 
