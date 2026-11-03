@@ -4,14 +4,17 @@ id: ASK-25
 title: Merge intervals ce-cutover into master and push?
 brief: Recommend merge now; push only after prepush, with a CI watcher
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-11-02a
 created: 2026-11-02
 moved: 2026-11-02a
-updated: 2026-11-02a
-last_asked: 2026-11-02a
+updated: 2026-11-03a
+last_asked: 2026-11-03a
 blocks: [CE-11]
+status: deprecated
+closed: 2026-11-03a
+answered: {on: 2026-11-03, session: 2026-11-03a, decision: DEC-147}
 ---
 
 ## Context
@@ -35,3 +38,7 @@ Backup: C:/Users/user/intervals-backup-2026-11-02/intervals.bundle (verified).
 
 Merge now and push after prepush: the branch is verified, is a fast-forward, and every later
 intervals session otherwise runs on a stale master. The push stays yours to approve.
+
+## Log
+
+- 2026-11-03a (claude-code/claude-opus-5-5): answered by the owner: DEC-147
