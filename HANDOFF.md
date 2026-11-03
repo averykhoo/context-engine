@@ -18,12 +18,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   ASK-33 MCP registration route (CE-177), ASK-34 and ASK-26 cleanup of the CE-167 / CE-11 rehearsal clones and backups.
 - **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181 (zanzibar: MCP registration at
   setup, G-W7 legacy history, G-W4 import status, G-D11 tasks/README, long gates and banner-set staling); all LATER.
-- **The MCP server ran stale code at 2026-11-03b start** (refused context.toml's `housekeeping` key): restart Claude Code; the
-  CLI works meanwhile.
 - **CE-11 closed (2026-11-03a, 32f4fd9):** intervals adopted and pushed (DEC-147); agent rulings DEC-148, DEC-149
   PROVISIONAL; intervals' own records 2 commits ahead of its origin, push is the owner's.
-- **CE-6 closed (2026-11-01b, b756f65):** tier-0 housekeeping is `hk run start` after session start and `hk run close` before
-  close (DEC-136); agent calls DEC-136..DEC-146 PROVISIONAL; split CE-168, CE-169; nits CE-170; INV-91..93.
 - **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves (35 tasks closed); residual
   follow-ups CE-150..CE-166; register INV-84..INV-90. DEC-133 PROVISIONAL (2026-10-31a).
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
@@ -31,13 +27,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Pushed through 309641b** (2026-11-01; local gate 1391 passed, Linux gate 1391 passed; CI green, run 41322960103). Since then
   this repo holds records-only commits ahead of origin/main, unpushed.
 - **Every clean close sets the banner** (G-W1).
-- **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each
-  parallel lane a reserved AC-id range; an integrator that closes the NOW item empties NOW (G-W5) until the next promote.
 - **Lesson (2026-11-02a, 2026-11-03a, 2026-11-03b):** an adoption runs as survey, verified bundle backup, scripted rehearsal on
   a clone, the same script live on a local branch, an independent verifier, then the owner's merge-and-push with a CI watcher,
   and last the adopter's own records refreshed in its own engine session; CE-43, CE-11 and CE-167 took this shape (CE-167 as
   one workflow: 2 surveys, builder, verifier, about 3.9 h).
-- **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
 - **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.**
@@ -46,7 +39,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
 - **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push. The MCP server runs stale code
-  after an engine change: restart Claude Code.
+  after an engine change: restart Claude Code (it refused `housekeeping` at 2026-11-03b start).
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
 
