@@ -3,21 +3,25 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-03a)
+## Banner (2026-11-03b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **NOW is empty (G-W5 red) since CE-11 closed (2026-11-03a, 32f4fd9):** the owner picks the next NOW. Asked 2026-11-03a: promote
-  CE-167 (zanzibar adoption, now unblocked) and start it? NEXT: CE-18, CE-156, CE-161, CE-164. Last rerank: 2026-10-30a
-  (`docs/evidence/rerank-2026-10-30a.md`).
-- **CE-11 closed (2026-11-03a):** intervals master fast-forwarded fa4cf12 -> 8f1cbab and pushed (478654a..8f1cbab) on the owner's
-  go (DEC-147); gate itf 27798 + rest 7188, prepush fuzz-x10 green; CI green (ci 41601384313, fuzz 41601384275); verifier 7/7.
-  Agent rulings on the owner's delegation: DEC-148 (keep commit A), DEC-149 (keep D-37..D-87), PROVISIONAL. intervals' own
-  records refreshed in its session 2026-11-03a (b89bf97, 594ef0f): local, 2 ahead of origin, push is the owner's.
-- **Owner questions open:** ASK-26 (delete `C:/Users/user/ce11-rehearsal`, the `intervals-ce-cutover` worktree and branch, and
-  when the backup `C:/Users/user/intervals-backup-2026-11-02`; live/ logs already copied into the backup).
-- **Engine findings from the intervals cutover:** CE-171..CE-174 (2026-11-02a), CE-175 (`banner set` commits all of HANDOFF),
-  CE-176 (orient's push-outside-a-session notice cannot be cleared); all LATER; CE-175/176 not yet reproduced first-hand.
+- **NOW is CE-167 (zanzibar adoption), promoted 2026-11-03b on the owner's go.** Cutover built and verified LOCALLY: zanzibar
+  branch `ce-cutover` (worktree C:/Users/user/PycharmProjects/zanzibar-ce-cutover, head 3e63fd7, 7 commits on master 4826a01),
+  engine pin 309641b; 303 board records + 9 decision sections conserved byte-equal; zanzibar's ten-phase gate green, lint
+  clean; verifier 8/8 PASS (`docs/evidence/ce167-zanzibar-cutover-2026-11-03.md`). Nothing pushed, tagged or merged. Next:
+  owner answers ASK-35 (design calls) then ASK-29 (merge + push, never a tag), then zanzibar's own records in its own session.
+  Working reports kept in `.scratch/ce-167/` until the merge. NEXT: CE-18, CE-156, CE-161, CE-164.
+- **Owner questions open:** ASK-29 merge/push zanzibar, ASK-35 confirm its design calls, ASK-36 rotate a credential in
+  zanzibar's local settings, ASK-30 engine lint in zanzibar CI, ASK-31 zanzibar charter words, ASK-32 coordinator rule there,
+  ASK-33 MCP registration route (CE-177), ASK-34 and ASK-26 cleanup of the CE-167 / CE-11 rehearsal clones and backups.
+- **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181 (zanzibar: MCP registration at
+  setup, G-W7 legacy history, G-W4 import status, G-D11 tasks/README, long gates and banner-set staling); all LATER.
+- **The MCP server ran stale code at 2026-11-03b start** (refused context.toml's `housekeeping` key): restart Claude Code; the
+  CLI works meanwhile.
+- **CE-11 closed (2026-11-03a, 32f4fd9):** intervals adopted and pushed (DEC-147); agent rulings DEC-148, DEC-149
+  PROVISIONAL; intervals' own records 2 commits ahead of its origin, push is the owner's.
 - **CE-6 closed (2026-11-01b, b756f65):** tier-0 housekeeping is `hk run start` after session start and `hk run close` before
   close (DEC-136); agent calls DEC-136..DEC-146 PROVISIONAL; split CE-168, CE-169; nits CE-170; INV-91..93.
 - **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves (35 tasks closed); residual
@@ -29,9 +33,10 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-10-30a):** worktree builders are trustworthy with `PYTHONPATH=<wt>/src` and `core.autocrlf=false`; give each
   parallel lane a reserved AC-id range; an integrator that closes the NOW item empties NOW (G-W5) until the next promote.
-- **Lesson (2026-11-02a, 2026-11-03a):** an adoption runs as survey, verified bundle backup, scripted rehearsal on a clone, the
-  same script live on a local branch, an independent verifier, then the owner's merge-and-push with a CI watcher, and last the
-  adopter's own records refreshed in its own engine session; CE-43 and CE-11 both took this shape.
+- **Lesson (2026-11-02a, 2026-11-03a, 2026-11-03b):** an adoption runs as survey, verified bundle backup, scripted rehearsal on
+  a clone, the same script live on a local branch, an independent verifier, then the owner's merge-and-push with a CI watcher,
+  and last the adopter's own records refreshed in its own engine session; CE-43, CE-11 and CE-167 took this shape (CE-167 as
+  one workflow: 2 surveys, builder, verifier, about 3.9 h).
 - **Rerank (FRAMEWORK §6.14):** orient says "rerank due" only when NEXT holds no task (DEC-64 amendment).
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.

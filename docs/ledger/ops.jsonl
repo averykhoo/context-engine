@@ -1426,3 +1426,4 @@
 {"at": "2026-11-04T00:38:09+08:00", "session": "2026-11-03b", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "ASK-35", "path": "tasks/ASK-35-confirm-ce-167-s-design-calls-on-zanzibar-s.md", "fields": ["last_asked", "updated"], "mechanical": false}
 {"at": "2026-11-04T00:38:09+08:00", "session": "2026-11-03b", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "ASK-36", "path": "tasks/ASK-36-rotate-and-remove-the-credential-in-zanzibar-s.md", "fields": ["last_asked", "updated"], "mechanical": false}
 {"at": "2026-11-04T00:38:09+08:00", "session": "2026-11-03b", "actor": "claude-code/claude-opus-5-5", "op": "ask.raised", "id": "2026-11-03b", "path": "docs/ledger/session-log.md", "fields": ["asked"], "mechanical": false}
+{"at": "2026-11-04T00:39:53+08:00", "session": "2026-11-03b", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-11-03b", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
