@@ -3,21 +3,20 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-03b)
+## Banner (2026-11-04a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **NOW is CE-167 (zanzibar adoption), promoted 2026-11-03b on the owner's go.** Cutover built and verified LOCALLY: zanzibar
-  branch `ce-cutover` (worktree C:/Users/user/PycharmProjects/zanzibar-ce-cutover, head 3e63fd7, 7 commits on master 4826a01),
-  engine pin 309641b; 303 board records + 9 decision sections conserved byte-equal; zanzibar's ten-phase gate green, lint
-  clean; verifier 8/8 PASS (`docs/evidence/ce167-zanzibar-cutover-2026-11-03.md`). Nothing pushed, tagged or merged. Next:
-  owner answers ASK-35 (design calls) then ASK-29 (merge + push, never a tag), then zanzibar's own records in its own session.
-  Working reports kept in `.scratch/ce-167/` until the merge. NEXT: CE-18, CE-156, CE-161, CE-164.
-- **Owner questions open:** ASK-29 merge/push zanzibar, ASK-35 confirm its design calls, ASK-36 rotate a credential in
-  zanzibar's local settings, ASK-30 engine lint in zanzibar CI, ASK-31 zanzibar charter words, ASK-32 coordinator rule there,
-  ASK-33 MCP registration route (CE-177), ASK-34 and ASK-26 cleanup of the CE-167 / CE-11 rehearsal clones and backups.
-- **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181 (zanzibar: MCP registration at
-  setup, G-W7 legacy history, G-W4 import status, G-D11 tasks/README, long gates and banner-set staling); all LATER.
+- **NOW is empty (G-W5 red) since CE-167 closed (2026-11-04a, aed85ac):** the owner picks the next NOW. NEXT: CE-18, CE-156,
+  CE-161, CE-164. Open owner asks: ASK-36 (zanzibar's local settings: drop six allow rules holding a GitLab token, rotate it?,
+  add deny rules for tag pushes?), ASK-26 (CE-11 clones and
+  backup), and whether this repo gets a HOLD tier (asked in chat 2026-11-04a, not filed).
+- **CE-167 closed (2026-11-04a):** zanzibar master fast-forwarded to 3e63fd7 and pushed (b743587..3e63fd7, no tag) on the owner's
+  go (DEC-151; ASK-35 confirmed DEC-150); CI green (gate 41817387647, docs 41817387643); verifiers PASS. Owner answers
+  DEC-152..DEC-156; zanzibar's own records (DEC-13..15, TK-301, TK-302, coordinator rule) refreshed in its session 2026-11-04a:
+  12 commits local, push is the owner's. Cleanup CE-182 (Recycle Bin over cap); INV-94 (CRLF drift, CE-184).
+- **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181, CE-183, CE-184 (zanzibar); CE-177
+  has its design (DEC-155); all LATER.
 - **CE-11 closed (2026-11-03a, 32f4fd9):** intervals adopted and pushed (DEC-147); agent rulings DEC-148, DEC-149
   PROVISIONAL; intervals' own records 2 commits ahead of its origin, push is the owner's.
 - **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves (35 tasks closed); residual
