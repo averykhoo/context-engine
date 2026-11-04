@@ -661,3 +661,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** tier 0 has no other cheap anchor (DEC-137)
 - **control:** collective: orient's Housekeeping owed line and procedures § Housekeeping, shown to every session
 - **from:** CE-6, session 2026-11-01b
+
+## INV-94: zanzibar's main checkout runs under core.autocrlf=true, so a later checkout rewrites CRLF and stales its content-addressed gate rows (a false red, never a false green)
+
+- **affects:** zanzibar sessions
+- **why not eliminated:** the engine's adoption does not set the adopter's EOL config yet
+- **control:** individual: CE-184; rerunning zanzibar's gate restores coverage
+- **from:** CE-167, session 2026-11-04a
