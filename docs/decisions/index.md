@@ -203,6 +203,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-153](DEC-153-zanzibar-s-charter-goals-and-first-stories-come.md): Zanzibar's charter goals and first stories come later, in the owner's words *(owner, 2026-11-04)*
 - [DEC-154](DEC-154-zanzibar-switches-to-the-coordinator-delegation.md): Zanzibar switches to the coordinator (delegation) rule *(owner, 2026-11-04)*
 - [DEC-155](DEC-155-setup-names-claude-mcp-add-as-a-required-step.md): Setup names claude mcp add as a required step; orient flags a session with no MCP server (CE-177) *(owner, 2026-11-04)*
+- [DEC-156](DEC-156-ce-167-cleanup-rehearsal-clones-binned-now.md): CE-167 cleanup: rehearsal clones binned now; worktree and backup after the merge and green CI *(owner, 2026-11-04)*
 
 ## SUPERSEDED
 

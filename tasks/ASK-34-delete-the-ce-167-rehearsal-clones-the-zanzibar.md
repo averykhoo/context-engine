@@ -4,13 +4,16 @@ id: ASK-34
 title: Delete the CE-167 rehearsal clones, the zanzibar worktree, and when the backup?
 brief: 'Recommend: bin rehearsal clones now; worktree and backup after merge and green CI'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-156}
 ---
 
 ## Context
@@ -31,3 +34,7 @@ live-logs). The worktree C:/Users/user/PycharmProjects/zanzibar-ce-cutover holds
 
 The third now (the clones are reproducible from the script and the space is large), then the first's
 worktree and backup steps after the merge.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-156
