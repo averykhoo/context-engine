@@ -4,14 +4,17 @@ id: ASK-29
 title: Merge zanzibar's ce-cutover into master and push it (no tag)?
 brief: 'Recommend: after the design confirmations, fast-forward, gate on master, push, CI watcher; never a tag'
 pri: NEXT
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
 blocks: [CE-167]
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-151}
 ---
 
 ## Context
@@ -34,3 +37,7 @@ needs its own engine env and SessionStart hook (the import script's bootstrap st
 
 Answer the design confirmations first, then the first option: everything on the branch is checked, and a
 fast-forward plus CI watcher is the same shape CE-11 took.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-151
