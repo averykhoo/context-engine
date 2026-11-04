@@ -7,9 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-04a · kind: open
+## 2026-11-04a · kind: close
 
-- **opened:** 2026-11-04T18:42:58+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-29..ASK-35 (answered, DEC-150..DEC-156); ASK-36 (open, owner follow-up); CE-167
+  (closed, INV-94); CE-182..CE-184 (filed)
+- **receipts:**
+  - guards: gate: not run (no code change); lint: only G-W5 red (NOW holds 0, owner to pick);
+    zanzibar 3e63fd7: gate COVERED, lint clean, CI green (gate 41817387647, docs 41817387643)
+  - read: orient, ASK-29..ASK-36, CE-167; workflow wf_8d74711b-a41 results (merger, binner,
+    pre-verify, pusher, CI watcher, post-merge, post-verify)
+- **summary** (the owner digest):
+  - Owner answered ASK-29..35: recorded DEC-150..DEC-156; CE-177's design is DEC-155.
+  - zanzibar master fast-forwarded to 3e63fd7 and pushed (b743587..3e63fd7, no tag); CI green; pre-
+    and post-verifiers PASS; CE-167 closed.
+  - zanzibar session 2026-11-04a: coordinator rule adopted (its DEC-13, CLAUDE.md), TK-301 CI lint
+    job, TK-302 charter; 12 commits local, unpushed.
+  - Rehearsal clones (9.47 GB) not deleted: Recycle Bin is over its cap (67 of 48 GB); gate logs
+    copied out first; CE-182.
+  - ASK-36 answered in chat: a GitLab token sits in six zanzibar allow rules; git push:* also allows
+    tag pushes (publish). Owner to choose.
+  - HOLD tier for this repo: recommended as an engine tier (never ready, outside reranks); asked in
+    chat, not filed.
+  - NOW is empty (G-W5): owner picks the next item from NEXT (CE-18, CE-156, CE-161, CE-164).
+- **Still owed:**
+  - Owner: pick the next NOW
+  - Owner: CE-182 Recycle Bin choice (empty, raise cap, or permanent delete)
+  - Owner: ASK-36 and the HOLD question
+  - Owner's word: push zanzibar's 12 local commits; push this repo's records-only commits
 - **start head:** 6afebd480c03c1c3412b9af24286020efeb5aa9f
 
 ---
