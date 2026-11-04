@@ -202,6 +202,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-152](DEC-152-add-an-engine-lint-job-to-zanzibar-s-ci-as-its.md): Add an engine lint job to zanzibar's CI, as its own change after the merge *(owner, 2026-11-04)*
 - [DEC-153](DEC-153-zanzibar-s-charter-goals-and-first-stories-come.md): Zanzibar's charter goals and first stories come later, in the owner's words *(owner, 2026-11-04)*
 - [DEC-154](DEC-154-zanzibar-switches-to-the-coordinator-delegation.md): Zanzibar switches to the coordinator (delegation) rule *(owner, 2026-11-04)*
+- [DEC-155](DEC-155-setup-names-claude-mcp-add-as-a-required-step.md): Setup names claude mcp add as a required step; orient flags a session with no MCP server (CE-177) *(owner, 2026-11-04)*
 
 ## SUPERSEDED
 

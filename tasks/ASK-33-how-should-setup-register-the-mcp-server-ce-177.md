@@ -4,14 +4,17 @@ id: ASK-33
 title: How should setup register the MCP server (CE-177)?
 brief: 'Recommend: next_steps names claude mcp add as required; orient flags a missing server'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
 blocks: [CE-177]
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-155}
 ---
 
 ## Context
@@ -30,3 +33,7 @@ writes ~/.claude.json, outside the repo, so CE-167 did not do it for zanzibar.
 ## Recommendation
 
 The first: it is a small change, and it keeps machine paths out of committed files.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-155
