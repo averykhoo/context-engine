@@ -4,13 +4,16 @@ id: ASK-31
 title: Zanzibar's charter goals and first stories, in the owner's words?
 brief: "Recommend: in zanzibar's first engine session after the merge"
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-153}
 ---
 
 ## Context
@@ -27,3 +30,7 @@ words. The CE-167 survey drafted candidate goals G-1..G-4 (`.scratch/ce-167/surv
 
 The first, in zanzibar's own first engine session after the merge; until then lint stays green with the
 templates.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-153
