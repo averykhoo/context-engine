@@ -4,13 +4,16 @@ id: ASK-30
 title: Add an engine lint job to zanzibar's CI?
 brief: 'Recommend: yes, as its own change after the merge'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-152}
 ---
 
 ## Context
@@ -28,3 +31,7 @@ in zanzibar.
 ## Recommendation
 
 The first, as its own change after the merge: a red record stays invisible to CI otherwise.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-152

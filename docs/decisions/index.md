@@ -199,6 +199,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-149](DEC-149-keep-d-37-d-87-as-minted-for-intervals.md): Keep D-37..D-87 as minted for intervals' unnumbered log entries *(owner asked, ruled by claude-code/claude-opus-5-5, 2026-11-03)*
 - [DEC-150](DEC-150-ce-167-s-design-calls-on-zanzibar-s-branch-are.md): CE-167's design calls on zanzibar's branch are confirmed as built *(owner, 2026-11-04)*
 - [DEC-151](DEC-151-merge-zanzibar-s-ce-cutover-into-master-and.md): Merge zanzibar's ce-cutover into master and push it, no tag *(owner, 2026-11-04)*
+- [DEC-152](DEC-152-add-an-engine-lint-job-to-zanzibar-s-ci-as-its.md): Add an engine lint job to zanzibar's CI, as its own change after the merge *(owner, 2026-11-04)*
 
 ## SUPERSEDED
 
