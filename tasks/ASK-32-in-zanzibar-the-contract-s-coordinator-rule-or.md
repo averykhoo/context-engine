@@ -4,13 +4,16 @@ id: ASK-32
 title: In zanzibar, the contract's coordinator rule or CLAUDE.md's 'the session works'?
 brief: 'Recommend: the coordinator rule'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-154}
 ---
 
 ## Context
@@ -28,3 +31,7 @@ also allows fable for executive decisions; it now says that overrides the contra
 ## Recommendation
 
 The coordinator rule: zanzibar's sessions are long and context-heavy, which is the case the rule was made for.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-154
