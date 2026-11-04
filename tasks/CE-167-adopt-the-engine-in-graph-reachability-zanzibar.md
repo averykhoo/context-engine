@@ -10,7 +10,7 @@ goals: [G-6]
 source: session 2026-11-01a
 created: 2026-11-01
 moved: 2026-11-03b
-updated: 2026-11-03b
+updated: 2026-11-04a
 ---
 
 Adopt the engine in graph-reachability-zanzibar-index, after intervals (CE-11)
@@ -29,3 +29,4 @@ Owner, 2026-11-01a (DEC-134): zanzibar gets its own task, and intervals goes fir
 
 - 2026-11-03b (claude-code/claude-opus-5-5): Owner, 2026-11-03b: "Let's do the Zanzibar adoption task" (answering the 2026-11-03a banner's ask: promote CE-167 and start it). Promoted LATER->NOW.
 - 2026-11-03b (claude-code/claude-opus-5-5): Session 2026-11-03b: local cutover done and verified. zanzibar branch ce-cutover (worktree C:/Users/user/PycharmProjects/zanzibar-ce-cutover, head 3e63fd7, 7 commits on master 4826a01), engine pin 309641b; 303 board records and 9 decision sections conserved byte-equal (checkers sabotaged); zanzibar's full ten-phase gate green and engine lint clean on 3e63fd7; independent verifier 8/8 PASS. Backup C:/Users/user/zanzibar-backup-2026-11-03 (bundle verified). Nothing pushed, tagged or merged. Waits on the owner: merge-and-push and the design confirmations. Findings: CE-177..CE-181, comments on CE-172, CE-174, CE-56. Evidence: docs/evidence/ce167-zanzibar-cutover-2026-11-03.md
+- 2026-11-04a (claude-code/claude-opus-5-5): 5e36527: CE-167: zanzibar cutover built and verified on a local branch; findings and owner questions filed

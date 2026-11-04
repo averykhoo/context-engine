@@ -4,14 +4,17 @@ id: ASK-35
 title: Confirm CE-167's design calls on zanzibar's branch (cutover, ids, decisions, cap, HOLD)?
 brief: 'Recommend: confirm all five; ids are never reused once merged'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-03b
-last_asked: 2026-11-03b
+updated: 2026-11-04a
+last_asked: 2026-11-04a
 blocks: [CE-167]
+status: deprecated
+closed: 2026-11-04a
+answered: {on: 2026-11-04, session: 2026-11-04a, decision: DEC-150}
 ---
 
 ## Context
@@ -37,3 +40,7 @@ after it):
 
 Confirm all five: each was forced by zanzibar's data or caps, conservation is byte-equal, and the cap raise
 keeps the ratchet rather than dropping it.
+
+## Log
+
+- 2026-11-04a (claude-code/claude-opus-5-5): answered by the owner: DEC-150
