@@ -3,18 +3,17 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-04a)
+## Banner (2026-11-05a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
-- **NOW is empty (G-W5 red) since CE-167 closed (2026-11-04a, aed85ac):** the owner picks the next NOW. NEXT: CE-18, CE-156,
-  CE-161, CE-164. Open owner asks: ASK-36 (zanzibar's local settings: drop six allow rules holding a GitLab token, rotate it?,
-  add deny rules for tag pushes?), ASK-26 (CE-11 clones and
-  backup), and whether this repo gets a HOLD tier (asked in chat 2026-11-04a, not filed).
+- **NOW is CE-164 (coverage op), the agent's pick on the owner's delegation (DEC-158, 2026-11-05a; rerank NEXT 1).**
+  NEXT: CE-18, CE-156, CE-161. Open owner asks: ASK-26 (CE-11 clones and backup); a HOLD tier for this repo and a louder
+  close when NOW is empty (both asked in chat, not filed). ASK-36 closed: leave zanzibar's token rules and tag push (DEC-157).
 - **CE-167 closed (2026-11-04a):** zanzibar master fast-forwarded to 3e63fd7 and pushed (b743587..3e63fd7, no tag) on the owner's
   go (DEC-151; ASK-35 confirmed DEC-150); CI green (gate 41817387647, docs 41817387643); verifiers PASS. Owner answers
   DEC-152..DEC-156; zanzibar's own records (DEC-13..15, TK-301, TK-302, coordinator rule) refreshed in its session 2026-11-04a:
-  12 commits local, push is the owner's. Cleanup CE-182 (Recycle Bin over cap); INV-94 (CRLF drift, CE-184).
+  pushed 3e63fd7..ebfe7d2 2026-11-05a, CI green. CE-182: clones binned but 21 locked DLLs; backup kept; INV-94 (CRLF drift, CE-184).
 - **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181, CE-183, CE-184 (zanzibar); CE-177
   has its design (DEC-155); all LATER.
 - **CE-11 closed (2026-11-03a, 32f4fd9):** intervals adopted and pushed (DEC-147); agent rulings DEC-148, DEC-149
@@ -23,8 +22,8 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
   follow-ups CE-150..CE-166; register INV-84..INV-90. DEC-133 PROVISIONAL (2026-10-31a).
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
   half), CE-132 (contract bump), CE-166 (adhoc), CE-28.
-- **Pushed through 309641b** (2026-11-01; local gate 1391 passed, Linux gate 1391 passed; CI green, run 41322960103). Since then
-  this repo holds records-only commits ahead of origin/main, unpushed.
+- **Pushed through 602aeac** (2026-11-05a, DEC-158; local gate 1429 passed, Linux gate 1429 passed; CI green, run 41994088181).
+  Records commits after it are local.
 - **Every clean close sets the banner** (G-W1).
 - **Lesson (2026-11-02a, 2026-11-03a, 2026-11-03b):** an adoption runs as survey, verified bundle backup, scripted rehearsal on
   a clone, the same script live on a local branch, an independent verifier, then the owner's merge-and-push with a CI watcher,
