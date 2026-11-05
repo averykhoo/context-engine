@@ -4,13 +4,16 @@ id: ASK-36
 title: Rotate and remove the credential in zanzibar's local Claude settings?
 brief: 'Owner-only: outside the repo; never printed or copied'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-03b
-updated: 2026-11-04a
-last_asked: 2026-11-03b
+updated: 2026-11-05a
+last_asked: 2026-11-05a
+status: deprecated
+closed: 2026-11-05a
+answered: {on: 2026-11-05, session: 2026-11-05a, decision: DEC-157}
 ---
 
 ## Context
@@ -31,3 +34,4 @@ Rotate and remove: a plain-text credential in a settings file gets copied by too
 ## Log
 
 - 2026-11-04a (claude-code/claude-opus-5-5): Owner, 2026-11-04a: "36 - what's this credit for? Push permission is fine as long as it doesn't publish". Answered in chat 2026-11-04a: the credential is a GitLab personal access token saved inside six allow rules (an export of GITLAB_TOKEN and five curl lookups of GitLab users and csitsg group members), left by earlier always-allow clicks; zanzibar's remote is GitHub and needs none of it. Bash(git push:*) also allows a tag push, which publishes. Still open: remove the six entries (and rotate?), and add deny rules for tag pushes?
+- 2026-11-05a (claude-code/claude-opus-5-5): answered by the owner: DEC-157
