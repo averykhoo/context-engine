@@ -205,6 +205,7 @@ Generated from each decision's frontmatter by `context-engine decision index`; n
 - [DEC-155](DEC-155-setup-names-claude-mcp-add-as-a-required-step.md): Setup names claude mcp add as a required step; orient flags a session with no MCP server (CE-177) *(owner, 2026-11-04)*
 - [DEC-156](DEC-156-ce-167-cleanup-rehearsal-clones-binned-now.md): CE-167 cleanup: rehearsal clones binned now; worktree and backup after the merge and green CI *(owner, 2026-11-04)*
 - [DEC-157](DEC-157-leave-zanzibar-s-local-allow-rules-gitlab-token.md): Leave zanzibar's local allow rules (GitLab token) and tag-push permission as they are for now *(owner, 2026-11-05)*
+- [DEC-158](DEC-158-push-zanzibar-and-this-repo-the-agent-picks-the.md): Push zanzibar and this repo; the agent picks the next NOW *(owner, 2026-11-05)*
 
 ## SUPERSEDED
 
