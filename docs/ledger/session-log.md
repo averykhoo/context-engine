@@ -7,9 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-05a · kind: open
+## 2026-11-05a · kind: close
 
-- **opened:** 2026-11-05T15:59:25+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-182 (open: clones binned, 21 locked DLLs, backup kept); ASK-36 (answered, DEC-157);
+  DEC-158 (owner push go); CE-164 (promoted to NOW)
+- **receipts:**
+  - guards: gate: 1429 passed (context-engine gate run 2026-11-05 on 602aeac), Linux gate 1429
+    passed; lint: clean; zanzibar ebfe7d2: gate COVERED, lint clean
+  - read: orient; CE-182, ASK-36; docs/evidence/rerank-2026-10-30a.md; push workflow wf_202766d8-3ed
+    results
+- **summary** (the owner digest):
+  - Owner emptied the Recycle Bin: ce167-rehearsal binned (9.48 GB, bin grew by it); 21 DLLs held by
+    live envs remain (CE-182).
+  - ASK-36: leave zanzibar's token rules and tag-push permission (DEC-157).
+  - Owner's push go (DEC-158): context-engine pushed 309641b..602aeac (CI gate 41994088181 green);
+    zanzibar 3e63fd7..ebfe7d2 (CI gate 41992788049, docs 41992788416 green).
+  - Next NOW: CE-164 (agent's pick on the owner's delegation; rerank NEXT 1).
+  - Answered in chat: session close does not run lint, so an empty NOW leaves G-W5 red until the
+    pick; offered a louder close.
+  - Pushed publicly: ASK-36's log names the GitLab group csitsg and says a token sits in zanzibar's
+    local settings (no value).
+- **Still owed:**
+  - Owner: file a task for the HOLD tier and/or a louder empty-NOW close?
+  - Owner: whether csitsg's mention in the public repo matters
 - **start head:** da2c46ec45aa41f05782f3d51b27323cae365bec
 
 ---

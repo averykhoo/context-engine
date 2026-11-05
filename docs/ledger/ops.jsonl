@@ -1475,3 +1475,4 @@
 {"at": "2026-11-05T16:09:14+08:00", "session": "2026-11-05a", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-164", "path": "tasks/CE-164-coverage-housekeeping-parts-g-d12-does-not.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-11-05T16:09:14+08:00", "session": "2026-11-05a", "actor": "claude-code/claude-opus-5-5", "op": "comment", "id": "CE-182", "path": "tasks/CE-182-delete-the-ce-167-rehearsal-clones-recycle-bin.md", "fields": ["updated", "body"], "mechanical": false}
 {"at": "2026-11-05T16:26:55+08:00", "session": "2026-11-05a", "actor": "claude-code/claude-opus-5-5", "op": "banner.set", "id": "2026-11-05a", "path": "HANDOFF.md", "fields": ["banner"], "mechanical": false}
+{"at": "2026-11-05T16:27:22+08:00", "session": "2026-11-05a", "actor": "claude-code/claude-opus-5-5", "op": "session.close", "id": "2026-11-05a", "path": "docs/ledger/session-log.md", "fields": ["kind"], "mechanical": false}
