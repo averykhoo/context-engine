@@ -3,13 +3,13 @@ type: Task
 id: CE-47
 title: Trim this repo's CLAUDE.md to repo-only rules now that it imports the contract
 brief: Rules the imported contract carries are duplicated in CLAUDE.md and will drift
-pri: NEXT
+pri: LATER
 state: open
 deps: []
 source: session 2026-10-13b
 created: 2026-10-13
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-06f
+updated: 2026-11-06f
 goals: [G-1]
 ---
 

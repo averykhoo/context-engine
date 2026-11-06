@@ -3,14 +3,14 @@ type: Task
 id: CE-187
 title: 'decision accept <ids>: owner-actor decisions born ACCEPTED, agent calls PROVISIONAL until accepted'
 brief: 'DEC-162: accept the listed agent calls through the op once built, never by hand before'
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-3, G-2]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-06f
+updated: 2026-11-06f
 ---
 
 Build `decision accept <ids>`, and make decisions whose actor is the owner born ACCEPTED (DEC-162).
