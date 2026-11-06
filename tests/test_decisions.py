@@ -1,6 +1,6 @@
 """Decision records (CE-5, FRAMEWORK §6.5): bracketed corrections, supersede and link in both
-directions, decision set (CE-32), relink (CE-35), find, show and why(), the generated index
-(G-D6), and the single-file log importer (AC-38 to AC-42, AC-53, AC-54)."""
+directions, decision set (CE-32), relink (CE-35), find, show and why(), the decision listing
+printed on demand and never stored (CE-185), and the single-file log importer (AC-38 to AC-42, AC-53, AC-54)."""
 
 import datetime as dt
 import json
@@ -31,7 +31,7 @@ CONFIG = {
         "decision": {"type": "Decision", "prefix": "D", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": STATUSES}, "types": {"decided": "date", "session": "key", **LISTS}},
         "story": {"type": "Story", "prefix": "US", "dir": "stories", "mode": "append-only", "required": ["title", "actor"]},
     },
-    "working": {"board": ["task", "question"], "task": "task", "question": "question", "decision": "decision", "decision_index": "decisions/index.md", "criteria": "criteria.md"},
+    "working": {"board": ["task", "question"], "task": "task", "question": "question", "decision": "decision", "criteria": "criteria.md"},
 }
 WORDS = "The owner said: we meet on Monday at noon.\n\nA second paragraph, with a [bracket] already in it.\n"
 
@@ -240,7 +240,7 @@ def test_a_multi_record_write_whose_second_write_fails_changes_nothing_and_a_ret
 
 
 @pytest.mark.criterion("AC-53")
-def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_index(eng):
+def test_decision_set_writes_a_decisions_own_keys_logs_set_and_the_listing_shows_it(eng):
     rid = dec(eng, "Provisional call", status="PROVISIONAL")
     before = eng.store.get(rid).doc
     sha, body = before.get("body_sha"), before.body
@@ -251,12 +251,12 @@ def test_decision_set_writes_a_decisions_own_keys_logs_set_and_regenerates_the_i
     assert (d.get("body_sha"), d.body) == (sha, body)  # the words and their stamp are untouched
     sets = [o for o in ops(eng) if o["op"] == "set"]
     assert [(o["id"], o["fields"], o["session"], o["actor"]) for o in sets] == [(rid, ["decision_status", "tags", "reopen_if"], S, ACTOR)]
-    assert ops(eng)[-1]["op"] == "index"  # regenerated in the same write
-    text = (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+    assert ops(eng)[-1]["op"] == "set"  # and nothing else: no index is stored (CE-185)
+    text = eng.decision_index()
     assert "## PROVISIONAL" not in text and f"### storage\n\n- [{rid}]" in text
     assert eng.decision_set(rid, {}, unset=("reopen_if",), **W) == f"{rid}: set reopen_if"
     assert eng.store.get(rid).doc.get("reopen_if") is None
-    assert eng.store.lint() == []  # schema, G-D10 and G-D6 (the index equals a regeneration)
+    assert eng.store.lint() == []  # schema and G-D10
 
 
 @pytest.mark.criterion("AC-53")
@@ -555,52 +555,33 @@ def test_find_filters_by_status_tag_link_and_text_and_show_gives_one_section(eng
         eng.decision_show(b, "Nope")
 
 
-# -- the generated index (G-D6) ------------------------------------------------------------------
+# -- the decision listing, printed on demand and never stored (CE-185) --------------------------
 
 
 @pytest.mark.criterion("AC-41")
-def test_every_decision_write_regenerates_the_index_grouped_by_status_then_tag(eng):
-    index = eng.root / "decisions" / "index.md"
+def test_the_listing_is_grouped_by_status_then_tag_and_no_decision_write_stores_an_index(eng):
+    """`decision index` prints every decision from frontmatter, grouped by status in the kind's
+    enum order, then by first tag with `untagged` last; no write (new, correct, supersede, an
+    answer) stores an index file or logs an `index` line (CE-185, US-19)."""
     a = dec(eng, "Alpha", tags="[zeta, records]")
-    assert f"[{a}](" in index.read_text(encoding="utf-8")
     b = dec(eng, "Beta", status="PROVISIONAL")
     c = dec(eng, "Gamma")
     eng.supersede(b, c, **W)
     eng.correct(a, "Monday", "sic", **W)
     q = eng.ask_new("Which?", body=ASK_BODY, **W)
     eng.ask_answer(q.id, "this one", title="Delta", **W)  # a decision made through another operation
-    text = index.read_text(encoding="utf-8")
-    assert text == eng.store.render_index()
+    assert sorted(p.name for p in (eng.root / "decisions").iterdir()) == sorted(r.path.name for r in eng.store.heads("decision"))
+    assert "index" not in {o["op"] for o in ops(eng)}
+    text = eng.decision_index()
+    assert text.startswith(D.INDEX_TITLE + "\n\n" + D.INDEX_NOTE)
     assert text.index("## BUILT") < text.index("## PROVISIONAL") < text.index("## SUPERSEDED")
     built = text[text.index("## BUILT") : text.index("## PROVISIONAL")]
     assert built.index("### zeta") < built.index("### untagged")  # by first tag; untagged last
-    assert f"- [{b}]({b}-beta.md): Beta *(owner, 2026-10-12)*; superseded by {c}" in text
+    assert f"- [{b}](decisions/{b}-beta.md): Beta *(owner, 2026-10-12)*; superseded by {c}" in text  # links from the root
     assert "D-4" in text and "Delta" in text
+    code, out = engine_ops.OPS["decision_index"].call(eng, engine_ops.Caller())
+    assert (code, out) == (0, text.rstrip("\n")) and engine_ops.OPS["decision_index"].write is False
     assert eng.store.lint() == []
-
-
-@pytest.mark.criterion("AC-41")
-def test_lint_g_d6_fails_on_a_hand_edited_or_missing_index_and_decision_index_restores_it(eng):
-    dec(eng)
-    index = eng.root / "decisions" / "index.md"
-    assert eng.reindex(**W).endswith("already current")
-    index.write_text(index.read_text(encoding="utf-8") + "- a line typed by hand\n", encoding="utf-8")
-    assert [f.guard for f in eng.store.lint()] == ["G-D6"]
-    assert eng.reindex(**W).endswith("regenerated") and eng.store.lint() == []
-    index.unlink()
-    assert [(f.guard, "missing" in f.message) for f in eng.store.lint()] == [("G-D6", True)]
-    eng.reindex(**W)
-    assert eng.store.lint() == []
-
-
-def test_no_index_is_written_or_checked_when_none_is_configured(tmp_path):
-    cfg = {**CONFIG, "working": {k: v for k, v in CONFIG["working"].items() if k != "decision_index"}}
-    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
-    e = Engine(tmp_path)
-    dec(e)
-    assert not (tmp_path / "decisions" / "index.md").exists() and e.store.lint() == []
-    with pytest.raises(Refusal, match="decision_index"):
-        e.reindex(**W)
 
 
 # -- the single-file log importer (FRAMEWORK §11.4) ----------------------------------------------
@@ -675,7 +656,7 @@ def test_import_keeps_every_id_and_text_verbatim_stamped_with_links_both_ways(en
     assert d6.get("decided") == dt.date(2026, 9, 1)  # no date in the row: the entry it names
     assert all(get(f"D-{n}").get("imported_from") == "decisions-copy.md" for n in range(1, 7))
     assert eng.store.lint() == []
-    assert "## REJECTED" in (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+    assert "## REJECTED" in eng.decision_index()
 
 
 @pytest.mark.criterion("AC-42")
@@ -1195,7 +1176,7 @@ def test_ask_answer_records_a_delegated_ruling_apart_from_the_owners_words(eng, 
     qd = eng.store.get(q.id).doc
     assert dict(qd.get("answered"))["ruled_by"] == "claude-code/fable" and qd.get("state") == "closed"
     assert "answered on the owner's delegation, ruled by claude-code/fable: D-1" in qd.body
-    assert "*(owner asked, ruled by claude-code/fable, 2026-10-12)*" in (eng.root / "decisions" / "index.md").read_text(encoding="utf-8")
+    assert "*(owner asked, ruled by claude-code/fable, 2026-10-12)*" in eng.decision_index()
     assert eng.store.lint() == [] and g_i3(eng) == []
     # the owner's own answer is unchanged: `actor: owner`, no `ruled_by`, no `## Ruling`
     q2 = eng.ask_new("Red or blue?", body=ASK_BODY, **W)

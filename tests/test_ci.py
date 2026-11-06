@@ -206,3 +206,49 @@ def test_the_procedures_runbook_gives_ci_s_by_hand_fallback_and_the_contract_nam
         assert part in by_hand, f"the by-hand fallback lacks {part!r}: {by_hand}"
     gate_section = (REPO / "CLAUDE.md").read_text(encoding="utf-8").split("\n## Gate\n", 1)[1].split("\n## ", 1)[0]
     assert WORKFLOW.relative_to(REPO).as_posix() in gate_section, "CLAUDE.md § Gate does not name the CI workflow"
+
+
+# -- the pages workflow (CE-185, US-19, DEC-159) ------------------------------------------------
+
+PAGES = REPO / ".github" / "workflows" / "pages.yml"
+
+
+def _pages() -> dict:
+    return YAML(typ="safe").load(PAGES.read_text(encoding="utf-8"))
+
+
+def _pages_steps(job: str) -> list[dict]:
+    return _pages()["jobs"][job]["steps"]
+
+
+def _uses(steps: list[dict], action: str) -> list[dict]:
+    return [s for s in steps if str(s.get("uses", "")).split("@")[0] == action]
+
+
+@pytest.mark.criterion("AC-182")
+def test_the_pages_workflow_builds_the_site_with_the_engine_op_at_the_floor_and_deploys_it():
+    """pages.yml publishes what `context-engine site build` makes, on every push to main: the
+    floor's Python, the plain install (the site needs no extra), the op's own CLI spelling into
+    the runner's temp directory (outside the checkout, so nothing is stored), that directory
+    uploaded, then deployed. gate.yml stays the gate."""
+    from context_engine.cli import CLI_OPS
+
+    wf = _pages()
+    assert wf["on"]["push"] == {"branches": ["main"]} and "workflow_dispatch" in wf["on"], wf["on"]
+    floor = re.fullmatch(r">=\s*(\d+\.\d+)", _pyproject()["project"]["requires-python"].strip()).group(1)
+    build = _pages_steps("build")
+    assert [s["with"]["python-version"] for s in _uses(build, "actions/setup-python")] == [floor]
+    runs = [s["run"].strip() for s in build if "run" in s]
+    out = '"$RUNNER_TEMP/site"'
+    assert runs == ["python -m pip install -e .", f"python -m context_engine site build {out}"], runs
+    assert CLI_OPS[("site", "build")] == "site_build"
+    order = [str(s.get("uses", s.get("run", ""))).split("@")[0] for s in build]
+    assert order.index("python -m context_engine site build " + out) < order.index("actions/configure-pages") < order.index("actions/upload-pages-artifact"), order
+    (upload,) = _uses(build, "actions/upload-pages-artifact")
+    assert upload["with"]["path"] == "${{ runner.temp }}/site"
+    deploy = wf["jobs"]["deploy"]
+    assert deploy["needs"] == "build" and deploy["environment"]["name"] == "github-pages"
+    assert len(_uses(deploy["steps"], "actions/deploy-pages")) == 1
+    assert {"pages": "write", "id-token": "write"}.items() <= wf["permissions"].items(), wf["permissions"]
+    assert wf["concurrency"]["group"] == "pages" and wf["concurrency"]["cancel-in-progress"] is False
+    assert "site" not in WORKFLOW.read_text(encoding="utf-8"), "gate.yml runs the gate, not the site"

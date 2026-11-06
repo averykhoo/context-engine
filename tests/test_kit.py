@@ -557,7 +557,8 @@ def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     assert _keys(C.Housekeeping) <= set(raw["housekeeping"]) and cfg.housekeeping.max_writes == 0, "the kit's cap is off (G-W10)"
     assert _keys(GATE.Gate, ("skip",)) <= set(raw["gate"]) and _keys(GATE.Scope, ("name",)) <= set(raw["gate"]["scopes"]["all"])
     assert cfg.gate.scopes and not cfg.gate.command and not cfg.gate.require, "the kit's gate is off until a repo sets its command"
-    assert _keys(C.Working) <= set(raw["working"])
+    assert _keys(C.Working, C.DEPRECATED_WORKING) <= set(raw["working"])
+    assert not set(C.DEPRECATED_WORKING) & set(raw["working"]), "the kit sets a deprecated key (CE-185)"
     kind_keys = set().union(*(set(k) for k in raw["kinds"].values()))
     assert _keys(C.Kind, ("name",)) <= kind_keys
     route_keys = set().union(*(set(r) for r in raw["routes"]))

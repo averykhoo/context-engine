@@ -36,10 +36,8 @@ S = [
     ("AC-40", W, 'CRITERION_ROW_RE = re.compile(r"^\\|\\s*([A-Z]+-\\d+)\\s*\\|", re.MULTILINE)', 'CRITERION_ROW_RE = re.compile(r"\\b([A-Z]+-\\d+)\\b")', T + " -k checks_the_target"),
     ("AC-40", W, "        path = self.root / self.w.criteria if self.w.criteria else None", '        path = self.root / (self.w.criteria or "criteria.md")', T + " -k no_criteria_file"),
     ("AC-40", W, "if status and str(d.get(D.STATUS_KEY)).upper() != status.upper():", "if False:", T + " -k find_filters"),
-    # AC-41: the index is regenerated on every write, in its order, and G-D6 checks it
-    ("AC-41", ST, "            self._reindex(kind, session, actor)\n        return Record(rid, kind, path, doc)", "        return Record(rid, kind, path, doc)", T + " -k regenerates_the_index"),
-    ("AC-41", D, "key=lambda t: (t == UNTAGGED, t))", "key=lambda t: t)", T + " -k regenerates_the_index"),
-    ("AC-41", ST, 'if path.read_bytes().decode("utf-8").replace("\\r\\n", "\\n") != text:', "if False:", T + " -k hand_edited"),
+    # AC-41: the listing is printed in its order (CE-185: no index is stored any more)
+    ("AC-41", D, "key=lambda t: (t == UNTAGGED, t))", "key=lambda t: t)", T + " -k grouped_by_status"),
     # AC-42: the import keeps ids and words, links both ways, and is all or nothing
     ("AC-42", D, "        stop = STOP_RE.search(text, start, end)", "        stop = None", T + " -k verbatim"),
     ("AC-42", D, "                back = by_id[t].links.setdefault(BACKLINK[key], [])\n                if e.id not in back:\n                    back.append(e.id)", "                pass", T + " -k verbatim"),

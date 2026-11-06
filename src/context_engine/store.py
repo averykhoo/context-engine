@@ -446,73 +446,15 @@ class Store:
             )
         return None
 
-    # -- the generated decision index (G-D6) --------------------------------------------
+    # -- the decision listing (FRAMEWORK §6.5): printed or published, never stored (CE-185) ------
 
-    def derived(self) -> dict[str, tuple[str, ...]]:
-        """Each file the engine generates from records, with the directories of its sources (the
-        decision index, from the decisions): a commit that carries one carries their lines too
-        (``commit.select``, CE-125)."""
-        ik = self._index_kind()
-        return {self.config.working.decision_index: (ik.dir,)} if ik is not None else {}
-
-    def _index_kind(self) -> Kind | None:
-        w = self.config.working
-        return self.config.kind(w.decision) if w.decision_index and w.decision else None
-
-    def render_index(self) -> str | None:
-        """The decision index as a regeneration would write it; None when none is configured."""
-        kind = self._index_kind()
-        if kind is None:
-            return None
-        base = (self.root / self.config.working.decision_index).parent
-        rows = [decisions.Row(r.id, Path(os.path.relpath(r.path, base)).as_posix(), dict(r.doc.data)) for r in self.heads(kind.name)]
-        return decisions.render_index(rows, kind.enums.get(decisions.STATUS_KEY, ()))
-
-    def _reindex(self, kind: Kind, session: str, actor: str) -> None:
-        """Holding the lock, after a write to ``kind``: rewrite the index if it changed."""
-        ik = self._index_kind()
-        if ik is None or kind.name != ik.name:
-            return
-        try:
-            text = self.render_index()
-        except Refusal:
-            return  # a broken neighbour must not block the write; lint reports both
-        path = self.root / self.config.working.decision_index
-        if path.exists() and path.read_bytes().decode("utf-8").replace("\r\n", "\n") == text:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.write_text(path, text)
-        self._log("index", "index", path, session, actor, ["index"], True)
-
-    def reindex(self, *, session: str, actor: str) -> bool:
-        """Regenerate the decision index (`hk.regen_index`); True if it changed."""
-        self._check_caller(session, actor)
-        kind = self._index_kind()
-        if kind is None:
-            raise Refusal("[working] has no `decision_index`", "set `decision_index = \"docs/decisions/index.md\"` in [working] of context.toml")
-        path = self.root / self.config.working.decision_index
-        with self._lock():
-            before = path.read_bytes() if path.exists() else None
-            self._reindex(kind, session, actor)
-            return before != path.read_bytes()
-
-    def lint_index(self) -> list[Failure]:
-        """G-D6: the generated index equals a regeneration from the records' frontmatter."""
-        try:
-            text = self.render_index()
-        except Refusal:
-            return []  # the schema check reports the broken record
-        if text is None:
+    def decision_rows(self, base: Path) -> list[decisions.Row]:
+        """Every decision as the listing sees it (frontmatter only), each link relative to
+        ``base``; none when `[working] decision` names no kind."""
+        name = self.config.working.decision
+        if not name:
             return []
-        rel = self.config.working.decision_index
-        path = self.root / rel
-        remedy = "regenerate it with `context-engine decision index`; never edit it by hand"
-        if not path.exists():
-            kind = self._index_kind()
-            return [Failure("G-D6", rel, "the decision index is missing", remedy)] if any(True for _ in self.heads(kind.name)) else []
-        if path.read_bytes().decode("utf-8").replace("\r\n", "\n") != text:
-            return [Failure("G-D6", rel, "is not what the decisions' frontmatter generates", remedy)]
-        return []
+        return [decisions.Row(r.id, Path(os.path.relpath(r.path, base)).as_posix(), dict(r.doc.data)) for r in self.heads(name)]
 
     def lint(self) -> list[Failure]:
         out: list[Failure] = []
@@ -531,7 +473,6 @@ class Store:
                 if bp:
                     out.append(Failure("G-D10", rel, *bp))
         out += self.lint_bundles()
-        out += self.lint_index()
         return out
 
     def lint_bundles(self) -> list[Failure]:
@@ -679,7 +620,7 @@ class Store:
             self.last_commit = commit_mod.Outcome()
             return
         try:
-            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), derived=self.derived())
+            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
@@ -692,7 +633,7 @@ class Store:
         the session runs it first."""
         with self._lock():
             try:
-                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, derived=self.derived())
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep)
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 
@@ -804,7 +745,6 @@ class Store:
             path.parent.mkdir(parents=True, exist_ok=True)
             self._write(path, doc)
             self._log("new", rid, path, session, actor, list(doc.data.keys()), mechanical)
-            self._reindex(kind, session, actor)
         return Record(rid, kind, path, doc)
 
     def set(
@@ -848,7 +788,6 @@ class Store:
             self._validate(rec.kind, rec.doc, rec.path, aliases=ALIASES in changes)
             self._write(rec.path, rec.doc)
             self._log(op, record_id, rec.path, session, actor, [*changes, *unset] + (["body"] if body else []), mechanical, as_)
-            self._reindex(rec.kind, session, actor)
         return rec
 
     def stamp(self, record_id: str, *, session: str, actor: str) -> Record:
@@ -864,7 +803,6 @@ class Store:
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
             self._log("stamp", record_id, rec.path, session, actor, ["body_sha"], False)
-            self._reindex(rec.kind, session, actor)
         return rec
 
     def amend(self, record_id: str, text: str, *, session: str, actor: str) -> Record:
@@ -882,7 +820,6 @@ class Store:
             rec.doc.set_body(amended(rec.doc.body, text, session, actor))
             self._write(rec.path, rec.doc)
             self._log("amend", record_id, rec.path, session, actor, [], False)
-            self._reindex(rec.kind, session, actor)
         return rec
 
     def correct(self, record_id: str, after: str, text: str, *, session: str, actor: str) -> tuple[Record, str]:
@@ -911,7 +848,6 @@ class Store:
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
             self._log("correct", record_id, rec.path, session, actor, ["body"], False)
-            self._reindex(rec.kind, session, actor)
         return rec, inserted
 
     def update(
@@ -956,8 +892,6 @@ class Store:
             todo = [(i, r) for i, r in recs.items() if changed.get(i) or i in amend]
             fields = {i: list(changed.get(i) or ()) + (["body"] if i in amend else []) for i, _ in todo}
             self._write_all([r for _, r in todo], lambda r: self._log(op, r.id, r.path, session, actor, fields[r.id], False))
-            for kind in {r.kind.name: r.kind for r in recs.values()}.values():
-                self._reindex(kind, session, actor)
         return recs
 
     def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:
@@ -1001,7 +935,6 @@ class Store:
             for r in out:
                 r.path.parent.mkdir(parents=True, exist_ok=True)
             self._write_all(out, lambda r: self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False))
-            self._reindex(kind, session, actor)
         return out
 
 

@@ -81,7 +81,7 @@ def build() -> argparse.ArgumentParser:
     p.add_argument("--rows", required=True, help="the items this session touched")
     p.add_argument("--deferred", required=True, help="the steps skipped (the gate, the commit, ...)")
 
-    hk = _sub(groups, "hk", "housekeeping that carries out recorded intent and forms none (FRAMEWORK §6.11); also `baton expire` and `decision index`").add_subparsers(dest="op", required=True)
+    hk = _sub(groups, "hk", "housekeeping that carries out recorded intent and forms none (FRAMEWORK §6.11); also `baton expire`").add_subparsers(dest="op", required=True)
     hc = _sub(hk, "close", "close an open item only on recorded evidence, mechanically, citing it (G-W9)")
     hc.add_argument("id", nargs="?", default="", help="the item's id (none with --scan)")
     hc.add_argument("--commit", default="", help="a commit in HEAD's history whose `Closes:` trailer names the item; git checks it")
@@ -89,7 +89,7 @@ def build() -> argparse.ArgumentParser:
     hc.add_argument("--scan", action="store_true", help="every open task a commit's `Closes:` trailer names; lists each it cannot close, with why")
     _sub(hk, "stamp", "stamp each open question's last_asked from the newest `asked` receipt in the ledger that names it")
     hr = _sub(hk, "run", "tier-0 housekeeping in one call: `start` after session start, `close` before session close; lists every operation")
-    hr.add_argument("phase", choices=("start", "close"), help="start: stale stubs, asked stamps, commit comments; close: batons, Closes: trailers, the decision index")
+    hr.add_argument("phase", choices=("start", "close"), help="start: stale stubs, asked stamps, commit comments; close: batons, Closes: trailers")
     hr.add_argument("--check", action="store_true", help="list the plan, one line per operation; write nothing")
     hr.add_argument("--anyway", action="store_true", help="run a plan bigger than `[housekeeping] max_writes`, on the owner's word (G-W10)")
     hm = _sub(hk, "comment", "a commit becomes a dated mechanical comment on the open task its title leads with")
@@ -271,7 +271,7 @@ def build() -> argparse.ArgumentParser:
     dsh = _sub(dc, "show", "one decision: its status, links and text, or one section")
     dsh.add_argument("id", help="the decision's id, or an alias (an earlier id)")
     dsh.add_argument("--section", help="show only this section, e.g. Amendments")
-    _sub(dc, "index", "housekeeping: regenerate the decision index (G-D6)")
+    _sub(dc, "index", "every decision grouped by status then first tag, one line each; printed on demand, never stored")
     di = _sub(dc, "import", "turn a single-file log into records: each number and text kept, an id in another prefix renamed to the kind's with its old id kept in `aliases`")
     di.add_argument("path", help="the single-file log, e.g. docs/decisions.md (on a branch first)")
     di.add_argument("--dry-run", action="store_true", help="write nothing; print the summary and the id map, a doc to save as evidence before the import")
@@ -318,6 +318,10 @@ def build() -> argparse.ArgumentParser:
     rg = _sub(groups, "register", "the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
     rgs = _sub(rg, "show", "the register's entries")
     rgs.add_argument("--engine", action="store_true", help="the engine's own register, shipped with the package")
+
+    si = _sub(groups, "site", "the records as a static HTML site, built on demand and never stored (FRAMEWORK §6.5)").add_subparsers(dest="op", required=True)
+    sb = _sub(si, "build", "build the site into a new or empty directory outside the repo (or git-ignored in it): decisions, stories, the board, coverage, the register")
+    sb.add_argument("outdir", help="the output directory, relative to the root or absolute; CI uploads it to GitHub Pages")
 
     bn = _sub(groups, "banner", "the handoff banner: what is true now (FRAMEWORK §5.5)").add_subparsers(dest="op", required=True)
     _sub(bn, "show", "the banner and its hash; pass the hash to `banner set --seen`")
@@ -367,7 +371,7 @@ CLI_OPS = {
     ("decision", "relink"): "decision_relink",
     ("decision", "find"): "decision_find",
     ("decision", "show"): "decision_show",
-    ("decision", "index"): "hk_regen_index",
+    ("decision", "index"): "decision_index",
     ("decision", "import"): "decision_import",
     ("commit", None): "commit",
     ("gate", "run"): "gate_run",
@@ -378,6 +382,7 @@ CLI_OPS = {
     ("doc", "freeze"): "doc_freeze",
     ("doc", "archive"): "doc_archive",
     ("register", "show"): "register_show",
+    ("site", "build"): "site_build",
     ("banner", "show"): "banner_show",
     ("banner", "set"): "banner_set",
 }

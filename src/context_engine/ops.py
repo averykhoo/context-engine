@@ -330,7 +330,7 @@ def hk_comment(e: Engine, c: Caller, id: str = "", commit: str = "", text: str =
 
 @op(write=True)
 def hk_run(e: Engine, c: Caller, phase: str, check: bool = False, anyway: bool = False) -> tuple[int, str]:
-    """Housekeeping's tier-0 run in one call: `phase` `start` (after session_start: session_abandon stale, hk_stamp_asked, hk_comment scan) or `close` (before session_close: hk_expire_batons, hk_close scan, hk_regen_index where configured), each sub-operation as its own tool does it, with the hk_ actor rule. `check`: the plan, one line per operation, and nothing written. The reply lists every operation, the procedures rows it does not do, then its writes and op log lines (G-W10). Where `[housekeeping] max_writes` is set, a bigger plan is refused before any write unless `anyway` (the owner's word)."""
+    """Housekeeping's tier-0 run in one call: `phase` `start` (after session_start: session_abandon stale, hk_stamp_asked, hk_comment scan) or `close` (before session_close: hk_expire_batons, hk_close scan), each sub-operation as its own tool does it, with the hk_ actor rule. `check`: the plan, one line per operation, and nothing written. The reply lists every operation, the procedures rows it does not do, then its writes and op log lines (G-W10). Where `[housekeeping] max_writes` is set, a bigger plan is refused before any write unless `anyway` (the owner's word)."""
     return 0, e.hk_run(phase, check=check, anyway=anyway, session=c.session, actor=c.actor or "process:housekeep")
 
 
@@ -437,10 +437,10 @@ def why(e: Engine, c: Caller, target: str) -> tuple[int, str]:
     return 0, "\n".join(e.why(target)) or f"no decision links {target}"
 
 
-@op(write=True)
-def hk_regen_index(e: Engine, c: Caller) -> tuple[int, str]:
-    """Housekeeping: regenerate the decision index from the decisions' frontmatter (G-D6)."""
-    return 0, e.reindex(session=c.session, actor=c.actor or "process:housekeep")
+@op(write=False, rest="`context-engine decision index` in a shell, or narrow it with `decision_find`")
+def decision_index(e: Engine, c: Caller) -> tuple[int, str]:
+    """Every decision, grouped by status then first tag, one line each (id, link, title, actor, date, superseded by): printed from frontmatter on demand, never stored (CE-185)."""
+    return 0, e.decision_index().rstrip("\n")
 
 
 @op(write=True)
@@ -510,6 +510,17 @@ def doc_archive(e: Engine, c: Caller, path: str, to: str = "", why: str = "", li
 def register_show(e: Engine, c: Caller, engine: bool = False) -> tuple[int, str]:
     """The residual-risk register's entries; `engine` reads the one shipped with the engine (the risks it hands over to every repo that adopts it)."""
     return 0, e.register_show(engine=engine)
+
+
+# -- the published site (FRAMEWORK §6.5, §9.3, CE-185) ----------------------------------------
+
+
+@op(write=False, rest="`context-engine site build <dir>` in a shell")
+def site_build(e: Engine, c: Caller, outdir: str) -> tuple[int, str]:
+    """Build a static HTML site from the records into `outdir` (a new or empty directory, outside the repo or git-ignored in it): the decisions grouped as the index was, each decision, story and board item on its own page, the board by tier, the coverage table and the residual-risk register, record ids as links. Stores nothing in the repo; CI publishes it (.github/workflows/pages.yml)."""
+    from . import site
+
+    return 0, site.build(e, outdir)
 
 
 # -- the banner (FRAMEWORK §5.5) ----------------------------------------------------------

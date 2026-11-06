@@ -63,11 +63,16 @@ class Working:
     baton_max_age: int = 2  # sessions closed after the owning one (G-W3)
     max_pauses: int = 2  # consecutive `kind: pause` entries (G-W2, owner 2026-10-07)
     register: str = ""  # the residual-risk register, one markdown file (FRAMEWORK §7.4, CE-23)
-    decision_index: str = ""  # the generated decision index, e.g. docs/decisions/index.md (FRAMEWORK §6.5, G-D6)
+    decision_index: str = ""  # DEPRECATED (CE-185, DEC-160; DEPRECATED_WORKING): still loads so an adopter's config does, but nothing reads it; orient names the remedy
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
     criteria: str = ""  # the criteria file, one `| AC-n | ... |` table row per criterion; `decision link` checks criterion ids against it
     archive: str = ""  # the archive directory `doc archive` moves a doc into when given none (FRAMEWORK §7.3, CE-27); its README.md is the redirect table
     gate_receipt: str = ""  # a regex the close's `guards:` receipt must match: a gate pass count, or a statement that the gate was not run (CE-123); empty is off (DEC-107)
+
+
+# [working] keys that still load but nothing reads (CE-185, DEC-160): the kit's template leaves
+# them out, and orient names each one a repo still sets (working.py::Engine.deprecated_config)
+DEPRECATED_WORKING = ("decision_index",)
 
 
 @dataclass(frozen=True)
@@ -253,8 +258,6 @@ def from_dict(raw: dict) -> Config:
     for name in named:
         if name not in kinds:
             raise Refusal(f"[working] names kind {name!r}, which is not declared", f"declare [kinds.{name}] or fix [working]")
-    if w.get("decision_index") and not w.get("decision"):
-        raise Refusal("[working] sets `decision_index` but names no `decision` kind", "set `decision = \"<kind>\"` in [working], or drop `decision_index`")
     if w.get("gate_receipt"):
         try:
             re.compile(w["gate_receipt"])

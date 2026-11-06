@@ -23,8 +23,8 @@ session's lines too, as CE-45 did, committed one live session's half-done work u
 name, and put a dead session's lines into the next session's first commit unasked (the adhoc
 trial's feedback). Which other lines still go in, and why:
 - a line naming a file the commit carries: that file holds its write, and G-W7 fails at HEAD
-  without the line. The decision index is generated from every decision, so carrying it
-  carries every decision's line, or G-D6 fails;
+  without the line (until CE-185 a stored decision index carried every decision's line too; no
+  index is stored now);
 - a line that does not parse: it names no session.
 
 The message and reply name whose lines those were (`including op lines that <key> left

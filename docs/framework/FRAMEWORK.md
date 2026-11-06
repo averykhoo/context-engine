@@ -674,7 +674,7 @@ Drift ids are `DR`, to avoid colliding with decision ids.
 | DR7 | A test passes without checking the behaviour | G-T5 mutation; sabotage |
 | DR8 | The suite or corpus silently shrinks | G-V2 floors |
 | DR9 | Working docs drift from reality | G-W rows, G-D8 |
-| DR10 | A generated index that is wrong but byte-identical to its regeneration | generate indexes from record frontmatter, not from parsed prose, so the misparse cannot happen; G-D6 content assertions from a cutoff id onward for indexes still built by parsing prose |
+| DR10 | A generated index that is wrong but byte-identical to its regeneration | generate listings from record frontmatter, not from parsed prose, so the misparse cannot happen, and print or publish them on demand rather than store them (§6.5); G-D6 content assertions from a cutoff id onward for a repo's own indexes still built by parsing prose |
 | DR11 | A guard bounds one dimension and growth moves to another | target the growth mechanism (stacking check) plus a byte backstop |
 
 ---
@@ -1268,7 +1268,7 @@ reading diffs.
 type: Decision
 id: D-262
 title: Batons are one record each, not blocks in HANDOFF
-description: one line; this is what the generated index shows
+description: one line; this is what the decision listing shows
 actor: owner asked                # the vocabulary above
 decided: 2026-10-08
 session: 2026-10-08a
@@ -1328,7 +1328,7 @@ The aim is what was meant, not an exact copy of every slip in what was typed; ve
 flavour and let a later reader check whether they were misread. A change of meaning is an
 `amend`, never a correction. Applies to every append-only kind.
 
-**Organisation:** records are stored by id; topic is a tag, and the generated index groups by
+**Organisation:** records are stored by id; topic is a tag, and the decision listing groups by
 tag. Topic narratives ("why is it like this at all") stay as prose docs that link decisions.
 Small engineering calls may live as task comments, and are promoted to a decision when they
 turn out to matter.
@@ -1348,18 +1348,22 @@ to the body.
 
 **Negative results** ("built and rejected; do not re-derive these") are `decision_status:
 REJECTED` records. Each says what was tried, the evidence, and in `reopen_if:` what would justify
-reopening it. The generated index lists them in their own group.
+reopening it. The decision listing shows them in their own group.
 
-**A generated index:** an OKF `docs/decisions/index.md` (no frontmatter, list shape, §9.3)
-built **from frontmatter**, grouped by status (in the kind's enum order) and then by each
-decision's first tag, one line per decision: id, link, description or title, actor and date, and
-`superseded by` where set. Every engine write to a decision regenerates it under the same lock
-(`[working] decision_index`), and `hk.regen_index` regenerates it on demand. Because nothing
-parses prose, its check (G-D6) is byte equality with a regeneration; the check of content from a cutoff
-id onward is needed only for indexes still built by parsing prose.
+**A listing, never stored:** the decisions grouped by status (in the kind's enum order) and
+then by each decision's first tag, one line per decision: id, link, description or title, actor
+(with `ruled by` where set) and date, and `superseded by` where set. It is built **from
+frontmatter**, never from prose, and printed on demand (`decision.index`, CLI `decision index`);
+the published site carries it for a reader without the CLI (`site.build`, §8.0.2). Nothing
+stores it: a stored copy goes stale after a hand edit and couples concurrent sessions through
+its commits, and OKF v0.2 makes `index.md` optional (§8: a consumer may synthesize
+one; §11: it must not reject a bundle without one). Until late in v0.5 the engine kept an OKF
+`docs/decisions/index.md` regenerated on every decision write (`[working] decision_index`); a
+repo whose config still sets that key loads as before, and orient names the key and the stored
+file to remove.
 
 **No splitting by period.** One file per decision has no single-file cap to hit. The growing thing is
-the index (DR11); one line per decision keeps it small, and superseded decisions can collapse
+the listing (DR11); one line per decision keeps it small, and superseded decisions can collapse
 into a group.
 
 **Existing single-file logs** (heading form `### D-n — title *(actor, date)*`, or `--` for the
@@ -1631,10 +1635,10 @@ the session approves the batch.
   6a): `hk run close`.
 - `hk run <phase>` runs that phase's tier-0 operations in order (start: `session abandon
   --stale`, `hk.stamp_asked`, `hk.comment` with `scan`; close: `hk.expire_batons`, `hk.close`
-  with `scan`, `hk.regen_index`), each with the `hk_` actor rule (the caller's actor, else
+  with `scan`), each with the `hk_` actor rule (the caller's actor, else
   `process:housekeep`), lists every operation, and ends with the rows it does not do; `--check`
-  lists the plan and writes nothing. The gate only checks, through lint (G-W3, G-W9, G-W11,
-  G-D6), and never writes.
+  lists the plan and writes nothing. The gate only checks, through lint (G-W3, G-W9, G-W11),
+  and never writes.
 
 **Safety:**
 - every `hk.*` write is stamped `--mechanical` with its actor, is logged, and lands in a
@@ -1983,13 +1987,13 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Group | Tools |
 |---|---|
 | Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7); `session.touch` (a live session that only reads resets its staleness, §7.1) |
-| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12) |
+| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12); `site.build(outdir)`: the records as a static HTML site in a new or empty directory outside the tracked tree, never stored (§6.5; CI publishes it) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
 | Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
@@ -1997,7 +2001,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.regen_index` (CLI `decision index`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's; it waits on the board as its own item, with G-V2's floors) |
+| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's; it waits on the board as its own item, with G-V2's floors) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
@@ -2138,11 +2142,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   list whose docs are all FROZEN or ACTIVE-PLAN, are red. Not checked: a rule value restated in
   prose (`NEXT holds 5`); and a generated block inside a hand-written doc is not told apart from
   the prose around it, so a count inside one is red like a typed one.
-- **G-D6:** generated indexes match a regeneration **and** are content-complete from a
-  configured cutoff id. An index built from record frontmatter needs only the regeneration
-  check; the cutoff check remains for indexes still built by parsing prose. The decision index
-  (`[working] decision_index`) is built from frontmatter: a missing one fails while any decision
-  exists.
+- **G-D6:** a repo's own generated indexes match a regeneration **and** are content-complete
+  from a configured cutoff id. An index built from record frontmatter needs only the
+  regeneration check; the cutoff check remains for indexes still built by parsing prose. The
+  engine stores no index (§6.5), so in the engine G-D6 checks nothing: the id stays one
+  lint knows, so a `[guards] off` naming it still loads.
 - **G-D7:** signal budgets: ⚠ ≤N per file, a bold-caps budget, retired glyphs. A signal stands
   out only if its use is capped. Config: `[guards] signals`, `warn_max`, `bold_caps_max`,
   `retired_glyphs`.
@@ -2301,8 +2305,8 @@ OKF v0.2 (`GoogleCloudPlatform/open-knowledge-format`, `SPEC.md`):
 |---|---|---|
 | component type | required `type:` (`Story`, `Criterion`, `Decision`, `Evidence`, `Invariant`, `Deviation`, `Runbook`, `Charter`) | — |
 | identity | concept id = path minus `.md` | **`id:`** extension: stable series ids that survive moves (P3) |
-| routing map / progressive loading | `index.md` per directory | **generated**, and checked by G-D6; the component → path mapping lives in `context.toml`, because `index.md`'s shape is fixed (§9.3.1) |
-| concept changelog | `log.md` | **none is written**: OKF does not require one, and what changed when is already in the op log, per write, and in the decision index; decisions' `creates/amends/retires` feed the census and trace-check (§6.5). `log.md` stays reserved, and G-D11 skips it. The session ledger is *not* an OKF `log.md` (§9.3.1) |
+| routing map / progressive loading | `index.md` per directory | **none is stored**: OKF makes `index.md` optional and lets a consumer synthesize one (§9.3.1), so listings are printed on demand (`decision index`, `task list`) and published as a site built by CI (`site build`, §6.5); the component → path mapping lives in `context.toml`, because `index.md`'s shape is fixed (§9.3.1) |
+| concept changelog | `log.md` | **none is written**: OKF does not require one, and what changed when is already in the op log, per write, and in the decision listing; decisions' `creates/amends/retires` feed the census and trace-check (§6.5). `log.md` stays reserved, and G-D11 skips it. The session ledger is *not* an OKF `log.md` (§9.3.1) |
 | who and when | `generated: {by, at}`; actors `human:<id>` / `<producer>/<version>` | `actor:` in our vocabulary (§6.5); the writing agent (`claude-code/<model-id>`) goes into the op log, per write, and only there: the engine writes no `generated`, so who wrote a record is never kept in two places that can disagree. A hand-written `generated` is round-tripped like any unknown key |
 | owner sign-off | `verified:`, by `human:owner` at a time → "human-reviewed" tier | distinct from `criterion_status: tested`. **Not settled:** whether it is one mapping or a list of them is fixed when the first owner endorsement is recorded; until then no operation writes it (`decision.set` refuses it, §6.5) |
 | no longer current | `status: deprecated` | **one mapping:** SUPERSEDED decision, `retired` story or criterion, FROZEN archive item, closed task → all carry `status: deprecated`, derived by the engine from the record's own state |
@@ -2322,7 +2326,7 @@ are deliberately permissive; our profile is strict on top of conformant files.
 | **`status` is a defined lifecycle key: `draft` \| `stable` \| `deprecated`; absent means `stable`** (§5.4). `deprecated` = "kept for links and history; no longer current" | Our own states must not go into `status`. Tasks carry **`state: open \| closed`** (an extension key); the engine derives `status`: absent while open, `deprecated` once closed. Decisions use `decision_status`, stories `story_status`, the charter `charter_status` (`confirmed`, or `unconfirmed` for an agent's reconstruction until the owner reviews it, §11.4). G-W4 checks the two keys agree for board items and decisions (a decision is `status: deprecated` exactly when it is SUPERSEDED), and G-I2 for stories; G-I1 checks the charter's `charter_status` is from its vocabulary and its `status`, where set, is OKF's, and orient asks the owner about an `unconfirmed` charter. |
 | **Concept id = the file's path minus `.md`** (§2) | Closing in place (§5.2) and never renaming a file on retitle keep record ids stable as OKF ids. The `id:` extension stays, for series ids that survive a migration. |
 | **Every non-reserved `.md` in a bundle needs frontmatter with a non-empty `type`** (§11) | **A bundle is a chosen set of directories, not the repo root;** otherwise README, CLAUDE.md and HANDOFF would all need frontmatter. Non-record files inside a bundle directory need a `type` too (e.g. `type: Readme`), and the engine filters on `type` rather than excluding files by name. |
-| **`index.md` and `log.md` are reserved at every level; `index.md` has no frontmatter (except `okf_version` at the bundle root) and a fixed list shape** (§3.1, §8) | The component → path mapping lives in `context.toml` (§8.0); `index.md` is a plain generated listing. |
+| **`index.md` and `log.md` are reserved at every level; `index.md` has no frontmatter (except `okf_version` at the bundle root) and a fixed list shape** (§3.1, §8) | The component → path mapping lives in `context.toml` (§8.0); the engine writes no `index.md` (§6.5), and one a repo keeps is a plain listing. |
 | **`log.md` headings must be `YYYY-MM-DD`** (§9) | Session keys like `2026-10-07c` cannot be log headings, so the ledger is not an OKF `log.md` (§7.1). |
 | **Actors: `<producer>/<version>`, `human:<id>`, `process:<id>`** (§7); trust tiers key off the `human:` prefix (§5.3) | Agent writes carry `claude-code/<model-id>`; the housekeeping script is `process:housekeep`; owner sign-off is `verified` by `human:<id>`. |
 | **`stale_after` is an absolute instant** (§5.5) | Baton expiry counts sessions, so it is an extension key; `stale_after` may serve as a time backstop. |
@@ -2353,13 +2357,12 @@ context.toml             * # framework config: guards, routes (component → pat
 .gitattributes           * # the repo's own; init creates it, or appends `<op log> merge=union` to it when it does not give the op log that yet
 .mcp.json                  # optional, not committed by default: the server is registered with `claude mcp add --scope local` (§8.0.2)
 docs/
-  index.md                 # generated OKF listing (no frontmatter, list shape)
   charter.md             *
   framework/contract.md  * # the framework's rules, imported by CLAUDE.md; replaced whole on upgrade, never edited here (G-D0)
   law.md                   # optional: the NFR doc (NFRs, data-model law) with invariant → test map
   stories/S-n-<slug>.md  * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
   criteria.md            * or criteria/ or features/*.feature
-  decisions/D-n-<slug>.md * # one record per decision; generated index.md
+  decisions/D-n-<slug>.md * # one record per decision; no index is stored (the listing is printed, and published by CI)
   deviations/              # append-only records (+ optional generated open-gaps view)
   invariants.md            # the residual-risk register (`[working] register`, §7.4)
   runbooks/              * # method: procedures.md (every procedure in order), manual-mode.md (every engine operation by hand), gate, sabotage, fan-out and release (§7.5), from the kit

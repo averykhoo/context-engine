@@ -103,7 +103,6 @@ writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
 | decision import | `import`, one line per record | the record | every frontmatter key |
-| any write to a decision, when `decision_index` is set and the index changed | `index`, mechanical | id `index`, path = the index | `["index"]` |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
@@ -417,6 +416,36 @@ with neither, up to five closed ones), and head the list with the totals per sta
 the status is generated from what G-D12 already reads instead of written by hand. It is read on
 demand, never stored: a stored table would go stale with every board close, and a closed item
 or a deferred row is the board's and the map's word, not proof the code exists.
+
+### context-engine site build
+
+`context-engine site build <dir>` (MCP `site_build(outdir)`), a read: it writes the records as a
+static HTML site into `<dir>` and nothing in the repo (no lock, no op log line, no commit).
+`<dir>` is relative to the repo root, or absolute; it must be new or empty, and outside the repo
+or git-ignored in it (`git check-ignore`), or the op refuses. CI runs it on every push to `main`
+and deploys `<dir>` to GitHub Pages (`.github/workflows/pages.yml`); on another host, wrap the
+same op in that host's pages job. By hand, write these pages, each with a link bar to the six
+listings:
+1. `index.html`: the repo's name, what the site holds, links to the listings.
+2. `decisions.html`: § context-engine decision index's groups and lines, each id a link to its
+   page, `superseded by` ids too.
+3. `stories.html`: the stories (`[guards] stories`) by `story_status` in the kind's enum order:
+   id, title, actor, date.
+4. `board.html`: the open items of every `[working] board` kind by tier in `pri`'s enum order,
+   by prefix and number, with their `brief`; then every closed item, with its `closed` key.
+5. `coverage.html`: § context-engine coverage's tables, or why it is not available here.
+6. `register.html`: each `## INV-n` entry of `[working] register` with its fields, anchored
+   `#INV-n`.
+7. One page per decision, story and board item at `<kind>/<id>.html`: its path, its frontmatter
+   keys and values, and its body as escaped, wrapped markdown text (not rendered).
+
+On every page, an id the site holds (a record above, or `INV-n` in the register) is a link to it,
+and every `http(s)://` URL is a link; other ids stay text.
+
+**Why:** a reader without the CLI (the owner on a phone, anyone on GitHub) gets the listings that
+a stored index once gave, and more, without anything generated being stored: a stored copy goes
+stale and couples sessions through commits. The op is the engine's, not a CI
+script, so a repo on another host publishes the same site.
 
 ### context-engine lint
 
@@ -1159,8 +1188,8 @@ The pause must be open. Set `state: done`, `resumed: <key>`.
 
 ## Housekeeping (FRAMEWORK §6.11)
 
-Two of housekeeping's operations live with their records: `baton expire` (MCP
-`hk_expire_batons`) and `decision index` (MCP `hk_regen_index`). The others are here. Each
+One of housekeeping's operations lives with its records: `baton expire` (MCP
+`hk_expire_batons`). The others are here. Each
 write is mechanical (`"mechanical": true`), with actor `process:housekeep` unless the caller
 gives one, and none forms new intent: each carries out what a commit or the ledger already says.
 
@@ -1216,8 +1245,7 @@ procedures.md § Housekeeping in order:
 
 1. **start:** § context-engine session abandon with `--stale`, § context-engine hk stamp, then §
    context-engine hk comment with `--scan`.
-2. **close:** § context-engine baton expire, § context-engine hk close with `--scan`, then §
-   context-engine decision index where `[working] decision_index` is set.
+2. **close:** § context-engine baton expire, then § context-engine hk close with `--scan`.
 3. Each write as its own section says: the actor is yours, or `process:housekeep`; every line is
    `"mechanical": true` but an abandon's. When the run abandoned or closed anything (milestones),
    commit all its writes in one commit by path at the end; otherwise they go with your next commit.
@@ -1623,8 +1651,8 @@ one: their earlier words, quoted here, would record a confirmation they never ga
 The decision kind is the one `[working] decision` names. Its link fields are lists:
 `supersedes` / `superseded_by`, `relaxes` / `narrowed_by` (each pair written together),
 `creates`, `amends`, `retires`, `tasks`, `code` (`file` or `file::symbol`) and `refs`.
-**Every write to a decision also regenerates the index** (§ context-engine decision index) when
-`[working] decision_index` is set; by hand, do that step after each one.
+No decision write stores an index: the listing is printed on demand (§ context-engine
+decision index) and published (§ context-engine site build).
 
 ### context-engine decision supersede
 
@@ -1664,8 +1692,7 @@ operation owns. Values take the kind's declared types, as in § context-engine t
   replaced it.
 
 Re-read the file, then change only the named keys in place (a new key goes last). The body and
-`body_sha` do not change. Log one `set` line with the changed keys, then regenerate the index
-(§ context-engine decision index). **Move an owner's decision's status (PROVISIONAL to BUILT, or
+`body_sha` do not change. Log one `set` line with the changed keys. **Move an owner's decision's status (PROVISIONAL to BUILT, or
 to REJECTED or DEFERRED) only on the owner's words, recorded first** (`record amend <id>
 "<words>"`): the engine cannot tell whether the owner said so, so this rule is the only control.
 
@@ -1705,8 +1732,7 @@ names moves. Refuse, and write nothing, when:
 
 Re-read the file, then replace `<old>` with `<new>` in place in `code:` (if `<new>` is already
 there, drop `<old>` and keep `<new>` once). The body and `body_sha` do not change. Log one
-`relink` line with fields `["code"]`, then regenerate the index (§ context-engine decision
-index). **Relink only to where the same behaviour now lives**, in the commit that moves it: if
+`relink` line with fields `["code"]`. **Relink only to where the same behaviour now lives**, in the commit that moves it: if
 what the code did is gone, the decision no longer describes the code, so supersede it.
 
 **Why:** a moved file or renamed symbol leaves the link dead, G-T3 red and `why()` answering
@@ -1733,24 +1759,23 @@ every non-empty link field and `tags`, one per line, then the body, or only the
 
 ### context-engine decision index
 
-Housekeeping (`hk_regen_index`). Rewrite `[working] decision_index` from the decisions'
-frontmatter alone, never their prose:
+A read (MCP `decision_index`): every decision, from its frontmatter alone, never its prose. Write
+nothing; print:
 1. `# Decisions`, a blank line, then the line
-   ``Generated from each decision's frontmatter by `context-engine decision index`; never edit it by hand (G-D6).``
+   ``Printed on demand from each decision's frontmatter by `context-engine decision index`; never stored.``
 2. For each `decision_status` in the kind's enum order (then any other value, alphabetically)
    that has decisions: a blank line, `## <status>`.
 3. Under it, group by each decision's first tag (`untagged` if none): tags alphabetical,
    `untagged` last. Per group: a blank line, `### <tag>`, a blank line, then one line per
    decision by id number:
-   `- [<id>](<file name relative to the index>): <description, else title> *(<actor>, <decided>)*`,
+   `- [<id>](<the record's path from the repo root>): <description, else title> *(<actor>, ruled by <ruled_by> where set, <decided>)*`,
    followed by `; superseded by <ids, comma-separated>` when `superseded_by` is set.
-4. LF line endings and one final `\n`.
 
-Lint G-D6 compares the file with a regeneration (line endings normalised), and fails a missing
-index while any decision exists.
-
-**Why:** an index built from frontmatter is checked by byte equality, so it cannot drift
-quietly; one line per decision keeps it small as the series grows (FRAMEWORK §6.5).
+**Why:** the listing is what a stored `index.md` used to hold, and printing it on demand means it
+can never be stale and no two sessions collide on it. OKF v0.2 §8 lets a consumer synthesize an
+index on the fly, and the published site (§ context-engine site build) carries it for a reader
+without the CLI (FRAMEWORK §6.5). A repo that still sets `[working] decision_index` loads as
+before; orient names the key and the stored file to remove.
 
 ### context-engine decision import
 
@@ -1816,7 +1841,7 @@ on a branch; nothing is written if any check fails.
    `actor: agent`; `decided`: the last date in the row's middle cells, else the date of the
    first entry its last cell names; `refs`: the new ids of the entries its last cell names;
    `attribution`: which table, and where the reasoning is.
-6. Stamp every record, log one `import` line each, and regenerate the index.
+6. Stamp every record and log one `import` line each.
 7. The id map, one table row per record (`| id in the log | record | status | title |`, a
    rejected row's first cell `(rejected table row <n>)`), under a title and a FROZEN line, saved
    as an evidence doc, with a `## Not imported` and a `## Headings kept inside entries` list

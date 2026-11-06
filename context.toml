@@ -75,7 +75,6 @@ pause = "pause"
 orient_max_bytes = 6000                  # provenance: JUDGEMENT, DEC-14 (one screen of orient); wrong if a routine orient gets cut
 read_max_bytes = 6000                    # provenance: JUDGEMENT, CE-3: the orient cap (DEC-14) for every MCP read; wrong if a routine read (one task, the board) gets cut
 register = "src/context_engine/REGISTER.md"  # the engine's residual-risk register; package data, so it ships with the engine (CE-23)
-decision_index = "docs/decisions/index.md"   # generated from the decisions' frontmatter on every decision write; lint G-D6 checks it
 criteria = "docs/criteria.md"               # `decision link` checks a criterion id is a row here
 archive = "docs/archive"                    # `doc archive` with no --to (FRAMEWORK §7.3, CE-27); none archived yet
 review_triggers = ["record-kind", "guard", "write-op", "git-loss", "long-lived", "shipped"]  # FRAMEWORK §5.2's threshold, one value per clause
@@ -166,7 +165,7 @@ component = "Decisions"
 path = "docs/decisions"
 pattern = "DEC-n-<slug>.md"
 mode = "append-only: `context-engine record amend` or `record correct`; links through `context-engine decision supersede|link`"
-note = "one record each (FRAMEWORK §6.5); index.md is generated on every decision write (G-D6)"
+note = "one record each (FRAMEWORK §6.5); no index is stored: `context-engine decision index` prints it and the site publishes it (CE-185)"
 
 [[routes]]
 component = "Tasks and owner questions"

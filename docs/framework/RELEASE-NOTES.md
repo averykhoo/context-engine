@@ -11,6 +11,13 @@ component, procedure and guard.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
+- **No decision index is stored any more.** No write regenerates the decision index file;
+  `context-engine decision index` (MCP `decision_index`, now a read) prints the same listing,
+  and `context-engine site build <dir>` (MCP `site_build`) builds the records as a static site
+  that CI publishes (the engine's own: `.github/workflows/pages.yml`). `hk run close` has no
+  index step, MCP `hk_regen_index` is gone, and G-D6 checks nothing in the engine. A
+  `context.toml` that still sets `[working] decision_index` loads as before; orient names the
+  key and the stored file to remove (§6.5, §8.3 G-D6, §9.3) — DEC-159, DEC-160, CE-185.
 - `context-engine coverage` (MCP `coverage`): each component, procedure and guard FRAMEWORK
   names, with its build status (built, deferred, prose-only, open work, done, map only,
   unowned), generated on demand from what G-D12 reads, the board and the guards lint reports;

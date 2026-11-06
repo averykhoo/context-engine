@@ -4,8 +4,8 @@
 Everything here is a pure function of record frontmatter or of a log's text; the store and the
 engine do the reading, the locking and the writing.
 
-- The index (``render_index``) is built from frontmatter only, never from prose, so its check
-  (G-D6) is byte equality with a regeneration.
+- The index (``render_index``, ``groups``) is built from frontmatter only, never from prose,
+  and is printed on demand (`decision index`) or published (`site build`), never stored (CE-185).
 - The importer (``plan_import``) reads a single-file log whose entries are headed
   ``### D-n -- title *(actor, date)*`` (``—`` and ``–`` also work), with an optional trailing
   ``-- **note**`` that may say ``SUPERSEDED by D-n``, ``relaxes D-n``, ``relaxed by D-n`` or
@@ -48,7 +48,7 @@ LINK_FIELDS = ("supersedes", "superseded_by", "relaxes", "narrowed_by", "creates
 BACKLINK = {"supersedes": "superseded_by", "superseded_by": "supersedes", "relaxes": "narrowed_by", "narrowed_by": "relaxes"}
 STATUS_KEY = "decision_status"
 INDEX_TITLE = "# Decisions"
-INDEX_NOTE = "Generated from each decision's frontmatter by `context-engine decision index`; never edit it by hand (G-D6)."
+INDEX_NOTE = "Printed on demand from each decision's frontmatter by `context-engine decision index`; never stored."
 UNTAGGED = "untagged"
 
 
@@ -57,7 +57,7 @@ class Row:
     """One decision as the index sees it: frontmatter only."""
 
     id: str
-    link: str  # the record's path relative to the index's directory
+    link: str  # the record's path relative to where the listing is read from (the repo root, for `decision index`)
     data: dict[str, Any]
 
     @property
@@ -79,31 +79,45 @@ def as_list(value: Any) -> list[str]:
     return [str(value)]
 
 
-def index_line(r: Row) -> str:
-    text = r.get("description") or r.get("title") or ""
+def line_parts(r: Row) -> tuple[str, str, list[str]]:
+    """One decision's index line as (its text, who and when, the ids superseding it)."""
+    text = str(r.get("description") or r.get("title") or "")
     ruled = f"ruled by {r.get('ruled_by')}" if r.get("ruled_by") else None  # CE-113: a ruling on the owner's delegation
     who = ", ".join(str(x) for x in (r.get("actor"), ruled, r.get("decided")) if x)
+    return text, who, as_list(r.get("superseded_by"))
+
+
+def index_line(r: Row) -> str:
+    text, who, later = line_parts(r)
     line = f"- [{r.id}]({r.link}): {text}" + (f" *({who})*" if who else "")
-    later = as_list(r.get("superseded_by"))
     if later:
         line += f"; superseded by {', '.join(later)}"
     return line
 
 
-def render_index(rows: list[Row], statuses: tuple[str, ...]) -> str:
-    """The index: grouped by status (in the kind's enum order, then any other value), then by
-    each record's first tag (alphabetical, `untagged` last), one line per decision by id."""
+def groups(rows: list[Row], statuses: tuple[str, ...]) -> list[tuple[str, list[tuple[str, list[Row]]]]]:
+    """The index's order: by status (in the kind's enum order, then any other value), then by
+    each record's first tag (alphabetical, `untagged` last), each group by id; empty groups are
+    left out. ``render_index`` prints it, and the site (``site.build``) renders the same groups."""
     order = list(statuses) + sorted({str(r.get(STATUS_KEY)) for r in rows} - set(statuses))
-    out = [INDEX_TITLE, "", INDEX_NOTE]
+    out = []
     for status in order:
         group = [r for r in rows if str(r.get(STATUS_KEY)) == status]
         if not group:
             continue
-        out += ["", f"## {status}"]
         tags = sorted({(r.tags() or [UNTAGGED])[0] for r in group}, key=lambda t: (t == UNTAGGED, t))
-        for tag in tags:
+        out.append((status, [(t, [r for r in sorted(group, key=lambda r: r.num) if (r.tags() or [UNTAGGED])[0] == t]) for t in tags]))
+    return out
+
+
+def render_index(rows: list[Row], statuses: tuple[str, ...]) -> str:
+    """The index as text: a `## <status>` per status, a `### <tag>` per group, one line per decision."""
+    out = [INDEX_TITLE, "", INDEX_NOTE]
+    for status, tagged in groups(rows, statuses):
+        out += ["", f"## {status}"]
+        for tag, group in tagged:
             out += ["", f"### {tag}", ""]
-            out += [index_line(r) for r in sorted(group, key=lambda r: r.num) if (r.tags() or [UNTAGGED])[0] == tag]
+            out += [index_line(r) for r in group]
     return "\n".join(out) + "\n"
 
 

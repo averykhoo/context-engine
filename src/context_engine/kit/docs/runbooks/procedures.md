@@ -19,8 +19,7 @@ achieve, its guards and its reasons; this file says what to do, in what order. E
   `CE_ACTOR` and `CE_SESSION` set). Over MCP the same operation is the tool
   `mcp__context-engine__<group>_<verb>` (`init` is `mcp__context-engine__init`, `why` is
   `mcp__context-engine__why`), except `baton expire`, which is
-  `mcp__context-engine__hk_expire_batons`, `decision index`, which is
-  `mcp__context-engine__hk_regen_index`, and `hk stamp`, which is
+  `mcp__context-engine__hk_expire_batons`, and `hk stamp`, which is
   `mcp__context-engine__hk_stamp_asked`; from the Claude Code plugin the prefix is
   `mcp__plugin_context-engine_engine__` instead. `—` means the step is not an engine operation.
 - **By hand**: the same step without the engine, as a link into
@@ -248,10 +247,9 @@ goes into the owner digest.
 
 | § | Do | Engine | By hand | Why |
 |---|---|---|---|---|
-| — | Run the rows below that `hk run close` does (batons, `Closes:` trailers, the decision index), in that order, then the rows it lists as not done (record stamps, ratchets, mechanical touches) | `context-engine hk run close` (MCP: `hk_run`; `--check` lists the plan and writes nothing) | [§ hk run](manual-mode.md#context-engine-hk-run) | as above |
+| — | Run the rows below that `hk run close` does (batons, `Closes:` trailers), in that order, then the rows it lists as not done (record stamps, ratchets, mechanical touches) | `context-engine hk run close` (MCP: `hk_run`; `--check` lists the plan and writes nothing) | [§ hk run](manual-mode.md#context-engine-hk-run) | as above |
 | — | Expire every baton and pause record with 2 or more closes or pauses after its session into a LATER task | `context-engine baton expire` (MCP: `hk_expire_batons`) | [§ baton expire](manual-mode.md#context-engine-baton-expire) | work carried over from earlier sessions must not drift for ever (G-W3) |
 | — | Close each open task named by a `Closes: <id>` trailer in a commit, citing the commit (git checks the trailer); list what it could not close; anything else housekeeping would close is proposed to the session, never closed by it | `context-engine hk close --scan` (one item: `hk close <id> --commit <sha>`) | [§ hk close](manual-mode.md#context-engine-hk-close) | a close needs evidence; a mechanical close without it hides a judgement that nobody recorded (G-W9) |
 | — | Stamp every append-only record whose body is final | `context-engine record stamp <ids>` | [§ record stamp](manual-mode.md#context-engine-record-stamp) | owner words in an unstamped record can still drift (G-D10) |
 | — | Mark each item that housekeeping updated, so the update does not count as progress | `context-engine task touch --mechanical <id>` | [§ task touch](manual-mode.md#context-engine-task-touch) | a mechanical touch must not look like progress |
-| — | Regenerate the decision index, where `[working] decision_index` is set (every engine write to a decision already does; a by-hand decision does not) | `context-engine decision index` (MCP: `hk_regen_index`) | [§ decision index](manual-mode.md#context-engine-decision-index) | a generated file is checked by byte equality, so a stale one is red (G-D6) |
 | — | Raise every ratcheting floor to its current count and regenerate any other generated file, where the repo has them, as the guard that names each one says | — (no ratcheting floor exists until G-V2's raw-total floors, FRAMEWORK §8.5) | regenerate or raise by hand | as above |

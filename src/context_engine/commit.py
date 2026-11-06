@@ -136,22 +136,14 @@ def left_behind(left: tuple[tuple[str, int], ...]) -> str:
             f"or once it is known dead, `context-engine commit --sweep` takes them")
 
 
-def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False,
-           derived: dict[str, tuple[str, ...]] | None = None) -> tuple[list[str], list[str]]:
+def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False) -> tuple[list[str], list[str]]:
     """Split uncommitted op lines into those a commit by ``session`` takes and those it leaves
     (CE-125): it takes its own lines; another session's line naming a path the commit carries
     (one of its own lines' paths, a ``given`` path or a file under a given directory), since
     that file holds the write; and a line that does not parse, unless its text names another
-    session (``session_of``), whose line it is then (CE-128). With ``sweep``, every line.
-
-    ``derived`` maps a file generated from others (the decision index) to the directories of its
-    sources: when the commit carries it, it holds every source's state on disk, so every line
-    naming a file under those directories goes in too, or the file at HEAD would not be what its
-    sources there generate (G-D6). Then a line taken for its path adds no new path, so the
-    passes end."""
+    session (``session_of``), whose line it is then (CE-128). With ``sweep``, every line."""
     if sweep:
         return list(lines), []
-    derived = derived or {}
     parsed = []
     for ln in lines:
         try:
@@ -169,10 +161,6 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
     under = tuple(g.rstrip("/") + "/" for g in given)
     at = [str(o.get("path") or "") if o is not None else "" for o in parsed]
     carried = lambda p: bool(p) and (p in paths or p.startswith(under))
-    for gen, dirs in derived.items():  # a carried generated file brings its sources' lines
-        if any(own(o) or carried(p) for o, p in zip(parsed, at) if p == gen) or gen in paths:
-            under += tuple(d.rstrip("/") + "/" for d in dirs)
-            paths.add(gen)
     taken, left = [], []
     for ln, o, p, k in zip(lines, parsed, at, keys):
         (taken if own(o, k) or carried(p) else left).append(ln)
@@ -376,8 +364,7 @@ def _others(lines: list[dict], session: str) -> tuple[str, ...]:
 
 
 def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
-           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False,
-           derived: dict[str, tuple[str, ...]] | None = None) -> Outcome:
+           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False) -> Outcome:
     """Commit ``session``'s uncommitted op lines (``select``; with ``sweep``, every line) with
     the files they name. Call it holding the lock.
 
@@ -416,7 +403,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
             how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
-            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep, derived)
+            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep)
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
             left = f"; it left {lock} behind: remove it once no git command is running" if lock.exists() and lock.stat().st_mtime >= started - 1 else ""
@@ -439,7 +426,7 @@ def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
     return str(f)
 
 
-def pending(root: Path, oplog: str, session: str | None = None, derived: dict[str, tuple[str, ...]] | None = None) -> set[str]:
+def pending(root: Path, oplog: str, session: str | None = None) -> set[str]:
     """The paths, from the top of the work tree as `git status` gives them, that the next
     commit carries: the op log and every path its lines HEAD lacks name (with ``session``, only
     the lines that session's commit takes, ``select``). Empty when
@@ -459,7 +446,7 @@ def pending(root: Path, oplog: str, session: str | None = None, derived: dict[st
     prefix = top.stdout.strip()
     fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
     if session is not None and head is not None:
-        fresh = select(fresh, session, derived=derived)[0]
+        fresh = select(fresh, session)[0]
     if not fresh:
         return set()
     out = {prefix + oplog}
@@ -473,13 +460,12 @@ def pending(root: Path, oplog: str, session: str | None = None, derived: dict[st
     return out
 
 
-def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
-                  derived: dict[str, tuple[str, ...]] | None = None) -> set[str]:
+def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False) -> set[str]:
     """The paths, relative to ``root``, a commit by ``session`` of ``given`` would carry: those,
     and when it takes any op line, the op log and the paths its taken lines name (``select``).
     Read without git's help when there is no git or no HEAD (then every line counts)."""
     out = set(given)
-    fresh = taken_lines(root, oplog, session, given, sweep, derived)
+    fresh = taken_lines(root, oplog, session, given, sweep)
     if fresh:
         out.add(oplog)
     for ln in fresh:
@@ -492,8 +478,7 @@ def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] =
     return out
 
 
-def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
-                derived: dict[str, tuple[str, ...]] | None = None) -> list[str]:
+def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False) -> list[str]:
     """The uncommitted op log lines a commit by ``session`` of ``given`` would take (``select``).
     Read without git's help when there is no git or no HEAD (then every line counts).
 
@@ -511,7 +496,7 @@ def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (
         except (OSError, subprocess.TimeoutExpired):
             pass
     fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
-    return select(fresh, session, given, sweep, derived)[0] if head is not None else fresh
+    return select(fresh, session, given, sweep)[0] if head is not None else fresh
 
 
 def _detached(git: _Git, gitdir: Path) -> bool:
@@ -527,7 +512,7 @@ def _detached(git: _Git, gitdir: Path) -> bool:
 
 
 def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: Path, remedy: str, how: dict,
-            text: str | None, given: tuple[str, ...], sweep: bool = False, derived: dict[str, tuple[str, ...]] | None = None) -> Outcome:
+            text: str | None, given: tuple[str, ...], sweep: bool = False) -> Outcome:
     log = root / oplog
     fresh: list[str] = []
     left: list[str] = []
@@ -542,7 +527,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
                                  f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
         fresh = new_lines(working, head_text)
         if head is not None:  # before the first commit every line goes in: no HEAD to build a partial op log on (CE-133)
-            fresh, left = select(fresh, session, given, sweep, derived)
+            fresh, left = select(fresh, session, given, sweep)
     whose = _whose(left)
     if not fresh and not given:
         if text is None:

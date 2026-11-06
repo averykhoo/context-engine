@@ -552,7 +552,7 @@ MILESTONE_CONFIG = copy.deepcopy(CONFIG)  # no `commit` key: the default policy
 MILESTONE_CONFIG["kinds"]["story"] = STORY
 MILESTONE_CONFIG["kinds"]["decision"]["enums"]["decision_status"].append("SUPERSEDED")
 MILESTONE_CONFIG["guards"] = {**CONFIG["guards"], "stories": "story"}
-MILESTONE_CONFIG["working"] = {**CONFIG["working"], "decision_index": "decisions/index.md", "baton_max_age": 0}  # 0: expiry has work at once
+MILESTONE_CONFIG["working"] = {**CONFIG["working"], "baton_max_age": 0}  # 0: expiry has work at once
 # DEC-36's milestones: a task's close, the owner-words writes, a hand-off (baton, pause) and the
 # session's own close or pause; and the banner, which a clean close writes after the session's
 # close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
@@ -638,8 +638,6 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("decision_relink", id="DEC-2", old="a.py::f", new="b.py::f")
     w("decision_set", id="DEC-2", fields={"tags": "a, b"})
     w("decision_supersede", old="DEC-1", new="DEC-2")
-    (mrepo / "decisions" / "index.md").write_text("stale\n", encoding="utf-8")  # so the regeneration writes
-    w("hk_regen_index")
     w("record_new", kind="story", title="A story", body="the owner's words", fields=OWNER)
     w("record_new", kind="story", title="Again", body="the owner's words", fields=OWNER)
     w("record_retire", id="US-1", why="recorded again", by="agent", superseded_by="US-2")
@@ -1195,28 +1193,6 @@ def test_a_partial_commit_in_a_root_below_the_top_of_the_work_tree(tmp_path):
     assert "svc/ops.jsonl" in names and "ops.jsonl" not in names and f"svc/{theirs}" not in names, names
     assert key not in git(top, "show", "HEAD:svc/ops.jsonl")
     assert git(top, "status", "--porcelain", "--", "ops.jsonl").strip() == ""
-
-
-def test_a_carried_decision_index_brings_every_decision_line_it_reflects(tmp_path):
-    """The index is generated from every decision on disk, so a commit carrying it carries the
-    decision lines it reflects, another session's too, or G-D6 fails at HEAD (CE-125 review)."""
-    cfg = copy.deepcopy(CONFIG)
-    cfg["working"]["decision_index"] = "decisions/index.md"
-    root = tmp_path / "r"
-    _write_target(root, cfg)
-    _init(root)
-    a = start(root)
-    for title in ("One", "Two"):
-        run(root, "record_new", a, kind="decision", title=title, body="x", fields={"actor": "owner", "decision_status": "PROVISIONAL"})
-    b = eng(root, commit="off")
-    key = b.session_start(actor=ACTOR)
-    b.decision_set("DEC-1", {"decision_status": "BUILT"}, session=key, actor=ACTOR)
-    run(root, "decision_set", a, id="DEC-2", fields={"decision_status": "BUILT"})
-    _, line = run(root, "commit", a, message="CE-1: mine")
-    assert f"including op lines that {key} left uncommitted" in line and "left uncommitted: 1 op line" in line, line  # only its session.start stays
-    clone = tmp_path / "clone"
-    git(tmp_path, "-c", "core.autocrlf=false", "clone", "-q", str(root), str(clone))
-    assert [str(f) for f in Engine(clone, today=lambda: TODAY).lint() if f.guard in ("G-D6", "G-W7")] == []
 
 
 def test_a_partial_commit_whose_index_update_fails_says_so(repo):

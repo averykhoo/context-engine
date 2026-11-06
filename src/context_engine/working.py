@@ -1509,15 +1509,14 @@ class Engine:
                     *([("hk stamp", self._hk_stamp)] if self.w.question else []),
                     ("hk comment --scan", self._hk_comment_scan)]
         if phase == "close":
-            return [("baton expire", self._hk_expire), ("hk close --scan", self._hk_close_scan),
-                    *([("decision index", self._hk_reindex)] if self.w.decision_index else [])]
+            return [("baton expire", self._hk_expire), ("hk close --scan", self._hk_close_scan)]
         raise Refusal(f"no housekeeping phase {phase!r}", "`hk run start` (after `session start`) or `hk run close` (before `session close`)")
 
     def hk_run(self, phase: str, *, check: bool = False, anyway: bool = False, session: str, actor: str) -> str:
         """Tier-0 housekeeping in one call (FRAMEWORK §6.11, CE-6, DEC-136): `start`, after `session
         start`, runs `session abandon --stale`, `hk stamp` and `hk comment --scan`; `close`, before
-        `session close`, runs `baton expire`, `hk close --scan` and `decision index` (where
-        `[working] decision_index` is set). Each sub-operation is the one its own command runs,
+        `session close`, runs `baton expire` and `hk close --scan` (no decision index since
+        CE-185: none is stored). Each sub-operation is the one its own command runs,
         with its actor (the caller's, else `process:housekeep`) and its marks (an abandon is not
         mechanical; the rest are). ``check`` lists the plan, one line per operation, and writes
         nothing; the run lists what it did, the same way. Then the rows of procedures §
@@ -1851,13 +1850,13 @@ class Engine:
         still reports it. Read without the lock: a write landing meanwhile is checked by the next
         commit, or the gate."""
         oplog = self.store.config.oplog
-        carried = C.carried_paths(self.root, oplog, session, tuple(rels), sweep, self.store.derived())
+        carried = C.carried_paths(self.root, oplog, session, tuple(rels), sweep)
         dirs = tuple(r.rstrip("/") + "/" for r in rels)
         bad = [f for f in self.lint() if f.path in carried or f.path.startswith(dirs)]
         if any(_unparseable_oplog(f, oplog) for f in bad):
             # G-W7's parse failure is for the working op log; the commit leaves out another
             # session's broken line, so refuse only for one it would take, and name it (CE-128)
-            taken = C.unparseable(C.taken_lines(self.root, oplog, session, tuple(rels), sweep, self.store.derived()))
+            taken = C.unparseable(C.taken_lines(self.root, oplog, session, tuple(rels), sweep))
             named = []
             if taken:
                 lines = (self.root / oplog).read_bytes().decode("utf-8", errors="replace").splitlines()
@@ -1907,7 +1906,7 @@ class Engine:
         dirty = []
         # the pause's own commit carries the op log's uncommitted lines and the files they name,
         # so they are not left uncommitted (INV-45); the list holds what stays so
-        carried = C.pending(self.root, self.store.config.oplog, session, self.store.derived())
+        carried = C.pending(self.root, self.store.config.oplog, session)
         # -z: a path as it is on disk, never quoted, so it matches the carried set (CE-66)
         for path in status_paths(self._git("status", "--porcelain=v1", "-z", "--untracked-files=all")):
             if path not in carried:
@@ -2646,25 +2645,24 @@ class Engine:
             return [_resolved(alias, target).rstrip("\n"), *(out or [f"no decision links {target}"])]
         return out
 
-    def reindex(self, *, session: str, actor: str) -> str:
-        changed = self.store.reindex(session=session, actor=actor)
-        return f"{self.w.decision_index}: {'regenerated' if changed else 'already current'}"
+    def decision_index(self) -> str:
+        """The decision listing (FRAMEWORK §6.5), printed on demand and never stored (CE-185):
+        grouped by status, then first tag, one line per decision, each link relative to the root."""
+        name = self._decision_kind()
+        rows = self.store.decision_rows(self.root)
+        return D.render_index(rows, self.store.config.kind(name).enums.get(D.STATUS_KEY, ()))
 
-    def _hk_reindex(self, *, session: str, actor: str, dry: bool = False) -> tuple[list[tuple[str, str]], list[str]]:
-        """`decision index` as housekeeping's plan and its run, where `[working] decision_index` is
-        set: one operation when the index on disk is not what a regeneration writes."""
-        if not self.w.decision_index:
-            return [], []
-        if dry:
-            path = self.root / self.w.decision_index
-            try:
-                text = self.store.render_index()
-            except Refusal:
-                return [], []  # a broken record: a regeneration writes nothing, and lint reports it
-            now = path.read_bytes().decode("utf-8").replace("\r\n", "\n") if path.exists() else None
-            return ([("decision index", f"{self.w.decision_index}: would regenerate")] if text is not None and now != text else []), []
-        changed = self.store.reindex(session=session, actor=actor)
-        return ([("decision index", f"{self.w.decision_index}: regenerated")] if changed else []), []
+    def deprecated_config(self) -> list[str]:
+        """Orient's notice for config the engine no longer reads (CE-185, DEC-160): it still
+        loads, so an adopter's upgrade breaks nothing, and this says what to remove."""
+        out = []
+        if self.w.decision_index:
+            stored = (self.root / self.w.decision_index).exists()
+            out.append(f"- `[working] decision_index` is set, but the engine no longer writes a decision index (CE-185): "
+                       f"delete the key from {CONFIG_NAME}" + (f" and `git rm {self.w.decision_index}`, which is no longer kept current" if stored else "")
+                       + "; `context-engine decision index` prints the listing and `context-engine site build <dir>` publishes it")
+        return out
+
 
     def import_log(self, path: str, *, session: str, actor: str, dry_run: bool = False) -> str:
         """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its number and
@@ -2707,7 +2705,7 @@ class Engine:
             )
             return f"dry run, nothing written: would import {summary} into {kind.dir}{after}\n\nSave everything below this line as the id map's evidence doc, then import:\n\n{doc}"
         self.store.create_many(kind.name, items, session=session, actor=actor, op="import")
-        return f"imported {summary} into {kind.dir}, each stamped" + (f"; index {self.w.decision_index} regenerated" if self.w.decision_index else "") + after
+        return f"imported {summary} into {kind.dir}, each stamped" + after
 
     # -- docs: freeze and archive (FRAMEWORK §6.7, §7.2, §7.3, CE-27) --------------------
 
@@ -3011,6 +3009,9 @@ class Engine:
         charter = self.unconfirmed_charter()
         if charter:  # CE-136
             sections.append(Part("Charter unconfirmed: ask the owner", "\n".join(charter), "FRAMEWORK §11.4", rank=2))
+        deprecated = self.deprecated_config()
+        if deprecated:  # CE-185: config that still loads but is no longer read
+            sections.append(Part("Deprecated config: tell the owner", "\n".join(deprecated), "FRAMEWORK §6.5", rank=2))
         upstream = self.upstream_lines()
         if upstream:  # CE-114
             sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))

@@ -8,6 +8,12 @@ starts itself. It also lints a repo's records, routes and docs against the frame
 
 The design is [`docs/framework/FRAMEWORK.md`](docs/framework/FRAMEWORK.md) (§8.0 is the engine).
 
+**To read the records without the CLI:** <https://averykhoo.github.io/context-engine/>. The
+decisions (grouped by status and tag), the stories, the board, the framework's build status and
+the residual-risk register, each record on its own page. CI builds it from the records on every
+push to `main` with `context-engine site build` (`.github/workflows/pages.yml`); nothing it shows
+is stored in the repo, so there is no index file to keep current.
+
 **Status: alpha, no release tag yet.** The engine runs this repo's own records, and the gate and
 CI were green on `main` at `8990dd0` (2026-10-13). It has not yet been adopted in a second repo; that trial is next on the
 board. The no-model housekeeping script is not built yet (`context-engine task show CE-6`).
