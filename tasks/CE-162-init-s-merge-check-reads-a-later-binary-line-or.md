@@ -4,13 +4,15 @@ id: CE-162
 title: init's merge check reads a later binary line or a macro unsetting merge on the op log
 brief: CE-53 residual (b36c32e); narrow case, git check-attr is the oracle
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-6]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-06c
+updated: 2026-11-06c
+status: deprecated
+closed: 2026-11-06c
 ---
 
 init's merge check reads a later binary line or a macro that unsets merge on the op log.
@@ -26,3 +28,6 @@ Source: CE-53's close (b36c32e), residual (verifier probe against git check-attr
 - bootstrap.py::_union_merged
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): closed: dropped (DEC-162): an edge of an edge (a binary line or macro after merge=union on the op log); nobody writes that
+  residual risk: none
