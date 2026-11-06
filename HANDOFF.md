@@ -3,32 +3,32 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-05a)
+## Banner (2026-11-06a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **NOW is CE-164 (coverage op), the agent's pick on the owner's delegation (DEC-158, 2026-11-05a; rerank NEXT 1).**
   NEXT: CE-18, CE-156, CE-161. Open owner asks: ASK-26 (CE-11 clones and backup); a HOLD tier for this repo and a louder
   close when NOW is empty (both asked in chat, not filed). ASK-36 closed: leave zanzibar's token rules and tag push (DEC-157).
-- **CE-167 closed (2026-11-04a):** zanzibar master fast-forwarded to 3e63fd7 and pushed (b743587..3e63fd7, no tag) on the owner's
-  go (DEC-151; ASK-35 confirmed DEC-150); CI green (gate 41817387647, docs 41817387643); verifiers PASS. Owner answers
-  DEC-152..DEC-156; zanzibar's own records (DEC-13..15, TK-301, TK-302, coordinator rule) refreshed in its session 2026-11-04a:
-  pushed 3e63fd7..ebfe7d2 2026-11-05a, CI green. CE-182: clones binned but 21 locked DLLs; backup kept; INV-94 (CRLF drift, CE-184).
+- **CE-185 closed (2026-11-06a, US-19):** records are published at https://averykhoo.github.io/context-engine/ by
+  `.github/workflows/pages.yml` calling the new read op `site build` (DEC-159); the stored `docs/decisions/index.md`, its
+  regeneration and `hk_regen_index` are gone, and `decision index` only prints. Adopters' `decision_index` key still loads and
+  orient names the remedy (DEC-160). Pages was turned on through the API (build_type workflow). Follow-up CE-186 (LATER): two
+  unpinned site claims, and INV-97 duplicates INV-95. **Restart Claude Code:** the MCP server still lists `hk_regen_index`.
+- **Decision lifecycle findings (2026-11-05a, chat, not filed):** PROVISIONAL means both owner words and agent calls awaiting
+  review, with no path to promote or age them; no check finds two decisions that conflict; one-off permissions could take a lighter shape.
 - **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181, CE-183, CE-184 (zanzibar); CE-177
-  has its design (DEC-155); all LATER.
-- **CE-11 closed (2026-11-03a, 32f4fd9):** intervals adopted and pushed (DEC-147); agent rulings DEC-148, DEC-149
-  PROVISIONAL; intervals' own records 2 commits ahead of its origin, push is the owner's.
-- **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves (35 tasks closed); residual
-  follow-ups CE-150..CE-166; register INV-84..INV-90. DEC-133 PROVISIONAL (2026-10-31a).
+  has its design (DEC-155); all LATER. CE-182: clones binned, 21 locked DLLs, backup kept.
+- **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves; DEC-133, DEC-148, DEC-149,
+  DEC-159, DEC-160 PROVISIONAL; residual follow-ups CE-150..CE-166; register INV-84..INV-90, INV-95..INV-97.
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
-  half), CE-132 (contract bump), CE-166 (adhoc), CE-28.
-- **Pushed through 602aeac** (2026-11-05a, DEC-158; local gate 1429 passed, Linux gate 1429 passed; CI green, run 41994088181).
-  Records commits after it are local.
+  half), CE-132 (contract bump), CE-166 (adhoc), CE-28. intervals' own records 2 commits ahead of its origin (push is the owner's).
+- **Pushed through 7a19c83** (2026-11-06a, on the owner's "get the pages deployed"; local and Linux gate 1434 passed; CI green:
+  gate 42156708766, pages 42156708817). Records commits after it are local.
 - **Every clean close sets the banner** (G-W1).
-- **Lesson (2026-11-02a, 2026-11-03a, 2026-11-03b):** an adoption runs as survey, verified bundle backup, scripted rehearsal on
-  a clone, the same script live on a local branch, an independent verifier, then the owner's merge-and-push with a CI watcher,
-  and last the adopter's own records refreshed in its own engine session; CE-43, CE-11 and CE-167 took this shape (CE-167 as
-  one workflow: 2 surveys, builder, verifier, about 3.9 h).
+- **Lesson (2026-11-02a..2026-11-06a):** a task runs as one workflow: builder, an independent verifier, fix rounds until PASS,
+  then the push and a CI watcher (CE-167 about 3.9 h; CE-185 about 63 min, PASS on round 1). `task close` files a reviewed
+  item's residuals itself: give `--residual` only for risks the review does not list.
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
 - **Every push: gate, then `tools/linux_gate.py`, then a CI watcher.**
@@ -37,7 +37,7 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
 - **CI is Linux, this machine Windows (CE-67):** run `tools/linux_gate.py` before every push. The MCP server runs stale code
-  after an engine change: restart Claude Code (it refused `housekeeping` at 2026-11-03b start).
+  after an engine change: restart Claude Code.
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:
   ask before every push; push only on a green gate** (DEC-22). Close eagerly, in the turn the last task finishes (DEC-31, CE-82).
 
