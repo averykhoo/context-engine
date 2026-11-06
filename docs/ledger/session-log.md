@@ -7,9 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06f · kind: open
+## 2026-11-06f · kind: close
 
-- **opened:** 2026-11-06T21:03:27+08:00 by claude-code/claude-opus-5-5
+- **rows:** DEC-163 (new); CE-195 (closed, INV-99); DEC-164..DEC-169 (new, PROVISIONAL); CE-196,
+  CE-197 (new); CE-187 (NOW); CE-47 (LATER)
+- **receipts:**
+  - guards: 1465 passed; lint: clean; linux gate 1465 passed; CI green (gate 42248932131, pages
+    42248932169)
+  - read: DEC-163; CE-195; workflow reports .scratch/2026-11-06f
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: set
+- **summary** (the owner digest):
+  - CE-195 built on DEC-163 (owner: make it cheap, close eagerly): durable-only banner, one-call
+    close, start --continues.
+  - Independent verify PASS on round 3; design calls DEC-164..DEC-169 PROVISIONAL; AC-185 reworded
+    and tested (owner to accept).
+  - Pushed 243efd0..a368143 on the owner's word; local and Linux gate 1465 passed; CI green.
+  - Banner cut to durable lines; this is the first one-call close.
+  - Found: commits lacked Co-Authored-By (CE-197); two already pushed (962b4b3, 243efd0), left as
+    is.
+  - Lesson: CE-195 cost 1.15M subagent tokens on all-opus; the XDA article suggests sonnet builders
+    under an opus verifier.
+- **Still owed:**
+  - owner: whether to trial sonnet builders and a delegation size floor (DEC-45, coordinator rule)
+  - owner: restart Claude Code (stale MCP server); push of audio-workspace ba31e29d
 - **start head:** c7b89ab87e89257016099470552a14da4b8724c8
 
 ---
