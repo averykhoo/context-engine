@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:3366d2affe7c546e63d360602eea5591ae3f7cb93a90d32dfc82273a4158f413
+supersedes: [DEC-88]
 ---
 
 PROVISIONAL decision (actor claude-code/claude-opus-5-5), for CE-147. Amends and narrows DEC-88.

@@ -3,14 +3,14 @@ type: Task
 id: CE-158
 title: 'G-W4 owner-question parts: a remedy that does not clear, and options misread'
 brief: CE-44 verifier residuals (3371106), all in guards.py::ask_parts
-pri: LATER
+pri: NEXT
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-06c
+updated: 2026-11-06c
 ---
 
 G-W4 owner-question parts: a remedy that does not clear, and options misread.
@@ -30,3 +30,5 @@ Source: CE-44's close (3371106), three verifier residuals, all in how guards.py:
 - okf.py::set_section
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): Promoted LATER->NEXT (DEC-162): a refusal whose printed remedy does not clear it is a trap, and the contract tells agents to follow remedies.

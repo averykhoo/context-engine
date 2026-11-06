@@ -3,10 +3,12 @@ type: Decision
 id: DEC-88
 title: "A decision text holding ## Amendments is refused at the write, through G-I3's shared check"
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: SUPERSEDED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:67aea9742cfd83ee0b76e418d1a150ac91864fa1ebc71451afbbef2e8332e1c6
+status: deprecated
+superseded_by: [DEC-125]
 ---
 
 `guards.py::delegation_problems(new=True)`, called by `record new` and `ask answer`, refuses a
