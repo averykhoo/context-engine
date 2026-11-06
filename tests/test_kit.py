@@ -886,10 +886,11 @@ def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_p
     key = _cli(tmp_path, "session", "start").split()[1]
     assert "no banner" in _cli(tmp_path, "orient", key=key)
     _cli(tmp_path, "task", "new", "First", "--pri", "NOW", key=key)
-    _cli(tmp_path, "session", "close", "--rows", "T-1", "--summary", "bootstrapped", "--guards", "gate not run (no code yet); lint clean", "--read", "orient", key=key)
     show = _cli(tmp_path, "banner", "show")
     assert show.split()[3] == "none", show
-    assert _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- Bootstrapped.", key=key).startswith("banner written (the first)")
+    out = _cli(tmp_path, "session", "close", "--rows", "T-1", "--summary", "bootstrapped", "--guards", "gate not run (no code yet); lint clean", "--read", "orient",
+               "--banner", "- Bootstrapped.", "--seen", "none", key=key)  # the first close writes the first banner (CE-195)
+    assert out.startswith(f"session {key} closed: ledger entry written (1-line summary); banner written (the first)"), out
     assert _cli(tmp_path, "lint") == "lint: clean"
     note = (tmp_path / "HANDOFF.md").read_text(encoding="utf-8")
     assert note.index(f"## Banner ({key})") < note.index("## Next session")
@@ -997,9 +998,12 @@ def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_p
     _fill_gate(tmp_path)
     key = _cli(tmp_path, "session", "start").split()[1]
     assert lint() == "lint: clean"  # no close yet: nothing is owed
-    _cli(tmp_path, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g: 1 passed", "--read", "r", key=key)
-    assert "G-W1" in lint() and "no `## Banner (<key>)` heading" in lint()
-    _cli(tmp_path, "banner", "set", "--seen", "none", "--text", "- B.", key=key)
+    close = ["session", "close", "--rows", "none", "--summary", "s", "--guards", "g: 1 passed", "--read", "r"]
+    with pytest.raises(Refusal, match=re.escape("HANDOFF.md has no banner yet, and the first close writes it (G-W1)")) as r:
+        run(["--root", str(tmp_path), "--actor", ACTOR, "--session", key, *close])  # CE-195: the first close is refused before it leaves G-W1 red
+    assert "--banner-file <banner.md> --seen none" in r.value.remedy
+    assert lint() == "lint: clean"  # the refusal wrote nothing
+    _cli(tmp_path, *close, "--banner", "- B.", "--seen", "none", key=key)  # the close writes the first banner itself
     assert lint() == "lint: clean"
     note = tmp_path / "HANDOFF.md"
     note.write_text(note.read_text(encoding="utf-8").replace("## Banner (", "## Old banner ("), encoding="utf-8")

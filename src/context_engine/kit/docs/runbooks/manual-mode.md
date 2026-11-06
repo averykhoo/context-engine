@@ -186,13 +186,18 @@ different case or one extra BOM gives a hash that never matches the engine's.*
    abandoned one's baton done). Its stub then carries `- **follows:** <key>` between the
    `opened` and `start head` lines. Never edit the closed entry. Your close or pause later keeps
    the `follows` line, first in the entry, above `rows`.
+   **The next turn of a conversation** (`--continues <key>`: the owner replied after that
+   session's eager close) does the same with `- **continues:** <key>`: the same check that the
+   entry is `kind: close`, the same place in the stub, kept the same way. A session carries one
+   of the two links or neither, never both.
 4. Leave it uncommitted: a session start is not a milestone, so it stays uncommitted and goes
    into the next commit, yours or another session's (§ What every write does, **Commit the
    write**).
 
 `HANDOFF.md` may be missing, or have no `## Banner (<key>)` heading yet (before the first clean
 close): then no banner key counts in step 2, and nothing refuses (`orient` says `no banner`,
-`banner show` gives hash `none`, and the first `banner set` writes the heading).
+`banner show` gives hash `none`, and the first close, given a banner with `--seen none`, writes
+the heading).
 
 The engine re-renders the whole ledger on every write: the preamble ends in a `---` line, entries
 are separated by a blank line, `---` and a blank line, and the last entry has no `---` after it.
@@ -205,9 +210,16 @@ counts too, because a session may have written the banner before its ledger entr
 head is where this session's reconciling of foreign commits ends and the next session's begins
 (procedures.md § Reconciling foreign commits). The ledger is append-only, so a closed session is
 never reopened: a follow-up links back to it with `follows`, and reads what it left (its rows,
-digest and still-owed lines, which orient shows) before starting.
+digest and still-owed lines, which orient shows) before starting. A continuation links back with
+`continues`, so a design conversation is a thread of short sessions, each closed eagerly, rather
+than one session left open that looks live after it dies (G-W11); follow the `continues:` links
+back to read the thread.
 
 ### context-engine session close
+
+The close in one call: steps 1 to 3 check everything before anything is written, then step 4
+runs the close housekeeping, step 5 writes the entry, and step 6 the banner when one was given.
+The engine makes them one commit; by hand, commit them together at the end.
 
 1. Your stub must exist and still say `kind: open`. A session closes or pauses only once. The
    entry you write must add no G-D1, G-D5 or G-D8 failure to the ledger (as § context-engine
@@ -224,7 +236,21 @@ digest and still-owed lines, which orient shows) before starting.
    `asked` text if you gave one, otherwise the stub's line.
    Then check the stub's `- **tasks:**` line (written by `session tasks`): your `rows` must
    name every id on it, closed or not, with how it ended.
-4. Replace the stub's text, keeping its position, with (bullets wrapped at 100 columns,
+   Then the banner. **Only if one of its durable lines changed** (FRAMEWORK §5.1: never for
+   what orient generates), you have a new banner and the hash `banner show` gave you: do §
+   context-engine banner set's steps 1 and 4 now, and stop if either refuses; the receipt is
+   `banner: set`. If the banner's key is this session's (you did § context-engine banner set
+   before the close), the receipt is `banner: set` too. Otherwise the receipt is `banner: kept
+   <the banner's key now>`; with no `## Banner (<key>)` heading at all, stop: the first close
+   writes the first banner (`--seen none`). And stop if no `kind: close` entry in the ledger
+   says `banner: set` or `banner: kept <the banner's key now>`: the banner predates the receipt
+   and may still hold lines orient now generates, so cut it to its durable lines and write it
+   (`banner: set`) this once.
+4. Unless told to skip it (`--no-housekeeping`), do § context-engine hk run's close phase, and
+   note its count line (`hk run close: <n> writes, <m> op log lines`) as the `housekeeping:`
+   receipt. Outside a git checkout with history, skip it and write `hk run close not run: no git
+   history here (run `hk run close` once there is)`.
+5. Replace the stub's text, keeping its position, with (bullets wrapped at 100 columns,
    continuation lines indented):
 
    ```
@@ -235,21 +261,30 @@ digest and still-owed lines, which orient shows) before starting.
      - guards: `<gate>` green, N passed; context-engine lint: ...
      - read: ...
      - asked: none open
+     - housekeeping: hk run close: 0 writes, 0 op log lines
+     - banner: kept 2026-10-08d
    - **summary** (the owner digest):
      - one line per point, 1 to 7 of them
    - **Still owed:**
      - nothing
    - **start head:** <the stub's start head, unchanged>
    ```
-   Leave out the `asked:` line if it is empty, and the `start head` line if the stub has none.
-   A follow-up session's stub carries `- **follows:** <key>`: keep it as the entry's first
-   bullet, above `rows` (a pause keeps it the same way).
+   Leave out the `asked:` line if it is empty, the `housekeeping:` line if step 4 was skipped
+   on request, and the `start head` line if the stub has none.
+   A follow-up session's stub carries `- **follows:** <key>` (a continuation's, `- **continues:**
+   <key>`): keep it as the entry's first bullet, above `rows` (a pause keeps it the same way).
    A stub's `- **tasks:**` line goes next, after `follows` and above `rows` (a pause keeps it
    the same way).
    Op log: `session.close`, fields `["kind"]`.
+6. With a new banner, do § context-engine banner set's steps 2, 3 and 5, under your session
+   key.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
 what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
+One call that checks first and writes last is what makes a close cheap enough to make after
+every reply; the banner is left alone unless a durable line changed, because orient
+reads the rest from the records, and the `banner: kept` receipt is what lets G-W1 tell a close
+that kept the banner from one that forgot it.
 
 ### context-engine session pause
 
@@ -346,11 +381,13 @@ refuses rows that do not name each one (§ context-engine session close, step 3)
 ### context-engine orient
 
 Read and report, in this order, in at most 6000 bytes in total (`orient_max_bytes`), counted as
-UTF-8 with LF line ends. Every part's heading appears. The bytes go first to parts 0, 2, 3 and 5,
-which a session must act on, then to 4, then to 6 and 7, and the banner (1) takes what is left; so
-cut the banner first. Cut a part between items (a line and the indented lines under it) and end it
-with a note naming the command that lists the rest (`banner show`, `baton list`, a `grep` of the
-ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`):
+UTF-8 with LF line ends. Every part's heading appears, but for one (below). The bytes go first to
+parts 0, 2, 3 and 5, which a session must act on, then to 4, then to 6 and 7, then to the banner
+(1), and the `Last close` part (3) takes what is left; so cut that part first, and leave it out,
+heading too, when even its heading and cut note would cut the banner; then cut the banner. Cut a
+part between items (a line and the indented lines under it) and end it with a note naming the
+command that lists the rest (`banner show`, `baton list`, a `grep` of the ledger for `kind:
+open`, `task list`, `task show <id>`, `register show --engine`):
 
 0. only when G-D0 fails (§ lint), and `[guards] off` does not name it: a `Contract: fix this
    first` section, one line per failure with its remedy;
@@ -363,9 +400,17 @@ ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`
    whose `Session:` trailer names it (`commit <sha>`, by committer date), so a session that died
    without a close shows how long it has been quiet; say `none` when there are none; a stub
    with a `follows:` line adds `; follows <key>` after its `opened` value;
+   a stub with a `continues:` line adds `; continues <key>` the same way;
    then, only when your own stub carries `follows: <key>`, a `Follows <key>: what it closed
    with` part (its bytes come with part 4's): `- rows: ...` from that closed entry, then one
    `- digest: ...` line per summary item and one `- still owed: ...` line per `Still owed` item;
+   or, when it carries `continues: <key>`, a `Continues <key>: what it closed with` part, the
+   same lines after a first `- thread: <oldest> > ... > <key> > <your key>` line (follow each
+   entry's `continues:` back, at most 30 keys);
+   then, unless the newest `kind: close` entry is the one that part shows, a `Last close <key>:
+   what it closed with` part with the same lines for it (its `- thread:` line only when it
+   continued one; its bytes come after the banner's, as the ledger holds it whole): the close's
+   digest is read here, not copied into the banner;
 4. board items at NOW and NEXT (as `context-engine task list`);
    then, only when a re-rank is due (§ The last rerank), a `Rerank due: tell the owner` part:
    one line per reason, then where the re-rank is (`procedures.md` § Rerank);
@@ -375,10 +420,18 @@ ledger for `kind: open`, `task list`, `task show <id>`, `register show --engine`
 7. in a repo whose `[working] register` is not the engine's own `REGISTER.md`: one line,
    `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
+Where a branch has an upstream, an `Upstream` part (its bytes come with parts 6 and 7's): `- HEAD
+is <a> commits ahead of <upstream> and <b> behind (as of the last fetch)` (`git rev-list
+--left-right --count HEAD...@{upstream}`), then the newest `update by push` entry of `git reflog
+show --date=iso-strict <the upstream's full ref>`: `- the last push to <upstream>: <short sha>, at
+<time>` when an open session's window (its `session.start` op line to its close, pause or
+abandon) holds that time, or the line saying it came while no session was open.
+
 **Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: a contract that did not load, then work carried over from earlier sessions and live sessions,
-then new work; the banner leads as the context for the rest, but it is the part cut first, so a
-long banner never hides what the session must act on. A `SessionStart` hook runs it in an adopted repo (kit README § Hook), with no
+then new work; the banner leads as the context for the rest, but it is cut before any part but
+`Last close`, so a long banner never hides what the session must act on, and a past digest the
+ledger holds never hides the banner's durable lines. A `SessionStart` hook runs it in an adopted repo (kit README § Hook), with no
 session key; a failing hook is silent, so a session that finds no orient output in its context
 does this by hand.
 
@@ -462,8 +515,14 @@ Check every record, then the working state. `--working` does only the second hal
   each kind's directory), subdirectories included, parses and has frontmatter with a `type`. The exceptions are `log.md` and
   `index.md`, and `index.md` may carry no frontmatter key but `okf_version`. *Why: a typeless file is invisible to
   every tool.*
-- **G-W1**: the banner key is not older than the newest `kind: close` entry. *Why: a close that
-  did not replace the banner leaves the next session reading an out-of-date banner.*
+- **G-W1**: the banner key is not older than the newest `kind: close` entry, unless that entry's
+  `banner:` receipt is `kept <the banner's key>` and another close says `banner: set` or kept
+  that same banner; and once a session has closed, the orientation note has a `## Banner
+  (<key>)` heading. *Why: a close that neither replaced the banner nor said it kept it may have
+  left the next session reading an out-of-date banner; one that says it kept it judged that no
+  durable line changed, and orient generates the rest (FRAMEWORK §5.1). A banner no close has
+  written since closes carry the receipt may still copy what orient generates, so it is cut
+  once before any close keeps it.*
 - **G-W2**: at most 2 `kind: pause` entries above the topmost close (G-W2 and G-W6 read the file
   top-down; G-W1 compares keys).
 - **G-W3**: no open baton or pause from a session with 2 or more closes/pauses after it. *Why:
@@ -1239,8 +1298,9 @@ nothing, so the question would come back as overdue though the owner saw it.
 
 ### context-engine hk run
 
-`context-engine hk run start` after `session start`, and `hk run close` before `session close`
-(MCP `hk_run(phase, check)`; `--check` lists the plan and writes nothing). By hand, do the rows of
+`context-engine hk run start` after `session start`, and `hk run close` before `session close`,
+which runs it itself, first, unless given `--no-housekeeping` (MCP `hk_run(phase, check)`;
+`--check` lists the plan and writes nothing). By hand, do the rows of
 procedures.md § Housekeeping in order:
 
 1. **start:** § context-engine session abandon with `--stale`, § context-engine hk stamp, then §

@@ -599,6 +599,73 @@ def test_a_max_writes_cap_below_the_plan_refuses_before_any_write_and_anyway_run
     assert _capped(eng, 2).hk_run("close", **kw(now)).splitlines()[-1].startswith("hk run close: 2 writes, ")  # within the cap
 
 
+# -- session close in one call (CE-195, DEC-163, AC-185) ------------------------------------------
+
+
+@pytest.mark.criterion("AC-185")
+def test_session_close_does_the_clean_close_in_one_call_and_one_commit(eng, capsys, tmp_path_factory):
+    """Close housekeeping, the ledger entry and, only when given, the banner: one command, one
+    commit, and the entry says what housekeeping did and what became of the banner."""
+    now, x = _owed(eng)
+    head = _git(eng.root, "rev-parse", "HEAD").strip()
+    words = tmp_path_factory.mktemp("words") / "banner.md"
+    words.write_text("- A durable line.\n", encoding="utf-8")
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", now]
+    close = [*base, "session", "close", "--rows", f"{x['a']} (closed)", "--summary", "closed it", "--guards", "gate green", "--read", "board only", "--asked", x["q"]]
+    assert main([*close, "--banner-file", str(words), "--seen", eng.banner().sha]) == 0, capsys.readouterr().err
+    out = capsys.readouterr().out
+    assert out.startswith(f"session {now} closed: ledger entry written (1-line summary); banner replaced (lines 1 -> 1), key {now}, "), out
+    assert "\nhk run close:\n- baton expire: 1 operation\n" in out and f"  - hk close {x['a']}: " in out, out
+    entry = eng.read_ledger().get(now)
+    assert entry.kind == "close" and entry.receipt("banner") == "set", entry.text
+    assert entry.receipt("housekeeping").startswith("hk run close: 2 writes, ") and "no model" not in entry.receipt("housekeeping"), entry.text
+    assert eng.store.get(x["a"]).doc.get("state") == "closed" and eng.store.get(x["baton"]).doc.get("state") == "expired"
+    assert (eng.banner().key, eng.banner().text.strip()) == (now, "- A durable line.")
+    assert _git(eng.root, "rev-list", "--count", f"{head}..HEAD").strip() == "1"  # one commit for the whole close
+    assert _git(eng.root, "status", "--porcelain", "--", "ops.jsonl", "ledger.md", "HANDOFF.md", "tasks", "working") == ""
+    assert _g(eng, "G-W1") == [] and _g(eng, "G-W6") == []
+    nxt = started(eng)  # the next close keeps that banner, and still passes G-W1
+    assert main([*base[:-2], "--session", nxt, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g", "--read", "r", "--asked", x["q"], "--no-housekeeping"]) == 0
+    assert f"; banner kept {now}" in capsys.readouterr().out
+    entry = eng.read_ledger().get(nxt)
+    assert entry.receipt("banner") == f"kept {now}" and entry.receipt("housekeeping") is None and _g(eng, "G-W1") == []
+
+
+@pytest.mark.criterion("AC-185")
+def test_a_refused_one_call_close_writes_nothing_not_even_housekeeping(eng):
+    now, x = _owed(eng)
+    before = _state(eng)
+    close = {"actor": ACTOR, "rows": "none", "summary": ["s"], "housekeeping": True}
+    with pytest.raises(Refusal, match="the banner changed since you read it"):
+        eng.session_close(now, receipts=receipts(asked=x["q"]), banner="- new", seen="sha256:stale", **close)
+    with pytest.raises(Refusal, match="a banner was given without the hash of the one it replaces"):
+        eng.session_close(now, receipts=receipts(asked=x["q"]), banner="- new", **close)
+    with pytest.raises(Refusal, match="overdue owner questions"):
+        eng.session_close(now, receipts=receipts(), **close)  # the question is not named: refused before housekeeping runs
+    assert _state(eng) == before
+    (eng.root / "HANDOFF.md").write_text("# HANDOFF\n\nNo banner yet.\n", encoding="utf-8")
+    before = _state(eng)
+    with pytest.raises(Refusal, match="has no banner yet, and the first close writes it"):
+        eng.session_close(now, receipts=receipts(asked=x["q"]), **close)
+    assert _state(eng) == before
+
+
+@pytest.mark.criterion("AC-185")
+def test_a_one_call_close_whose_digest_lint_would_fail_is_refused_before_housekeeping_writes(eng):
+    """verify-1: the entry's prose (CE-63) is checked before `hk run close` runs, not after it
+    wrote, so this refusal too leaves the tree as it was."""
+    now, x = _owed(eng)
+    cfg = json.loads(json.dumps(CONFIG))
+    cfg.setdefault("routes", []).append({"component": "Ledger", "path": "ledger.md", "mode": "append-only", "max_width": 70})
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    e = Engine(eng.root, today=eng.today)
+    before = _state(e)
+    with pytest.raises(Refusal, match="would make ledger.md fail G-D1"):
+        e.session_close(now, actor=ACTOR, rows="none", summary=["x" * 80], receipts=receipts(asked=x["q"]), housekeeping=True)
+    assert _state(e) == before, "housekeeping wrote before the refusal"
+    assert e.session_close(now, actor=ACTOR, rows="none", summary=["short"], receipts=receipts(asked=x["q"]), housekeeping=True).startswith(f"session {now} closed")
+
+
 @pytest.mark.criterion("AC-177")
 @pytest.mark.parametrize("table, match", [({"max_write": 1}, "unknown key 'max_write'"), ({"max_writes": "5"}, "is str"), ({"max_writes": -1}, "`max_writes` is -1")])
 def test_a_bad_housekeeping_table_fails_the_config(eng, table, match):

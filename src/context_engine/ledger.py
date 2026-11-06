@@ -155,6 +155,32 @@ def _follows(key: str | None) -> str:
     return bullet(FOLLOWS, key) if key else ""
 
 
+CONTINUES = "continues"  # the closed session of the same conversation this one continues (CE-195, DEC-163): `session start --continues <key>`; a bullet, as `follows` is
+LINKS = (FOLLOWS, CONTINUES)  # a session's link back to the closed one before it: one of these, never both
+
+
+def _link(follows: str | None, continues: str | None) -> str:
+    """A session's link back to a closed session, first in the entry: ``follows`` or ``continues``
+    (`session start` refuses both)."""
+    return _follows(follows) + (bullet(CONTINUES, continues) if continues else "")
+
+
+def thread(led: "Ledger", key: str, limit: int = 30) -> list[str]:
+    """The keys of the conversation that ends at ``key``, oldest first: ``key`` and each
+    `continues:` link back from it, at most ``limit`` (CE-195). A key the ledger lacks ends it.
+
+    Not checked: a loop, which only a hand edit can make (a key is never reused); the walk stops
+    at a key it has already seen."""
+    out = [key]
+    while len(out) < limit:
+        e = led.get(out[-1])
+        prev = e.field(CONTINUES) if e else None
+        if not prev or prev in out:
+            break
+        out.append(prev)
+    return out[::-1]
+
+
 TASKS = "tasks"  # the board items the owner asked this session for, named at intake (`session tasks`, CE-112); the close's rows say how each ended
 
 
@@ -162,18 +188,22 @@ def _tasks(ids: str | None) -> str:
     return bullet(TASKS, ids) if ids else ""
 
 
-def render_open(key: str, at: str, actor: str, head: str | None = None, follows: str | None = None) -> str:
-    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _follows(follows) + _head(head)
+def render_open(key: str, at: str, actor: str, head: str | None = None, follows: str | None = None, continues: str | None = None) -> str:
+    return f"## {key} · kind: open\n\n" + bullet("opened", f"{at} by {actor}") + _link(follows, continues) + _head(head)
 
 
-RECEIPTS = ("guards", "read", "asked")
+# `housekeeping`: what the close's own `hk run close` did; `banner`: `set`, or `kept <key>` when
+# the close left the banner as it was (CE-195, DEC-163), which G-W1 reads
+RECEIPTS = ("guards", "read", "asked", "housekeeping", "banner")
+BANNER_SET = "set"
+BANNER_KEPT = "kept"
 
 
-def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None, follows: str | None = None, tasks: str | None = None) -> str:
+def render_close(key: str, rows: str, receipts: dict[str, str], summary: list[str], owed: list[str], head: str | None = None, follows: str | None = None, tasks: str | None = None, continues: str | None = None) -> str:
     rec = [f"{k}: {receipts[k]}" for k in RECEIPTS if receipts.get(k)]
     return (
         f"## {key} · kind: close\n\n"
-        + _follows(follows)
+        + _link(follows, continues)
         + _tasks(tasks)
         + bullet("rows", rows)
         + sub_bullets("- **receipts:**", rec)
@@ -189,8 +219,8 @@ def closed_in_rows(rows: str, rid: str) -> re.Match | None:
     return re.search(rf"(?<![\w-]){re.escape(rid)}(?![\w-])\s*\(closed", rows)
 
 
-def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None, tasks: str | None = None) -> str:
-    return f"## {key} · kind: pause\n\n" + _follows(follows) + _tasks(tasks) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
+def render_pause(key: str, rows: str, deferred: str, head: str | None = None, follows: str | None = None, tasks: str | None = None, continues: str | None = None) -> str:
+    return f"## {key} · kind: pause\n\n" + _link(follows, continues) + _tasks(tasks) + bullet("rows", rows) + bullet("deferred", deferred) + _head(head)
 
 
 def items(entry: Entry, head: str) -> list[str]:

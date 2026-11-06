@@ -366,7 +366,7 @@ from them, not from the broken process.
 | 7 | Rules | **Routing map** | Where does each kind of statement live, and how do framework components map onto this repo? | replaced, small | agent |
 | 8 | Rules | **Residual-risk register** | What is load-bearing, and must not be rediscovered the hard way? | replaced; changes only when the code does | agent |
 | 9 | Rules | **Runbooks** (method) | How do we run the gate, sabotage, fan-out, release, and every engine operation by hand? | replaced. Archive the status, keep the method | agent |
-| 10 | Working state | **Orientation note** | What is true now; what must the next session not miss? | replaced at every clean close; banner = one session key, stamped by the engine, written only if unchanged since read (§5.5) | agent |
+| 10 | Working state | **Orientation note** | What is true now; what must the next session not miss? | its banner holds durable lines only, replaced at a clean close only when one of them changes (`orient` generates the rest from the records, §5.1); one session key, stamped by the engine, written only if unchanged since read (§5.5) | agent |
 | 11 | Working state + Record | **Tasks and the board** (tasks **and** owner questions) | What is next, in what order, what is waiting on the owner, and what happened on each item? | each task is a **durable record** (body, comments, op log, links to decisions; it stays when closed, **in place**, with `state: closed`). Only the ranking fields and the board *view* are volatile | agent ranks; owner assignment overrides |
 | 12 | Working state | **Batons and pause records** | What did a session skip, or leave mid-flight? | **record**, session-stamped, one file each; closed by `baton done` with evidence (a pause by `pause resume`), or expired after two sessions by housekeeping | agent |
 | 13 | Working state | **Unverified hazards** | What is suspected to be dangerous right now, and must not be fixed without checking first? | replaced | agent |
@@ -684,20 +684,33 @@ Drift ids are `DR`, to avoid colliding with decision ids.
 ### 5.1 Orientation note (`HANDOFF.md`)
 
 **Contents:**
-- a **banner** with exactly **one session key** (the stacking check, G-D8), stating what is
-  true now;
+- a **banner** with exactly **one session key** (the stacking check, G-D8), holding the
+  **durable** hand-written lines: what stays true across sessions (the repo's purpose, owner
+  rules, lessons, standing facts not derivable from the records);
 - a generated pointer to **open batons and pause records** (§5.4);
 - **next session**: the start sequence.
 
 **No session history.** In small repos an inline board is allowed (§5.2).
 
+**What the banner does not hold:** anything `orient()` generates from the
+records, because a hand-written copy goes stale the moment a record moves: the board's NOW and
+NEXT, the questions to raise, the open sessions, the upstream and push state (`Upstream`), and
+the last close's rows, digest and still-owed lines (`Last close`, read from the ledger). A
+banner line that restates one of them is a second copy to rewrite at every close.
+
 **Read on demand.** `orient()` prints the banner (§6.1), so a cold session often needs nothing
 else. The `read:` receipt records whether the orientation note was read (§6.3).
 
-**Replaced on clean close**, safely for several writers (§5.5). Batons and pause records are
-records of their own (§5.4), so the replaced part is only the banner and "next session". The
-banner is written with `banner.set(text, seen)`, which refuses if the banner changed since
-this session last saw it.
+**Replaced only when a durable line changes**, safely for several writers (§5.5). Batons and
+pause records are records of their own (§5.4), so the replaced part is only the banner and
+"next session". A clean close that changed no durable line leaves the banner as it is, and its
+ledger entry says so (`banner: kept <key>`, which G-W1 reads); one that did passes the new
+banner to `session.close(banner=..., seen=...)`, or writes it with `banner.set(text, seen)`.
+Either refuses if the banner changed since this session last saw it. A banner is kept only once
+a close has written it (`banner: set`): one from before this rule may still copy what orient
+generates, so a repo's first close under it cuts the banner, and both the close and G-W1 refuse
+`kept` until then. Not checked: that a kept
+line is still true (the closer's judgement; fewer hand-written lines make it a small one).
 
 **Caps:** the stacking check first; then lines, bytes and line width as backstops. A line cap
 alone does not hold: the bytes grow back as sessions stack updates.
@@ -902,7 +915,11 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      the same lock, and the close or pause keeps it; the session reconciles foreign commits up
      to it (§6.10 item 2);
    - **a link back from a follow-up:** a stub opened with `follows: <key>` names the closed
-     session it continues (§6.3), and the close or pause keeps it too.
+     session it continues (§6.3), and the close or pause keeps it too;
+   - **a thread through one conversation:** a stub opened with `continues: <key>` names the
+     closed session whose conversation it carries on (the owner replied after an eager close,
+     §6.3); the close or pause keeps it, and `orient` reads the chain of `continues:` links back
+     as one thread (`2026-11-06a > 2026-11-06b > ...`). A session has one link or none.
 2. **Write the banner only if it is unchanged since you read it.** `banner.set(text, seen)`
    refuses when the banner's hash differs from the one this session last saw; re-read, merge
    and retry. **And only if lint would pass it:** it refuses a write that would add a failure of
@@ -923,8 +940,10 @@ These records are not ephemeral: they are tracked and committed, and they *expir
    - **a hand-off:** a baton (`baton.add`) or a pause (`pause.open`), which the next session
      must find whatever happens to this one;
    - **the session's end:** `session.close` or `session.pause`, and `banner.set`, which a
-     clean close writes after its ledger entry (§6.3), so nothing of the close is left
-     uncommitted; and another session's end, `session.abandon` (§7.1).
+     clean close that changed a durable line writes after its ledger entry (§6.3);
+     `session.close` runs the close housekeeping and, when given one, the banner in its own
+     batch, so the whole close is one commit and nothing of it is left uncommitted; and another
+     session's end, `session.abandon` (§7.1).
 
    Every other write (a task's new, set, comment, touch, section, dep, promote and reopen; a
    question's new, raised and later; baton done, pause resume; decision set, link, relink and
@@ -1052,8 +1071,14 @@ letter suffix); none is renumbered.
 
 **With the engine, items 2–5 are one call.** `session.start` mints the key (§5.5), then
 `orient()` returns, in one size-capped response: the banner; this session's open batons and
-pause records, then other sessions'; the other sessions still open; the NEXT tier; owner
-questions to raise; and the top item's brief, Traps and Read first. Step 1 is unchanged, and
+pause records, then other sessions'; the other sessions still open; the last close's rows,
+digest and still-owed lines (for a session that follows or continues one, that one's, with the
+conversation's thread); the NEXT tier; owner questions to raise; HEAD against its upstream and
+the last push; and the top item's brief, Traps and Read first. What it generates, the banner
+does not repeat (§5.1). At the cap, what the session must act on is served first and the banner
+last but one: only the last close's part comes after it, and gives way whole when the banner
+would be cut, since the ledger holds that part whole and the banner's durable lines are held
+nowhere else. Step 1 is unchanged, and
 item 6 is still on demand (the order: `procedures.md` § Session start). A **SessionStart
 hook** injects `orient()`'s output, so orientation costs no tool call: a hook's output reaches
 the model's context. The hook holds no session key and writes nothing, so it only shows what
@@ -1143,8 +1168,17 @@ after a close starts a new session. **A closed session is never reopened:** a se
 or finishes what a closed one left starts with `session.start(follows=<its key>)`, so its stub
 carries `follows: <key>` (and its close or pause after it), and `orient` shows that session's rows,
 digest and still-owed lines; a key that is not a `kind: close` entry is refused (an open session
-is worked in, a paused one resumed, an abandoned one's baton done). The rule is in the contract, which every session loads, not
-only in the procedures runbook, which a session reads on demand. **"Every task it was asked
+is worked in, a paused one resumed, an abandoned one's baton done). The owner's reply after a
+close, in the same conversation, starts the next session with `session.start(continues=<its
+key>)` instead: the same link and the same refusals, read as one thread (§5.5 rule 1). The rule is in the contract, which every session loads, not
+only in the procedures runbook, which a session reads on demand.
+
+**Close eagerly, with no long-lived-session exception; the close is made cheap instead.** A close that costs seconds is one a session makes after every reply, so a
+design conversation is a thread of short sessions, not one session left open: an open stub that
+looks live is what a dead session leaves (G-W11), and a cheap close keeps that from happening.
+So the close is one call (`session.close` runs item 6a's housekeeping and writes item 2's
+entry, and item 3's banner only when a durable line changed), and what a close used to copy
+into the banner by hand, `orient` generates (§5.1). **"Every task it was asked
 for" is the stub's `tasks:` line** (§6.2 item 7): `session.tasks()` with no ids, and `orient`,
 say which of them are still open, and when none is, the session closes. `session.close`
 refuses rows that do not name each one, done or not, and keeps the line in the entry (G-W6 checks
@@ -1170,8 +1204,15 @@ numbered for citation (the order is below):
        **measures how cheap orientation is (job 3)**;
      - `asked:` naming every open question at NOW or NEXT and every overdue one (the engine
        refuses the close otherwise);
+     - `housekeeping:` what item 6a's `hk run close` did, which `session.close` runs itself
+       first (its count of writes and op log lines);
+     - `banner:` `set`, or `kept <key>` when the close left the banner as it was (G-W1);
    - `Still owed:`.
-3. **Replace** the banner, in the way that is safe when several sessions write at once (§5.5).
+3. **Replace the banner only when a durable line changed** (§5.1), in the way that is safe when
+   several sessions write at once (§5.5): `session.close` takes it with the hash it replaces
+   and writes it after the entry. Otherwise the banner is kept, and the entry's `banner:`
+   receipt says whose it is. The first close in a repo writes the first banner, and the first
+   close under this rule rewrites one no close has written (§5.1).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
    `Closes:` and `Sabotage:` lines, §5.5 rule 4; each close states the residual risk its work
    left, or `none`, §7.4, and an item carrying a `## Kill bar` closes with its verdict, §5.2), a
@@ -1189,7 +1230,8 @@ numbered for citation (the order is below):
    - **6a. Pre-close housekeeping** (§6.11): carry out what this session recorded but did not
      finish (closes named by `Closes:` trailers, `hk.close`; floor ratchets; stamps; regenerated
      indexes).
-     Its operation list goes into the digest.
+     Its operation list goes into the digest. `session.close` runs it first (`hk run close`),
+     so a close made in one call does it; its cap (G-W10) refuses the close before any write.
 7. **Prove this close with lint and the gate's status,** then commit by path whatever the engine
    did not (`context-engine commit <paths> -m ...`, which takes any write still uncommitted, with
    its op line, §5.5 rule 4). Since the gate run in item 2's receipt, the close has written only
@@ -1202,9 +1244,11 @@ numbered for citation (the order is below):
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
 **The order is not the numbering.** Items 2–4 and 6 are engine operations (`session.close`,
-which refuses a malformed receipt; `banner.set`; the board operations; `baton.add`). The ledger
-entry (2) comes after the gate because the close receipt carries the gate result, and after the
-board operations (4) because `rows:` names what they touched. The steps in order, each with its
+which refuses a malformed receipt and also does items 6a and 3; `banner.set`; the board
+operations; `baton.add`). The ledger entry (2) comes after the gate because the close receipt
+carries the gate result, and after the board operations (4) because `rows:` names what they
+touched. `session.close` checks everything it would refuse (the receipts, the named tasks, the
+banner's hash and lint) before its first write, so a refused close writes nothing. The steps in order, each with its
 command and by-hand step: `procedures.md` § Clean close.
 
 ### 6.4 Pause (an awkward stopping point; the work continues next session)
@@ -1544,8 +1588,9 @@ Working instructions may come from any of these three sources; a grant may not.
    Then it sets the correctness chain's sources in `[guards]` (§8.1): if they were set before
    the first stories and criteria were recorded, the guards would be red on a source that is
    still empty, and the first session could not open on a green lint.
-5. First clean close: the guards are green, the ledger entry is `kind: close`, and the first
-   `banner set` (with `--seen none`) writes the banner heading.
+5. First clean close: the guards are green, the ledger entry is `kind: close`, and the close,
+   given the first banner (`session.close(banner=..., seen="none")`), writes the banner heading;
+   a close without one is refused until it exists (G-W1).
 
 ### 6.10 Humans working outside the procedures
 
@@ -1739,7 +1784,8 @@ cite for each item.
   §5.5), then `close` or `pause`; `abandoned` for a stub that housekeeping found was never closed; and
   `foreign` for reconciled human commits (§6.10), which the session writes by hand from the runbook.
   An entry never changes kind back: a follow-up to a closed session is a new entry carrying
-  `follows: <key>` (§6.3).
+  `follows: <key>`, and the next turn of the same conversation one carrying `continues: <key>`
+  (§6.3).
   `session.abandon` writes `abandoned`: start-of-session housekeeping runs it, as
   `session abandon --stale`, on every other session's stub with 3 or more closes or pauses after
   its last activity (the owner's window), adds a `derived digest:` line (G-W11), and files a
@@ -1986,7 +2032,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 
 | Group | Tools |
 |---|---|
-| Session | `session.start`; `session.close(rows, summary, guards, read, asked, owed)` (the last four are its receipts and owed list); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7); `session.touch` (a live session that only reads resets its staleness, §7.1) |
+| Session | `session.start(follows, continues)` (a link back to a closed session, §5.5 rule 1); `session.close(rows, summary, guards, read, asked, owed, banner, seen, housekeeping)` (guards to owed are its receipts and owed list; it runs `hk run close` first unless `housekeeping` is false, and sets the banner only when given `banner` with the `seen` hash, §6.3); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7); `session.touch` (a live session that only reads resets its staleness, §7.1) |
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12); `site.build(outdir)`: the records as a static HTML site in a new or empty directory outside the tracked tree, never stored (§6.5; CI publishes it) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
@@ -2192,7 +2238,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   optional is exempt.
 
 ### 8.4 Working-state guards
-- **G-W1:** the banner's key is ≥ the newest `kind: close` ledger key.
+- **G-W1:** the banner's key is ≥ the newest `kind: close` ledger key, or that close's `banner:`
+  receipt says it kept this banner (`kept <the banner's key>`: nothing durable changed, §5.1);
+  once a session has closed, a banner heading exists. Not checked: that a kept line is still true.
 - **G-W2:** at most N consecutive `kind: pause` entries.
 - **G-W3:** no baton or pause record older than two sessions: two `close` or `pause` entries
   after the owning session. Housekeeping repairs it.

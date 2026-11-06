@@ -126,11 +126,13 @@ Then:
    template's `commit = "milestones"` needs this engine or later on every machine: an older one
    refuses it (write `true` instead until they are upgraded). Then
    `context-engine session start` opens the first session.
-4. The first clean close (FRAMEWORK §6.3): `session close`, then `banner show` (it says
-   `no banner yet`, hash `none`) and `banner set --seen none --file <banner.md>`, which writes the
-   `## Banner (<key>)` heading. Both are milestones, so the engine has committed them with
-   every write before them; commit anything else the close changed with `context-engine commit
-   <paths> -m "<message>"`, which takes any write still uncommitted with it.
+4. The first clean close (FRAMEWORK §6.3): `session close ... --banner-file <banner.md> --seen
+   none` (`banner show` says `no banner yet`, hash `none`), which also writes the `## Banner
+   (<key>)` heading, with the repo's durable lines only (FRAMEWORK §5.1): a close without a
+   banner is refused until the first one exists, and later closes keep it unless a durable line
+   changes. The close is a milestone, so the engine has committed it with every write before
+   it; commit anything else the close changed with `context-engine commit <paths> -m
+   "<message>"`, which takes any write still uncommitted with it.
 
 ## 2b. Bootstrap by hand
 

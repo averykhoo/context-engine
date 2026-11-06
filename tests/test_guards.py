@@ -1008,6 +1008,7 @@ def test_session_close_refuses_a_digest_line_lint_would_fail(tmp_path):
     (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
     e = Engine(tmp_path)
     key = e.session_start(actor=ACTOR)
+    e.banner_set("- true now", e.banner().sha, session=key, actor=ACTOR)  # a banner written under CE-195, so the close may keep it
     before = (tmp_path / "ledger.md").read_bytes()
     with pytest.raises(Refusal, match="would make ledger.md fail G-D1"):
         e.session_close(key, actor=ACTOR, rows="none", summary=["x" * 80], receipts={"guards": "green", "read": "board"})

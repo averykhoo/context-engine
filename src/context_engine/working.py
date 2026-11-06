@@ -124,6 +124,11 @@ HOUSEKEEPER = "process:housekeep"
 BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
 RERANK_HOW = "The full rerank is procedures.md § Rerank: run it now that NEXT is empty, or whenever the owner asks."
 RERANK_REST = "procedures.md § Rerank"
+# orient's banner is served last but one (CE-75); `Last close`, a copy of a ledger entry, after it (CE-195)
+BANNER_RANK, LAST_CLOSE_RANK = 3, 4
+# The `housekeeping:` receipt a one-call close checks its entry's prose with before `hk run close`
+# writes (CE-195): as wide as a real one at up to 99 writes (`hk run close: 2 writes, 3 op log lines`)
+HK_RECEIPT_STANDIN = "hk run close: 00 writes, 00 op log lines"
 
 
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
@@ -168,6 +173,14 @@ def _short(text: str, limit: int) -> str:
 
 def _one(items) -> str:
     return ", ".join(items) if items else "none"
+
+
+def _link_note(e: L.Entry) -> str:
+    """`; follows <key>` or `; continues <key>` for a ledger entry that links back (CE-84, CE-195)."""
+    for name in L.LINKS:
+        if e.field(name):
+            return f"; {name} {e.field(name)}"
+    return ""
 
 
 def status_paths(z: str) -> list[str]:
@@ -268,43 +281,49 @@ class Engine:
 
     # -- sessions (FRAMEWORK §5.5, §6.3, §6.4) ------------------------------------------
 
-    def session_start(self, *, actor: str, follows: str = "") -> str:
+    def session_start(self, *, actor: str, follows: str = "", continues: str = "") -> str:
         """Mint ``max(newest ledger key, banner key) + 1 letter`` under the lock and reserve it
         with a ``kind: open`` stub (AC-10), recording HEAD as its ``start head``: the session
         reconciles foreign commits up to it (CE-65). ``follows`` (CE-84, DEC-45) names the closed
         session this one follows up (work found wanting after its close): the stub carries
         `follows: <key>`, the close or pause carries it on, and orient shows what that session
-        left. The closed session is never reopened or written to; a key that is not a `kind:
-        close` entry is refused before anything is written."""
+        left. ``continues`` (CE-195, DEC-163) names the closed session of the same conversation
+        that this one continues (the owner replied after its eager close): the stub carries
+        `continues: <key>` the same way, and orient shows the thread. The closed session is never
+        reopened or written to; a key that is not a `kind: close` entry, or both links at once,
+        is refused before anything is written."""
         if not actor or not ACTOR_RE.match(actor):
             self._check("2000-01-01a", actor)  # raises the actor refusal
-        follows = follows.strip()
+        follows, continues = follows.strip(), continues.strip()
+        if follows and continues:
+            raise Refusal(f"both --follows {follows} and --continues {continues}", "a session links back to one closed session: --continues for the next turn of the same conversation, --follows for work found wanting after a close")
         path = self._path("ledger")
         with self.store.lock():
             led = self.read_ledger()
-            if follows:
-                self._followable(led, follows)
+            if follows or continues:
+                self._followable(led, follows or continues, "continue" if continues else "follow")
             b = self.banner()
             key = L.next_key(L.newest([*led.keys(), b.key if b else None]), self.today())
-            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor, L.head_sha(self.root), follows or None)))
+            led.entries.insert(0, L.Entry(key, "open", L.render_open(key, _now(), actor, L.head_sha(self.root), follows or None, continues or None)))
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, led.render())
             self.store.log("session.start", key, path, key, actor, ["kind"])
         return key
 
-    def _followable(self, led: L.Ledger, key: str) -> None:
-        """Refuse a ``--follows`` key that names no closed session (CE-84): a follow-up continues
-        work that was closed, so an open, paused or abandoned session has its own way back (DEC-105)."""
+    def _followable(self, led: L.Ledger, key: str, verb: str = "follow") -> None:
+        """Refuse a ``--follows`` or ``--continues`` key that names no closed session (CE-84,
+        CE-195): a follow-up continues work that was closed, so an open, paused or abandoned
+        session has its own way back (DEC-105)."""
         entry = led.get(key)
         if entry is None:
-            raise Refusal(f"the ledger has no session {key} to follow", f"pass the key of a closed session, as its `## <key> · kind: close` heading in {self.w.ledger} shows it")
+            raise Refusal(f"the ledger has no session {key} to {verb}", f"pass the key of a closed session, as its `## <key> · kind: close` heading in {self.w.ledger} shows it")
         if entry.kind != "close":
             how = {
                 "open": "it is still open: work in it if it is yours, or wait for its close",
                 "pause": "resume its pause record instead (`pause resume <id>`, orient lists it)",
                 "abandoned": "its unfinished work is in the baton it was abandoned with: do that baton",
-            }.get(entry.kind, "follow a closed session only")
-            raise Refusal(f"session {key} is `kind: {entry.kind}`, not closed, so there is nothing to follow up", how)
+            }.get(entry.kind, f"{verb} a closed session only")
+            raise Refusal(f"session {key} is `kind: {entry.kind}`, not closed, so there is nothing to {'follow up' if verb == 'follow' else verb}", how)
 
     def actor_spellings(self, actor: str) -> list[tuple[str, int]]:
         """The other spellings of ``actor`` the op log already signs with (``same_agent``), each
@@ -327,15 +346,21 @@ class Engine:
                 counts[a] = counts.get(a, 0) + 1
         return sorted(((a, n) for a, n in counts.items() if same_agent(a, actor)), key=lambda x: (-x[1], x[0]))
 
+    @staticmethod
+    def _open_entry(led: L.Ledger, key: str) -> L.Entry:
+        """The session's own `kind: open` stub, or the refusal that says why there is none."""
+        entry = led.get(key)
+        if entry is None:
+            raise Refusal(f"the ledger has no entry for {key}", "run `session start` at the start of a session and use the key it gives")
+        if entry.kind != "open":
+            raise Refusal(f"session {key} is already `kind: {entry.kind}`", "a session closes or pauses once; start a new session for new work")
+        return entry
+
     def _finalise(self, key: str, actor: str, render: Callable[[L.Entry], str], op: str, check: Callable[[L.Ledger, L.Entry], None] | None = None) -> None:
         path = self._path("ledger")
         with self.store.lock():
             led = self.read_ledger()
-            entry = led.get(key)
-            if entry is None:
-                raise Refusal(f"the ledger has no entry for {key}", "run `session start` at the start of a session and use the key it gives")
-            if entry.kind != "open":
-                raise Refusal(f"session {key} is already `kind: {entry.kind}`", "a session closes or pauses once; start a new session for new work")
+            entry = self._open_entry(led, key)
             if check:
                 check(led, entry)
             entry.text = render(entry)
@@ -356,8 +381,28 @@ class Engine:
         return f"the `guards` receipt has no gate result: it does not match [working] gate_receipt ({pattern!r})"
 
     @_milestone
-    def session_close(self, key: str, *, actor: str, rows: str, summary: list[str], receipts: dict[str, str], owed: list[str] | None = None) -> str:
-        """Write the session's ledger entry over its stub, refusing a malformed receipt (AC-11, G-W6, G-W8)."""
+    def session_close(self, key: str, *, actor: str, rows: str, summary: list[str], receipts: dict[str, str], owed: list[str] | None = None,
+                      banner: str = "", seen: str = "", housekeeping: bool = False) -> str:
+        """Write the session's ledger entry over its stub, refusing a malformed receipt (AC-11, G-W6, G-W8).
+
+        The clean close in one call (CE-195, DEC-163): with ``housekeeping``, `hk run close` runs
+        first and its count is the entry's `housekeeping:` receipt; with ``banner`` (and the
+        ``seen`` hash, as `banner set` takes it), the banner is replaced after the entry, and the
+        entry's `banner:` receipt says `set`; without it the banner is left as it is, and the
+        receipt says `kept <its key>`, which G-W1 reads. Everything is one milestone, so one
+        commit. Every refusal the entry or the banner would meet is met before the first write
+        (the lock is held throughout), so a refused close writes nothing: the entry's prose is
+        checked before housekeeping runs, with a stand-in `housekeeping:` receipt as wide as a
+        real one (``HK_RECEIPT_STANDIN``). Only a real receipt wider than that (100 writes or more)
+        can still be refused after housekeeping wrote; its writes are kept (they are committed;
+        run the close again).
+
+        Refused without a banner: one no close has written under CE-195 (``_banner_cut``, DEC-169, verify-2
+        D1), so a repo's first close under CE-195 cuts it; a banner already written this session
+        (`banner set` before the close) gives `banner: set`.
+
+        Not checked: whether the banner kept still holds only true lines (judgement: a durable
+        line that went false is the closer's to rewrite)."""
         self._check(key, actor)
         summary = [s.strip() for s in summary if s.strip()]
         if not rows.strip():
@@ -390,11 +435,50 @@ class Engine:
                 raise Refusal(f"the rows do not say how {_one(unsaid)} ended, which the owner asked for (the stub's `{L.TASKS}:` line, CE-112)",
                               f"name each in --rows with how it ended, e.g. `{unsaid[0]} (closed)` or `{unsaid[0]} (open: <why>)`")
 
-        self._finalise(key, actor, lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS)), "session.close", check)
+        check(self.read_ledger(), self._open_entry(self.read_ledger(), key))  # before any write: housekeeping's, the entry's or the banner's
+        banner = banner.strip()
+        if banner:
+            if not self.w.handoff:
+                raise Refusal("a banner was given, but [working] handoff names no orientation note", f"close without --banner, or set [working] handoff in {CONFIG_NAME}")
+            if not seen.strip():
+                raise Refusal("a banner was given without the hash of the one it replaces", f"read it with `banner show` and pass its hash as --seen (`{L.NO_BANNER}` for the first banner)")
+            self._banner_note(banner, seen, key)  # refuses a stale hash or a banner lint would fail, before any write
+            receipts["banner"] = L.BANNER_SET
+        elif self.w.handoff:
+            b = self.banner()
+            if b is None:
+                raise Refusal(f"{self.w.handoff} has no banner yet, and the first close writes it (G-W1)",
+                              f"pass the banner's durable lines: `session close ... --banner-file <banner.md> --seen {L.NO_BANNER}`")
+            if b.key == key:  # written this session, by `banner set` before the close
+                receipts["banner"] = L.BANNER_SET
+            elif not self._banner_cut([e for e in self.read_ledger().entries if e.kind == "close"], b.key):
+                raise Refusal(f"the banner ({b.key}) has not been written since orient generates the board, push and close lines (CE-195): no close says `banner: set`, so it may still hold lines that are no longer true",
+                              f"cut it to its durable lines and pass them: `session close ... --banner-file <banner.md> --seen <its hash, from banner show>`; or `banner set` first, then close")
+            else:
+                receipts["banner"] = f"{L.BANNER_KEPT} {b.key}"
+        render = lambda e: L.render_close(key, rows, receipts, summary, owed or [], e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS), e.field(L.CONTINUES))  # noqa: E731
+        if housekeeping:  # CE-63 before housekeeping writes (verify-1): the entry as it will be, with a stand-in receipt
+            receipts["housekeeping"] = HK_RECEIPT_STANDIN
+            led = self.read_ledger()
+            stub = self._open_entry(led, key)
+            stub.text, stub.kind = render(stub), "close"
+            self._refuse_prose(self._path("ledger"), led.render(), "this session close")
+        done = ""
+        if housekeeping and L.head_sha(self.root) is None:  # `hk close --scan` reads git's history, which is not there
+            receipts["housekeeping"] = "hk run close not run: no git history here (run `hk run close` once there is)"
+        elif housekeeping:
+            done = self.hk_run("close", session=key, actor=actor)
+            receipts["housekeeping"] = done.splitlines()[-1].split("; no model", 1)[0]
+        self._finalise(key, actor, render, "session.close", check)
         out = f"session {key} closed: ledger entry written ({len(summary)}-line summary)"
+        if banner:
+            out += "; " + self.banner_set(banner, seen, session=key, actor=actor)
+        elif receipts.get("banner"):
+            out += f"; banner {receipts['banner']}"
         named = ID_RE.findall(self.read_ledger().get(key).field(L.TASKS) or "")
         still = [rid for rid, state in self._task_states(named) if state != "closed"]
-        return out + (f"; the owner's named tasks still open: {_one(still)} (the rows say how each ended; the digest should too)" if still else "")
+        out += f"; the owner's named tasks still open: {_one(still)} (the rows say how each ended; the digest should too)" if still else ""
+        return out + (f"\n{done}" if done else "")
 
     @staticmethod
     def _unsaid_tasks(tasks: str | None, rows: str) -> list[str]:
@@ -681,7 +765,7 @@ class Engine:
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
             raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
-        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS)), "session.pause")
+        self._finalise(key, actor, lambda e: L.render_pause(key, rows, deferred, e.field(L.START_HEAD), e.field(L.FOLLOWS), e.field(L.TASKS), e.field(L.CONTINUES)), "session.pause")
         return f"session {key} paused: ledger entry written"
 
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------
@@ -2920,21 +3004,29 @@ class Engine:
 
     # -- banner (FRAMEWORK §5.5 rule 2) -------------------------------------------------
 
+    def _banner_note(self, text: str, seen_hash: str, session: str) -> tuple[str, L.Banner | None]:
+        """The orientation note with ``text`` as its banner, and the banner it replaces; refused,
+        writing nothing, for an empty text, a ``seen_hash`` that is not the banner's now, or a
+        note lint would fail (CE-63). `banner set` and `session close --banner` both use it."""
+        if not text.strip():
+            raise Refusal("an empty banner", "write what is true now")
+        path = self._path("handoff")
+        note = path.read_bytes().decode("utf-8") if path.exists() else ""
+        now = L.find_banner(note)  # None: the first banner, which `seen` = "none" vouches for
+        if (now.sha if now else L.NO_BANNER) != seen_hash:
+            where = f"now {now.sha}, key {now.key}" if now else f"there is no banner yet, so pass --seen {L.NO_BANNER}"
+            raise Refusal(f"the banner changed since you read it ({where})", "re-read it with `banner show`, merge, and pass the new hash")
+        new_note = L.replace_banner(note, session, text)
+        self._refuse_prose(path, new_note, "this banner")  # CE-63: refuse what lint would fail, before writing
+        return new_note, now
+
     @_milestone
     def banner_set(self, text: str, seen_hash: str, *, session: str, actor: str) -> str:
         """Replace the banner only if it is unchanged since ``seen_hash`` was read (AC-16)."""
         self._check(session, actor)
-        if not text.strip():
-            raise Refusal("an empty banner", "write what is true now")
         path = self._path("handoff")
         with self.store.lock():
-            note = path.read_bytes().decode("utf-8") if path.exists() else ""
-            now = L.find_banner(note)  # None: the first banner, which `seen` = "none" vouches for
-            if (now.sha if now else L.NO_BANNER) != seen_hash:
-                where = f"now {now.sha}, key {now.key}" if now else f"there is no banner yet, so pass --seen {L.NO_BANNER}"
-                raise Refusal(f"the banner changed since you read it ({where})", "re-read it with `banner show`, merge, and pass the new hash")
-            new_note = L.replace_banner(note, session, text)
-            self._refuse_prose(path, new_note, "this banner")  # CE-63: refuse what lint would fail, before writing
+            new_note, now = self._banner_note(text, seen_hash, session)
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, new_note)
             self.store.log("banner.set", session, path, session, actor, ["banner"])
@@ -2963,18 +3055,30 @@ class Engine:
         b = self.banner()
         # Shown in this order; the cap's bytes go to the must-act parts (`first`) before the rest,
         # and the banner, last in line, takes what is left (CE-75): a long banner once starved
-        # the batons out of orient altogether (docs/evidence/adhoc-dryrun-2026-10-14.md F29)
+        # the batons out of orient altogether (docs/evidence/adhoc-dryrun-2026-10-14.md F29).
+        # Only `Last close` comes after it (CE-195): a copy of a ledger entry, whole in the ledger,
+        # never cuts the durable lines the banner now holds
         sections: list[Part] = []
-        sections.append(Part(f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", BANNER_REST, rank=3))
+        sections.append(Part(f"Banner ({b.key})" if b else "Banner", b.text if b else "no banner", BANNER_REST, rank=BANNER_RANK))
         sections.append(Part("Batons and pauses: do these first", "\n".join(self.carried_lines(session)) or "none", "`context-engine baton list`", rank=0))
 
         others = [e for e in led.entries if e.kind == "open" and e.key != session]
         seen = self.last_active([e.key for e in others])
-        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" + (f"; follows {e.field(L.FOLLOWS)}" if e.field(L.FOLLOWS) else "") + (f"; last active {seen[e.key][0]} ({seen[e.key][1]})" if e.key in seen else "") for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
+        sections.append(Part("Other open sessions: show the owner, one line each", "\n".join(f"- {e.key}, opened {e.field('opened')}" + _link_note(e) + (f"; last active {seen[e.key][0]} ({seen[e.key][1]})" if e.key in seen else "") for e in others) or "none", f'`grep -n "kind: open" {self.w.ledger}`', rank=0))
         mine = led.get(session) if session else None
         followed = mine.field(L.FOLLOWS) if mine else None
+        continued = mine.field(L.CONTINUES) if mine else None
         if followed:  # CE-84: a follow-up session starts from what the closed one left
             sections.append(Part(f"Follows {followed}: what it closed with", "\n".join(self.follows_lines(led, followed)), f"the `## {followed}` entry in {self.w.ledger}", rank=1))
+        elif continued:  # CE-195: the next turn of the same conversation starts from the last one's close
+            lines = [f"- thread: {' > '.join([*L.thread(led, continued), session])}", *self.follows_lines(led, continued)]
+            sections.append(Part(f"Continues {continued}: what it closed with", "\n".join(lines), f"the `## {continued}` entry in {self.w.ledger}", rank=1))
+        closes = [e for e in led.entries if e.kind == "close"]
+        last = max(closes, key=lambda e: key_order(e.key)) if closes else None
+        if last is not None and last.key not in (followed, continued):  # CE-195, DEC-163: the digest is read here, not copied into the banner
+            chain = L.thread(led, last.key)
+            lines = ([f"- thread: {' > '.join(chain)}"] if len(chain) > 1 else []) + self.follows_lines(led, last.key)
+            sections.append(Part(f"Last close {last.key}: what it closed with", "\n".join(lines), f"the `## {last.key}` entry in {self.w.ledger}", rank=LAST_CLOSE_RANK))
         named = ID_RE.findall(mine.field(L.TASKS) or "") if mine else []
         if named:  # CE-112: what the owner asked for, so the close is not judged from memory
             states = self._task_states(named)
@@ -3041,7 +3145,12 @@ class Engine:
         if "G-D0" not in self.store.config.guards.off and (bad := self.lint_contract()):
             sections.insert(0, Part("Contract: fix this first", "\n".join(f"- {f.path}: {f.message}. Remedy: {f.remedy}" for f in bad), "`context-engine lint`", rank=0))
         head = f"# orient {session or '(no session)'}\n"
-        return fit(head, sections, self.w.orient_max_bytes)
+        out = fit(head, sections, self.w.orient_max_bytes)
+        if f"the rest: {BANNER_REST}]" in out and (past := [p for p in sections if p.rank == LAST_CLOSE_RANK]):
+            # CE-195 (verify-1 D1): even its heading and cut note can cut a banner that filled the
+            # cap (adhoc's came 33 bytes short of it), so the past digest, whole in the ledger, gives way
+            out = fit(head, [p for p in sections if p not in past], self.w.orient_max_bytes)
+        return out
 
     def follows_lines(self, led: L.Ledger, key: str) -> list[str]:
         """What the closed session ``key`` left, for the session that follows it up (CE-84): its
@@ -3248,8 +3357,9 @@ class Engine:
         return [(s, end.get(k)) for k, s in start.items()]
 
     def upstream_lines(self) -> list[str]:
-        """HEAD against its upstream branch, and whether the upstream's last push came while no
-        session was open (CE-114; adhoc AAR entry 26: a push made outside any session was
+        """HEAD against its upstream branch, and the upstream's last push: its commit and time
+        (CE-195: the push state, which the banner no longer carries by hand), and whether it came
+        while no session was open (CE-114; adhoc AAR entry 26: a push made outside any session was
         recorded nowhere, and the ledger said nothing was pushed). The push time is the local
         reflog's `update by push` entry for the upstream ref. Empty with no upstream or no git.
 
@@ -3264,9 +3374,10 @@ class Engine:
             ahead, behind = counts
             out.append(f"- HEAD is {ahead} commit{'s' if ahead != '1' else ''} ahead of {up} and {behind} behind (as of the last fetch)")
         ref = (L._git(self.root, "rev-parse", "--symbolic-full-name", "@{upstream}") or "").strip()
-        log = L._git(self.root, "reflog", "show", "--date=iso-strict", "--format=%gd%x09%gs", ref) if ref else None
+        log = L._git(self.root, "reflog", "show", "--date=iso-strict", "--format=%gd%x09%h%x09%gs", ref) if ref else None
         for row in (log or "").splitlines():
-            sel, _, subject = row.partition("\t")
+            sel, _, rest = row.partition("\t")
+            sha, _, subject = rest.partition("\t")
             if not subject.startswith("update by push"):
                 continue
             m = re.search(r"@\{(.+)\}$", sel)
@@ -3278,7 +3389,9 @@ class Engine:
                 break
             at = at if at.tzinfo else at.astimezone()
             if not any(s <= at and (e is None or at <= e) for s, e in self._session_windows()):
-                out.append(f"- the last push to {up}, at {m.group(1)}, came while no session was open: tell the owner, and record it in this session's close (what was pushed, and whether the gate ran first)")
+                out.append(f"- the last push to {up}, at {m.group(1)} ({sha}), came while no session was open: tell the owner, and record it in this session's close (what was pushed, and whether the gate ran first)")
+            else:  # CE-195, DEC-163: the push state is read here, not hand-written into the banner
+                out.append(f"- the last push to {up}: {sha}, at {m.group(1)}")
             break  # the newest push only
         return out
 
@@ -3451,9 +3564,25 @@ class Engine:
                 out.append(Failure("G-D0", shown, "is not the installed engine's kit/contract.md, and the framework owns this file", f"copy the engine's kit/contract.md over it (an upgrade replaces it whole); this repo's own rules go in {rel}, outside the kit markers"))
         return out
 
+    @staticmethod
+    def _banner_kept(close: L.Entry | None, key: str) -> bool:
+        """Whether the close entry ``close`` says it kept the banner of ``key`` (`banner: kept
+        <key>`, CE-195, DEC-163): a close that left the banner as it is, which G-W1 accepts."""
+        said = (close.receipt("banner") or "").split() if close else []
+        return said == [L.BANNER_KEPT, key]  # nothing after the key: only a hand edit puts words there
+
+    @staticmethod
+    def _banner_cut(closes: list[L.Entry], key: str) -> bool:
+        """Whether the banner ``key`` was written under CE-195 (verify-2 D1): one of ``closes``
+        says `banner: set`, or one kept this banner (which it could only do once one had said
+        `set`). Until then a close cannot keep the banner, nor G-W1 accept `kept`: a banner from
+        before CE-195 may hold the NOW, NEXT and push lines orient now generates, so a repo's
+        first close under CE-195 writes it (`--banner-file`, or `banner set` first)."""
+        return any((e.receipt("banner") or "").split() in ([L.BANNER_SET], [L.BANNER_KEPT, key]) for e in closes)
+
     def lint_working(self) -> list[Failure]:
         """G-W1 to G-W6 and G-W11 on the stored files, then G-W12 and G-W13 (``lint_review``): the banner
-        key against the newest close (G-W1); the run of pauses since the last close (G-W2); carried
+        key against the newest close, unless that close says it kept this banner (G-W1, CE-195); the run of pauses since the last close (G-W2); carried
         batons and pause records by age (G-W3); stale `kind: open` stubs (G-W11,
         ``_stale_stub_failures``); each board item's ``state`` against its OKF
         ``status``, an open question carrying ``answered:``, and each decision's ``decision_status``
@@ -3475,8 +3604,16 @@ class Engine:
                 newest_close = max((e.key for e in closes), key=key_order)
                 if b is None:  # a session closed, so a banner is owed: a missing or renamed heading fails
                     out.append(Failure("G-W1", self.w.handoff, f"no `## Banner (<key>)` heading, but {newest_close} closed", "write it at clean close (`banner set`, with `--seen none` for the first)"))
-                elif key_order(b.key) < key_order(newest_close):
-                    out.append(Failure("G-W1", self.w.handoff, f"banner key {b.key} is older than the newest close {newest_close}", "replace the banner at clean close (`banner set`)"))
+                elif (key_order(b.key) < key_order(newest_close) and self._banner_kept(led.get(newest_close), b.key)
+                      and not self._banner_cut([e for e in closes if e.key != newest_close], b.key)):  # verify-2 D1
+                    out.append(Failure("G-W1", self.w.handoff, f"the newest close {newest_close} kept banner {b.key}, but no close before it wrote the banner under CE-195 (`banner: set`), so it may hold lines orient now generates",
+                                       "cut the banner to its durable lines and write it: `banner set`, then close, or the next close with `--banner-file`"))
+                elif key_order(b.key) < key_order(newest_close) and not self._banner_kept(led.get(newest_close), b.key):
+                    kept = (led.get(newest_close).receipt("banner") or "").split()
+                    why = (f"; that close kept the banner of {kept[1]}, not this one" if kept[:1] == [L.BANNER_KEPT] and len(kept) > 1 and kept[1] != b.key
+                           else "; its `banner:` receipt has words after the key, which `session close` never writes" if kept[:2] == [L.BANNER_KEPT, b.key] else "")
+                    out.append(Failure("G-W1", self.w.handoff, f"banner key {b.key} is older than the newest close {newest_close}, which does not say it kept this banner{why}",
+                                       "replace the banner (`banner set`) if a durable line changed; a close made by `session close` records `banner: kept <key>` when it leaves the banner as it is, and that passes"))
             run = 0
             for e in led.entries:
                 if e.kind == "pause":
@@ -3484,7 +3621,7 @@ class Engine:
                 elif e.kind == "close":
                     break
             if run > self.w.max_pauses:
-                out.append(Failure("G-W2", ledger_rel, f"{run} consecutive pause entries (at most {self.w.max_pauses})", "do a clean close: gate, commit, banner, ledger"))
+                out.append(Failure("G-W2", ledger_rel, f"{run} consecutive pause entries (at most {self.w.max_pauses})", "do a clean close: the gate, then `session close` (the ledger entry; the banner only if a durable line changed)"))
             if closes:
                 last = closes[0]
                 for name in ("guards", "read"):

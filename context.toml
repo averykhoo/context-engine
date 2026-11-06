@@ -176,7 +176,7 @@ mode = "frontmatter through `context-engine task`/`context-engine ask`, bodies b
 [[routes]]
 component = "Orientation note"
 path = "HANDOFF.md"
-mode = "replaced at clean close; banner through `context-engine banner set`"
+mode = "banner of durable lines, replaced only when one changes (`session close --banner-file`, or `context-engine banner set`)"
 max_lines = 130    # G-D1, the byte cap is the backstop to G-D8 (P6); provenance: MEASURED 2026-10-12d, 101 lines, plus about a quarter; wrong if a cold session needs more to orient than fits
 max_bytes = 10000  # G-D1; provenance: MEASURED 2026-10-12d, 7723 bytes, plus about a quarter; wrong as above
 max_width = 140    # G-D1; provenance: MEASURED 2026-10-12d, widest prose line 136; wrong if wrapping starts to split commands mid-line

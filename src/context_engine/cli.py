@@ -62,14 +62,21 @@ def build() -> argparse.ArgumentParser:
 
     s = _sub(groups, "session", "open, close or pause a framework session (FRAMEWORK §6.1, §6.3, §6.4)").add_subparsers(dest="op", required=True)
     ss = _sub(s, "start", "open a session: mint its key and write the ledger stub; run it first, every session")
-    ss.add_argument("--follows", default="", metavar="KEY", help="the key of a closed session this one follows up (work found wanting after its close); never reopens it")
-    c = _sub(s, "close", "clean close: write this session's ledger entry over its stub")
+    link = ss.add_mutually_exclusive_group()
+    link.add_argument("--continues", default="", metavar="KEY", help="the key of the closed session of this same conversation (the owner replied after its close): the ledger and orient read the two as one thread")
+    link.add_argument("--follows", default="", metavar="KEY", help="the key of a closed session this one follows up (work found wanting after its close); never reopens it")
+    c = _sub(s, "close", "clean close in one call: close housekeeping, this session's ledger entry over its stub, and the banner only when given; one commit")
     c.add_argument("--rows", required=True, help="the items this session touched and how each ended, e.g. `CE-2 (closed); AC-10 (tested)`")
     c.add_argument("--summary", action="append", required=True, help="one line of the owner digest; repeat for each, 1 to 7 lines")
     c.add_argument("--guards", required=True, help="receipt: the gate and lint results, verbatim (where [working] gate_receipt is set, it must match it: the gate's pass count, e.g. `1112 passed`, or `not run`)")
     c.add_argument("--read", required=True, help="receipt: what was read to start work")
     c.add_argument("--asked", default="", help="receipt: the owner questions raised in chat; must name each one at NOW or NEXT (default: those `ask raised` recorded)")
     c.add_argument("--owed", action="append", default=[], help="one thing still owed (an answer, a check, a push); repeat for each (default: nothing)")
+    cb = c.add_mutually_exclusive_group()
+    cb.add_argument("--banner", dest="banner", default="", metavar="TEXT", help="replace the banner after the entry (only when one of its durable lines changed); needs --seen")
+    cb.add_argument("--banner-file", dest="banner_file", type=Path, help="as --banner, read from a file")
+    c.add_argument("--seen", default="", help="with --banner: the hash `banner show` printed (`none` for the first banner)")
+    c.add_argument("--no-housekeeping", dest="housekeeping", action="store_false", help="skip the close's own `hk run close`: its cap refused it and the owner has not said go on (say so in --owed)")
     st = _sub(s, "tasks", "intake: name the board items the owner asked this session for; with no ids, say which are still open")
     st.add_argument("ids", nargs="*", help="the task ids, comma- or space-separated (file a task first for a request with none)")
     ab = _sub(s, "abandon", "mark another session's stale open stub abandoned, with a baton for what it left in flight (housekeeping: --stale)")
@@ -408,6 +415,8 @@ def _params(args: argparse.Namespace) -> dict:
         a["message"] = _read(a["message_file"]) if a.get("message_file") else "\n\n".join(a["message"])
     if a.get("body_file") is not None:
         a["body"] = _read(a["body_file"])
+    if a.get("banner_file") is not None:  # `session close --banner-file` (CE-195)
+        a["banner"] = _read(a["banner_file"])
     if a.get("ruling_file") is not None:
         a["ruling"] = _read(a["ruling_file"])
     if a.get("answered_file") is not None:

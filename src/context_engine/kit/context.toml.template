@@ -236,7 +236,7 @@ mode = "session-stamped, through `context-engine baton`/`context-engine pause`"
 [[routes]]
 component = "Orientation note"
 path = "HANDOFF.md"
-mode = "replaced at clean close; banner through `context-engine banner set`"
+mode = "banner of durable lines, replaced only when one changes (`session close --banner-file`, or `context-engine banner set`)"
 max_lines = 150    # G-D1, the backstop to G-D8's stacking check (FRAMEWORK P6); provenance: JUDGEMENT, engine default; wrong if a cold session needs more to orient than fits
 max_bytes = 12000  # provenance: JUDGEMENT, engine default; wrong as above
 max_width = 120    # provenance: JUDGEMENT, engine default; wrong if wrapping splits commands mid-line

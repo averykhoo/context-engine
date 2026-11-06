@@ -11,6 +11,29 @@ component, procedure and guard.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
+- **A close is one call, and the banner holds durable lines only.** `session close` (MCP
+  `session_close`) runs `hk run close` first (`--no-housekeeping` skips it), writes the entry,
+  and replaces the banner only when given one (`--banner-file <banner.md> --seen <hash>`), all
+  in one commit; it checks everything it would refuse before its first write. Without a banner
+  it keeps the one there and its entry says `banner: kept <key>`, which G-W1 now accepts in
+  place of a fresh banner key; a repo with no banner yet is refused until the close writes the
+  first. `orient` shows the last close's rows, digest and still-owed lines (`Last close`) and the
+  last push (`Upstream`), so the banner stops copying them. `session start --continues <key>`
+  (MCP `session_start(continues=)`) links the next turn of a conversation to the closed session
+  before it, and orient reads the thread. At orient's cap, `Last close` is served after the
+  banner and gives way whole rather than cut it; the `Upstream` part's new last-push line (about
+  60 bytes) is served before it. A banner is kept only once a close has written it (`banner:
+  set`): until then a close without `--banner-file` is refused, and G-W1 fails a `kept` receipt,
+  so a banner from before this change cannot be kept with the lines orient now generates.
+  **Upgrade:** the repo's first close under this engine cuts the banner to its durable lines
+  (the repo's purpose, owner rules, lessons, standing facts) and passes it, `session close ...
+  --banner-file <banner.md> --seen <hash>` (or `banner set`, then the close): the close refuses
+  otherwise. A banner that filled orient to its cap loses its last item to the push line until it
+  is cut (`banner set` says when orient cuts it). Drop `hk run close` and `banner set` from the
+  close if the repo's own docs list them (running them still works). **Every machine that works
+  on the repo needs this engine or later:** an older engine reads a `banner: kept` close as a
+  stale banner and fails G-W1. Old banners, ledgers and configs load unchanged (§5.1, §5.5, §6.1,
+  §6.3, §8.4 G-W1) — DEC-163, DEC-164, DEC-165, DEC-166, DEC-167, DEC-168, DEC-169, CE-195.
 - **No decision index is stored any more.** No write regenerates the decision index file;
   `context-engine decision index` (MCP `decision_index`, now a read) prints the same listing,
   and `context-engine site build <dir>` (MCP `site_build`) builds the records as a static site

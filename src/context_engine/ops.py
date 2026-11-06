@@ -108,10 +108,11 @@ def init(root: Path, c: Caller, prefix: dict[str, str] | None = None, dry_run: b
 
 
 @op(write=True)
-def session_start(e: Engine, c: Caller, follows: str = "") -> tuple[int, str]:
-    """Open a framework session: mint its key and write the ledger stub. Call it first, every session. `follows`: the key of a closed session this one follows up (more work found after its close); the stub records it, and orient shows what that session left. A closed session is never reopened."""
-    c.session = e.session_start(actor=c.actor, follows=follows)
-    out = f"session {c.session} opened (stub written to {e.w.ledger}{f'; follows {follows.strip()}' if follows.strip() else ''}); pass --session {c.session} or set CE_SESSION={c.session}"
+def session_start(e: Engine, c: Caller, follows: str = "", continues: str = "") -> tuple[int, str]:
+    """Open a framework session: mint its key and write the ledger stub. Call it first, every session. `continues`: the key of the closed session of this same conversation (the owner replied after its eager close); `follows`: the key of a closed session this one follows up (more work found after its close); one or neither. The stub records it, and orient shows what that session left (and, for `continues`, the thread). A closed session is never reopened."""
+    c.session = e.session_start(actor=c.actor, follows=follows, continues=continues)
+    link = f"; follows {follows.strip()}" if follows.strip() else f"; continues {continues.strip()}" if continues.strip() else ""
+    out = f"session {c.session} opened (stub written to {e.w.ledger}{link}); pass --session {c.session} or set CE_SESSION={c.session}"
     other = e.actor_spellings(c.actor or "")
     if other:  # CE-122: one agent keeps one spelling, so a query for it finds all its lines
         known = ", ".join(f"`{a}` ({n} op line{'s' if n != 1 else ''})" for a, n in other[:3])
@@ -121,10 +122,11 @@ def session_start(e: Engine, c: Caller, follows: str = "") -> tuple[int, str]:
 
 
 @op(write=True)
-def session_close(e: Engine, c: Caller, rows: str, summary: list[str], guards: str, read: str, asked: str = "", owed: list[str] | None = None) -> tuple[int, str]:
-    """Clean close: finalise this session's ledger stub. `summary` is the owner digest, at most 7 lines."""
+def session_close(e: Engine, c: Caller, rows: str, summary: list[str], guards: str, read: str, asked: str = "", owed: list[str] | None = None,
+                  banner: str = "", seen: str = "", housekeeping: bool = True) -> tuple[int, str]:
+    """Clean close in one call: close housekeeping (`hk run close`, unless `housekeeping` is false), then this session's ledger entry over its stub, then the banner only when `banner` is given (with `seen`, the hash banner_show printed); one commit. `summary` is the owner digest, at most 7 lines. Without `banner` the banner is kept, and the entry says so: its lines are durable, and orient generates the rest; refused until some close has written the banner (`banner: set`), so a repo's first close under CE-195 passes one."""
     receipts = {"guards": guards, "read": read, "asked": asked}
-    return 0, e.session_close(c.session, actor=c.actor, rows=rows, summary=summary, receipts=receipts, owed=owed or [])
+    return 0, e.session_close(c.session, actor=c.actor, rows=rows, summary=summary, receipts=receipts, owed=owed or [], banner=banner or "", seen=seen or "", housekeeping=housekeeping)
 
 
 @op(write=True)

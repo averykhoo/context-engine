@@ -60,6 +60,7 @@ Newest first.
 - **receipts:**
   - guards: gate green
   - read: board only
+  - banner: set
 - **summary** (the owner digest):
   - did things
 - **Still owed:**
@@ -243,6 +244,89 @@ def test_session_start_refuses_to_follow_a_session_that_is_not_closed(eng, make,
     with pytest.raises(Refusal, match=re.escape(says)):
         eng.session_start(actor=ACTOR, follows=follows)
     assert (eng.root / "ledger.md").read_bytes() == before
+
+
+@pytest.mark.criterion("AC-185")
+def test_a_session_that_continues_the_conversation_links_back_and_orient_reads_the_thread(eng, capsys):
+    """CE-195, DEC-163: the owner replies after an eager close; the next session says which one
+    it continues, so the back-and-forth reads as one thread, and the closed entry is never touched."""
+    closed = eng.read_ledger().get("2026-10-07b").text
+    base = ["--root", str(eng.root), "--actor", ACTOR]
+    assert main([*base, "session", "start", "--continues", "2026-10-07b"]) == 0, capsys.readouterr().err
+    out = capsys.readouterr().out
+    key = out.split()[1]
+    assert "; continues 2026-10-07b)" in out, out
+    assert eng.read_ledger().get(key).field("continues") == "2026-10-07b" and eng.read_ledger().get(key).field("follows") is None
+    eng.session_close(key, actor=ACTOR, rows="none", summary=["answered the reply"], receipts=receipts())
+    assert eng.read_ledger().get(key).field("continues") == "2026-10-07b" and eng.read_ledger().get("2026-10-07b").text == closed
+    nxt = eng.session_start(actor=ACTOR, continues=key)
+    text = eng.orient(nxt)
+    assert f"## Continues {key}: what it closed with\n- thread: 2026-10-07b > {key} > {nxt}\n- rows: none\n- digest: answered the reply\n- still owed: nothing\n" in text, text
+    assert "## Last close" not in text  # the link already shows that close
+    other = started(eng)
+    seen = eng.orient(other)
+    assert f"- {nxt}, opened " in seen and f"; continues {key}" in seen, seen
+    assert f"## Last close {key}: what it closed with\n- thread: 2026-10-07b > {key}\n- rows: none\n" in seen, seen
+    eng.session_pause(nxt, actor=ACTOR, rows="x", deferred="y")
+    assert eng.read_ledger().get(nxt).field("continues") == key  # a pause keeps the link
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="a session links back to one closed session"):
+        eng.session_start(actor=ACTOR, follows=key, continues=key)
+    with pytest.raises(Refusal, match=re.escape(f"session {nxt} is `kind: pause`, not closed, so there is nothing to continue")):
+        eng.session_start(actor=ACTOR, continues=nxt)
+    with pytest.raises(Refusal, match="the ledger has no session 2026-09-01a to continue"):
+        eng.session_start(actor=ACTOR, continues="2026-09-01a")
+    assert (eng.root / "ledger.md").read_bytes() == before  # a refused start writes nothing
+    with pytest.raises(SystemExit):
+        main([*base, "session", "start", "--continues", key, "--follows", key])  # the CLI takes one link or none
+
+
+@pytest.mark.criterion("AC-185")
+def test_orient_shows_the_last_close_so_the_banner_need_not_repeat_it(eng):
+    """CE-195, DEC-163: the newest close's rows, digest and still-owed lines are read from the
+    ledger, by the hook's keyless orient too, instead of being copied into the banner."""
+    part = "## Last close 2026-10-07b: what it closed with\n- rows: CE-1 (created)\n- digest: did things\n- still owed: nothing\n"
+    assert part in eng.orient(None)
+    key = started(eng)
+    assert part in eng.orient(key)
+    eng.session_close(key, actor=ACTOR, rows="CE-1 (moved)", summary=["one", "two"], receipts=receipts(), owed=["an answer"])
+    assert f"## Last close {key}: what it closed with\n- rows: CE-1 (moved)\n- digest: one\n- digest: two\n- still owed: an answer\n" in eng.orient(None)
+
+
+@pytest.mark.criterion("AC-185")
+def test_a_banner_that_fit_orient_before_the_last_close_part_still_fits_whole(eng):
+    """CE-195 (verify-1 D1): the banner holds durable lines only, so the `Last close` part, a copy
+    of a ledger entry that is whole in the ledger, is served after it and cut first; served
+    before it, it cut 19 durable owner rules out of adhoc's orient."""
+    key = started(eng)
+    digest = [f"step {i} " + "d" * 100 for i in range(7)]
+    eng.session_close(key, actor=ACTOR, rows="none", summary=digest, receipts=receipts())
+    out = eng.orient(None)
+    part = out.split(f"## Last close {key}: what it closed with\n", 1)[1].split("\n## ", 1)[0]
+    assert len(out.encode("utf-8")) <= eng.w.orient_max_bytes and "[cut at" not in out  # the fixture fits whole
+    room = eng.w.orient_max_bytes - len(out.encode("utf-8")) + len(part.encode("utf-8")) - 200  # past the cap only with the whole part
+    banner = "\n".join(f"- durable rule {i:02}: " + "r" * 40 for i in range(room // 60))
+    (eng.root / "HANDOFF.md").write_text(NOTE.replace("- The banner says where things stand.", banner).format(key=key), encoding="utf-8")
+    out = eng.orient(None)
+    assert len(out.encode("utf-8")) <= eng.w.orient_max_bytes
+    shown = out.split(f"## Banner ({key})\n", 1)[1].split("\n## ", 1)[0]
+    assert shown == banner + "\n", "a banner that fits without the Last close part is shown whole"
+    assert f"[cut at the orient cap; the rest: the `## {key}` entry in ledger.md]" in out, out
+    assert out.count("[cut at") == 1, "only the Last close part is cut"
+    assert f"- digest: {digest[0]}\n" in out, "the part keeps its leading lines"
+    # a banner that leaves less than the part's heading and cut note free (adhoc's left 33 bytes):
+    # the part gives way whole, and orient is what it was before the part existed
+    cap, size = eng.w.orient_max_bytes, len(out.encode("utf-8"))
+    section = f"\n## Last close {key}: what it closed with\n" + out.split(f"## Last close {key}: what it closed with\n", 1)[1].split("\n## ", 1)[0]
+    want = cap - 10 - (size - len(section.encode("utf-8")) - len(banner.encode("utf-8")))  # orient without the part: 10 bytes short of the cap
+    lines = [f"- durable rule {i:02}: " + "r" * 40 for i in range(want // 60)]
+    lines[-1] += "r" * (want - len("\n".join(lines)))
+    banner = "\n".join(lines)
+    (eng.root / "HANDOFF.md").write_text(NOTE.replace("- The banner says where things stand.", banner).format(key=key), encoding="utf-8")
+    out = eng.orient(None)
+    assert len(out.encode("utf-8")) == cap - 10 and "[cut at" not in out, out
+    assert out.split(f"## Banner ({key})\n", 1)[1].split("\n## ", 1)[0] == banner + "\n"
+    assert "## Last close" not in out, "the past digest, whole in the ledger, gives way to the banner"
 
 
 # -- the task set the owner named at intake (CE-112) ---------------------------------------------
@@ -1713,13 +1797,55 @@ def guards(eng, name):
     return [f for f in eng.lint() if f.guard == name]
 
 
-def test_a_banner_older_than_the_newest_close_fails_lint(eng):
+@pytest.mark.criterion("AC-185")
+def test_a_banner_older_than_the_newest_close_fails_lint_unless_that_close_kept_it(eng):
+    """CE-195, DEC-163: the banner holds durable lines, so a close that leaves it as it is says so
+    (`banner: kept <key>`) and G-W1 passes; a close that says nothing of it, or kept another
+    banner, is the old failure."""
     assert guards(eng, "G-W1") == []
     key = started(eng)
-    eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
-    assert len(guards(eng, "G-W1")) == 1
+    out = eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    assert "; banner kept 2026-10-07b" in out
+    assert eng.read_ledger().get(key).receipt("banner") == "kept 2026-10-07b"
+    assert guards(eng, "G-W1") == []  # kept: nothing durable changed, and nothing is owed
+    path = eng.root / "ledger.md"
+    kept = path.read_text(encoding="utf-8")
+    path.write_text(kept.replace("  - banner: kept 2026-10-07b\n", ""), encoding="utf-8")  # a close that says nothing of the banner
+    [f] = guards(eng, "G-W1")
+    assert f.message == f"banner key 2026-10-07b is older than the newest close {key}, which does not say it kept this banner", f.message
+    path.write_text(kept.replace("  - banner: kept 2026-10-07b\n", "  - banner: kept 2026-10-07a\n"), encoding="utf-8")
+    [f] = guards(eng, "G-W1")
+    assert f.message.endswith("; that close kept the banner of 2026-10-07a, not this one"), f.message
+    path.write_text(kept.replace("  - banner: kept 2026-10-07b\n", "  - banner: kept 2026-10-07b but rewrote it\n"), encoding="utf-8")  # verify-1: a hand edit
+    [f] = guards(eng, "G-W1")
+    assert f.message.endswith("; its `banner:` receipt has words after the key, which `session close` never writes"), f.message
     eng.banner_set("- fresh", eng.banner().sha, **kw(key))
     assert guards(eng, "G-W1") == []
+
+
+@pytest.mark.criterion("AC-185")
+def test_a_banner_no_close_wrote_under_ce195_is_not_kept_until_one_writes_it(eng):
+    """verify-2 D1: a banner from before CE-195 may still hold the NOW, NEXT and push lines orient
+    now generates, so a close cannot keep it, and G-W1 does not accept `kept`, until a close has
+    written it (`banner: set`); `banner set` before the close counts as that."""
+    path = eng.root / "ledger.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("  - banner: set\n", ""), encoding="utf-8")  # a ledger from before CE-195
+    first = started(eng)
+    before = {p: p.read_bytes() for p in (path, eng.root / "HANDOFF.md")}
+    with pytest.raises(Refusal, match=r"the banner \(2026-10-07b\) has not been written since orient generates") as e:
+        eng.session_close(first, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    assert "--banner-file" in e.value.remedy
+    assert {p: p.read_bytes() for p in before} == before  # refused before any write
+    eng.banner_set("- durable only", eng.banner().sha, **kw(first))  # cut first, then close
+    out = eng.session_close(first, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    assert eng.read_ledger().get(first).receipt("banner") == "set", out
+    second = started(eng)
+    eng.session_close(second, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    assert eng.read_ledger().get(second).receipt("banner") == f"kept {first}"
+    assert guards(eng, "G-W1") == []  # written once under CE-195, so kept from then on
+    path.write_text(path.read_text(encoding="utf-8").replace("  - banner: set\n", ""), encoding="utf-8")  # kept, but never written
+    [f] = guards(eng, "G-W1")
+    assert f.message == f"the newest close {second} kept banner {first}, but no close before it wrote the banner under CE-195 (`banner: set`), so it may hold lines orient now generates", f.message
 
 
 def test_more_than_two_pauses_in_a_row_fail_lint(eng):
@@ -1867,7 +1993,10 @@ def test_orient_compares_head_with_upstream_and_flags_a_push_made_outside_a_sess
     _commit_as(root, key, "2026-10-08T00:00:00+08:00")
     assert _section(eng.orient(key), "Upstream").splitlines()[0] == "- HEAD is 1 commit ahead of origin/main and 0 behind (as of the last fetch)"
     _git(root, "push", "-q")
-    assert _section(eng.orient(key), "Upstream").splitlines() == ["- HEAD is 0 commits ahead of origin/main and 0 behind (as of the last fetch)"]  # pushed inside a session
+    up = _section(eng.orient(key), "Upstream").splitlines()  # pushed inside a session: the push state, which the banner no longer carries (CE-195)
+    sha = _git(root, "rev-parse", "--short", "HEAD").strip()
+    assert up[0] == "- HEAD is 0 commits ahead of origin/main and 0 behind (as of the last fetch)" and len(up) == 2, up
+    assert up[1].startswith(f"- the last push to origin/main: {sha}, at ") and "no session" not in up[1], up
     eng.session_close(key, actor=ACTOR, rows="none", summary=["pushed"], receipts=receipts())
     dead, other = started(eng), started(eng)
     eng.session_abandon(dead, force=True, **kw(other))  # an abandoned stub's window ends there
