@@ -38,3 +38,5 @@ The adhoc trial's feedback was taken in already (CE-7; frozen copy `docs/evidenc
 - C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md
 
 ## Log
+
+- 2026-11-06e (claude-code/claude-opus-5-5): audio-workspace ba31e29d (2026-11-06e, local, unpushed; its gate passed): its CLAUDE.md now tells sessions to append context-engine feedback to docs/context-engine-feedback.md. US-21's criterion is AC-185 (planned).

@@ -25,3 +25,5 @@ A green gate is enough to ship, as a framework principle (US-20, owner 2026-11-0
 - docs/framework/FRAMEWORK.md (P7)
 
 ## Log
+
+- 2026-11-06e (claude-code/claude-opus-5-5): Its criterion is AC-184 (planned, from US-20).
