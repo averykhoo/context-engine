@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-06d)
+## Banner (2026-11-06e)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -13,9 +13,9 @@ is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 - **DEC-162 carried out (2026-11-06c, verify PASS round 2):** DEC-88 superseded by DEC-125; DEC-126 refs DEC-112; new CE-187..
   CE-192; CE-153, CE-159, CE-162 closed (merged or dropped), CE-163 became INV-98; INV-89+90 merged, INV-97 retired (register
   by hand: no op retires an entry, and `register show` hides `retired:`). The accept list waits for CE-187's op, not by hand.
-- **audio-workspace feedback (2026-11-06d, not yet taken in):** `audio-workspace/docs/context-engine-feedback.md` has 10 items;
-  item 1 is CE-177, item 3 is probably fixed by CE-44 (verify, then re-pin); items 2, 7, 8 need owner calls (green gate as a
-  principle; close eagerly vs back-and-forth; model ids in actor strings). Digest: `.scratch/2026-11-06d/audit.md`.
+- **audio-workspace feedback is picked up later by CE-193 (LATER)**; its CLAUDE.md now points sessions at the feedback file
+  (ba31e29d, local). Owner words: US-20 (a green gate is enough to ship: principle, CE-194) and US-21 (close eagerly vs
+  long-lived design sessions, or cheap sessions).
 - **CE-185 closed (2026-11-06a, US-19):** records are published at https://averykhoo.github.io/context-engine/ by
   `.github/workflows/pages.yml` calling the new read op `site build` (DEC-159); the stored `docs/decisions/index.md`, its
   regeneration and `hk_regen_index` are gone, and `decision index` only prints. Adopters' `decision_index` key still loads and
