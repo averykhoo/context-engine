@@ -627,19 +627,21 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **control:** individual: kit README § Hook tells the owner to keep one SessionStart orient hook for every source
 - **from:** CE-146, session 2026-10-30a
 
-## INV-89: the plugin launcher checks a settings orient hook's program and --root but not whether the hook would succeed (for example, an engine that is present but broken), so beside such a hook it stays quiet and orient fails silently
+## INV-89: the plugin launcher judges a settings orient hook by its text and never runs or expands it, so beside a hook that would fail (an engine present but broken), or whose program or --root names a variable or ~ that expands to a stale path or that its shell never expands, it stays quiet and orient fails silently
 
-- **affects:** repos running the plugin beside a settings orient hook
-- **why not eliminated:** running the hook to find out would run orient twice (DEC-124 option d)
+- **affects:** repos running the plugin beside a settings orient hook, among them those whose committed hook uses $CLAUDE_PROJECT_DIR, %VAR% or ~
+- **why not eliminated:** running the hook to find out would run orient twice (DEC-124 option d), and the hook's shell expands a variable or ~ where the launcher cannot (DEC-124)
 - **control:** individual: contract § Session start: a failing hook is silent, so the agent says so when orient is missing from its context
 - **from:** CE-146, session 2026-10-30a
+- **merged:** INV-90 folded into this entry, session 2026-11-06c (DEC-162)
 
-## INV-90: the plugin launcher trusts a settings orient hook whose program or --root names a variable or starts with ~ without checking it, so one that expands to a stale path, or that quotes ~ or single-quotes a variable so its shell never expands it, keeps the plugin quiet
+## INV-90: (retired 2026-11-06c: merged into INV-89, DEC-162) the plugin launcher trusts a settings orient hook whose program or --root names a variable or starts with ~ without checking it, so one that expands to a stale path, or that quotes ~ or single-quotes a variable so its shell never expands it, keeps the plugin quiet
 
 - **affects:** repos whose committed settings hook uses $CLAUDE_PROJECT_DIR, %VAR% or ~
 - **why not eliminated:** the hook's shell expands it and the launcher cannot (DEC-124)
 - **control:** individual: contract § Session start: a failing hook is silent, so the agent says so when orient is missing from its context
 - **from:** CE-146, session 2026-10-30a
+- **retired:** session 2026-11-06c (claude-code/claude-opus-5-5): merged into INV-89 (DEC-162); kept so its id is never reused
 
 ## INV-91: In an adopting repo's shallow CI checkout, G-W9 trusts history it cannot see and G-W11 skips
 
@@ -683,12 +685,13 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **control:** collective: the CI watcher every push gets (procedures § Push and CI)
 - **from:** CE-185, session 2026-11-06a
 
-## INV-97: an adopter's stored decision index.md goes stale until someone acts on orient's Deprecated config notice
+## INV-97: (retired 2026-11-06c: a duplicate of INV-95, DEC-162) an adopter's stored decision index.md goes stale until someone acts on orient's Deprecated config notice
 
 - **affects:** every adopting repo that sets decision_index
 - **why not eliminated:** deleting a tracked file in another repo is that repo's owner's call, not the engine's
 - **control:** individual: orient's Deprecated config section (DEC-160)
 - **from:** CE-185, session 2026-11-06a
+- **retired:** session 2026-11-06c (claude-code/claude-opus-5-5): a reworded duplicate of INV-95 (DEC-162); kept so its id is never reused
 
 ## INV-98: a successor story confirmed by hand in the words that confirmed the story it replaces passes lint: record confirm refuses those words only at the write, and G-I2 does not re-check them
 

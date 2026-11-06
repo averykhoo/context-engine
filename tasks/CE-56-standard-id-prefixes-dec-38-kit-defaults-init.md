@@ -1,7 +1,7 @@
 ---
 type: Task
 id: CE-56
-title: 'Standard id prefixes (DEC-38): kit defaults, init asks the task prefix, reserved prefixes in lint, this repo renamed'
+title: 'Standard id prefixes (DEC-38): kit defaults, init asks the task prefix, reserved prefixes in lint'
 brief: 'Ids are never renumbered: a rename keeps the number and the old id stays an alias (DEC-37); stamped text keeps old ids'
 pri: LATER
 state: open
@@ -9,7 +9,7 @@ deps: []
 source: session 2026-10-13c
 created: 2026-10-13
 moved: 2026-10-13c
-updated: 2026-11-03b
+updated: 2026-11-06c
 goals: [G-6]
 ---
 
@@ -19,3 +19,5 @@ DEC-38 sets one prefix per record kind in every repo, 2 to 5 capitals: DEC, STOR
 
 - 2026-10-14a (claude-code/claude-opus-5-5): Audit 2026-10-14a (spec F6, F7): the engine does not enforce [A-Z]+-[1-9][0-9]* on prefixes; init accepts digits and its remedy suggests T2; G and INV prefixes are hard-coded. Fold into this task's prefix work.
 - 2026-11-03b (claude-code/claude-opus-5-5): From CE-167: the kit's default prefixes D and S collide with ordinary audit labels (zanzibar's D7, S-1..S-7) and init --dry-run gives no warning; zanzibar took DEC/TK/US. Idea: census <prefix>-<n> hits in the tracked tree during the dry run. Evidence: docs/evidence/ce167-zanzibar-cutover-2026-11-03.md § Engine findings
+- 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: the rename half (this repo's US, INV, G, BTN, PAU to STORY, RISK, GOAL, BATON, PAUSE) is declined: DEC-37's aliases exist so this repo keeps its prefixes while the kit defaults use the standard set. The kit-defaults half stands (template prefixes, init asking the task prefix, reserved prefixes in lint, the prefix census idea), so the task stays open.
+- 2026-11-06c (claude-code/claude-opus-5-5): Title drops 'this repo renamed': that half was declined (DEC-162).

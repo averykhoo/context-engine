@@ -31,3 +31,4 @@ Source: CE-96's close (654ea03), residual (verifier finding 1). `doc archive con
 
 - 2026-11-06c (claude-code/claude-opus-5-5): closed: merged into CE-154 (DEC-162): same file, a one-line refusal; CE-154 carries it
   residual risk: none
+- 2026-11-06c (claude-code/claude-opus-5-5): Correction (DEC-162): the refusal is carried by CE-158 at NEXT ('do now'), not by CE-154 at LATER.

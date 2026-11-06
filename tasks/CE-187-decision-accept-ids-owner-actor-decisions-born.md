@@ -29,6 +29,7 @@ Once the op exists, accept in one op the agent calls DEC-162 lists (not by hand 
 
 - Do not accept anything by hand before the op exists: 60 `decision set` lines would be op-log noise (DEC-162).
 - The existing owner-actor PROVISIONAL decisions need a migration path (the op, or the born-ACCEPTED rule applied at rest); say which in the PROVISIONAL decision this build records.
+- The accept op takes exactly DEC-162's list, and the body's last sentence overstates it (DEC-162). Never accept DEC-107: the owner overruled it ('on' against its chosen off), so the decision CE-192 records supersedes it. DEC-97, DEC-110 and DEC-120 are not on the list either: the owner gave each its own word in DEC-162 (text, optional, cut), so leave them out of this op.
 
 ## Read first
 
@@ -37,3 +38,5 @@ Once the op exists, accept in one op the agent calls DEC-162 lists (not by hand 
 - docs/framework/contract.md § Rules, Who decides
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): Correction (DEC-162): DEC-107 is never accepted; it is superseded by the decision CE-192 records. DEC-97, DEC-110 and DEC-120 are outside DEC-162's accept list; the body's 'accept them with the rest' is withdrawn (see Traps).

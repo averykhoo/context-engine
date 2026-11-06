@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-11-06a
 created: 2026-11-06
 moved: 2026-11-06a
-updated: 2026-11-06a
+updated: 2026-11-06c
 ---
 
 Pin the two site-build claims no test holds, and drop dead sabotage rows (CE-185 verifier nits, 2026-11-06a).
@@ -33,3 +33,4 @@ Pin the two site-build claims no test holds, and drop dead sabotage rows (CE-185
 ## Log
 
 - 2026-11-06a (claude-code/claude-opus-5-5): INV-97 duplicates INV-95: at CE-185's close (031e87a) the coordinator restated the design review's residuals with --residual; the engine skips only an exact repeat of a review residual's text, so a reworded one is filed again. Two things to do: settle INV-97 (the route says an entry is edited only when the code changes, so it was left in place), and have task close refuse or warn on a --residual that rewords one of the review's residuals.
+- 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: INV-97 is retired as a duplicate of INV-95 this session (hand edit of the register, which no op writes); this task now carries only the pins and the dead sabotage rows.

@@ -33,3 +33,4 @@ Source: CE-96's close (654ea03), residuals (verifier findings 2 and 3, and the r
 ## Log
 
 - 2026-11-06c (claude-code/claude-opus-5-5): Takes over CE-153 (DEC-162): doc archive refuses the engine's own control files, context.toml and the op log (docs/ledger/ops.jsonl), which CE-96 made archivable when it dropped the non-.md refusal (654ea03, verifier finding 1). Same file as this task (working.py::Engine.doc_archive); a one-line refusal.
+- 2026-11-06c (claude-code/claude-opus-5-5): Correction (DEC-162): CE-153's one-line refusal of context.toml and the op log moves on to CE-158 at NEXT, since the ruling says to do it now ('merge into CE-154, do now'; 'take CE-153's one-line refusal with them', with CE-156 and CE-158) and CE-154 stays LATER. This task keeps only its --lines findings.

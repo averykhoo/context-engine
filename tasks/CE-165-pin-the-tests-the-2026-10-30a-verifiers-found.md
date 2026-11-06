@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-01a
-updated: 2026-11-01a
+updated: 2026-11-06c
 ---
 
 Pin the tests the 2026-10-30a verifiers found loose.
@@ -40,3 +40,4 @@ Source: verifier residuals in the close commits named per line. Each is a claime
 
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-2, DEC-11: ten loose tests, several claiming CE-6's just-landed criteria. Can be fanned out per file.
 - 2026-11-01a (claude-code/claude-opus-5-5): Moved NEXT->LATER (agent's call, PROVISIONAL, 2026-11-01a): room for CE-11 in NEXT on the owner's DEC-135; this was the last NEXT item.
+- 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: the body's eleven bullets are this task's tests (AC-150, AC-160, test_coverage_status's file-name-only compare and AC-171, AC-123, AC-113, bootstrap.py::APPENDED, the CRLF kit lint, CE-134's frontmatter refusal, commit.py::select's id.reserve, AC-110, AC-149's marker), listed so it can be split per file. It also takes over INV-86's stricter match: a guards receipt passes gate_receipt on 'not run' only when the whole receipt is 'not run', never on those words anywhere in it (e.g. 'lint not run').

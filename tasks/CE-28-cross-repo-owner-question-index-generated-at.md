@@ -3,14 +3,18 @@ type: Task
 id: CE-28
 title: Cross-repo owner-question index generated at session start (FRAMEWORK §5.6)
 brief: Generated and disposable, outside the repos; each repo's board stays the source of truth
-pri: SOMEDAY
+pri: LATER
 state: open
 deps: [CE-15]
 source: session 2026-10-12b
 created: 2026-10-12
-moved: 2026-10-12b
-updated: 2026-10-20e
+moved: 2026-11-06c
+updated: 2026-11-06c
 goals: [G-6, G-1]
 ---
 
 Filed by CE-16 from the coverage map (docs/evidence/framework-coverage-2026-10-12.md): procedure §5.6 (the owner digest). The digest itself is built: session close refuses a summary outside 1 to 7 lines (working.py::Engine.session_close) and writes it into the ledger. Not built: the generated cross-repo index (e.g. ~/.claude/owner-questions.md with last_asked) and the one-line start-of-session reminder about other repos' overdue questions. Only useful once a second repo runs the framework, hence the dep on CE-15. The answer-in-place file is CE-19.
+
+## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): Moved SOMEDAY->LATER (DEC-162): three repos run the framework and the owner's question queue is invisible across them; the CE-15 dep stays.
