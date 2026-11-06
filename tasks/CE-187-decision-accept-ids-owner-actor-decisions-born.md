@@ -3,7 +3,7 @@ type: Task
 id: CE-187
 title: 'decision accept <ids>: owner-actor decisions born ACCEPTED, agent calls PROVISIONAL until accepted'
 brief: 'DEC-162: accept the listed agent calls through the op once built, never by hand before'
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-3, G-2]
