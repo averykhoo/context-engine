@@ -7,9 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06d · kind: open
+## 2026-11-06d · kind: close
 
-- **opened:** 2026-11-06T17:41:07+08:00 by claude-code/claude-opus-5-5
+- **rows:** none (read-only audit)
+- **receipts:**
+  - guards: not run
+  - read: orient; audit of adhoc and audio-workspace (.scratch/2026-11-06d/audit.md)
+- **summary** (the owner digest):
+  - adhoc trial: closed (CE-7, CE-79, CE-145); its feedback file was removed in adhoc 51fb1df, a
+    frozen copy is in docs/evidence.
+  - adhoc has a session 2026-11-06c with no close, 31 commits unpushed, a dirty tree: live work,
+    left alone.
+  - audio-workspace feedback: 10 items, 1 filed (CE-177), 1 probably fixed (CE-44), 6 new; owner
+    calls on items 2, 7, 8.
+- **Still owed:**
+  - owner: calls on audio-workspace feedback items 2, 7, 8; then intake of the rest
 - **start head:** 89884d152599846606d699e4f9de8c062920a5d4
 
 ---
