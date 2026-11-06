@@ -7,9 +7,28 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06c · kind: open
+## 2026-11-06c · kind: close
 
-- **opened:** 2026-11-06T15:30:37+08:00 by claude-code/claude-opus-5-5
+- **rows:** DEC-162 (new, PROVISIONAL); CE-187..CE-192 (new); CE-153, CE-159, CE-162, CE-163
+  (closed); INV-98 (new); INV-89/90 merged; INV-97 retired
+- **receipts:**
+  - guards: 1443 passed; lint: clean; linux gate 1443 passed; CI green (gate 42184360650, pages
+    42184360702)
+  - read: DEC-162; docs/evidence/owner-review-advice-2026-11-06b.md; workflow reports
+    .scratch/2026-11-06c
+- **summary** (the owner digest):
+  - Owner adopted fable's advice (DEC-162, ruled_by fable); carried out on the records, independent
+    verify PASS on round 2.
+  - NOW is CE-187 (decision accept op; owner decisions born ACCEPTED); the ~60 agent calls get
+    accepted through it, not by hand.
+  - Agent calls (PROVISIONAL): NEXT cap of 5 moved CE-164 and CE-18 to LATER and filed CE-192
+    (DEC-107 flip) at LATER.
+  - Register edited by hand (INV-89+90 merged, INV-97 retired): no op retires an entry, and register
+    show hides retired lines.
+  - Pushed 7a19c83..243efd0 on the owner's word; local and Linux gate 1443 passed; CI green (gate
+    and pages).
+- **Still owed:**
+  - owner: CE-110 paste; reboot frees CE-182's DLL names; restart Claude Code (stale MCP server)
 - **start head:** 67985f9f4bc9e837d2af3d554dc92d49b042220e
 
 ---
