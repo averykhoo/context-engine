@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-10-30a
-updated: 2026-10-30a
+updated: 2026-11-06c
 ---
 
 doc archive --lines: pointer reds, liveness and the uncommitted check.
@@ -31,3 +31,5 @@ Source: CE-96's close (654ea03), residuals (verifier findings 2 and 3, and the r
 - working.py::Engine._prune
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): Takes over CE-153 (DEC-162): doc archive refuses the engine's own control files, context.toml and the op log (docs/ledger/ops.jsonl), which CE-96 made archivable when it dropped the non-.md refusal (654ea03, verifier finding 1). Same file as this task (working.py::Engine.doc_archive); a one-line refusal.

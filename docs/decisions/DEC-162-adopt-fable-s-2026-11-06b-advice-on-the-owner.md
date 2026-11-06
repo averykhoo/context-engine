@@ -8,8 +8,9 @@ decision_status: PROVISIONAL
 decided: 2026-11-06
 session: 2026-11-06c
 body_sha: sha256:cfe95efccceea6c0bfaec879557095093f76e743324f1851668dc60563c60a9d
-refs: [DEC-97, DEC-110, DEC-120]
+refs: [DEC-97, DEC-110, DEC-120, DEC-88, DEC-125, DEC-126, DEC-112]
 amends: [DEC-107]
+tasks: [CE-187, CE-188, CE-189, CE-190, CE-191, CE-192]
 ---
 
 okay take fables recs, and push when the gate is green

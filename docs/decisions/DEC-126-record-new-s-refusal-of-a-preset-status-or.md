@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:6391f43017272bc1db6fad2200e89334430756c289a3badf810c1ac7e84666ce
+refs: [DEC-112]
 ---
 
 PROVISIONAL decision (actor claude-code/claude-opus-5-5), for CE-149. Relates to DEC-112.
