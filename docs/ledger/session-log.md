@@ -7,11 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06a · kind: open
+## 2026-11-06a · kind: close
 
-- **opened:** 2026-11-06T10:22:22+08:00 by claude-code/claude-opus-5-5
-- **start head:** f6f5144ddb81d14e77a4d8d31853cd04a0cabb38
 - **tasks:** CE-185
+- **rows:** US-19 (new: Pages site, no stored index); CE-185 (closed: site live, index removed);
+  CE-186 (new, LATER); DEC-159, DEC-160 (new, PROVISIONAL); INV-95..INV-97 (filed)
+- **receipts:**
+  - guards: gate PASSED in 483.3s (1434 passed in 482.29s) on g1/all:bca5c14d1b4e523c; gate readers
+    PASSED (406 passed) on g1/code+readers:50b8b5a32156cca2; linux gate 1434 passed on 7a19c83;
+    lint: clean
+  - read: orient (hook); FRAMEWORK §6.5, §9.3, P8; manual-mode; procedures; OKF v0.2 SPEC.md §8, §11
+- **summary** (the owner digest):
+  - CE-185 closed: records published at https://averykhoo.github.io/context-engine/ by pages.yml
+    calling the new read op site build (US-19).
+  - Stored docs/decisions/index.md, its regeneration on every decision write and hk_regen_index
+    removed; decision index now only prints.
+  - Pushed 602aeac..7a19c83 on the owner's go; local and Linux gate 1434 passed; CI green (gate
+    42156708766, pages 42156708817); site pages return 200.
+  - Agent calls PROVISIONAL for owner review: DEC-159 (stdlib HTML site, bodies as escaped text),
+    DEC-160 (adopters' decision_index key deprecated, not refused).
+  - Pages turned on through the API with the stored github.com credential (build_type workflow).
+  - Follow-up CE-186: pin the site's group order and body escaping; INV-97 duplicates INV-95 (task
+    close refiled a reworded review residual).
+  - Lesson: one workflow (builder, independent verifier, fix rounds) took CE-185 to PASS in round 1,
+    about 63 min.
+- **Still owed:**
+  - Restart Claude Code so the MCP server drops hk_regen_index and gains site_build
+  - Owner review of DEC-159 and DEC-160 (PROVISIONAL)
+  - Decision-lifecycle findings (PROVISIONAL overloaded, no conflict check, lighter shape for
+    one-off permissions) are offered, not filed
+- **start head:** f6f5144ddb81d14e77a4d8d31853cd04a0cabb38
 
 ---
 

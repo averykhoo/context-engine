@@ -31,3 +31,5 @@ Pin the two site-build claims no test holds, and drop dead sabotage rows (CE-185
 - tests/test_site.py
 
 ## Log
+
+- 2026-11-06a (claude-code/claude-opus-5-5): INV-97 duplicates INV-95: at CE-185's close (031e87a) the coordinator restated the design review's residuals with --residual; the engine skips only an exact repeat of a review residual's text, so a reworded one is filed again. Two things to do: settle INV-97 (the route says an entry is edited only when the code changes, so it was left in place), and have task close refuse or warn on a --residual that rewords one of the review's residuals.
