@@ -699,3 +699,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a G-I2 re-check was judged not worth building for the by-hand path alone (DEC-162)
 - **control:** individual: working.py::Engine.confirm refuses them at the write; by hand, manual-mode § context-engine record confirm
 - **from:** CE-163, session 2026-11-06c
+
+## INV-99: An engine older than CE-195 reads a banner: kept close as a stale banner (G-W1 red)
+
+- **affects:** adopters running mixed engine versions
+- **why not eliminated:** the receipt is new, and old engines cannot know it
+- **control:** individual: RELEASE-NOTES says every machine on the repo needs this engine or later
+- **from:** CE-195, session 2026-11-06f
