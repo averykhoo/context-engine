@@ -271,7 +271,7 @@ back through the digest (FRAMEWORK §3.3).
 | AC-63 | Besides a clean close, a session can be rolled back and closed: what it changed is undone and the session ends | US-13 | planned |
 | AC-64 | Rolling a session back leaves the work of other humans and agents in the same checkout (a shared directory, not a worktree) untouched | US-13 | planned |
 | AC-184 | FRAMEWORK states that a green gate is the whole release decision: a check only a human runs is filed as a board item to automate, never accepted as a residual | US-20 | planned |
-| AC-185 | The framework says when a session closes eagerly and when it stays open for a design conversation, or a fresh session is cheap enough that staying open is never needed | US-21 | planned |
+| AC-185 | Close eagerly has no long-lived-session exception, and a close is cheap: `session close` runs the close housekeeping, writes the ledger entry and replaces the banner only when given one, in one commit, refusing before any write; a close that leaves the banner records `banner: kept <key>`, which G-W1 accepts; orient shows the last close and the last push, so the banner holds durable lines only; and `session start --continues <key>` links the next turn of a conversation to the closed session before it, which orient reads as one thread | US-21, DEC-163 | tested |
 
 ## Criterion write op (CE-42)
 
