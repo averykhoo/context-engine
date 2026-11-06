@@ -7,9 +7,23 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06e · kind: open
+## 2026-11-06e · kind: close
 
-- **opened:** 2026-11-06T17:53:15+08:00 by claude-code/claude-opus-5-5
+- **rows:** US-20, US-21 (new, live); AC-184, AC-185 (planned); CE-193, CE-194 (new, LATER)
+- **receipts:**
+  - guards: lint: clean; gate not run here (records only, code green); audio-workspace gate passed
+    (lint clean)
+  - read: audio-workspace feedback file items 1-2; .scratch/2026-11-06e workflow reports
+- **summary** (the owner digest):
+  - audio-workspace CLAUDE.md now tells sessions to add context-engine feedback (ba31e29d, local;
+    its gate passed; verify PASS).
+  - CE-193 (LATER) picks the feedback up later; its body carries the 10-item digest.
+  - Owner words: US-20 (green gate is enough to ship, a principle; CE-194, AC-184) and US-21
+    (session length; AC-185).
+  - Banner trimmed back under orient's cap.
+- **Still owed:**
+  - owner: push of this repo's records commits and audio-workspace ba31e29d (both local); item 8
+    (model ids in actor strings) still needs a call
 - **start head:** 2e98f1c4736c38c73798e644fc2b0c8b1cbd2452
 
 ---
