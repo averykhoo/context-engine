@@ -4,13 +4,15 @@ id: CE-159
 title: --id takes only a reserved id, or the docs stop saying so; one id reserved twice is caught
 brief: CE-105 residuals (9e7c1d0); ids never collide today, a series can jump
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-06c
+updated: 2026-11-06c
+status: deprecated
+closed: 2026-11-06c
 ---
 
 --id takes only an id this session reserved, or the docs stop saying so; two sessions reserving one id is caught.
@@ -29,3 +31,6 @@ Source: CE-105's close (9e7c1d0), residuals.
 - ops.py::id_reserve
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): closed: merged into CE-156 (DEC-162): the fix is the doc sentence ('any never-used id'), not the code
+  residual risk: none

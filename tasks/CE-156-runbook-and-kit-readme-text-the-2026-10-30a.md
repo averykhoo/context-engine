@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-10-30a
-updated: 2026-10-30a
+updated: 2026-11-06c
 ---
 
 Runbook and kit README text the 2026-10-30a builds left stale.
@@ -37,3 +37,4 @@ Source: residuals in the close commits named per line; both runbooks are kit cop
 ## Log
 
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-4/G-7, exit criterion 1 (DEC-20 by-hand fallback): eight stale runbook lines, kit copies only, no contract touch.
+- 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: keep NEXT, matters most (the runbooks are where every session reads the steps). Takes over CE-159's fix as a doc sentence, not code: cli.py's --id help and manual-mode § context-engine record new step 1 say --id must be a reserved id, while record new, task new and ask new accept any never-used id; the text says 'any never-used id of the series' instead (CE-105, 9e7c1d0). CE-159's other half, a lint for one id reserved by two sessions, is not taken: the ruling fixes the doc, not the code.
