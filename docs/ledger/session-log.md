@@ -7,11 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-06b · kind: open
+## 2026-11-06b · kind: close
 
-- **opened:** 2026-11-06T14:30:49+08:00 by claude-code/claude-opus-5-5
+- **rows:** ASK-26 (answered, DEC-161); CE-182 (commented, open)
+- **receipts:**
+  - guards: 1436 passed; lint: clean
+  - read: orient; CE-182; procedures § Housekeeping; workflow reports .scratch/2026-11-06b
+  - asked: ASK-26
+- **summary** (the owner digest):
+  - ASK-26 answered (DEC-161, owner: delete what we don't need, try to unlock the DLLs).
+  - CE-182: CE-11/CE-167 clones, intervals worktree and both backups binned (+1.14 GB, cap checked);
+    independent verify PASS.
+  - 42 DLL hardlink names stay: mapped by 3 live MCP servers and hawker-bot; free on reboot. Nothing
+    was killed.
+  - Salvage kept in intervals-backup/salvage-2026-11-06b and zanzibar-backup logs/tools: transcribe
+    into those repos, then bin.
+  - Fable advised on the owner review queue: docs/evidence/owner-review-advice-2026-11-06b.md
+    (962b4b3); owner answers pending.
+  - Lesson: the MCP server was stale (refused context.toml), so the CLI carried the session; restart
+    Claude Code.
+- **Still owed:**
+  - owner: one-word answers to the fable advice (top: PROVISIONAL split, DEC-97/107/110/120, CE-56,
+    CE-110)
+  - owner: push (local records commits, unpushed); restart Claude Code; reboot frees the DLL names
 - **start head:** 795704c4c664fb2b7b006ed11f9e137c3eddd483
-- **asked:** ASK-26
 
 ---
 
