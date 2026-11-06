@@ -689,3 +689,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** deleting a tracked file in another repo is that repo's owner's call, not the engine's
 - **control:** individual: orient's Deprecated config section (DEC-160)
 - **from:** CE-185, session 2026-11-06a
+
+## INV-98: a successor story confirmed by hand in the words that confirmed the story it replaces passes lint: record confirm refuses those words only at the write, and G-I2 does not re-check them
+
+- **affects:** the owner, whose confirmations record their words; any session confirming a story by hand
+- **why not eliminated:** a G-I2 re-check was judged not worth building for the by-hand path alone (DEC-162)
+- **control:** individual: working.py::Engine.confirm refuses them at the write; by hand, manual-mode § context-engine record confirm
+- **from:** CE-163, session 2026-11-06c

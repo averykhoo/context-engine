@@ -4,13 +4,15 @@ id: CE-163
 title: Lint re-checks a successor confirmed by hand in a predecessor's words
 brief: 'CE-102 residual (61735ae): a G-I2 check, or a register entry if not built'
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-06c
+updated: 2026-11-06c
+status: deprecated
+closed: 2026-11-06c
 ---
 
 Lint re-checks a successor confirmed by hand in a predecessor's words.
@@ -27,3 +29,6 @@ Source: CE-102's close (61735ae), residual (builder and verifier, 2026-10-31; le
 - working.py::confirmation_words
 
 ## Log
+
+- 2026-11-06c (claude-code/claude-opus-5-5): closed: filed as a register entry instead of a G-I2 check (DEC-162): the task allowed either
+  residual risk: INV-98
