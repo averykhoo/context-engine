@@ -668,3 +668,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the engine's adoption does not set the adopter's EOL config yet
 - **control:** individual: CE-184; rerunning zanzibar's gate restores coverage
 - **from:** CE-167, session 2026-11-04a
+
+## INV-95: an adopter's stored index.md goes stale until someone acts on orient's notice
+
+- **affects:** every adopting repo (its context.toml sets `decision_index` and it holds a stored index), the owner and anyone reading the records on GitHub without the CLI, the next session (the `hk_regen_index` tool and the stored index are gone)
+- **why not eliminated:** deleting a tracked file in another repo is that repo's owner's call, not the engine's
+- **control:** individual: orient's `Deprecated config` section (DEC-160)
+- **from:** CE-185, session 2026-11-06a
+
+## INV-96: the published site is only as current as the last deploy, and a failed deploy shows only in GitHub Actions
+
+- **affects:** every adopting repo (its context.toml sets `decision_index` and it holds a stored index), the owner and anyone reading the records on GitHub without the CLI, the next session (the `hk_regen_index` tool and the stored index are gone)
+- **why not eliminated:** GitHub runs the deploy, outside the gate
+- **control:** collective: the CI watcher every push gets (procedures § Push and CI)
+- **from:** CE-185, session 2026-11-06a
+
+## INV-97: an adopter's stored decision index.md goes stale until someone acts on orient's Deprecated config notice
+
+- **affects:** every adopting repo that sets decision_index
+- **why not eliminated:** deleting a tracked file in another repo is that repo's owner's call, not the engine's
+- **control:** individual: orient's Deprecated config section (DEC-160)
+- **from:** CE-185, session 2026-11-06a

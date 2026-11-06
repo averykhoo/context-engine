@@ -4,7 +4,7 @@ id: CE-185
 title: Publish the records as a GitHub Pages site built by CI; remove the stored decision index
 brief: US-19; engine read op, not a CI script; gate.yml untouched; nothing stored
 pri: NEXT
-state: open
+state: closed
 deps: []
 goals: [G-5]
 source: session 2026-11-06a
@@ -12,6 +12,8 @@ created: 2026-11-06
 moved: 2026-11-06a
 updated: 2026-11-06a
 review: [shipped, guard]
+status: deprecated
+closed: 2026-11-06a
 ---
 
 Publish the records as a GitHub Pages site built by CI, and remove the stored decision index (US-19).
@@ -40,6 +42,9 @@ Why: the index was carried over from the v0.4 single-file log (audio-workspace d
 - tests/test_ci.py
 
 ## Log
+
+- 2026-11-06a (claude-code/claude-opus-5-5): closed: Records site live on GitHub Pages; stored decision index removed
+  residual risk: INV-95, INV-96, INV-97
 
 ## Design review
 

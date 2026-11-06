@@ -1,0 +1,33 @@
+---
+type: Task
+id: CE-186
+title: Pin the site's group order and body escaping with tests; drop dead sabotage rows
+brief: CE-185 verifier nits; each new test sabotaged
+pri: LATER
+state: open
+deps: []
+goals: [G-2]
+source: session 2026-11-06a
+created: 2026-11-06
+moved: 2026-11-06a
+updated: 2026-11-06a
+---
+
+Pin the two site-build claims no test holds, and drop dead sabotage rows (CE-185 verifier nits, 2026-11-06a).
+
+- Enum order of the decisions listing on the site is unpinned: with `statuses=()` passed to decisions.py::groups in site.py::Site.decisions_page, groups sort alphabetically and every test still passes; tests/test_site.py's fixture has no REJECTED decision. Add one and assert enum order; sabotage it.
+- DEC-159's "bodies are escaped" is unpinned: dropping esc() from the text between links in site.py::Site.link leaves tests green, because no fixture body holds `<` or `&`. The site is public, so an unescaped body is markup injected into the page. Add a body with `<script>` and `&` and assert it is escaped; sabotage it.
+- tools/sabotage_ce55.py still patches the removed `reindex` method in working.py and stops there; drop the row as sabotage_ce5.py did.
+- CE-170's nit about working.py::Engine._hk_reindex is moot (the method is gone with CE-185): prune it from CE-170.
+
+## Traps
+
+- none yet
+
+## Read first
+
+- site.py::Site.decisions_page
+- site.py::Site.link
+- tests/test_site.py
+
+## Log
