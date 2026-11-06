@@ -3,23 +3,24 @@
 LIVING. Orientation note (FRAMEWORK §5.1). Replaced at every clean close; no session history here (that
 is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-06a)
+## Banner (2026-11-06b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **NOW is CE-164 (coverage op), the agent's pick on the owner's delegation (DEC-158, 2026-11-05a; rerank NEXT 1).**
-  NEXT: CE-18, CE-156, CE-161. Open owner asks: ASK-26 (CE-11 clones and backup); a HOLD tier for this repo and a louder
-  close when NOW is empty (both asked in chat, not filed). ASK-36 closed: leave zanzibar's token rules and tag push (DEC-157).
+  NEXT: CE-18, CE-156, CE-161. No filed owner asks (ASK-26 answered 2026-11-06b: DEC-161). A HOLD tier and a louder
+  close when NOW is empty: asked in chat, not filed; fable advises filing both. ASK-36 closed (DEC-157).
 - **CE-185 closed (2026-11-06a, US-19):** records are published at https://averykhoo.github.io/context-engine/ by
   `.github/workflows/pages.yml` calling the new read op `site build` (DEC-159); the stored `docs/decisions/index.md`, its
   regeneration and `hk_regen_index` are gone, and `decision index` only prints. Adopters' `decision_index` key still loads and
   orient names the remedy (DEC-160). Pages was turned on through the API (build_type workflow). Follow-up CE-186 (LATER): two
-  unpinned site claims, and INV-97 duplicates INV-95. **Restart Claude Code:** the MCP server still lists `hk_regen_index`.
+  unpinned site claims, and INV-97 duplicates INV-95. **Restart Claude Code:** the MCP server runs stale code (refuses `context.toml`).
 - **Decision lifecycle findings (2026-11-05a, chat, not filed):** PROVISIONAL means both owner words and agent calls awaiting
   review, with no path to promote or age them; no check finds two decisions that conflict; one-off permissions could take a lighter shape.
 - **Engine findings from the cutovers:** CE-171..CE-175 (intervals), CE-176, CE-177..CE-181, CE-183, CE-184 (zanzibar); CE-177
-  has its design (DEC-155); all LATER. CE-182: clones binned, 21 locked DLLs, backup kept.
-- **Owner to review:** agent calls DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves; DEC-133, DEC-148, DEC-149,
+  has its design (DEC-155); all LATER. CE-182: clones, both backups binned; 42 DLL names wait on a reboot; salvage kept.
+- **Owner to review** (fable advice, one word per item: `docs/evidence/owner-review-advice-2026-11-06b.md`): agent calls
+  DEC-86..DEC-130 PROVISIONAL from the 2026-10-30a build waves; DEC-133, DEC-148, DEC-149,
   DEC-159, DEC-160 PROVISIONAL; residual follow-ups CE-150..CE-166; register INV-84..INV-90, INV-95..INV-97.
 - **Owner-held, not done:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close), CE-40, CE-47, CE-56 (rename
   half), CE-132 (contract bump), CE-166 (adhoc), CE-28. intervals' own records 2 commits ahead of its origin (push is the owner's).
