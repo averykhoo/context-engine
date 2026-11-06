@@ -4,13 +4,16 @@ id: ASK-26
 title: Delete the CE-11 rehearsal clones, and when the intervals backup?
 brief: 'Recommend: copy live/ logs to the backup, bin rehearsals after merge, keep backup until CI green'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-02a
 created: 2026-11-02
 moved: 2026-11-02a
-updated: 2026-11-02a
-last_asked: 2026-11-02a
+updated: 2026-11-06b
+last_asked: 2026-11-06b
+status: deprecated
+closed: 2026-11-06b
+answered: {on: 2026-11-06, session: 2026-11-06b, decision: DEC-161}
 ---
 
 ## Context
@@ -32,3 +35,7 @@ copied into the backup.
 
 The first: the rehearsal clones are reproducible from the scripts, the live logs are evidence, and
 the backup is the only undo until the merge is pushed.
+
+## Log
+
+- 2026-11-06b (claude-code/claude-opus-5-5): answered by the owner: DEC-161
