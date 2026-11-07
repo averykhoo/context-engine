@@ -1830,8 +1830,10 @@ cite for each item.
 
 - One per item or investigation, dated, with its liveness declared near the top (G-D4). While
   ACTIVE-PLAN it names its board item there, and dated corrections are added at the top.
-  It freezes when the item closes: a FROZEN line with the date goes above the old declaration
-  (`doc.freeze` writes `FROZEN <date> (session <key>): <why>`), before the item's close.
+  It freezes when the item closes: a FROZEN line with the date goes above the old declaration,
+  or, in a doc that declares none, after its title, else first after its frontmatter, else as
+  its first line (`doc.freeze` writes `FROZEN <date> (session <key>): <why>`), before the item's
+  close.
 - The task row is the index and the doc is the body: `show <id>` alone must be enough to
   resume.
 - A TODO the author left in a frozen doc marks a known gap; it is not an instruction to whoever
@@ -2067,7 +2069,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
-| Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line (§6.7, §7.2); `doc.archive(path, to, why, lines)`: a whole doc or file into an archive directory with its redirect row, or the lines named pruned into it (§7.3) |
+| Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line, or, in a doc that declares none, after its title, else first after its frontmatter, else as its first line (§6.7, §7.2); `doc.archive(path, to, why, lines)`: a whole doc or file into an archive directory with its redirect row, or the lines named pruned into it (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |

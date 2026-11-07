@@ -42,6 +42,10 @@ component, procedure and guard.
   whose `path` is `docs/runbooks/fan-out.md`, raise a `max_lines = 90` copied from an older
   `context.toml.template` to 110, as the template has it: G-D1 fails the replaced runbook until
   then (§5.3, §8.3 G-D1, §8.4 G-W4) — DEC-102, DEC-103, DEC-86, CE-44, CE-107.
+- **`doc freeze` writes the FROZEN line into a doc that declares no liveness** instead of
+  refusing: after its title, else first after its frontmatter, else as its first line; it refuses,
+  writing nothing, only when that line would fall outside G-D4's window. FRAMEWORK §7.2; DEC-200,
+  DEC-201, DEC-202, CE-172.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

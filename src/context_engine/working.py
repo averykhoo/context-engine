@@ -2980,10 +2980,12 @@ class Engine:
 
     def doc_freeze(self, path: str, note: str = "", *, session: str, actor: str) -> str:
         """FRAMEWORK §6.7 and §7.2: put `FROZEN <date> (session <key>): <note>` above the doc's
-        liveness declaration, so G-D4 reads it as FROZEN; nothing else in it changes. Refused
-        for a doc with no declaration in G-D4's window, one already FROZEN, one declared by a
-        frontmatter `liveness:` key, and one `[guards] liveness_given` declares (its opening
-        lines are not this repo's to edit)."""
+        liveness declaration, so G-D4 reads it as FROZEN; nothing else in it changes. A doc with
+        no declaration in G-D4's window takes the line where `archive.opening` puts it (after its
+        title, else first after its frontmatter, else as its first line, CE-172), and is refused,
+        written nothing, if G-D4 would not then read it there. Refused for a doc already FROZEN,
+        one declared by a frontmatter `liveness:` key, and one `[guards] liveness_given` declares
+        (its opening lines are not this repo's to edit)."""
         self._check(session, actor)
         rel, p = self._doc(path)
         g = self.store.config.guards
@@ -2997,8 +2999,15 @@ class Engine:
             own = G.declared(flat, g.liveness_lines)
             if own.problem:
                 raise Refusal(f"{rel}: {own.problem}", "fix the declaration by hand first (G-D4)")
-            if own.word is None:
-                raise Refusal(f"{rel} declares no liveness in its first {g.liveness_lines} lines, so there is no declaration to freeze above", f"write `FROZEN {today} (session {session}): <why>` as a line of its own near the top by hand (manual-mode.md § context-engine doc freeze)")
+            if own.word is None:  # CE-172 (DEC-200..202): write the declaration, where G-D4 will read it
+                at, where = A.opening(text)
+                new = A.freeze(text, at, A.frozen_line(today, session, note.strip() or "below, the doc as it stood"))
+                got = G.declared(new.replace("\r\n", "\n"), g.liveness_lines)
+                if (got.word, got.line) != ("FROZEN", at):
+                    raise Refusal(f"{rel} declares no liveness in its first {g.liveness_lines} lines, and a FROZEN line at line {at} would fall outside them", f"write `FROZEN {today} (session {session}): <why>` by hand within the first {g.liveness_lines} lines (manual-mode.md § context-engine doc freeze), or raise [guards] liveness_lines")
+                self.store.write_text(p, new)
+                self.store.log("doc.freeze", rel, p, session, actor, ["liveness"])
+                return f"{rel}: FROZEN {today} written on line {at}, {where}; it declared no liveness before, so G-D4 now reads it as FROZEN"
             if own.word == "FROZEN":
                 raise Refusal(f"{rel} is already FROZEN (line {own.line})", "nothing to do: a frozen doc is never edited (FRAMEWORK §7.2)")
             if G.FM_LIVENESS_RE.match(flat.lstrip("\ufeff").split("\n")[own.line - 1]) and flat.lstrip("\ufeff").startswith("---"):

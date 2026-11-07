@@ -1483,8 +1483,12 @@ closed item keeps its file (FRAMEWORK §6.7).
    emphasis, by LIVING, ACTIVE-PLAN or FROZEN, or by `ARCHIVED <date>`; or a frontmatter
    `liveness:` key. Stop if it is already FROZEN: nothing to do. Stop if `[guards]
    liveness_given` names the doc: its opening lines are not this repo's to edit. If it declares
-   nothing, write the FROZEN line below as its own block near the top. If the declaration is a
-   frontmatter key, set it to `FROZEN` and say when and why in the body.
+   nothing, "that line" below is the line after its title, when the first non-blank line after
+   any frontmatter is a `# ` title (past the blank line that follows the title, when a line
+   follows that blank); else the line first after the frontmatter; else its first line. Stop if
+   the FROZEN line would then fall outside the first `liveness_lines` lines, where G-D4 does not
+   read it (the engine refuses): put it within them instead, or raise `[guards] liveness_lines`.
+   If the declaration is a frontmatter key, set it to `FROZEN` and say when and why in the body.
 2. Right above that line, insert `FROZEN <today, YYYY-MM-DD> (session <key>): <why>` and one
    blank line, in the doc's own line endings; wrap the FROZEN line at 100 characters. With no
    `--note`, the why of an ACTIVE-PLAN doc that names board items is `<their ids> closed; below,

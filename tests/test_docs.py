@@ -93,18 +93,57 @@ def test_freeze_writes_the_frozen_line_g_d4_reads_above_the_plan_and_changes_not
     assert f"\n\nFROZEN {dt.date.today().isoformat()} (session {KEY}): the trial ended\n\nACTIVE-PLAN" in (tmp_path / "docs/c.md").read_text(encoding="utf-8")  # the CLI's clock is real
 
 
+S = f"FROZEN 2026-10-08 (session {KEY}): below, the doc as it stood"
+
+
+@pytest.mark.criterion("AC-81")
+@pytest.mark.parametrize("before, after, line, where", [
+    ("# Decisions\n\nSome log.\n", f"# Decisions\n\n{S}\n\nSome log.\n", 3, "after its title"),
+    ("﻿# D\r\n\r\nlog\r\n", f"﻿# D\r\n\r\n{S}\r\n\r\nlog\r\n", 3, "after its title"),  # a BOM and CRLF stay
+    ("# D\nlog\n", f"# D\n{S}\n\nlog\n", 2, "after its title"),
+    ("Some notes.\nMore.\n", f"{S}\n\nSome notes.\nMore.\n", 1, "as its first line"),
+    ("---\ntype: Log\n---\n# D\n\nlog\n", f"---\ntype: Log\n---\n# D\n\n{S}\n\nlog\n", 6, "after its title"),
+    ("---\ntype: Log\n---\nlog\n", f"---\ntype: Log\n---\n{S}\n\nlog\n", 4, "first after its frontmatter"),
+    ("# D", f"# D\n{S}\n\n", 2, "after its title"),  # no final newline
+    ("", f"{S}\n\n", 1, "as its first line"),
+    ("## Part\n\ntext\n", f"{S}\n\n## Part\n\ntext\n", 1, "as its first line"),  # an H2 is not a title
+    ("# D\n\n" + "x\n" * 12 + "LIVING.\n", f"# D\n\n{S}\n\n" + "x\n" * 12 + "LIVING.\n", 3, "after its title"),  # below the window
+], ids=["title", "bom-crlf", "title-no-blank", "prose", "fm-title", "fm", "no-newline", "empty", "h2", "late-living"])
+def test_freeze_writes_the_frozen_line_into_a_doc_that_declares_no_liveness(tmp_path, before, after, line, where):
+    """CE-172: a doc with no declaration in G-D4's window takes the FROZEN line where
+    archive.opening puts it, and G-D4 then reads it there."""
+    e = target(tmp_path)
+    write(tmp_path, "docs/log.md", before)
+    assert G.declared(before.replace("\r\n", "\n"), 10).word is None
+    out = e.doc_freeze("docs/log.md", **W)
+    assert out == f"docs/log.md: FROZEN 2026-10-08 written on line {line}, {where}; it declared no liveness before, so G-D4 now reads it as FROZEN"
+    text = (tmp_path / "docs/log.md").read_bytes().decode("utf-8")
+    assert text == after
+    assert dataclasses.astuple(G.declared(text.replace("\r\n", "\n"), 10)) == ("FROZEN", line, "")
+    assert oplines(tmp_path)[-1] | {"at": None} == {"at": None, "session": KEY, "actor": ACTOR, "op": "doc.freeze", "id": "docs/log.md", "path": "docs/log.md", "fields": ["liveness"], "mechanical": False}
+    assert reds(e) == []
+
+
+def test_the_cli_freezes_a_doc_that_declares_no_liveness(tmp_path):
+    e = target(tmp_path)
+    write(tmp_path, "docs/n.md", "# N\n\nAn imported log.\n")
+    assert main(["--root", str(tmp_path), "--actor", ACTOR, "--session", KEY, "doc", "freeze", "docs/n.md", "--note", "imported log"]) == 0
+    assert (tmp_path / "docs/n.md").read_text(encoding="utf-8") == f"# N\n\nFROZEN {dt.date.today().isoformat()} (session {KEY}): imported log\n\nAn imported log.\n"  # the CLI's clock is real
+    assert reds(e) == []
+
+
 @pytest.mark.criterion("AC-81")
 def test_freeze_refuses_what_it_cannot_freeze_and_writes_nothing(tmp_path):
     e = target(tmp_path, {**DOCS, "guards": {**DOCS["guards"], "liveness_given": {"docs/given.md": "LIVING"}}})
     t = e.new("task", "build it", **W)
     write(tmp_path, "docs/frozen.md", "# F\n\nFROZEN 2026-10-01. As measured.\n")
-    write(tmp_path, "docs/none.md", "# N\n\nNo declaration here.\n")
+    write(tmp_path, "docs/deep.md", "---\n" + "k: v\n" * 10 + "---\n# D\n\nlog\n")  # its line would land on 15
     write(tmp_path, "docs/fm.md", "---\ntype: Runbook\nliveness: LIVING\n---\n\n# R\n")
     write(tmp_path, "docs/given.md", "# G\n\nKept by another tool.\n")
     write(tmp_path, "docs/notes.txt", "LIVING.\n")
     cases = {
         "docs/frozen.md": "docs/frozen.md is already FROZEN (line 3)",
-        "docs/none.md": "docs/none.md declares no liveness in its first 10 lines",
+        "docs/deep.md": "docs/deep.md declares no liveness in its first 10 lines, and a FROZEN line at line",
         "docs/fm.md": "docs/fm.md declares LIVING in its frontmatter",
         "docs/given.md": "docs/given.md's liveness is given in config",
         "docs/notes.txt": "docs/notes.txt is not a markdown doc",

@@ -2,7 +2,8 @@
 
 ``doc freeze`` puts a FROZEN line with the date above a doc's liveness declaration (G-D4's
 reading, ``guards.declared``), so the topmost declaration, the one G-D4 counts, is FROZEN and the
-old one stays below it as history. ``doc archive`` moves a whole doc into an archive directory
+old one stays below it as history; in a doc that declares none, where ``opening`` says: after its
+title, else first after its frontmatter, else as its first line (CE-172). ``doc archive`` moves a whole doc into an archive directory
 unrepaired, opening it with ``ARCHIVED <date>`` (first after its frontmatter, whose `liveness:`
 key, if it has one, becomes FROZEN), and adds a row to that directory's one redirect table, its
 ``README.md``; material that is not markdown moves byte for byte. ``doc archive --lines`` prunes
@@ -49,13 +50,38 @@ def freeze(text: str, line: int, stamp: str) -> str:
     """``text`` with ``stamp`` (wrapped at ``WRAP``) and a blank line inserted above its line
     ``line``, counted from 1 after any BOM, as ``guards.declared`` counts. The stamp opens a block
     where the declaration did (after a blank line, a heading, the frontmatter, or at the top), and
-    the declaration, now after a blank line, still opens one: the topmost, FROZEN, counts."""
+    the declaration, now after a blank line, still opens one: the topmost, FROZEN, counts. A
+    ``line`` one past a last line with no final newline gives that line the doc's ending first."""
     bom = "\ufeff" if text.startswith("\ufeff") else ""
     lines = _lines(text[len(bom):])
     at = line - 1
+    if at == len(lines) and not lines[-1].endswith("\n"):  # one past a last line with no newline
+        lines[-1] += _ending(lines[0])
+        lines.append("")
     nl = _ending(lines[at]) if lines[at].endswith("\n") else _ending(lines[at - 1]) if at else "\n"
     block = nl.join(textwrap.wrap(stamp, WRAP, break_long_words=False, break_on_hyphens=False)) + nl + nl
     return bom + "".join(lines[:at]) + block + "".join(lines[at:])
+
+
+def opening(text: str) -> tuple[int, str]:
+    """Where ``doc freeze`` puts the FROZEN line in a doc that declares no liveness (CE-172): its
+    line, counted from 1 after any BOM, and how the reply says it. After an ATX H1 that is the
+    first non-blank line below any frontmatter, past the blank line that follows the H1 when a line
+    follows that; else first after the frontmatter; else the doc's first line. Never a new
+    frontmatter key: that would edit YAML. The caller re-reads the result with G-D4's reading."""
+    flat = text.lstrip("﻿").replace("\r\n", "\n").split("\n")
+    end = frontmatter(text)
+    i = end + 1 if end is not None else 0
+    while i < len(flat) and not flat[i].strip():
+        i += 1
+    if i < len(flat) and (m := G.HEADING_RE.match(flat[i])) and m.group(1) == "#":
+        at = i + 1
+        if at + 1 < len(flat) and not flat[at].strip():
+            at += 1
+        return at + 1, "after its title"
+    if end is not None:
+        return end + 2, "first after its frontmatter"
+    return 1, "as its first line"
 
 
 def frontmatter(text: str) -> int | None:

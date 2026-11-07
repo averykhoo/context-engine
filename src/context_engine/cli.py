@@ -321,7 +321,7 @@ def build() -> argparse.ArgumentParser:
     wy.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
 
     dd = _sub(groups, "doc", "freeze or archive a hand-written doc (FRAMEWORK §6.7, §7.3)").add_subparsers(dest="op", required=True)
-    df_ = _sub(dd, "freeze", "write a FROZEN line with the date above the doc's liveness line (G-D4 then reads it as FROZEN)")
+    df_ = _sub(dd, "freeze", "write a FROZEN line with the date above the doc's liveness line, or, in a doc that declares none, after its title, else first after its frontmatter, else as its first line (G-D4 then reads it as FROZEN)")
     df_.add_argument("path", help="the doc, relative to the root")
     df_.add_argument("--note", default="", help="why it is frozen (default: the board items it names closed)")
     da = _sub(dd, "archive", "move a committed doc (or other file) into an archive directory, unrepaired, ARCHIVED <date> first, with a row in that directory's redirect table; or prune some of its lines there")

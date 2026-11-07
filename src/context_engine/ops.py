@@ -501,7 +501,7 @@ def gate_status(e: Engine, c: Caller, require: str = "") -> tuple[int, str]:
 
 @op(write=True)
 def doc_freeze(e: Engine, c: Caller, path: str, note: str = "") -> tuple[int, str]:
-    """Freeze a doc (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): write `FROZEN <date> (session <key>): <note>` above its liveness line, so G-D4 reads it as FROZEN; nothing else changes. Do it before `task_close` of the last open item the plan names, which refuses until then. `note` says why (default: the items it names closed)."""
+    """Freeze a doc (FRAMEWORK §6.7: an ACTIVE-PLAN doc freezes when its item closes): write `FROZEN <date> (session <key>): <note>` above its liveness line, so G-D4 reads it as FROZEN; nothing else changes. A doc that declares no liveness takes the line after its title, else first after its frontmatter, else as its first line (refused, writing nothing, if that falls outside G-D4's window). Do it before `task_close` of the last open item the plan names, which refuses until then. `note` says why (default: the items it names closed)."""
     return 0, e.doc_freeze(path, note, **c.kw)
 
 
