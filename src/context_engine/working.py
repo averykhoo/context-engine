@@ -1134,10 +1134,13 @@ class Engine:
         names no board kinds (`_board` would refuse, and `session_close` calls this after it has
         written), there is no NOW cap, NOW is at or over its cap, or nothing is open. Shared by
         `_now_left` (which op emptied NOW) and `session_close` (the board as the close leaves it),
-        so the two cannot drift."""
+        so the two cannot drift. Both call it after they have written, so it never refuses: a
+        board record that does not parse (a hand edit in progress, legal under G-5) is passed
+        over, as lint's G-W5 passes over it (``Store.skipping_unreadable``)."""
         if "G-W5" in self.store.config.guards.off or not self.w.board:
             return ""
-        open_ = self._open_board()
+        with self.store.skipping_unreadable():  # after the write: a refusal here would refuse a done op (CE-191 verifier r2, D2)
+            open_ = self._open_board()
         cap = self.w.caps.get("NOW")
         if cap is None or sum(r.doc.get("pri") == "NOW" for r in open_) >= cap:
             return ""

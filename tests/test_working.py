@@ -975,6 +975,42 @@ def test_a_session_close_in_a_repo_with_no_board_kinds_closes_and_says_nothing_o
 
 
 @pytest.mark.criterion("AC-186")
+def test_a_session_close_passes_over_a_board_record_that_does_not_parse(tmp_path):
+    """CE-191 fix round 2: `_now_refill` reads the board after the entry is written, and a board
+    record that does not parse (a hand edit in progress, legal under G-5) would refuse there,
+    with the entry already on disk. It is passed over, as lint's G-W5 passes over it: the close
+    returns, quiet while NOW holds its item, and warning with lint's G-W5 text when it does not."""
+    def unparse(rec):
+        rec.path.write_bytes(rec.path.read_bytes().replace(b"\n---\n", b"\n", 1))  # drop the closing fence
+        with pytest.raises(Refusal, match="does not parse"):
+            list(e.board_heads())
+
+    e = _engine(tmp_path / "a", copy.deepcopy(CONFIG))
+    key = started(e)
+    task(e, key, "Now", pri="NOW")
+    unparse(task(e, key, "Later"))
+    out = e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts(), housekeeping=False)
+    assert out == _closed(key), out
+    assert e.read_ledger().get(key).kind == "close"
+
+    e = _engine(tmp_path / "b", copy.deepcopy(CONFIG))
+    key = started(e)
+    task(e, key, "Later")
+    unparse(task(e, key, "Broken", pri="NOW"))
+    out = e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts(), housekeeping=False)
+    short = "NOW holds 0 (none); the cap is exactly 1"
+    assert out.endswith(f"{WARN}{short}; ask the owner which item to `task promote <id> NOW` (NEXT is empty; `task list` shows the rest){DIGEST}"), out
+    assert [f.message for f in guards(e, "G-W5")] == [short]  # lint's G-W5 passes over it the same way
+    assert e.read_ledger().get(key).kind == "close"
+
+    e = _engine(tmp_path / "c", copy.deepcopy(CONFIG))  # `_now_left` shares the read: a `close` that empties NOW returns too (CE-36)
+    key = started(e)
+    now = task(e, key, "Now", pri="NOW")
+    unparse(task(e, key, "Later"))
+    assert e.close(now.id, "done", **kw(key)) == f"{now.id}: closed (done)"
+
+
+@pytest.mark.criterion("AC-186")
 def test_cli_session_close_with_an_empty_now_exits_zero_and_prints_the_warning(eng, capsys):
     key = started(eng)
     nxt = task(eng, key, "Next", pri="NEXT")
