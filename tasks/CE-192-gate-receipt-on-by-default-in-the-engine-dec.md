@@ -3,14 +3,14 @@ type: Task
 id: CE-192
 title: gate_receipt on by default in the engine (DEC-162 amends DEC-107)
 brief: 'DEC-162: supersede DEC-107 when built; release note for repos whose gate prints no pass count'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 gate_receipt on by default in the engine (DEC-162 amends DEC-107).
