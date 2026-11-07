@@ -1661,3 +1661,4 @@
 {"at": "2026-11-07T21:15:21+08:00", "session": "2026-11-07d", "actor": "claude-code/claude-opus-5-5", "op": "link", "id": "DEC-178", "path": "docs/decisions/DEC-178-ce-191-session-close-warns-of-an-empty-now-on.md", "fields": ["tasks"], "mechanical": false}
 {"at": "2026-11-07T21:19:08+08:00", "session": "2026-11-07d", "actor": "claude-code/claude-sonnet-5-5", "op": "criterion.new", "id": "AC-186", "path": "docs/criteria.md", "fields": ["row"], "mechanical": false}
 {"at": "2026-11-07T21:30:27+08:00", "session": "2026-11-07d", "actor": "claude-code/claude-sonnet-5-5", "op": "criterion.set", "id": "AC-186", "path": "docs/criteria.md", "fields": ["status"], "mechanical": false}
+{"at": "2026-11-07T21:50:59+08:00", "session": "2026-11-07d", "actor": "claude-code/claude-sonnet-5-5", "op": "criterion.set", "id": "AC-186", "path": "docs/criteria.md", "fields": ["criterion"], "mechanical": false}

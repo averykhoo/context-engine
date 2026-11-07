@@ -1130,10 +1130,12 @@ class Engine:
 
     def _now_refill(self) -> str:
         """G-W5's message and remedy for a NOW below its cap while items stay open, without the
-        leading "; ", or "" when there is nothing to say (CE-36, CE-191): G-W5 is off, there is no
-        NOW cap, NOW is at or over its cap, or nothing is open. Shared by `_now_left` (which op
-        emptied NOW) and `session_close` (the board as the close leaves it), so the two cannot drift."""
-        if "G-W5" in self.store.config.guards.off:
+        leading "; ", or "" when there is nothing to say (CE-36, CE-191): G-W5 is off, [working]
+        names no board kinds (`_board` would refuse, and `session_close` calls this after it has
+        written), there is no NOW cap, NOW is at or over its cap, or nothing is open. Shared by
+        `_now_left` (which op emptied NOW) and `session_close` (the board as the close leaves it),
+        so the two cannot drift."""
+        if "G-W5" in self.store.config.guards.off or not self.w.board:
             return ""
         open_ = self._open_board()
         cap = self.w.caps.get("NOW")

@@ -961,6 +961,20 @@ def test_a_session_close_with_an_empty_now_is_refused_for_the_same_reasons_as_ev
 
 
 @pytest.mark.criterion("AC-186")
+def test_a_session_close_in_a_repo_with_no_board_kinds_closes_and_says_nothing_of_g_w5(tmp_path):
+    """CE-191 fix round 1: `_now_refill` reads the board, which refuses when [working] names no board
+    kinds, and `session_close` asks it after the entry is written: the close must stay quiet, not
+    refuse with the entry already on disk."""
+    cfg = copy.deepcopy(CONFIG)
+    del cfg["working"]["board"]
+    e = _engine(tmp_path, cfg)
+    key = started(e)
+    out = e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts(), housekeeping=False)
+    assert out == _closed(key), out
+    assert e.read_ledger().get(key).kind == "close"
+
+
+@pytest.mark.criterion("AC-186")
 def test_cli_session_close_with_an_empty_now_exits_zero_and_prints_the_warning(eng, capsys):
     key = started(eng)
     nxt = task(eng, key, "Next", pri="NEXT")
