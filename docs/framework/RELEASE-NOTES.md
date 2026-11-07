@@ -31,6 +31,17 @@ component, procedure and guard.
   commit` is described as it works since CE-125 (this session's lines, and another's only where
   they name a file the commit carries); a close's follow-up session starts with `session start
   --follows <key>` (CE-132). Copy the new contract and bootloader block in (kit README § 4).
+- **Two upgrade steps the 0.5 notes left out** (from a pin before 2026-10-30). An open
+  question's body is checked for its three parts: its context, two or more options, and a
+  recommendation with its reason, or `none` naming which exemption applies (too costly to reach,
+  or it needs human judgement). The old `ask new` template's `none cheap: <why>` names neither,
+  so G-W4 fails a question that kept it, and any open question recorded without the three parts.
+  The Fan-out runbook (`docs/runbooks/fan-out.md`) is past 90 lines, and the template's Fan-out
+  route caps it at `max_lines = 110`. **Upgrade:** add what each open question lacks to its body
+  before the first lint under this engine (kit README § 3 step 4); and in the `[[routes]]` entry
+  whose `path` is `docs/runbooks/fan-out.md`, raise a `max_lines = 90` copied from an older
+  `context.toml.template` to 110, as the template has it: G-D1 fails the replaced runbook until
+  then (§5.3, §8.3 G-D1, §8.4 G-W4) — DEC-102, DEC-103, DEC-86, CE-44, CE-107.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

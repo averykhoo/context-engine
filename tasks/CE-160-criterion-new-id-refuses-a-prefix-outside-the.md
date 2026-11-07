@@ -3,7 +3,7 @@ type: Task
 id: CE-160
 title: criterion new --id refuses a prefix outside the rows' series
 brief: CE-42 residual (f85e632); a foreign prefix blocks every later criterion new
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-2]

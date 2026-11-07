@@ -3,14 +3,14 @@ type: Task
 id: CE-157
 title: 'Release notes: upgrade lines for three-part owner questions and the raised Fan-out cap'
 brief: CE-44 (3371106) and CE-107 (8c30e8a) residuals; adopters go red on upgrade otherwise
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Release notes: upgrade lines for the three-part owner questions and the raised Fan-out cap.
