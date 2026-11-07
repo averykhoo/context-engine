@@ -818,3 +818,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** needs every row deleted, a rare state, and the remedy (a foreign prefix) is the CE-42 failure it narrows
 - **control:** individual: criterion new without --id still derives the prefix from rows, and lint flags mixed series
 - **from:** CE-160, session 2026-11-07e
+
+## INV-116: CE-157 release-notes wording is slightly loose: 'from a pin before 2026-10-30' omits that CE-44 (10f8717) and CE-107 (55c47ec) both landed late on 2026-10-30, so an earlier-that-day pin is also affected; and 'kit README section 3 step 4' is the import step, the upgrade procedure is section 4 (the task text cited section 3 step 4)
+
+- **affects:** adopters upgrading from a pin taken on 2026-10-30
+- **why not eliminated:** a wording nit in release notes, adopters pinning mid-day 2026-10-30 are the only ones misled
+- **control:** individual: fix the lines at the 0.6 release edit; the notes are reviewed by the owner at release
+- **from:** CE-157, session 2026-11-07e
