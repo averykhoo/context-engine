@@ -1119,3 +1119,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** agent calls stay PROVISIONAL until owner accepts
 - **control:** individual: context-engine decision accept after owner review
 - **from:** CE-189, session 2026-11-07e
+
+## INV-159: the session close refusal remedy text (fit gate_receipt to the result line, or '') is not pinned by any test; the test asserts only 'pass count' and 'gate_receipt', which the old remedy also contained
+
+- **affects:** engine maintainers
+- **why not eliminated:** low-value text pin, the behaviour itself is tested
+- **control:** reduce: none yet; pin the new remedy wording in tests/test_working.py
+- **from:** CE-192, session 2026-11-07e
+
+## INV-160: the tests/test_kit.py parity assert checks only the C.Working() dataclass default; the load path for an absent gate_receipt key is guarded only by the AC-125 test (sabotage: absent key read as '' in config.py::from_dict turned AC-125 red and left test_kit green)
+
+- **affects:** engine maintainers
+- **why not eliminated:** one guard covers it, but only indirectly
+- **control:** reduce: AC-125 test
+- **from:** CE-192, session 2026-11-07e
+
+## INV-161: decision commits b33560d..7dfd1ba precede code commit 261e538, so DEC-223 cites config.py::GATE_RECEIPT before it exists in history
+
+- **affects:** readers bisecting history
+- **why not eliminated:** lint is not affected (decisions are not in [guards] links, G-D3); history order only
+- **control:** individual: G-D3
+- **from:** CE-192, session 2026-11-07e
+
+## INV-162: ops.py::session_close (the MCP docstring) does not describe the guards receipt rule; true before CE-192 as well
+
+- **affects:** MCP tool users
+- **why not eliminated:** doc gap in tool help, not behaviour
+- **control:** reduce: none
+- **from:** CE-192, session 2026-11-07e
+
+## INV-163: the default gate_receipt takes effect on upgrade in adhoc (CE-166), which is outside this repo and needs an adhoc session
+
+- **affects:** adhoc repo sessions
+- **why not eliminated:** intended effect, but not verifiable from here
+- **control:** individual: CE-166
+- **from:** CE-192, session 2026-11-07e

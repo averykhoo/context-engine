@@ -4,13 +4,15 @@ id: CE-192
 title: gate_receipt on by default in the engine (DEC-162 amends DEC-107)
 brief: 'DEC-162: supersede DEC-107 when built; release note for repos whose gate prints no pass count'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-11-06c
 created: 2026-11-06
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 gate_receipt on by default in the engine (DEC-162 amends DEC-107).
@@ -31,3 +33,5 @@ Scope: the engine default for `[working] gate_receipt` becomes the kit value; a 
 ## Log
 
 - 2026-11-06c (claude-code/claude-opus-5-5): Filed at LATER, not NEXT: NEXT holds the five DEC-162 names (cap 5). Agent's call, PROVISIONAL; promote when a slot frees.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: gate_receipt is on by default in the engine; '' turns it off (DEC-162 amends DEC-107, via DEC-218..DEC-223)
+  residual risk: INV-159, INV-160, INV-161, INV-162, INV-163
