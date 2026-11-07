@@ -1494,3 +1494,117 @@ def test_link_reads_a_criterion_as_lint_reads_its_row(eng):
         eng.link(rid, "AC-12", "amends", **W)
     with pytest.raises(Refusal, match=r"lint cannot read part of criteria\.md"):
         eng.link(rid, "AC-13", "amends", **W)
+
+
+# -- a bad or expired `stale_after` is refused at write time, G-D4's twin (CE-155) ----------------
+
+NOW = dt.datetime(2026, 11, 1, 12, 0, tzinfo=dt.timezone.utc)
+PAST = "2026-11-01T11:59:00Z"
+EQUAL = "2026-11-01T20:00:00+08:00"  # the same instant as NOW
+FUTURE = "2026-12-01T00:00:00Z"
+WRITERS = ["record_new", "task_set", "decision_set"]
+
+
+def clocked(tmp_path, **extra):
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, **extra}), encoding="utf-8")
+    return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12), now=lambda: NOW)
+
+
+def write_stale_after(e, writer, value, target=None):
+    """Write `stale_after: value` through one writer; return the id written (or the target)."""
+    if writer == "record_new":
+        return e.record_new("decision", "D", WORDS, {"actor": "owner", "decision_status": "BUILT", "stale_after": value}, **W).id
+    if writer == "task_set":
+        e.set(target, {"stale_after": value}, **W)
+        return target
+    e.decision_set(target, {"stale_after": value}, **W)
+    return target
+
+
+def target_for(e, writer):
+    """The record a set writes to: a task, a decision, or none for record new."""
+    if writer == "task_set":
+        return e.new("task", "T", **W).id
+    return dec(e) if writer == "decision_set" else None
+
+
+def g_d4(e):
+    return [f for f in e.lint() if f.guard == "G-D4"]
+
+
+@pytest.mark.criterion("AC-190")
+@pytest.mark.parametrize("writer", WRITERS)
+@pytest.mark.parametrize("value, match", [
+    ("2026-10-01", "is not an absolute instant"),
+    ("2026-10-01T00:00:00", "is not an absolute instant"),
+    ("soon", "is not an absolute instant"),
+    ("", "an empty `stale_after`"),
+    (PAST, "has already passed"),
+], ids=["bare-date", "no-offset", "junk", "empty", "past"])
+def test_record_new_task_set_and_decision_set_refuse_a_bad_or_expired_stale_after(tmp_path, writer, value, match):
+    """CE-155: the three writers that take caller fields refuse, before any byte, a `stale_after`
+    G-D4 would be red on (working.py::Engine._stale_after_check)."""
+    e = clocked(tmp_path)
+    target = target_for(e, writer)
+    before = target and e.store.get(target).path.read_bytes()
+    decisions = sorted(r.id for r in e.store.records("decision"))
+    oplog = (e.root / "ops.jsonl").read_text(encoding="utf-8").splitlines() if (e.root / "ops.jsonl").is_file() else []
+    with pytest.raises(Refusal, match=re.escape(match)) as r:
+        write_stale_after(e, writer, value, target)
+    assert "`2026-12-01T00:00:00Z`" in r.value.remedy
+    assert ("leave it out" if writer == "record_new" else "`--unset stale_after`") in r.value.remedy
+    assert sorted(r.id for r in e.store.records("decision")) == decisions  # record new wrote no decision
+    if target:
+        assert e.store.get(target).path.read_bytes() == before
+    after = (e.root / "ops.jsonl").read_text(encoding="utf-8").splitlines() if (e.root / "ops.jsonl").is_file() else []
+    assert after == oplog
+
+
+@pytest.mark.criterion("AC-190")
+@pytest.mark.parametrize("writer", WRITERS)
+@pytest.mark.parametrize("value", [FUTURE, EQUAL], ids=["future", "equal-to-now"])
+def test_a_future_or_equal_stale_after_is_written_and_lint_g_d4_stays_green(tmp_path, writer, value):
+    e = clocked(tmp_path)
+    rid = write_stale_after(e, writer, value, target_for(e, writer))
+    stored = e.store.get(rid).doc.get("stale_after")
+    assert G.instant(stored) == G.instant(value) is not None
+    assert g_d4(e) == []
+
+
+@pytest.mark.criterion("AC-190")
+def test_unset_stale_after_is_taken_and_a_closed_task_still_refuses_a_past_one(tmp_path):
+    e = clocked(tmp_path)
+    tid = e.new("task", "T", **W).id
+    e.set(tid, {"stale_after": FUTURE}, **W)
+    e.set(tid, {}, unset=("stale_after",), **W)
+    assert "stale_after" not in e.store.get(tid).doc.data
+    rid = dec(e, stale_after=FUTURE)
+    e.decision_set(rid, {}, unset=("stale_after",), **W)
+    assert "stale_after" not in e.store.get(rid).doc.data
+    e.close(tid, "done", **W)
+    assert str(e.store.get(tid).doc.get("state")) == "closed"
+    before = e.store.get(tid).path.read_bytes()
+    with pytest.raises(Refusal, match="has already passed"):  # whatever the record's liveness (DEC-204)
+        e.set(tid, {"stale_after": PAST}, **W)
+    assert e.store.get(tid).path.read_bytes() == before
+
+
+@pytest.mark.criterion("AC-190")
+def test_guards_off_g_d4_switches_off_the_write_time_stale_after_stop(tmp_path):
+    e = clocked(tmp_path, guards={"off": ["G-D4"]})
+    rid = write_stale_after(e, "record_new", "2026-10-01")
+    assert e.store.get(rid).doc.get("stale_after") == "2026-10-01"
+    tid = write_stale_after(e, "task_set", PAST, e.new("task", "T", **W).id)
+    assert G.instant(e.store.get(tid).doc.get("stale_after")) == G.instant(PAST)
+
+
+@pytest.mark.criterion("AC-190")
+@pytest.mark.parametrize("value", ["2026-10-01", "2000-01-01T00:00:00Z"], ids=["bare-date", "long-past"])
+def test_task_set_refuses_a_bad_or_expired_stale_after_from_the_cli(eng, value, capsys):
+    """The item's own repro, through the CLI on the real clock: both values are red whenever it runs."""
+    tid = eng.new("task", "T", **W).id
+    path = eng.store.get(tid).path
+    before = path.read_bytes()
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "task", "set", tid, "--set", f"stale_after={value}"]) == 2
+    assert "stale_after" in capsys.readouterr().err
+    assert path.read_bytes() == before

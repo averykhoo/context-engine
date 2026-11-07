@@ -820,7 +820,8 @@ first bullet's check that every record parses.
 A guard id listed in `[guards] off` is not reported (only ids lint reports may be listed), and
 the write-time stops that check the same rule are off with it (among them G-I1 and G-I2 in
 § context-engine record new for a story, G-I3 there and in § context-engine ask answer for a
-decision, G-W4 in § context-engine ask new). Two stops are no guard's twin and stay on: the
+decision, G-W4 in § context-engine ask new, G-D4 for `stale_after` in § context-engine record
+new, task set and decision set). Two stops are no guard's twin and stay on: the
 `## Amendments` stop of record new and ask answer, and record new's stop on a decision given a
 `status` key, `decision_status: SUPERSEDED`, `supersedes` or `superseded_by`. A path listed in `[guards]` that does not exist is
 itself a failure.
@@ -911,6 +912,10 @@ replaces the old one: name every alias that is dropped in the reply, since it no
 Only a write that sets `aliases` checks them; a clash made elsewhere shows in lint G-D2.
 `goals` on a task where `[guards] task_goals` names the kind: at least one goal of the charter,
 each in the form `G-n`; never unset it on an open task (lint G-I1).
+Stop, writing nothing, if you were given `stale_after` and it is empty, not a timestamp with
+its offset (`2026-12-01T00:00:00Z`, OKF §5.5; a bare date is not one), or already passed by the
+clock (one equal to now is taken), whatever the item's state: G-D4 of § context-engine lint
+would be red on it (off with it). Unsetting it is always taken.
 
 **Why:** the keys with an operation each carry a rule: caps, consistency of `state` and `status`,
 `moved` meaning real progress. A raw edit would skip that rule.
@@ -1665,7 +1670,9 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if its only possible value is the present: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else
-   required, `actor` above all, must be given; if it is missing, stop. For a story (the kind
+   required, `actor` above all, must be given; if it is missing, stop. If you were given
+   `stale_after`, stop unless it is a timestamp with its offset that has not yet passed (G-D4 of
+   § context-engine lint; off with it). For a story (the kind
    `[guards] stories` names), stop too unless it passes G-I2 and G-I1 of § context-engine lint:
    `actor` is `owner`, `human:<id>` or `agent (reconstructed from ...)`, `story_status` is from the
    vocabulary but not `retired`, and `unconfirmed` when the actor is an agent's (§ context-engine
@@ -1868,6 +1875,8 @@ operation owns. Values take the kind's declared types, as in § context-engine t
 - the new `decision_status` is `SUPERSEDED`: use `decision supersede <id> <new>`;
 - the new `decision_status` is `ACCEPTED`: use `decision accept <id>`, which checks the decision
   is PROVISIONAL and logs the review;
+- the key is `stale_after` and its value is empty, not a timestamp with its offset, or already
+  passed, as in § context-engine task set (G-D4; off with it): unsetting it is taken;
 - the decision is already SUPERSEDED and the change touches `decision_status`: a superseded
   decision stays superseded; to bring it back, record a new decision and supersede the one that
   replaced it.

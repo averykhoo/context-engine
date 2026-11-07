@@ -237,6 +237,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 |---|---|---|---|
 | AC-150 | Lint (G-D4) is red on a live item whose `stale_after` has passed, and on one whose `stale_after` is not an absolute instant (a timestamp with its offset; a bare date or a time without an offset is red): a record that is not `status: deprecated` and whose `state` is not closed, done or expired; a criterion that is not `retired`, in its table's `stale_after` column; and an entry of `[working] register` by its `- **stale_after:**` line. It runs whatever `[guards] liveness` and `history` hold, and only `[guards] off` naming G-D4 silences it | US-6, US-14 | tested |
 | AC-151 | Lint (G-I1) is red on a charter whose frontmatter carries a `charter_status` other than `confirmed` or `unconfirmed`, or an OKF `status` other than `draft`, `stable` or `deprecated`; a charter without frontmatter, or without those keys, passes; orient asks the owner to review a charter that is `charter_status: unconfirmed`, and says nothing of one that is `confirmed` or while G-I1 is off | US-6 | tested |
+| AC-190 | `record new`, `task set` and `decision set` refuse, before any byte, a `stale_after` that is empty, not an absolute instant, or already passed by the engine's clock (an instant equal to now is taken), whatever the record's liveness; `--unset stale_after` and a future instant are taken and lint G-D4 stays green; off only with `[guards] off` naming G-D4 (CE-155) | US-6, US-14, DEC-203 | tested |
 
 ## Claude Code plugin (CE-77, CE-146)
 

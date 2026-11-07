@@ -882,6 +882,7 @@ class Engine:
             raise Refusal(f"the brief is {len(raw['brief'])} characters", f"cut it to {BRIEF_MAX}")
         kind = self.store.config.kind_for_id(rid)
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
+        self._stale_after_check(changes, can_unset=True)
         if "goals" in changes or "goals" in unset:
             self._task_goal_check(kind.name, [] if "goals" in unset else list(changes.get("goals") or []))
         if changes.get("review") is not None:
@@ -2114,6 +2115,7 @@ class Engine:
                 fields[key] = self.today()
             elif key not in fields and k.types.get(key) == "key":
                 fields[key] = session
+        self._stale_after_check(fields, can_unset=False)
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
         if kind == self.w.decision:
@@ -2165,6 +2167,27 @@ class Engine:
             ruled = f", `ruled_by: {fields.get(G.RULED_BY)}`" if fields.get(G.RULED_BY) is not None else ""
             raise Refusal(f"the decision is an agent's call (`actor: {fields.get('actor')}`{ruled}) but would be created {D.ACCEPTED}, which only a review gives it",
                           f"record it {D.PROVISIONAL} (or leave `{D.STATUS_KEY}` out); once it has been reviewed, `decision accept <id>` marks it {D.ACCEPTED} and logs who did")
+
+    def _stale_after_check(self, fields: dict[str, Any], *, can_unset: bool) -> None:
+        """G-D4's freshness half at write time (CE-155, DEC-203, DEC-204; FRAMEWORK §9.3): a
+        `stale_after` being written must be an absolute instant (``guards.instant``) that has not
+        passed by ``Engine.now``, the reading ``guards.stale`` makes, so a write never leaves G-D4
+        red. Only the key being written is read, whatever the record's liveness; off with G-D4."""
+        if G.STALE_AFTER not in fields or "G-D4" in self.store.config.guards.off:
+            return
+        value = fields[G.STALE_AFTER]
+        gone = "`--unset stale_after`" if can_unset else "leave it out"
+        if value is None:
+            raise Refusal("an empty `stale_after` would be written as null, which is not an absolute instant (G-D4)",
+                          f"give a timestamp with its offset, e.g. `2026-12-01T00:00:00Z` (OKF §5.5), or {gone}")
+        when = G.instant(value)
+        if when is None:
+            raise Refusal(f"`stale_after: {value}` is not an absolute instant, so G-D4 would be red on it",
+                          f"write it as a timestamp with its offset, e.g. `2026-12-01T00:00:00Z` (OKF §5.5), or {gone}")
+        now = self.now()
+        if now > when:
+            raise Refusal(f"`stale_after: {value}` has already passed (now is {now.isoformat(timespec='seconds')}), so G-D4 would be red on it",
+                          f"give an instant still to come, e.g. `2026-12-01T00:00:00Z`, by which what it rests on is to be re-checked (FRAMEWORK §9.3), or {gone}")
 
     def _story_checks(self, fields: dict[str, Any]) -> None:
         """The write-time twins of G-I2 and G-I1, by the same checks: a story's provenance from the
@@ -2393,6 +2416,7 @@ class Engine:
             raise Refusal(f"`decision set` does not change a decision's `{owned[0]}`", DECISION_OWNED[owned[0]])
         kind = self.store.config.kind_for_id(rid)
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
+        self._stale_after_check(changes, can_unset=True)
         if str(changes.get(D.STATUS_KEY)) == "SUPERSEDED":
             raise Refusal(f"`decision set` does not mark {rid} SUPERSEDED", f"use `decision supersede {rid} <new>`: it writes `superseded_by`, `supersedes` and `status: deprecated` with it")
         if str(changes.get(D.STATUS_KEY)) == D.ACCEPTED:

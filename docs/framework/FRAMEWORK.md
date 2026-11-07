@@ -2197,8 +2197,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   that has passed, or one that is not an absolute instant (a timestamp with its offset, OKF §5.5).
   It reads the frontmatter of every record that is not `status: deprecated` and whose `state`,
   where it has one, is not closed, done or expired; the `stale_after` column of a criteria table,
-  for a criterion that is not `retired`; and a register entry's `- **stale_after:**` line. Not
-  checked: whether an item that should carry one does, and a doc that is not a record.
+  for a criterion that is not `retired`; and a register entry's `- **stale_after:**` line.
+  `record.new`, `task.set` and `decision.set` refuse such a value at write time (empty, not an
+  absolute instant, or already passed by the engine's clock), whatever the record's liveness,
+  and are off with G-D4. Not checked: whether an item that should carry one does, and a doc that
+  is not a record.
 - **G-D5:** derivable counts appear only in generated blocks, so a count of things in the tree
   typed in prose is red: a number (a numeral, or a spelled one from three to twenty) directly before a
   counted noun (`[guards] count_nouns`: tests, checks, criteria, stories, tasks, rows and the
