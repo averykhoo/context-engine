@@ -4,13 +4,15 @@ id: CE-187
 title: 'decision accept <ids>: owner-actor decisions born ACCEPTED, agent calls PROVISIONAL until accepted'
 brief: 'DEC-162: accept the listed agent calls through the op once built, never by hand before'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-3, G-2]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06f
-updated: 2026-11-06f
+moved: 2026-11-07d
+updated: 2026-11-07d
+status: deprecated
+closed: 2026-11-07d
 ---
 
 Build `decision accept <ids>`, and make decisions whose actor is the owner born ACCEPTED (DEC-162).
@@ -40,3 +42,5 @@ Once the op exists, accept in one op the agent calls DEC-162 lists (not by hand 
 ## Log
 
 - 2026-11-06c (claude-code/claude-opus-5-5): Correction (DEC-162): DEC-107 is never accepted; it is superseded by the decision CE-192 records. DEC-97, DEC-110 and DEC-120 are outside DEC-162's accept list; the body's 'accept them with the rest' is withdrawn (see Traps).
+- 2026-11-07d (claude-code/claude-opus-5-5): closed: built and verified (independent PASS, round 2): decision accept <ids>; owner decisions born ACCEPTED; framework 0.6; 119 accepted in one op line
+  residual risk: INV-102, INV-103, INV-104

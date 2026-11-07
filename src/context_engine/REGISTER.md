@@ -720,3 +720,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** first-hit-wins precedence puts the env var above the actor
 - **control:** individual: --co-author none / unset CE_CO_AUTHOR (manual-mode § context-engine commit)
 - **from:** CE-197, session 2026-11-07a
+
+## INV-102: Hand edits of decision_status that lint does not catch: PROVISIONAL to BUILT/REJECTED/DEFERRED, ACCEPTED back to PROVISIONAL, an owner decision set to anything
+
+- **affects:** anyone editing decision records by hand
+- **why not eliminated:** pre-existing (the 0.5 engine caught none either); only an agent call set ACCEPTED by hand is G-W4 now
+- **control:** individual: contract § Rules, never hand-edit decision_status
+- **from:** CE-187, session 2026-11-07d
+
+## INV-103: decision set moves an owner's own decision from ACCEPTED to PROVISIONAL; nothing refuses it
+
+- **affects:** agents using decision set
+- **why not eliminated:** decision_set predates born-ACCEPTED and was not in scope
+- **control:** individual: decision accept --owners sweeps it back
+- **from:** CE-187, session 2026-11-07d
+
+## INV-104: The 0.6 contract says never accept by hand, while manual-mode gives a by-hand accept fallback (DEC-20)
+
+- **affects:** agents in manual mode
+- **why not eliminated:** rewording costs another contract bump
+- **control:** individual: the existing never-hand-edit-what-an-op-owns convention; manual-mode § context-engine decision accept
+- **from:** CE-187, session 2026-11-07d
