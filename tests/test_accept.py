@@ -84,6 +84,22 @@ def test_an_owners_own_decision_is_born_accepted_and_an_agents_call_provisional(
     assert not D.owners_own({"actor": "owner", "ruled_by": "claude-code/fable"}) and not D.owners_own({"actor": "owner", "ruled_by": ""})
 
 
+@pytest.mark.parametrize("actor", ["owner asked", "owner + agent", "owner/claude-code", "the owner", "human:avery and claude", "claude-code/owner", "human:", ""])
+def test_an_actor_that_only_mentions_the_owner_is_not_the_owners_own(tmp_path, actor):
+    # the whole actor is one human, or the decision skips review: born ACCEPTED, swept by --owners, exempt from G-W4
+    assert not D.owners_own({"actor": actor})
+    if not actor:
+        return
+    e = engine(tmp_path)
+    rid = new(e, actor=actor)
+    assert status(e, rid) == "PROVISIONAL", "an agent-side call is never born ACCEPTED"
+    with pytest.raises(Refusal, match="no owner's decision is PROVISIONAL"):
+        e.decision_accept([], owners=True, **W)  # --owners does not sweep it up
+    path = e.store.get(rid).path
+    path.write_bytes(path.read_bytes().replace(b"decision_status: PROVISIONAL\n", b"decision_status: ACCEPTED\n"))
+    assert [f.guard for f in e.lint() if f.guard == "G-W4"] == ["G-W4"], "ACCEPTED by hand, it needs a logged accept"
+
+
 def test_record_new_refuses_provisional_on_owner_words_and_accepted_on_an_agents_call(eng):
     with pytest.raises(Refusal, match="the owner's own .* would be created PROVISIONAL") as r:
         new(eng, status="PROVISIONAL")

@@ -1,6 +1,6 @@
 # A context-engineering framework for agent-built repos
 
-**LIVING. Framework 0.5. Status: DRAFT.** This is the framework: what it is for, its rules,
+**LIVING. Framework 0.6. Status: DRAFT.** This is the framework: what it is for, its rules,
 components, procedures and guards, written for whoever uses it, owner or agent. It is the source
 of truth for what the `context-engine` repo builds.
 
