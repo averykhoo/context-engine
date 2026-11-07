@@ -3,14 +3,14 @@ type: Task
 id: CE-189
 title: 'Two decision-conflict checks: duplicate live titles, and a relates/narrows link kind'
 brief: 'DEC-162: mechanical checks only, no semantic conflict detection'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Two mechanical decision-conflict checks: duplicate live titles, and a relates/narrows link kind (DEC-162).
