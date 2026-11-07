@@ -1091,3 +1091,31 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a commit message cannot be amended after the fact
 - **control:** reduce: CE-202 comment records working.py::Engine.import_log
 - **from:** CE-171, session 2026-11-07e
+
+## INV-155: DEFERRED decisions counting as current by G-I4 has no committed test (verifier probe: DEFERRED+PROVISIONAL with tab vs space fires once)
+
+- **affects:** engine maintainers
+- **why not eliminated:** verifier probe only, not pinned in tests/test_guards.py
+- **control:** individual: G-I4 guards.py::decision_titles
+- **from:** CE-189, session 2026-11-07e
+
+## INV-156: CE-189 log comment says 'uncommitted', now out of date after bd25ca2
+
+- **affects:** readers of the board log
+- **why not eliminated:** board log is append-only; this close message supersedes it
+- **control:** individual: close commit bd25ca2 and this close
+- **from:** CE-189, session 2026-11-07e
+
+## INV-157: Full gate takes about 600s (598.6s measured 2026-11-07), at the Bash foreground limit
+
+- **affects:** sessions running the gate
+- **why not eliminated:** suite size, not a defect of this change
+- **control:** individual: run gate with run_in_background
+- **from:** CE-189, session 2026-11-07e
+
+## INV-158: DEC-214 to DEC-217 are PROVISIONAL and await owner review
+
+- **affects:** owner
+- **why not eliminated:** agent calls stay PROVISIONAL until owner accepts
+- **control:** individual: context-engine decision accept after owner review
+- **from:** CE-189, session 2026-11-07e

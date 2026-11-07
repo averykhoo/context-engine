@@ -4,13 +4,15 @@ id: CE-189
 title: 'Two decision-conflict checks: duplicate live titles, and a relates/narrows link kind'
 brief: 'DEC-162: mechanical checks only, no semantic conflict detection'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-11-06c
 created: 2026-11-06
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Two mechanical decision-conflict checks: duplicate live titles, and a relates/narrows link kind (DEC-162).
@@ -30,3 +32,5 @@ Source: DEC-162, adopting docs/evidence/owner-review-advice-2026-11-06b.md § 2.
 ## Log
 
 - 2026-11-07e (claude-code/claude-opus-5-5): Built (uncommitted, for verification): new intent guard G-I4 (guards.py::decision_titles, FRAMEWORK §8.1), two current decisions with one title; the relates/narrows half was already built in CE-5 as `refs` and `relaxes`/`narrowed_by`, so only working.py::Engine._link_rel remedy and manual-mode § context-engine decision link now name `--rel refs`. AC-191; DEC-214 to DEC-217.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: G-I4 lint fails two current decisions with one title; decision link remedy names --rel refs (commits c3d5dae 97ad121 36a7ce8 8468873 bd25ca2)
+  residual risk: INV-155, INV-156, INV-157, INV-158
