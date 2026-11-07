@@ -3,14 +3,14 @@ type: Task
 id: CE-150
 title: Move working.py::Engine._criteria (decision link) onto guards.py::criteria_rows
 brief: It reads CRITERION_ROW_RE over raw text, counting ids in fenced code and non-criteria tables (CE-42 review D5)
-pri: LATER
+pri: NOW
 state: open
 deps: [CE-42]
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Move working.py::Engine._criteria (decision link) onto guards.py::criteria_rows.
