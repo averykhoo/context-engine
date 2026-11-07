@@ -7,10 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-07d · kind: open
+## 2026-11-07d · kind: close
 
-- **opened:** 2026-11-07T16:03:43+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-07c
+- **rows:** CE-187 (closed); CE-156 (closed); CE-158 (closed); CE-161 (closed); CE-191 (closed);
+  CE-199, CE-200, CE-201 (new, LATER); CE-198 (trial 1 of 6); US-22, DEC-177 (new, owner);
+  DEC-174..176, DEC-178 (new, PROVISIONAL)
+- **receipts:**
+  - guards: gate FAILED: 1 failed, 1570 passed (test_this_repos_records_pass_lint: G-W5 NOW empty
+    only); linux gate RED, same test
+  - read: orient; task show CE-187, CE-198, CE-156, CE-158, CE-161, CE-191; procedures §
+    Housekeeping, § Intake; advice doc 2026-11-07a
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Built and verified 5 tasks: CE-187 (decision accept, framework 0.6; 119 accepted in one op),
+    CE-156, CE-158, CE-161, CE-191.
+  - Owner (DEC-177): nontrivial tasks get an opus planner, a sonnet builder, an opus verifier;
+    CE-191 was trial task 1 (792k, 2 FAILs, escalated).
+  - CE-158 and CE-161 failed the trial filter (design not pinned) and kept opus builders; CE-187 and
+    CE-156 changed the kit.
+  - Owner: US-22 and CE-199 filed (scheduled board items); follow-ups CE-200, CE-201; residuals
+    INV-102..113.
+  - Agent calls PROVISIONAL: DEC-174 (owner-decision migration), DEC-175 (question parsing), DEC-176
+    (unparseable records), DEC-178 (close warning).
+  - Gate and Linux gate red on one check only: G-W5, NOW empty after the closes; the owner picks the
+    next NOW (only CE-198 is at NEXT).
+- **Still owed:**
+  - owner: pick the next NOW item (task promote <id> NOW); the gate is red on G-W5 until then
+  - owner: push 37 commits once the gate and Linux gate are green (ask first, DEC-22)
+  - owner: restart Claude Code so the MCP server runs the 0.6 engine
 - **start head:** 039dd9ad485003fa54c57c4bb6023ccd1b3814d6
 
 ---
