@@ -3,7 +3,7 @@ type: Task
 id: CE-173
 title: 'Adopter CI: engine writes defeat docs-only CI filters'
 brief: Seen in CE-11; intervals needed gate.py and fuzz.yml changes (commit 3906abd)
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-6]

@@ -204,6 +204,19 @@ def test_the_kit_readme_names_the_engine_writes_a_docs_only_ci_filter_misses():
         assert glob in five, f"§ 5 names {glob} as prose for a CI filter"
 
 
+def test_the_kit_readme_tells_an_existing_repo_to_type_its_bundle_readme():
+    """CE-180: G-D11 fails a typeless `.md` in a bundle directory, a repo's own `tasks/README.md`
+    included (by design: FRAMEWORK §11 filters on `type`, not on names); § 3 says what to add,
+    and names the same exemptions the lint makes (tests/test_store.py proves the lint side)."""
+    from context_engine.store import RESERVED_MD
+
+    readme = " ".join((B.KIT / "README.md").read_text(encoding="utf-8").split())
+    three = readme[readme.index("## 3. An existing repo") : readme.index("## 4. Upgrade")]
+    assert "`tasks/README.md`" in three and "`type: Readme`" in three and "G-D11" in three, three[:200]
+    for name in RESERVED_MD:
+        assert f"`{name}`" in three, f"§ 3 names {name} as exempt, as store.py::RESERVED_MD does"
+
+
 def _hook_command(root: Path) -> str:
     import json
 

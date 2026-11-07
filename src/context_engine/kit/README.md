@@ -253,6 +253,11 @@ place:
   move over in the first session (below);
 - each `[[routes]]` `path` points at the existing file for that component;
 - a skeleton `init` wrote for a component the repo keeps elsewhere is deleted, not routed;
+- a `.md` the repo already keeps in a bundle directory (`[engine] bundles` and each kind's
+  `dir`) that is not a record, a `tasks/README.md` say, gets frontmatter with a `type`
+  (`type: Readme`): lint (G-D11) fails a `.md` there with none, since the engine tells records
+  from other files by `type`, never by file name (FRAMEWORK §11). Only `index.md` and `log.md`
+  are exempt;
 - a runbook `init` skipped because the repo already had a file of that name (`skipped` in its
   output) is now the framework's runbook of that name: the contract points agents at it and its
   route's caps apply. Merge the kit's copy into it by hand, or move the repo's own file aside

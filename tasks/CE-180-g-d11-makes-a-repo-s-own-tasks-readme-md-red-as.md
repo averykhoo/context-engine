@@ -2,14 +2,14 @@
 type: Task
 id: CE-180
 title: G-D11 makes a repo's own tasks/README.md red as a bundle member
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-03b
 created: 2026-11-04
-moved: 2026-11-03b
-updated: 2026-11-03b
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 G-D11 makes a repo's own tasks/README.md red as a bundle member.
