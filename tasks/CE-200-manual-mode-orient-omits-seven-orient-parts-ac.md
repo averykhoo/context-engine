@@ -4,13 +4,15 @@ id: CE-200
 title: manual-mode § orient omits seven orient parts; AC-110's row is undated
 brief: Both runbook copies byte-equal; AC-110 changes through criterion set
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-11-07d
 created: 2026-11-07
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 manual-mode § context-engine orient omits seven parts orient emits; AC-110's row text is undated.
@@ -32,3 +34,5 @@ Source: CE-156's builder and verifier (a5b1570), outside CE-156's list.
 ## Log
 
 - 2026-11-07e (claude-code/claude-opus-5-5): a6fa1d8: CE-200: file CE-156's out-of-scope residuals (orient parts, AC-110 row)
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: manual-mode § orient names every orient part in output order; AC-110 row dated (commits 5b73567, 1fbf39b, 6e8d5c7, fb2982b, 319e744)
+  residual risk: INV-125, INV-126, INV-127

@@ -881,3 +881,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** DEC-175 reopen condition; judged not worth a rule
 - **control:** reduce: pinned test and the 'Not checked' notes in guards.py::ask_options and guards.py::ask_problems
 - **from:** CE-201, session 2026-11-07e
+
+## INV-125: _orient_titles comment and commit message say '22 on 2026-11-08' but len(found) is 23 (22 distinct headings, Top item twice); the floor of 20 leaves 3 titles of slack, so up to 3 titles could move to a form the regex misses with no test red
+
+- **affects:** the next session editing orient titles or manual-mode § orient
+- **why not eliminated:** a floor with slack avoids a brittle exact count; a stricter floor was not worth the churn
+- **control:** individual: tests _orient_titles floor of 20
+- **from:** CE-200, session 2026-11-07e
+
+## INV-126: the parked-items line format in manual-mode § orient shows a single dep, but working.py::Engine.parked_deps joins several deps with '; '
+
+- **affects:** a by-hand session reading the manual-mode orient description
+- **why not eliminated:** doc example kept to the common single-dep case
+- **control:** individual: none beyond review of manual-mode § orient
+- **from:** CE-200, session 2026-11-07e
+
+## INV-127: orient part ranks and rest pointers are described in prose but pinned by no test (DEC-184, as planned)
+
+- **affects:** the next session changing orient order or pointers, and by-hand sessions relying on the prose
+- **why not eliminated:** DEC-184 chose prose over a pin
+- **control:** individual: DEC-184
+- **from:** CE-200, session 2026-11-07e
