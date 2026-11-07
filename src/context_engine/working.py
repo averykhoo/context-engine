@@ -378,7 +378,8 @@ class Engine:
     def _gate_receipt_problem(self, guards: str) -> str | None:
         """What is wrong with a close's ``guards:`` receipt under ``[working] gate_receipt`` (CE-123):
         a receipt that does not match carries no gate pass count and says nothing of the gate not
-        being run, so the gate's baseline cannot be read from it (gate.md § Test baselines).
+        being run, so the gate's baseline cannot be read from it (gate.md § Test baselines). On by
+        default, with the kit's pattern (config.py::GATE_RECEIPT, CE-192, DEC-162); ``''`` is off.
 
         Not checked: whether the count is true, or is the gate's and not some other suite's."""
         pattern = self.w.gate_receipt
@@ -425,7 +426,7 @@ class Engine:
             if not (receipts.get(name) or "").strip():
                 raise Refusal(f"the close has no `{name}` receipt", "guards: the gate and lint results, verbatim; read: what was read to start work")
         if bad := self._gate_receipt_problem(" ".join(receipts["guards"].split())):
-            raise Refusal(bad, f"put the gate's own result line in it (its pass count, e.g. `1112 passed`), or say the gate was not run and why ([working] gate_receipt in {CONFIG_NAME}, CE-123)")
+            raise Refusal(bad, f"put the gate's own result line in it (its pass count, e.g. `1112 passed`), or say the gate was not run and why; or, for a gate that prints no pass count, fit [working] gate_receipt in {CONFIG_NAME} to its result line ('' turns the check off; CE-123, CE-192)")
         receipts = dict(receipts)
 
         def check(led: L.Ledger, stub: L.Entry) -> None:
@@ -3901,7 +3902,7 @@ class Engine:
                     if not last.receipt(name):
                         out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `{name}:` receipt", "receipts are written by `session close`; add the missing line"))
                 if last.receipt("guards") and (bad := self._gate_receipt_problem(last.receipt("guards"))):
-                    out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}): {bad}", "add the gate's pass count to the `guards:` line, or say the gate was not run and why"))
+                    out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}): {bad}", "add the gate's pass count to the `guards:` line, or say the gate was not run and why; or, for a gate that prints no pass count, fit [working] gate_receipt to its result line ('' turns the check off)"))
                 if not last.field("rows"):
                     out.append(Failure("G-W6", ledger_rel, f"the newest close ({last.key}) has no `rows:` line", "name the items the session touched"))
                 elif unsaid := self._unsaid_tasks(last.field(L.TASKS), last.field("rows")):  # CE-112, DEC-128

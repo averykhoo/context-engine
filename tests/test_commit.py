@@ -113,7 +113,7 @@ def test_a_mid_session_commit_passes_lint_on_its_own(repo, tmp_path):
     that commit must pass G-W7 without the op log lines still sitting in the shared tree."""
     c = start(repo)
     run(repo, "task_new", c, title="Build the parser")
-    run(repo, "session_close", c, rows="CE-1 (filed)", summary=["filed"], guards="gate green", read="board")
+    run(repo, "session_close", c, rows="CE-1 (filed)", summary=["filed"], guards="gate 3 passed", read="board")
     c = start(repo)
     run(repo, "task_touch", c, id="CE-1")
     (repo / "parser.py").write_text("x = 1\n", encoding="utf-8")
@@ -202,7 +202,7 @@ def test_an_operation_that_writes_twice_and_is_no_milestone_makes_one_commit(rep
 def test_the_session_ledger_is_committed_at_start_and_close(repo):
     c = start(repo)
     assert files_at(repo) == ["ledger.md", "ops.jsonl"]
-    run(repo, "session_close", c, rows="none", summary=["nothing"], guards="gate green", read="board")
+    run(repo, "session_close", c, rows="none", summary=["nothing"], guards="gate 3 passed", read="board")
     assert files_at(repo) == ["ledger.md", "ops.jsonl"]
     assert git(repo, "log", "-1", "--format=%s").strip() == f"engine: session.close {c.session}"
     assert git(repo, "status", "--porcelain").strip() == ""
@@ -665,7 +665,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     sha = run(mrepo, "banner_show", c)[1].split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
     w("ask_new", title="And this?", body=ASK_BODY, pri="LATER")
-    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board", asked="ASK-2")  # no `ask raised`
+    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="gate 3 passed", read="board", asked="ASK-2")  # no `ask raised`
     w("session_start")
     w("hk_stamp_asked")  # last_asked from that receipt (CE-6): not a milestone
     w("session_pause", rows="none", deferred="everything")

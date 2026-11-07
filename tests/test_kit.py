@@ -589,6 +589,7 @@ def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     assert cfg.gate.scopes and not cfg.gate.command and not cfg.gate.require, "the kit's gate is off until a repo sets its command"
     assert _keys(C.Working, C.DEPRECATED_WORKING) <= set(raw["working"])
     assert not set(C.DEPRECATED_WORKING) & set(raw["working"]), "the kit sets a deprecated key (CE-185)"
+    assert cfg.working.gate_receipt == C.Working().gate_receipt == C.GATE_RECEIPT, "the template's gate_receipt is the engine's default (CE-192)"
     kind_keys = set().union(*(set(k) for k in raw["kinds"].values()))
     assert _keys(C.Kind, ("name",)) <= kind_keys
     route_keys = set().union(*(set(r) for r in raw["routes"]))

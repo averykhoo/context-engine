@@ -219,7 +219,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("hk_expire_batons")
     sha = text(call(srv, "banner_show")).split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
-    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="green", read="board")
+    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="gate 3 passed", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
     # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
@@ -232,7 +232,7 @@ def test_session_close_with_an_empty_now_and_an_open_item_warns_on_its_one_line(
     srv = server(root)
     call(srv, "session_start", {"actor": ACTOR})
     call(srv, "task_new", {"title": "Later", "brief": "b"})
-    r = call(srv, "session_close", {"rows": "CE-1", "summary": ["built it"], "guards": "green", "read": "board"})
+    r = call(srv, "session_close", {"rows": "CE-1", "summary": ["built it"], "guards": "gate 3 passed", "read": "board"})
     assert not r.is_error, text(r)
     assert "\n" not in text(r) and "; WARNING: G-W5 is red until NOW is refilled: " in text(r), text(r)
 

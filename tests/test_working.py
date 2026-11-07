@@ -59,7 +59,7 @@ Newest first.
 
 - **rows:** CE-1 (created)
 - **receipts:**
-  - guards: gate green
+  - guards: gate 3 passed
   - read: board only
   - banner: set
 - **summary** (the owner digest):
@@ -73,7 +73,7 @@ Newest first.
 
 - **rows:** none
 - **receipts:**
-  - guards: gate green
+  - guards: gate 3 passed
   - read: board only
 - **summary** (the owner digest):
   - founding
@@ -102,7 +102,7 @@ def kw(key):
 
 
 def receipts(**extra):
-    return {"guards": "gate green", "read": "board only", **extra}
+    return {"guards": "gate 3 passed", "read": "board only", **extra}
 
 
 def task(eng, key, title="A task", pri="LATER", **extra):
@@ -149,7 +149,7 @@ def test_close_finalises_the_stub_with_its_receipts(eng):
     entry = eng.read_ledger().get(key)
     assert entry.kind == "close"
     assert entry.field("rows") == "CE-1 (closed)"
-    assert entry.receipt("guards") == "gate green" and entry.receipt("read") == "board only"
+    assert entry.receipt("guards") == "gate 3 passed" and entry.receipt("read") == "board only"
     assert "  - a push" in entry.text
     assert len([e for e in eng.read_ledger().entries if e.key == key]) == 1
     with pytest.raises(Refusal, match="already `kind: close`"):
@@ -1174,7 +1174,7 @@ def test_cli_session_close_with_an_empty_now_exits_zero_and_prints_the_warning(e
     nxt = task(eng, key, "Next", pri="NEXT")
     base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
     capsys.readouterr()
-    assert main([*base, "session", "close", "--rows", "x", "--summary", "y", "--guards", "gate green", "--read", "board only", "--no-housekeeping"]) == 0
+    assert main([*base, "session", "close", "--rows", "x", "--summary", "y", "--guards", "gate 3 passed", "--read", "board only", "--no-housekeeping"]) == 0
     out = capsys.readouterr().out
     assert "WARNING: G-W5 is red until NOW is refilled" in out and f"`task promote <id> NOW` (NEXT holds {nxt.id})" in out and out.rstrip().endswith("say so in the owner digest"), out
     assert eng.read_ledger().get(key).kind == "close"
@@ -1917,7 +1917,7 @@ def test_cli_runs_a_session_end_to_end(eng, capsys):
     assert main([*base, "task", "close", "CE-1"]) == 2
     assert "without a message" in capsys.readouterr().err
     assert main([*base, "task", "close", "CE-1", "-m", "done"]) == 0
-    assert main([*base, "session", "close", "--rows", "CE-1 (closed)", "--summary", "built the CLI", "--guards", "green", "--read", "board only"]) == 0
+    assert main([*base, "session", "close", "--rows", "CE-1 (closed)", "--summary", "built the CLI", "--guards", "gate 3 passed", "--read", "board only"]) == 0
     assert eng.read_ledger().get(key).kind == "close"
 
 
@@ -2300,33 +2300,46 @@ def test_the_newest_close_needs_its_receipts_at_rest(eng):
     assert [f.message for f in guards(eng, "G-W6")] == ["the newest close (2026-10-07b) has no `read:` receipt"]
 
 
-GATE_RECEIPT = "(?i)[0-9]+ passed|passed [0-9]+|not run"  # the kit template's value, less the backslashes conftest.py::_toml does not escape
-
-
 @pytest.mark.criterion("AC-125")
 def test_a_guards_receipt_without_a_gate_result_is_refused_and_fails_lint_at_rest(tmp_path):
     """CE-123 (adhoc AAR entry 36): a `guards:` receipt with no pass count leaves the gate's
-    baseline unknown, so under `[working] gate_receipt` the close is refused and lint fails the
-    newest close; a count, or a statement that the gate was not run, passes. Unset is off."""
-    cfg = copy.deepcopy(CONFIG)
-    cfg["working"]["gate_receipt"] = GATE_RECEIPT
-    e = _engine(tmp_path / "on", cfg)
+    baseline unknown, so the close is refused and lint fails the newest close; a count, or a
+    statement that the gate was not run, passes. On by default, with the kit's pattern (CE-192,
+    DEC-162); `gate_receipt = ''` is off; a repo's own pattern replaces the default."""
+    e = _engine(tmp_path / "on", CONFIG)  # no gate_receipt key: the engine's default
+    (e.root / "ledger.md").write_text(LEDGER.replace("guards: gate 3 passed", "guards: gate green", 1), encoding="utf-8")
     [f] = guards(e, "G-W6")
     assert f.message.startswith("the newest close (2026-10-07b): the `guards` receipt has no gate result"), f.message
+    assert "gate_receipt" in f.remedy and "''" in f.remedy
     key = started(e)
     before = (e.root / "ledger.md").read_bytes()
-    with pytest.raises(Refusal, match="has no gate result") as err:
-        e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="sabotage: drop the check -> red; lint clean"))
-    assert "pass count" in err.value.remedy and "gate_receipt" in err.value.remedy
-    assert (e.root / "ledger.md").read_bytes() == before
+    for bad in ("sabotage: drop the check -> red; lint clean", "gate green", "ok  example.com/x 0.1s"):
+        with pytest.raises(Refusal, match="has no gate result") as err:
+            e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards=bad))
+        assert "pass count" in err.value.remedy and "gate_receipt" in err.value.remedy
+        assert (e.root / "ledger.md").read_bytes() == before
     e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="gate PASSED 1112\n  passed; lint clean"))
     assert guards(e, "G-W6") == []
     key = started(e)
     e.session_close(key, actor=ACTOR, rows="CE-1", summary=["docs only"], receipts=receipts(guards="gate not run: docs only; lint clean"))
     assert guards(e, "G-W6") == []
-    off = _engine(tmp_path / "off", CONFIG)  # the default: no pattern, no check
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["gate_receipt"] = ""  # set to '' explicitly: off
+    off = _engine(tmp_path / "off", cfg)
+    (off.root / "ledger.md").write_text(LEDGER.replace("guards: gate 3 passed", "guards: gate green", 1), encoding="utf-8")
+    assert guards(off, "G-W6") == []
     off.session_close(started(off), actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="green"))
     assert guards(off, "G-W6") == []
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["gate_receipt"] = "ok[ ]"  # a repo's own pattern (go test): conftest.py::_toml escapes no backslash
+    own = _engine(tmp_path / "own", cfg)
+    key = started(own)
+    with pytest.raises(Refusal, match="has no gate result"):
+        own.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="3 passed"))
+    own.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards="ok  example.com/x 0.1s"))
+    assert guards(own, "G-W6") == []
 
 
 @pytest.mark.criterion("AC-125")

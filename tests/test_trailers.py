@@ -63,7 +63,7 @@ def test_every_engine_commit_carries_session_where_reconciling_reads_it(mrepo):
     (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message=f"CE-1: a\n\nSabotage: x -> test_y red\n\nCo-Authored-By: {AUTHOR}\n")
     assert trailers(mrepo) == [f"Co-Authored-By: {AUTHOR}", f"Session: {c.session}"]
-    run(mrepo, "session_close", c, rows="CE-1", summary=["built"], guards="green", read="board")
+    run(mrepo, "session_close", c, rows="CE-1", summary=["built"], guards="gate 3 passed", read="board")
     log = git(mrepo, "log", f"--format={reconcile_format()}", f"{base}..HEAD").splitlines()
     assert len(log) == 5, log
     assert [ln for ln in log if not ln.endswith(f"[{c.session}]")] == [], log
@@ -215,7 +215,7 @@ def test_every_engine_commit_names_the_actors_model_beside_session(mrepo):
     (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a")
     assert trailers(mrepo) == [f"Session: {c.session}", f"Co-Authored-By: {OPUS}"]
-    run(mrepo, "session_close", c, rows="CE-1", summary=["built"], guards="green", read="board")
+    run(mrepo, "session_close", c, rows="CE-1", summary=["built"], guards="gate 3 passed", read="board")
     log = _log(mrepo, base)
     assert len(log) == 5, log
     assert log == [f"{c.session} | {OPUS}"] * 5, log

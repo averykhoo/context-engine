@@ -233,8 +233,9 @@ The engine makes them one commit; by hand, commit them together at the end.
 2. You need: `rows` (the items you touched, not empty); a summary of 1 to 7 lines (the owner
    digest); a `guards` receipt (gate and lint results, verbatim); a `read` receipt (what you read
    to start work). `asked` and `Still owed` are optional; an empty `Still owed` is written as
-   `nothing`. Where `[working] gate_receipt` is set, the `guards` text must match that regex
-   (joined onto one line): the gate's pass count (`1112 passed`), or that it was not run and why.
+   `nothing`. Unless `[working] gate_receipt` is `''`, the `guards` text must match it (by
+   default the kit's pattern), joined onto one line: the gate's pass count (`1112 passed`), or
+   that it was not run and why.
 3. Check the asked ids: the ids in your `asked` text **plus** those in the stub's `- **asked:**`
    line (written by `ask raised`). Together they must name every open owner question at NOW or
    NEXT, and every overdue one. A question is overdue if `last_asked` is empty, or at least 5
@@ -617,7 +618,7 @@ first bullet's check that every record parses.
   hand-set `status` hides one; an agent's call accepted by hand leaves no record of its review.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt; its
-  `guards:` text matches `[working] gate_receipt` where that is set; and where it has a
+  `guards:` text matches `[working] gate_receipt` unless that is `''`; and where it has a
   `- **tasks:**` line, its `rows:` names every id on that line. *Why: the close's refusal of
   rows that miss a named task (§ context-engine session close) does not cover a close written or
   edited by hand.*

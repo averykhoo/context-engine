@@ -627,7 +627,7 @@ def test_session_close_does_the_clean_close_in_one_call_and_one_commit(eng, caps
     words = tmp_path_factory.mktemp("words") / "banner.md"
     words.write_text("- A durable line.\n", encoding="utf-8")
     base = ["--root", str(eng.root), "--actor", ACTOR, "--session", now]
-    close = [*base, "session", "close", "--rows", f"{x['a']} (closed)", "--summary", "closed it", "--guards", "gate green", "--read", "board only", "--asked", x["q"]]
+    close = [*base, "session", "close", "--rows", f"{x['a']} (closed)", "--summary", "closed it", "--guards", "gate 3 passed", "--read", "board only", "--asked", x["q"]]
     assert main([*close, "--banner-file", str(words), "--seen", eng.banner().sha]) == 0, capsys.readouterr().err
     out = capsys.readouterr().out
     assert out.startswith(f"session {now} closed: ledger entry written (1-line summary); banner replaced (lines 1 -> 1), key {now}, "), out
@@ -641,7 +641,7 @@ def test_session_close_does_the_clean_close_in_one_call_and_one_commit(eng, caps
     assert _git(eng.root, "status", "--porcelain", "--", "ops.jsonl", "ledger.md", "HANDOFF.md", "tasks", "working") == ""
     assert _g(eng, "G-W1") == [] and _g(eng, "G-W6") == []
     nxt = started(eng)  # the next close keeps that banner, and still passes G-W1
-    assert main([*base[:-2], "--session", nxt, "session", "close", "--rows", "none", "--summary", "s", "--guards", "g", "--read", "r", "--asked", x["q"], "--no-housekeeping"]) == 0
+    assert main([*base[:-2], "--session", nxt, "session", "close", "--rows", "none", "--summary", "s", "--guards", "gate 3 passed", "--read", "r", "--asked", x["q"], "--no-housekeeping"]) == 0
     assert f"; banner kept {now}" in capsys.readouterr().out
     entry = eng.read_ledger().get(nxt)
     assert entry.receipt("banner") == f"kept {now}" and entry.receipt("housekeeping") is None and _g(eng, "G-W1") == []

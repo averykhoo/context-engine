@@ -433,7 +433,7 @@ def test_a_close_s_own_writes_leave_step_2_s_run_covering_the_code_and_a_code_ch
     e, key = _engine(repo)
     assert G.run(repo, g, session=key, actor=ACTOR)[0] == 0  # step 2's gate
     assert G.status(repo, g, require="code+readers")[0] == 0  # step 2's run covered the readers too
-    e.session_close(key, actor=ACTOR, rows="CE-1 (closed)", summary=["built it"], receipts={"guards": "gate green", "read": "board only"})
+    e.session_close(key, actor=ACTOR, rows="CE-1 (closed)", summary=["built it"], receipts={"guards": "gate 3 passed", "read": "board only"})
     e.banner_set("- my banner", e.banner().sha, session=key, actor=ACTOR)  # step 3
     code, text = G.status(repo, g, require="code")
     assert code == 0 and "code: covered" in text and "all: NOT covered" in text, text  # all moved: the close did write

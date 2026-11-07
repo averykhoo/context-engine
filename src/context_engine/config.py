@@ -43,6 +43,11 @@ class Kind:
         return re.compile(rf"^{re.escape(self.prefix)}-(\d+)$")
 
 
+# The kit's `[working] gate_receipt` pattern (kit/context.toml.template carries the same value,
+# pinned equal by AC-32's test): the engine's default since CE-192 (DEC-162); '' turns it off
+GATE_RECEIPT = r"(?i)\d+ passed|passed \d+|not run"
+
+
 @dataclass(frozen=True)
 class Working:
     """``[working]``: where the working state lives and which kinds play which part (FRAMEWORK §5)."""
@@ -67,7 +72,7 @@ class Working:
     review_triggers: tuple[str, ...] = ()  # the values a board item's `review:` may take (§5.2)
     criteria: str = ""  # the criteria file, one `| AC-n | ... |` table row per criterion; `decision link` checks criterion ids against it
     archive: str = ""  # the archive directory `doc archive` moves a doc into when given none (FRAMEWORK §7.3, CE-27); its README.md is the redirect table
-    gate_receipt: str = ""  # a regex the close's `guards:` receipt must match: a gate pass count, or a statement that the gate was not run (CE-123); empty is off (DEC-107)
+    gate_receipt: str = GATE_RECEIPT  # a regex the close's `guards:` receipt must match: a gate pass count, or a statement that the gate was not run (CE-123); on by default (DEC-162), '' is off (DEC-223, supersedes DEC-107)
 
 
 # [working] keys that still load but nothing reads (CE-185, DEC-160): the kit's template leaves
