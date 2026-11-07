@@ -3,19 +3,19 @@
 LIVING. Orientation note (FRAMEWORK §5.1). The banner holds durable lines only, replaced when one changes;
 no session history here (that is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-07a)
+## Banner (2026-11-07b)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **This banner holds durable lines only** (DEC-163, CE-195): orient generates the board, the asks, the open sessions, the
   push state and the last close's digest. A close keeps the banner unless one of these lines changes.
-- **Owner-held:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close); pushes of intervals' records and of
-  audio-workspace's CLAUDE.md pointer (ba31e29d); a reboot frees CE-182's 42 DLL names.
+- **Owner-held:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close); pushes of intervals' records (audio-workspace's
+  ba31e29d handles itself, owner 2026-11-07b); a reboot frees CE-182's 42 DLL names.
 - **Records site:** https://averykhoo.github.io/context-engine/, built by `.github/workflows/pages.yml` (`site build`, DEC-159).
 - **The MCP server runs stale code after an engine change:** use the CLI, and ask the owner to restart Claude Code.
 - **Lesson (2026-11-02a..2026-11-06c):** a task runs as one workflow: builder, an independent verifier, fix rounds until PASS,
-  then the push and a CI watcher. `task close` files a reviewed item's residuals itself: give `--residual` only for risks
-  the review does not list.
+  then the push and a CI watcher; under DEC-173's size floor the coordinator edits directly, and pinned-design code tasks
+  try sonnet builders (CE-198, comment each task's numbers). `task close` files a reviewed item's residuals itself.
 - **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
   verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
 - **Every push: gate, then `tools/linux_gate.py` (CI is Linux, this machine Windows: CE-67), then a CI watcher.**

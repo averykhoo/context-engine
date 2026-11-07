@@ -7,10 +7,27 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-07b · kind: open
+## 2026-11-07b · kind: close
 
-- **opened:** 2026-11-07T11:41:26+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-07a
+- **rows:** DEC-173 (new, owner); CE-198 (new, NEXT)
+- **receipts:**
+  - guards: gate 1495 passed (2026-11-07); linux gate 1495 passed on fc317a7; lint inside the gate
+  - read: orient (in context from 2026-11-07a);
+    docs/evidence/article-takeaways-advice-2026-11-07a.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: set
+- **summary** (the owner digest):
+  - Owner (DEC-173): trial sonnet builders on the next tasks, adopt the size floor, push;
+    audio-workspace's push handles itself.
+  - CE-198 filed at NEXT: the trial's shape and adopt/drop rule; comment each trial task's tokens,
+    FAIL rounds and escalation there.
+  - CLAUDE.md points to DEC-173 (it sat at its G-D1 cap; the floor's text stays in the advice doc);
+    size-floor review by sonnet PASS.
+  - Pushed a368143..fc317a7 on the owner's word; gate and Linux gate 1495 passed; CI gate and pages
+    green.
+- **Still owed:**
+  - owner: restart Claude Code so the MCP commit tool gets CE-197's options
 - **start head:** da4647884f69a36546a6c464dad8922ce93bf35b
 
 ---
