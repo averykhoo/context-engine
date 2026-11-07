@@ -128,6 +128,12 @@ BANNER_RANK, LAST_CLOSE_RANK = 3, 4
 # The `housekeeping:` receipt a one-call close checks its entry's prose with before `hk run close`
 # writes (CE-195): as wide as a real one at up to 99 writes (`hk run close: 2 writes, 3 op log lines`)
 HK_RECEIPT_STANDIN = "hk run close: 00 writes, 00 op log lines"
+# The remedy of the write-time twin of G-D3's record citations (CE-183, DEC-205 to DEC-209)
+CITES_REMEDY = ("the text is stamped and never edited, so lint G-D3 would fail it for good: put an id of another repo in backticks "
+                "(`` `ASK-32` ``), saying which repo in the words around it, since G-D3 does not read inline code (in an owner's quote that is "
+                "markup, not a change of their words; a blockquote is the alternative); cite an id of this repo only once it exists "
+                "(`task show` / `decision show` it) or this session reserved it (`id reserve`, then write it with `--id`); never a guessed "
+                "next number. Nothing was written")
 
 
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
@@ -1816,6 +1822,7 @@ class Engine:
         if "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
             raise Refusal(f"the decision answering {rid} {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
                           "a ruling made on the owner's delegation goes in `--ruling`, with `--ruled-by` naming who made it (never `owner`, in any case); the owner's words hold no `## Ruling` heading")
+        self._cites_known(body, f"decision answering {rid}", session)  # G-D3's twin (CE-183): `<the new question>` holds no id
         return fields, body
 
     def _is_question(self, rid: str) -> None:
@@ -2122,6 +2129,7 @@ class Engine:
             self._born_checks(fields)
         if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147, DEC-125)
             raise Refusal(f"the {kind} {amends}", f"record the {kind}'s text without that line; once it exists, a later note goes in with `record amend <id> \"<text>\"`")
+        self._cites_known(body, kind, session, own=rid.strip())  # G-D3's twin (CE-183)
         if kind == self.w.decision:  # no guard's twin, so on whatever `[guards] off` says (CE-149, DEC-126): only `decision supersede` makes a decision history
             preset = "`status`" if "status" in fields else "`decision_status: SUPERSEDED`" if str(fields.get(D.STATUS_KEY)) == "SUPERSEDED" else ""
             if preset:
@@ -2167,6 +2175,19 @@ class Engine:
             ruled = f", `ruled_by: {fields.get(G.RULED_BY)}`" if fields.get(G.RULED_BY) is not None else ""
             raise Refusal(f"the decision is an agent's call (`actor: {fields.get('actor')}`{ruled}) but would be created {D.ACCEPTED}, which only a review gives it",
                           f"record it {D.PROVISIONAL} (or leave `{D.STATUS_KEY}` out); once it has been reviewed, `decision accept <id>` marks it {D.ACCEPTED} and logs who did")
+
+    def _cites_known(self, text: str, what: str, session: str, own: str = "") -> None:
+        """The write-time twin of G-D3's record citations (CE-183, DEC-205): refuse, before
+        anything is written, append-only ``text`` that cites an id no record or alias has, or a
+        `<id> § <heading>` its target lacks, as guards.py::record_refs would fail it at rest,
+        since a stamped text is never edited. ``own``, the id being written, passes, and so do the
+        ids this session reserved (DEC-206); another session's do not. Off with G-D3."""
+        if "G-D3" in self.store.config.guards.off:
+            return
+        allow = {own} if own else set()
+        allow |= {rid for rid, s in self.store.reserved_ids().items() if s == session}
+        if bad := G.new_text_refs(self, text, frozenset(allow)):
+            raise Refusal(f"the text of the {what}, at {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""), CITES_REMEDY)
 
     def _stale_after_check(self, fields: dict[str, Any], *, can_unset: bool) -> None:
         """G-D4's freshness half at write time (CE-155, DEC-203, DEC-204; FRAMEWORK §9.3): a
@@ -2229,12 +2250,14 @@ class Engine:
     @_milestone
     def amend(self, rid: str, text: str, *, session: str, actor: str) -> str:
         """Append a dated entry under ``## Amendments``; the text above it never changes."""
+        self._cites_known(text, f"amendment to {rid}", session)  # G-D3's twin (CE-183)
         self.store.amend(rid, text, session=session, actor=actor)
         return f"{rid}: amendment added under ## Amendments"
 
     def correct(self, rid: str, after: str, text: str, *, session: str, actor: str) -> str:
         """A bracketed insertion into an append-only record (DEC-13): insert-only and logged; the
         stamp is kept, since it pins the words as typed."""
+        self._cites_known(text, f"correction to {rid}", session)  # G-D3's twin (CE-183)
         _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
         return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
 
@@ -2295,6 +2318,7 @@ class Engine:
                 keys = {new: ["supersedes"], rid: [*keys[rid], "superseded_by"]}
             return keys
 
+        self._cites_known(why, f"reason for retiring {rid}", session)  # G-D3's twin (CE-183)
         head = f"retired (by {by}" + (f"; superseded by {new}" if new else "") + "): "
         # the successor first: its `supersedes` is idempotent, so if the story's write fails, a
         # retry (no story `retire` line logged yet) completes both
@@ -2366,6 +2390,7 @@ class Engine:
             d.set("story_status", status)
             return {rid: ["story_status"]}
 
+        self._cites_known(words, f"confirmation of {rid}", session)  # G-D3's twin (CE-183)
         head = f"confirmed (by {by}" + ("; unspecified" if status == "unspecified" else "") + "): "
         self.store.update([rid], mutate, session=session, actor=actor, op="confirm", amend={rid: head + words})
         return f"{rid}: confirmed by {by} (story_status: {status}); their words are under ## Amendments"

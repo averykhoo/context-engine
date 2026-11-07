@@ -35,7 +35,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterable, Iterator
 
 from . import decisions as D
 from . import gate as GATE
@@ -705,44 +705,81 @@ def record_refs(e: Engine) -> list[Failure]:
     store.py::Store.reserve, not caught here). An id reserved but not yet written is no record, so
     a batch citing it is red until the batch is written."""
     st = e.store
-    known: dict[str, Path] = {}
-    for kind in st.config.kinds.values():
-        for path in st._files(kind):
-            rid = st._id_of(kind, path)
-            if rid:
-                known.setdefault(rid, path)
+    known = record_ids(e)
     if not known:
         return []
     aliases = st.alias_map()
-    series = re.compile(rf"(?<![\w-])(?:{'|'.join(re.escape(k.prefix) for k in st.config.kinds.values())})-[0-9]+(?![\w-])")
+    series = id_series(e)
     heads: dict[str, list[str]] = {}
     out: list[Failure] = []
     for rid, path in sorted(known.items()):
         text = _text(path)
         if _deprecated(text):
             continue
-        rel = st._rel(path)
-        bad: list[str] = []
-        log = False
-        for n, line in prose(text, history=True):
-            if line.startswith("## "):
-                log = bool(LOG_HEAD_RE.match(line))
-            if log:
-                continue
-            bare = SPAN_RE.sub("", line)
-            for cited in dict.fromkeys(series.findall(bare)):
-                if cited not in known and cited not in aliases:
-                    bad.append(f"line {n}: names {cited}, which is no record (cited before it was allocated, or mistyped)")
-            for m in SECTION_REF_RE.finditer(bare):
-                target = known.get(m["id"])
-                if target is None:
-                    continue  # reported above as an id that is no record
-                if m["id"] not in heads:
-                    heads[m["id"]] = _headings(_text(target))
-                if not _cites_heading(m["rest"], heads[m["id"]]):
-                    bad.append(f"line {n}: `{m['id']} § {m['rest'].strip()[:40]}` names no heading of {m['id']}")
-        out += [Failure("G-D3", rel, b, "cite the id and heading that exist (`task show` / `decision show` the record first), or drop the citation") for b in bad]
+        bad = cite_problems(prose(text, history=True), known, aliases, series, heads)
+        out += [Failure("G-D3", st._rel(path), b, "cite the id and heading that exist (`task show` / `decision show` the record first), or drop the citation") for b in bad]
     return out
+
+
+def record_ids(e: Engine) -> dict[str, Path]:
+    """Every record id in the repo, of every kind, with the file holding it (the first, if two do)."""
+    st = e.store
+    known: dict[str, Path] = {}
+    for kind in st.config.kinds.values():
+        for path in st._files(kind):
+            rid = st._id_of(kind, path)
+            if rid:
+                known.setdefault(rid, path)
+    return known
+
+
+def id_series(e: Engine) -> re.Pattern[str]:
+    """An id of any series the repo configures (`<prefix>-<n>`, standing alone)."""
+    prefixes = "|".join(re.escape(k.prefix) for k in e.store.config.kinds.values())
+    return re.compile(rf"(?<![\w-])(?:{prefixes})-[0-9]+(?![\w-])")
+
+
+def cite_problems(lines: Iterable[tuple[int, str]], known: dict[str, Path], aliases, series: re.Pattern[str],
+                  heads: dict[str, list[str]], allow: frozenset[str] = frozenset()) -> list[str]:
+    """G-D3's record citations in ``lines`` (``prose(text, history=True)``'s (number, line)
+    pairs): each id of ``series`` that is neither in ``known``, nor an alias, nor in ``allow``,
+    and each `<id> § <heading>` whose target in ``known`` has no such heading (``heads`` caches
+    the targets' headings). A task's `## Log` is skipped, and so is inline code."""
+    bad: list[str] = []
+    log = False
+    for n, line in lines:
+        if line.startswith("## "):
+            log = bool(LOG_HEAD_RE.match(line))
+        if log:
+            continue
+        bare = SPAN_RE.sub("", line)
+        for cited in dict.fromkeys(series.findall(bare)):
+            if cited not in known and cited not in aliases and cited not in allow:
+                bad.append(f"line {n}: names {cited}, which is no record (cited before it was allocated, or mistyped)")
+        for m in SECTION_REF_RE.finditer(bare):
+            target = known.get(m["id"])
+            if target is None:
+                continue  # reported above as an id that is no record, or allowed with no text yet
+            if m["id"] not in heads:
+                heads[m["id"]] = _headings(_text(target))
+            if not _cites_heading(m["rest"], heads[m["id"]]):
+                bad.append(f"line {n}: `{m['id']} § {m['rest'].strip()[:40]}` names no heading of {m['id']}")
+    return bad
+
+
+CITE_STUB = "---\nid: x\n---\n"  # stands in for the frontmatter a text is written below
+
+
+def new_text_refs(e: Engine, text: str, allow: frozenset[str] = frozenset()) -> list[str]:
+    """The write-time twin of ``record_refs`` (CE-183, DEC-205): what G-D3 would fail in ``text``,
+    an append-only text about to be written, read as lint reads a body at rest (below its
+    frontmatter, so a text opening with `---` is body, INV-61), with line numbers counted from the
+    text's first line. Beyond lint's set it lets ``allow`` pass: the id being written and ids
+    this session reserved (DEC-206). The callers skip it when `[guards] off` names G-D3. An
+    empty repo is checked too: the record being written is what lint will then read."""
+    known = record_ids(e)
+    lines = ((n - 3, line) for n, line in prose(CITE_STUB + text.replace("\r\n", "\n"), history=True))
+    return cite_problems(lines, known, e.store.alias_map(), id_series(e), {}, allow)
 
 
 # -- G-T3 existence in normative text ----------------------------------------------------

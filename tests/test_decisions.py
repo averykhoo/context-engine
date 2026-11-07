@@ -1459,6 +1459,111 @@ def test_an_amendments_line_is_refused_in_every_append_only_record_new_whatever_
     assert "## Amendments" in e.store.get(sid).doc.body
 
 
+# -- the write-time twin of G-D3's record citations (CE-183, DEC-205 to DEC-209) ----------------
+
+OWNED = {"actor": "owner", "decision_status": "BUILT"}
+FOREIGN = 'Owner, answering context-engine ASK-32 (recorded there as D-154): *"yes, switch"*\n'
+NO_RECORD = "which is no record (cited before it was allocated, or mistyped)"
+
+
+def cites_engine(tmp_path, **guards):
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"stories": "story", **guards}}), encoding="utf-8")
+    return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+
+
+def g_d3(e):
+    return [f for f in e.lint() if f.guard == "G-D3"]
+
+
+def files(root) -> dict[str, bytes]:
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file() and ".context" not in p.parts}
+
+
+def test_record_new_refuses_a_text_citing_an_id_no_record_has_before_anything_is_written(eng):
+    """CE-183 (DEC-205): a stamped text is never edited, so `record new` refuses, before any byte,
+    a citation lint G-D3 would fail at rest, read as lint reads it (inline code, blockquotes,
+    history notes and fences are not read; a series the repo does not configure is not either),
+    with line numbers counted from the text's first line, whatever its line endings and even when
+    it opens with `---` (the zanzibar case: another repo's ids named bare)."""
+    eng.record_new("story", "Seed", "words\n", {"actor": "owner"}, **W)  # the op log exists
+    before = files(eng.root)
+    with pytest.raises(Refusal) as got:
+        dec(eng, body=FOREIGN)
+    assert f"the text of the decision, at line 1: names ASK-32, {NO_RECORD} (and 1 more)" in str(got.value)
+    assert "backticks" in got.value.remedy and got.value.remedy.endswith("Nothing was written")
+    assert files(eng.root) == before and not list(eng.store.records("decision"))
+    # the remedy: another repo's ids in backticks are written, and lint agrees
+    dec(eng, body=FOREIGN.replace("ASK-32", "`ASK-32`").replace("D-154", "`D-154`"))
+    dec(eng, body="> D-98 (history)\n\n*HISTORY —* D-97 was dropped.\n\n```\nD-96\n```\n\nDEC-154 and TK-301 are no series here.\n")
+    why = dec(eng, body="Layout B.\n\n## Why the detectors miss them\n\nreasons\n")
+    dec(eng, body=f"Per {why}, and {why} § Why the detectors miss them.\n")
+    dec(eng, body=f"Per {why} § Why the detectors miss them\r\n")  # read as lint reads it once written
+    assert g_d3(eng) == []
+    for body, line in ((f"Fine.\n\n{why} § No such heading\n", f"line 3: `{why} § No such heading` names no heading of {why}"),
+                       ("---\nfoo: bar\n---\nD-55\n", f"line 4: names D-55, {NO_RECORD}"),  # not frontmatter: it is below the record's own
+                       ("per D-55\r\nand more\r\n", f"line 1: names D-55, {NO_RECORD}")):
+        n = len(list(eng.store.records("decision")))
+        with pytest.raises(Refusal, match=re.escape(f"the text of the decision, at {line}")):
+            dec(eng, body=body)
+        assert len(list(eng.store.records("decision"))) == n
+    assert g_d3(eng) == []
+
+
+def test_the_write_time_check_allows_this_sessions_reserved_ids_and_the_records_own_id(eng):
+    """CE-183 (DEC-206): the id being written passes, and so do the ids this session reserved, so
+    a reserved batch citing each other is written one by one (lint is red on it until the whole
+    batch is, AC-131); an id another session reserved is refused, since this session can never
+    write it."""
+    first, second = eng.store.reserve("decision", 2, **W)
+    eng.record_new("decision", "One of a batch", f"{first} goes with {second}.\n", OWNED, rid=first, **W)
+    assert [f.message for f in g_d3(eng) if second in f.message]
+    eng.record_new("decision", "The other", f"{second} goes with {first}.\n", OWNED, rid=second, **W)
+    assert g_d3(eng) == []
+    eng.record_new("decision", "Its own id", "D-40 stands alone.\n", OWNED, rid="D-40", **W)  # never reserved: passes as its own
+    [held] = eng.store.reserve("decision", 1, session="2026-10-12e", actor=ACTOR)
+    n = len(list(eng.store.records("decision")))
+    with pytest.raises(Refusal, match=re.escape(f"names {held}, {NO_RECORD}")):
+        dec(eng, body=f"Wait for {held}.\n")
+    assert len(list(eng.store.records("decision"))) == n
+    assert g_d3(eng) == []
+
+
+def test_the_write_time_check_is_off_with_g_d3(tmp_path):
+    """CE-183 (DEC-205): the check is G-D3's twin, so `[guards] off` naming G-D3 turns it off."""
+    e = cites_engine(tmp_path, off=["G-D3"])
+    rid = dec(e, body=FOREIGN)
+    assert "ASK-32" in e.store.get(rid).doc.body
+
+
+@pytest.mark.parametrize("op", ["amend", "confirm", "retire", "correct", "ask_answer", "ask_answered"])
+def test_every_op_writing_append_only_text_refuses_a_citation_no_record_has(tmp_path, op):
+    """CE-183 (DEC-205): every other op that writes append-only text refuses, before any byte, an
+    id its text cites that no record has: `record amend`, `confirm`, `retire` and `correct`, and
+    `ask answer`, whose question stays open, and `ask new --answered`, which leaves no question
+    behind. The same text with the id in backticks is written."""
+    e = cites_engine(tmp_path)
+    d1 = dec(e)
+    recon = e.record_new("story", "Rebuilt", "words\n", {"actor": "agent (claude-x, reconstructed from the PRD)", "story_status": "unconfirmed", "date": "2026-10-12"}, **W).id
+    owned = e.record_new("story", "Owned", "words\n", {"actor": "owner", "story_status": "live", "date": "2026-10-12"}, **W).id
+    q = e.ask_new("Which index layout?", body=ASK_BODY, **W).id
+    run = {
+        "amend": (f"amendment to {d1}", lambda t: e.amend(d1, f"superseded in spirit by {t}", **W)),
+        "confirm": (f"confirmation of {recon}", lambda t: e.confirm(recon, f"yes, per {t}", **W)),
+        "retire": (f"reason for retiring {owned}", lambda t: e.retire(owned, f"replaced by {t}", by="owner", **W)),
+        "correct": (f"correction to {d1}", lambda t: e.correct(d1, "noon.", f"see {t}", **W)),
+        "ask_answer": (f"decision answering {q}", lambda t: e.ask_answer(q, f"yes, as {t} said", title="Layout B", **W)),
+        "ask_answered": ("decision answering <the new question>", lambda t: e.ask_answered("Which layout?", f"see {t}", title="Layout B", **W)),
+    }
+    what, call = run[op]
+    before = files(tmp_path)
+    with pytest.raises(Refusal, match=re.escape(f"the text of the {what}, at line 1: names ASK-99, {NO_RECORD}")) as got:
+        call("ASK-99")
+    assert "backticks" in got.value.remedy
+    assert files(tmp_path) == before  # the question still open, no decision, no question filed
+    call("`ASK-99`")
+    assert files(tmp_path) != before and g_d3(e) == []
+
+
 @pytest.mark.criterion("AC-101")
 def test_lint_g_i3_fails_a_hand_edited_capitalised_owner(eng):
     """CE-138: G-I3 matches the owner in any case at rest too, where a hand edit puts it."""

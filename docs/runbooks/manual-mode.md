@@ -1264,7 +1264,8 @@ or demoted to LATER.
    is the owner's words.`, a blank line, then the ruling. Stop if the words hold a `## Ruling`
    heading of their own (G-I3, unless `[guards] off` names it), or if the words or the ruling
    hold a `## Amendments` line (the text below it would fall outside `body_sha` and read as a
-   later amendment; this stop holds whatever `[guards] off` names).
+   later amendment; this stop holds whatever `[guards] off` names), and stop as § context-engine
+   record new step 2 does if the body cites an id no record has.
 3. On the question, set `state: closed`, `status: deprecated`, `closed: <key>`,
    `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` (with
    `ruled_by: <who ruled>` added for a delegated ruling) and `updated`.
@@ -1700,7 +1701,13 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    and logs it); `BUILT`, `DEFERRED` and `REJECTED` are taken as given. For every
    kind, whatever `[guards] off` names, stop if the text holds a `## Amendments` line: the text
    below it would fall outside `body_sha` and read as a later amendment (a later note goes in with
-   § context-engine record amend, once the record exists).
+   § context-engine record amend, once the record exists). Stop too, unless `[guards] off` names
+   G-D3, if the text, outside inline code, fenced code, blockquotes and `*HISTORY —*` lines,
+   cites an id of a configured series that no record or alias has (other than the id being
+   written, or one this session reserved: § context-engine id reserve), or a `<id> § <heading>`
+   whose target has no such heading: lint G-D3 would fail the stamped text for good. An id of
+   another repo goes in backticks, with the repo named in the words around it; in an owner's
+   quote that is markup, not a change of their words (or quote the words as a blockquote).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.
 4. Stamp it at once (`context-engine record stamp`): `body_sha` is the last frontmatter key.
 
@@ -1724,7 +1731,8 @@ The only body change an append-only record takes (the engine takes the text as a
 written to a file and passed with `--file`). If the record is stamped, its hash must match
 first. If there is no `## Amendments` heading, add one at the end. Then append a blank line and
 `- **<key> (<actor>):** <first line>`, with further lines indented two spaces (blank lines stay
-blank).
+blank). Stop first, as § context-engine record new step 2 does, if the text cites an id no
+record has.
 
 **Why:** owner intent changes by addition, so the original words and every change stay readable
 in order, and the hash above the heading still holds.
@@ -1737,7 +1745,8 @@ missing word, a `[sic]`. It only inserts.
 2. Take the original text: the body above `## Amendments`, in the body hash's canonical form
    (LF, outer newlines stripped, one final `\n`; § The two hashes). Find `after` in it: it must
    occur exactly once (count overlapping matches); if it is missing or occurs twice, stop and
-   pick a longer anchor. The anchor and the text are each one line.
+   pick a longer anchor. The anchor and the text are each one line, and stop as § context-engine
+   record new step 2 does if the text cites an id no record has.
 3. Insert `[text]` right after it. Note the offset: the number of characters (not bytes) of the
    canonical text before the `[`.
 4. Append an amendment as in § context-engine record amend, with the text
@@ -1770,7 +1779,8 @@ name this step). `record retire <id> --by <who> --why "<words>" [--superseded-by
    the same. A story that an earlier `retire` line of the op log retired is final, even if a hand
    edit has since undone it: stop; restore it from git, and to bring its intent back, record a
    new story. A story already `retired` with no such line was retired by hand: retire it here,
-   so who and why are recorded.
+   so who and why are recorded. Stop as § context-engine record new step 2 does if `--why` cites
+   an id no record has.
 3. On the successor: add the story to `supersedes` (a list; a new key goes last). On the story:
    set `story_status: retired`, set `status: deprecated`, and with a successor add it to
    `superseded_by` (a list), each new key going last in that order. Then append an amendment
@@ -1815,7 +1825,8 @@ unconfirmed`): the owner read it and said it is what they meant. `record confirm
    confirmed it are recorded. Follow the story's `supersedes` links, and theirs in turn: if the
    words are those of a `confirmed (by <who>): <words>` amendment on any story found there
    (whitespace aside), stop, and ask the owner again; if they answer in the very same words,
-   quote them with when and where they said them.
+   quote them with when and where they said them. Stop as § context-engine record new step 2
+   does if the words cite an id no record has.
 3. Set `story_status: live`, or `unspecified` with `--status unspecified` when no criterion comes
    from the story yet (lint G-T1 fails a `live` story with none). Leave `actor` as it is. Then
    append an amendment as in § context-engine record amend, with the text `confirmed (by
