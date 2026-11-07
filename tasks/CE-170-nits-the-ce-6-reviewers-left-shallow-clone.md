@@ -3,14 +3,14 @@ type: Task
 id: CE-170
 title: 'Nits the CE-6 reviewers left: shallow-clone docstring, hk.run signature, an untested dry branch'
 brief: Small follow-ups from CE-6's 2026-11-01b review and verify; none blocks
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-3]
 source: session 2026-11-01b
 created: 2026-11-01
-moved: 2026-11-01b
-updated: 2026-11-01b
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 The CE-6 reviewers and final verifier (2026-11-01b) left these unaddressed; none blocked the close:
