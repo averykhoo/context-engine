@@ -7,6 +7,8 @@ decided: 2026-11-07
 session: 2026-11-07d
 decision_status: ACCEPTED
 body_sha: sha256:1884145ce88ac98ab1380ddae9ec0b65e1f0ea138848e00613cdebb2984c68c2
+amends: [DEC-173]
+tasks: [CE-198]
 ---
 
 Owner, 2026-11-07d:
