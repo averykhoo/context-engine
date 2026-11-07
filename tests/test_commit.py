@@ -1106,6 +1106,45 @@ def test_a_record_that_does_not_parse_is_a_lint_failure_and_stops_no_commit_that
     assert rec.read_bytes() == breaks(good)  # the hand edit is the owner's: untouched
 
 
+BODY_READERS = {  # a board record whose frontmatter parses, made into one a guard reads the body of (fix round 1)
+    "open-question": lambda b, key, rec: b.ask_new("Red or blue?", session=key, actor=ACTOR, body=ASK_BODY).path,  # G-W4
+    "reviewed-now": lambda b, key, rec: _edit(rec, b"pri: LATER", b"pri: NOW\nreview: yes"),  # G-W12
+    "reviewed-closed": lambda b, key, rec: _edit(rec, b"state: open", b"state: closed\nreview: yes"),  # G-W13
+}
+
+
+def _edit(rec: Path, old: bytes, new: bytes) -> Path:
+    rec.write_bytes(rec.read_bytes().replace(old, new, 1))
+    return rec
+
+
+@pytest.mark.criterion("AC-78")
+@pytest.mark.parametrize("how", sorted(BODY_READERS))
+def test_a_record_whose_body_does_not_parse_is_passed_over_by_the_guards_that_read_bodies(repo, how):
+    """CE-161: "does not parse" is the whole file's. A board record's head parses, so `heads`
+    yields it, but G-W4 (an open question's body) and G-W12/G-W13 (a reviewed item's) read its
+    body, which is not UTF-8: lint raised there, naming no file, and refused every commit. Now
+    every guard passes over it and the schema failure names it, in `lint` and `lint --working`."""
+    a, b, key, theirs = _two(repo)
+    path = BODY_READERS[how](b, key, repo / theirs)
+    rel = path.relative_to(repo).as_posix()
+    good = path.read_bytes()
+    path.write_bytes(good + b"\n\xff half-pasted\n")
+    e = eng(repo)  # one engine throughout, as the MCP server keeps one
+    for working in (False, True):
+        named = [f for f in e.lint(working=working) if f.path == rel]
+        assert [f.guard for f in named if f.guard == "schema"] == ["schema"], (working, named)
+        assert re.match(r"does not parse: is not UTF-8 \(invalid start byte at byte", next(f for f in named if f.guard == "schema").message), named
+    path.write_bytes(good)  # fixed: the guards read it again (what was passed over is not remembered past a lint)
+    again = [f.guard for f in e.lint(working=True) if f.path == rel]
+    assert again == {"reviewed-now": ["G-W12"], "reviewed-closed": ["G-W4"], "open-question": []}[how], again  # no design review; `status` not deprecated
+    path.write_bytes(good + b"\n\xff half-pasted\n")
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert line.startswith(f"committed {head(repo)}") and "a.py" in files_at(repo), line
+    assert rel not in git(repo, "ls-files")
+
+
 @pytest.mark.criterion("AC-78")
 def test_a_commit_with_only_another_sessions_lines_and_no_path_says_so(repo):
     a, b, key, theirs = _two(repo)

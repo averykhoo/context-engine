@@ -169,6 +169,7 @@ class Store:
         self._lead: list[str] = []  # `<op> <id>` of the lines logged since the last commit point: this operation's
         self.last_commit = commit_mod.Outcome()  # what the newest commit attempt did
         self._skip_unreadable = 0  # open skipping_unreadable() scopes (lint's, CE-161)
+        self._parses: dict[Path, bool] = {}  # within them: whether a record's whole file parses (``_whole_parses``)
 
     # -- reading -----------------------------------------------------------------------
 
@@ -198,12 +199,32 @@ class Store:
     @contextmanager
     def skipping_unreadable(self) -> Iterator[None]:
         """Within it, ``heads`` and ``records`` pass over a record that does not parse, where they
-        would refuse: lint runs in it, and its schema check reports that record by name (CE-161)."""
+        would refuse: lint runs in it, and its schema check reports that record by name (CE-161).
+        "Does not parse" is the whole file's, as ``read`` parses it, not just the frontmatter
+        ``heads`` reads: a guard that reads a head's body (G-W4 on an open question, G-W12 and
+        G-W13 on a reviewed item) would otherwise meet a body that is not UTF-8 and raise."""
+        if not self._skip_unreadable:
+            self._parses = {}
         self._skip_unreadable += 1
         try:
             yield
         finally:
             self._skip_unreadable -= 1
+            if not self._skip_unreadable:
+                self._parses = {}
+
+    def _whole_parses(self, path: Path) -> bool:
+        """Whether ``read`` parses the file, asked once per file within ``skipping_unreadable``
+        (``lint`` fills it as it reads every record)."""
+        ok = self._parses.get(path)
+        if ok is None:
+            try:
+                self.read(path)
+                ok = True
+            except Refusal:
+                ok = False
+            self._parses[path] = ok
+        return ok
 
     def _each(self, kind_name: str, parse: Callable[[Path], okf.Document]) -> Iterator[Record]:
         """Every record of a kind, parsed by ``parse``. One that does not parse (a hand edit in
@@ -213,6 +234,8 @@ class Store:
         for path in self._files(kind):
             rid = self._id_of(kind, path)
             if not rid:
+                continue
+            if self._skip_unreadable and not self._whole_parses(path):
                 continue
             try:
                 doc = parse(path)
@@ -500,7 +523,11 @@ class Store:
                     doc = self.read(path)
                 except Refusal as r:
                     out.append(Failure("schema", rel, f"does not parse: {r.message}", r.remedy))
+                    if self._skip_unreadable:
+                        self._parses[path] = False
                     continue
+                if self._skip_unreadable:
+                    self._parses[path] = True
                 if unreadable_only:
                     continue
                 out += [Failure("schema", rel, m, rem) for m, rem in self.problems(kind, doc, path)]
