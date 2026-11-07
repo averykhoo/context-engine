@@ -37,7 +37,6 @@ OKF reserves `status`: use `state`, `decision_status`, `story_status`, `charter_
 ## Environment
 
 - Interpreter: `C:/Users/user/anaconda3/envs/context-engine/python.exe` (Python 3.12).
-  Bare `python` is broken on this machine; always use the full path.
 - Install for development: `<interpreter> -m pip install -e ".[dev]"`.
 - **The engine runs from its own env and is pointed at a repo; it is never installed into a
   target repo's environment** (DEC-1).
@@ -113,7 +112,8 @@ This repo's values for those steps:
 - **Never run `context-engine init` here** (it holds the kit's sources). Close eagerly, without asking (DEC-31).
 - **Coordinator** (DEC-16, DEC-44, DEC-60; contract § Rules): every task, even one, to an ultracode
   subagent; checks and verification to agents. Cheapest viable model (DEC-45): haiku for watchers,
-  sonnet for bulk reading and census, opus for code and review.
+  sonnet for bulk reading and census, opus for code and review; DEC-173 adds a sonnet-builder trial
+  (CE-198) and a size floor (in its advice doc).
 - Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths no uncommitted op
   line names, and for a `code` path only on a green `gate status --require code`); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
