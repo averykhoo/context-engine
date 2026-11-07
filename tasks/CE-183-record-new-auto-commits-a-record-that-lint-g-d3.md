@@ -3,13 +3,15 @@ type: Task
 id: CE-183
 title: record new auto-commits a record that lint G-D3 then fails (bare foreign ids), and a stamped body cannot be fixed
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-6]
 source: session 2026-11-04a
 created: 2026-11-04
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 record new auto-commits a record that lint G-D3 then fails (bare foreign ids), and a stamped body cannot be fixed.
@@ -25,3 +27,5 @@ record new auto-commits a record that lint G-D3 then fails (bare foreign ids), a
 ## Log
 
 - 2026-11-04a (claude-code/claude-opus-5-5): Found in CE-167 post-merge (zanzibar session 2026-11-04a, first-hand by the agent): record new stamped and auto-committed DEC-10..12 whose bodies named context-engine ids bare (ASK-3x, DEC-15x); G-D3 failed them and only the next commit refused. Stamped bodies cannot be edited, so the words were re-recorded as DEC-13..15 and DEC-10..12 superseded. Fix: run commit's lint check before milestone auto-commits, or let G-D3 accept a repo-qualified foreign id.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: write-time G-D3 twin: appends/new refuse a citation lint would fail at rest
+  residual risk: INV-149, INV-150, INV-151, INV-152

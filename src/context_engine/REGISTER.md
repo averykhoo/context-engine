@@ -1049,3 +1049,31 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the engine-level tests pin the reasons
 - **control:** reduce: test_record_new_task_set_and_decision_set_refuse_a_bad_or_expired_stale_after
 - **from:** CE-155, session 2026-11-07e
+
+## INV-149: the write-time check is stricter than lint for deprecated records (retire's reason; amend/correct/confirm on a superseded decision): it refuses text lint at rest would never fail; undecided whether those ops should skip the check or keep it
+
+- **affects:** an agent retiring or amending a deprecated record who must reword
+- **why not eliminated:** not decided; keeping the check is the safe side
+- **control:** individual: the write-time G-D3 twin refusal in the append-only ops
+- **from:** CE-183, session 2026-11-07e
+
+## INV-150: record new without --id refuses a body that cites the id it is about to get; by design, own is only the rid passed in
+
+- **affects:** an agent recording owner words that cite their own new id
+- **why not eliminated:** by design, the id is not known before the write
+- **control:** individual: the write-time G-D3 twin refusal, which names the remedy (pass --id)
+- **from:** CE-183, session 2026-11-07e
+
+## INV-151: no criteria row (AC-n) claims the CE-183 tests, so no criterion tracks the write-time twin
+
+- **affects:** the owner reading the criteria register
+- **why not eliminated:** criterion not yet written
+- **control:** individual: none beyond the tests themselves
+- **from:** CE-183, session 2026-11-07e
+
+## INV-152: .scratch/wave-2026-11-07e/ce-183/ still holds probes, logs and sabotage scripts (verifier_r3_sabotage.py among them), gitignored and unrecorded
+
+- **affects:** the next session reading .scratch
+- **why not eliminated:** the coordinator must transcribe or delete them
+- **control:** individual: none; housekeeping
+- **from:** CE-183, session 2026-11-07e
