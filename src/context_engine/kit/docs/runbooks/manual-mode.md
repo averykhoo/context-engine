@@ -396,26 +396,31 @@ refuses rows that do not name each one (§ context-engine session close, step 3)
 ### context-engine orient
 
 Read and report, in this order, in at most 6000 bytes in total (`orient_max_bytes`), counted as
-UTF-8 with LF line ends. Every part's heading appears, but for one (below). The bytes go first to
-parts 0, 2, 3 and 5, which a session must act on, then to 4, then to 6 and 7, then to the banner
-(1), and the `Last close` part (3) takes what is left; so cut that part first, and leave it out,
-heading too, when even its heading and cut note would cut the banner; then cut the banner. Cut a
-part between items (a line and the indented lines under it) and end it with a note naming the
-command that lists the rest (`banner show`, `baton list`, a `grep` of the ledger for `kind:
-open`, `task list`, `task show <id>`, `register show --engine`):
+UTF-8 with LF line ends. Every part shown keeps its heading, but for one (below); a part said to
+come only when something holds is left out, heading too, when it does not, and says whose bytes
+its own come with. The bytes go first to parts 0, 2, 3 and 5, which a session must act on, then
+to 4, then to 6 and 7, then to the banner (1), and the `Last close` part (3) takes what is left;
+so cut that part first, and leave it out, heading too, when even its heading and cut note would
+cut the banner; then cut the banner. Cut a part between items (a line and the indented lines
+under it) and end it with a note naming the command that lists the rest (`banner show`, `baton
+list`, a `grep` of the ledger for `kind: open`, `task list`, `task show <id>`, `register show
+--engine`, and for each part below that comes only when something holds, the place it names):
 
 0. only when G-D0 fails (§ lint), and `[guards] off` does not name it: a `Contract: fix this
    first` section, one line per failure with its remedy;
-1. the banner (`HANDOFF.md` § Banner);
-2. open batons and pauses (`docs/working/`, `state: open`), your own session's first, then
-   pauses before batons, each pause with its resume step and branch;
-3. other sessions with an open stub in the ledger, which the session then shows the owner, one
-   line each (`procedures.md` § Session start): the key, its `opened` value, and `; last active
-   <time> (<what>)`, the newest of its op log lines (`op <op>`, by its `at`) and of the commits
-   whose `Session:` trailer names it (`commit <sha>`, by committer date), so a session that died
-   without a close shows how long it has been quiet; say `none` when there are none; a stub
-   with a `follows:` line adds `; follows <key>` after its `opened` value;
-   a stub with a `continues:` line adds `; continues <key>` the same way;
+1. the banner (`HANDOFF.md` § Banner), headed `Banner (<key>)` with the banner's key, or headed
+   `Banner` alone with the body `no banner` when there is none;
+2. open batons and pauses (`docs/working/`, `state: open`), headed `Batons and pauses: do these
+   first`: your own session's first, then pauses before batons, each pause with its resume step
+   and branch; say `none` when there are none;
+3. other sessions with an open stub in the ledger, headed `Other open sessions: show the owner,
+   one line each`, which the session then shows the owner, one line each (`procedures.md` §
+   Session start): the key, its `opened` value, and `; last active <time> (<what>)`, the newest
+   of its op log lines (`op <op>`, by its `at`) and of the commits whose `Session:` trailer names
+   it (`commit <sha>`, by committer date), so a session that died without a close shows how long
+   it has been quiet; say `none` when there are none; a stub with a `follows:` line adds `;
+   follows <key>` after its `opened` value; a stub with a `continues:` line adds `; continues
+   <key>` the same way;
    then, only when your own stub carries `follows: <key>`, a `Follows <key>: what it closed
    with` part (its bytes come with part 4's): `- rows: ...` from that closed entry, then one
    `- digest: ...` line per summary item and one `- still owed: ...` line per `Still owed` item;
@@ -426,33 +431,75 @@ open`, `task list`, `task show <id>`, `register show --engine`):
    what it closed with` part with the same lines for it (its `- thread:` line only when it
    continued one; its bytes come after the banner's, as the ledger holds it whole): the close's
    digest is read here, not copied into the banner;
-4. board items at NOW and NEXT (as `context-engine task list`);
+   then, only when your own stub carries a `tasks:` line, a `Tasks the owner asked for: close
+   when every one is closed` part (its bytes come with parts 0, 2, 3 and 5's): one `- <id>:
+   <state>` line per id the line names (`missing` when no record has the id), then `- <n> of <m>
+   still open`, or `- every one is closed: do the clean close now`; the rest is `session tasks`;
+4. board items at NOW and NEXT (as `context-engine task list`), headed `Board: NOW and NEXT`; say
+   `empty` when there are none;
    then, only when a re-rank is due (§ The last rerank), a `Rerank due: tell the owner` part:
    one line per reason, then where the re-rank is (`procedures.md` § Rerank);
-5. owner questions to raise now: open at NOW or NEXT, or overdue (see session close step 3);
-6. the NOW item's brief, `## Traps` and `## Read first` (with no NOW item, `no NOW item`, and
-   `: rerank due (above)` after it when a re-rank is due);
+   then, each only when it has a line, in this order:
+   - a `Next work waits on parked items: tell the owner` part (its bytes come with part 4's):
+     for each open NOW or NEXT item, and each board id on a banner line holding the word
+     `next`, whose `deps` names an open SOMEDAY item, `- <id> (<pri>, named next in the banner)
+     waits on <dep>, which is SOMEDAY (parked): drop the dep, promote it, or re-rank <id>` (the
+     `, named next in the banner` only for a banner id); the rest is `task show <id>`;
+   - a `Plans to freeze: their items are closed` part (its bytes come with part 4's; off
+     with G-D4): each ACTIVE-PLAN doc G-D4 reads whose named board items are all closed, with how
+     to freeze it: `doc freeze <path>`, or, when it has a `[guards] liveness_given` entry, that
+     entry set to FROZEN; the rest is `lint` (G-D4);
+   - an `Unspecified stories and the items G-T1 counts` part (its bytes come with parts 6
+     and 7's; off while `[guards] stories` is unset): each `story_status: unspecified` story,
+     with the open board items naming it, which G-T1 counts (check one is the task to specify
+     it), or saying no open board item names it (G-T1 is red: `task new` the work to specify it);
+     the rest is `lint` (G-T1);
+   - a `Housekeeping owed` part (its bytes come with part 4's): a line counting the stale `kind:
+     open` stubs, with their keys (your own included, since the hook holds no key: if one is
+     yours, `session touch`), a line counting the open questions an `asked` receipt names more
+     newly than their `last_asked` (only with a question kind), then a last line saying to run
+     `hk run start`; the rest is `hk run start --check`. It only shows what is owed: the session
+     runs it (procedures.md § Housekeeping, at session start);
+   - a `Foreign commits to reconcile` part (its bytes come with parts 6 and 7's): the
+     foreign commits of your session's range, less those a `kind: foreign` entry names (none
+     without a key), then those of the newest five abandoned sessions' ranges, at most 8 lines a
+     range and then `- (+<n> more in <whose>)`, each `- <sha7> <subject> (<author>; <whose>)`,
+     `<whose>` being `this session's range` or `abandoned <key>'s range`; the rest is
+     `procedures.md` § Reconciling foreign commits;
+   - the `Templates still unfilled: ask the owner` and `Charter unconfirmed: ask the owner`
+     parts (described below);
+   - a `Deprecated config: tell the owner` part (its bytes come with parts 6 and 7's):
+     one line while `[working] decision_index` is set, saying the engine no longer writes a
+     decision index: delete the key from `context.toml`, and `git rm` the index file when it
+     exists; `decision index` prints the listing and `site build <dir>` publishes it; the rest is
+     FRAMEWORK §6.5;
+   - the `Upstream` part (described below);
+5. owner questions to raise now, headed `Raise in chat now, one line each`: open at NOW or NEXT,
+   or overdue (see session close step 3); say `none` when there are none;
+6. the NOW item's brief, `## Traps` and `## Read first`, headed `Top item: <id> <title>` (with no
+   NOW item, headed `Top item` with the body `no NOW item`, and `: rerank due (above)` after it
+   when a re-rank is due);
 7. in a repo whose `[working] register` is not the engine's own `REGISTER.md`: one line,
    `Engine register (<version>): <N> residual risks, context-engine register show --engine`.
 
-Where a branch has an upstream, an `Upstream` part (its bytes come with parts 6 and 7's): `- HEAD
+Two parts ask the owner for what bootstrap left unfilled (their bytes come with parts 6 and 7's),
+each only when it has a line. `Templates still unfilled: ask the owner`: a line for the charter
+(`[guards] charter`, else `docs/charter.md`) and one for the criteria file (`[working] criteria`,
+else `docs/criteria.md`) when it is still the kit's template whole, or when it still holds one of
+the template's `*(...)*` placeholders, naming each (kit README § 2a). `Charter unconfirmed: ask
+the owner`: one line while the charter's frontmatter says `charter_status: unconfirmed`, an
+agent's reconstruction (off while `[guards] charter` is unset or G-I1 is off): bring it to the
+owner as an owner question, record the answer as a decision, then set `charter_status:
+confirmed` (FRAMEWORK §3.1, §11.4). Lint fails neither, since every repo starts from the
+templates and a migrated one from an unconfirmed charter, so orient asks at every session start
+until they are done.
+
+Where a branch has an upstream, the `Upstream` part (its bytes come with parts 6 and 7's): `- HEAD
 is <a> commits ahead of <upstream> and <b> behind (as of the last fetch)` (`git rev-list
 --left-right --count HEAD...@{upstream}`), then the newest `update by push` entry of `git reflog
 show --date=iso-strict <the upstream's full ref>`: `- the last push to <upstream>: <short sha>, at
 <time>` when an open session's window (its `session.start` op line to its close, pause or
 abandon) holds that time, or the line saying it came while no session was open.
-
-Two parts ask the owner for what bootstrap left unfilled, shown after part 4 (their bytes come
-with parts 6 and 7's), each only when it has a line. `Templates still unfilled: ask the owner`:
-a line for the charter (`[guards] charter`, else `docs/charter.md`) and one for the criteria
-file (`[working] criteria`, else `docs/criteria.md`) when it is still the kit's template whole,
-or when it still holds one of the template's `*(...)*` placeholders, naming each (kit
-README § 2a). `Charter unconfirmed: ask the owner`: one line while the charter's frontmatter says
-`charter_status: unconfirmed`, an agent's reconstruction (off while `[guards] charter` is unset
-or G-I1 is off): bring it to the owner as an owner question, record the answer as a decision,
-then set `charter_status: confirmed` (FRAMEWORK §3.1, §11.4). Lint fails neither, since every
-repo starts from the templates and a migrated one from an unconfirmed charter, so orient asks at
-every session start until they are done.
 
 **Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: a contract that did not load, then work carried over from earlier sessions and live sessions,

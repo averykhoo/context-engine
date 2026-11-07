@@ -66,6 +66,51 @@ def test_the_lint_section_names_every_guard_id_lint_reports():
     assert unnamed == [], f"{RUNBOOK.name} § context-engine lint never names {unnamed} in bold (config.LINT_IDS): give each its rule, or say it checks nothing"
 
 
+def _orient_titles() -> list[tuple[str, re.Pattern]]:
+    """CE-200: each part heading working.py::Engine.orient can emit, in output order, as
+    (title as written, a regex for it in the runbook). Read from the source, not a hand list
+    (which drifts as the runbook did: CE-121, CE-136, CE-185 each added a part): a part put first
+    with `sections.insert(0, ...)` leads, the rest keep source order; an f-string's `{...}`
+    placeholders read as a runbook `<...>` (`Banner ({b.key})` -> `Banner (<key>)`)."""
+    import inspect
+
+    from context_engine import working
+
+    src = inspect.getsource(working.Engine.orient)
+    found = re.findall(r'(sections\.insert\(0, )?Part\((f?)"([^"]*)"', src)
+    assert len(found) >= 20, found  # the source walk itself must not silently find nothing (22 on 2026-11-08)
+    ordered = [f for f in found if f[0]] + [f for f in found if not f[0]]
+    out = []
+    for _, is_f, title in ordered:
+        pat = "<[^<>]+>".join(re.escape(piece) for piece in re.split(r"\{[^}]*\}", title)) if is_f else re.escape(title)
+        out.append((title, re.compile(pat)))
+    return out
+
+
+def _orient_section() -> str:
+    return " ".join(runbook_sections()["context-engine orient"].split())  # a heading wrapped across lines still reads whole
+
+
+def test_the_orient_section_names_every_part_orient_shows():
+    """CE-200: a by-hand orient (§ context-engine orient) shows each part the engine's does; seven
+    conditional parts (CE-112, CE-116, CE-97, CE-48, CE-6, CE-101, CE-185) were once in the
+    engine and nowhere in the runbook. Each heading Engine.orient can emit is named in the section."""
+    flat = _orient_section()
+    missing = [title for title, pat in _orient_titles() if not pat.search(flat)]
+    assert missing == [], f"{RUNBOOK.name} § context-engine orient never names these Engine.orient part headings: {missing}"
+
+
+def test_the_orient_section_names_the_parts_in_the_order_orient_shows_them():
+    """CE-200: the section names the parts in the order orient shows them (each heading's first
+    mention), so a by-hand orient puts them in the engine's order. Non-decreasing, not increasing:
+    `Top item` and `Top item: <id> <title>` match at the same place."""
+    flat = _orient_section()
+    seen = [(title, pat.search(flat)) for title, pat in _orient_titles()]
+    at = [(title, m.start()) for title, m in seen if m]
+    out_of_order = [(a, b) for (a, i), (b, j) in zip(at, at[1:]) if j < i]
+    assert out_of_order == [], f"{RUNBOOK.name} § context-engine orient names these part headings out of Engine.orient's order (earlier, later): {out_of_order}"
+
+
 # -- the procedures runbook: every procedure's steps, in order, in one place (US-15, CE-24) ----
 
 PROCEDURES = RUNBOOK.with_name("procedures.md")
