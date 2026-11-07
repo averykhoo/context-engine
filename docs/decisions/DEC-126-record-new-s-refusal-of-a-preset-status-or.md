@@ -3,7 +3,7 @@ type: Decision
 id: DEC-126
 title: record new's refusal of a preset status or SUPERSEDED on a decision is not behind G-W4's off switch
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:6391f43017272bc1db6fad2200e89334430756c289a3badf810c1ac7e84666ce

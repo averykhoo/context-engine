@@ -3,7 +3,7 @@ type: Decision
 id: DEC-112
 title: The decision_status/status agreement check is a clause of G-W4, not a new G-id
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:d1af8db4788ca0ae8a7ee2a24612821ae797b89016e00840b919530651c5190d

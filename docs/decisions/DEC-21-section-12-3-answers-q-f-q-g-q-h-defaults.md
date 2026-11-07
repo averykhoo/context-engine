@@ -3,7 +3,7 @@ type: Decision
 id: DEC-21
 title: 'Section 12.3 answers: Q-F, Q-G, Q-H defaults accepted; Q-J deferred; no housekeeping write budget by default (Q-K)'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: Q-F, Q-G, Q-H, Q-J, Q-K
 decided: 2026-10-09
 session: 2026-10-09e

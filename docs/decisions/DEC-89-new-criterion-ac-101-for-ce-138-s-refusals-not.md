@@ -3,7 +3,7 @@ type: Decision
 id: DEC-89
 title: New criterion AC-101 for CE-138's refusals, not a rewrite of AC-98, AC-99 or AC-100
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:a5c075908f8bfbcfb4e032852e610d869ce981bfea30295d5e56461104eb4dd8

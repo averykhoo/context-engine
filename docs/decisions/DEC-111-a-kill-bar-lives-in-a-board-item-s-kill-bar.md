@@ -3,7 +3,7 @@ type: Decision
 id: DEC-111
 title: A kill bar lives in a board item's Kill bar section, and task close --verdict is KILL, PASS or VOID with evidence
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:daf1a3afec2acbea848e08bd14a453f33f31294608c32d7ff4bd76cc946af3a7

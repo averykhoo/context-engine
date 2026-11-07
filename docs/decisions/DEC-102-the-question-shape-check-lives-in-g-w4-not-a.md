@@ -3,7 +3,7 @@ type: Decision
 id: DEC-102
 title: The question-shape check lives in G-W4, not a new guard id
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:9cf96903768748e6d5e30c93e382bfd74c67684ea21a0b6c13987ea4f3af97ab

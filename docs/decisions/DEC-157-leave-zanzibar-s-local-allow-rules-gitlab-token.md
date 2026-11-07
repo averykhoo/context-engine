@@ -5,7 +5,7 @@ title: Leave zanzibar's local allow rules (GitLab token) and tag-push permission
 actor: owner
 decided: 2026-11-05
 session: 2026-11-05a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-36
 body_sha: sha256:0a55f8675a712a4af5fd6427e715543918eb31dc98553ed4aebc72bc9d7026a0
 ---

@@ -5,7 +5,7 @@ title: audio-workspace open issue folders become tasks, a HANDOFF row naming a f
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-9
 body_sha: sha256:965ad860c182d5386d92993ff1fc2cbefc0ad69314981479235f355a9bced2cd
 ---

@@ -5,7 +5,7 @@ title: The SessionStart hook goes in the machine-local settings file; init merge
 actor: owner
 decided: 2026-10-13
 session: 2026-10-13b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-4
 body_sha: sha256:b6e11ec24806b6d19984afe428f520587d164c1b1d2f6067a092f0bbb7299d06
 ---

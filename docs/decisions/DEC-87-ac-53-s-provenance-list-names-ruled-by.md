@@ -3,7 +3,7 @@ type: Decision
 id: DEC-87
 title: AC-53's provenance list names ruled_by
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:1057bc8749aba8851ab1633c224b73f853bf42d4e6851b16da7fe6dc0f8b9f71

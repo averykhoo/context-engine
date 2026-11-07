@@ -5,7 +5,7 @@ title: 'CE-110: owner pastes shell rules 1 and 2; rule 3 only if ulimit -u is sh
 actor: owner
 decided: 2026-11-01
 session: 2026-10-31a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-22
 body_sha: sha256:db5068c1dfa2fb35d7e4bd907de683b8c89c98645e37c2d790ecb491383afdc4
 ---

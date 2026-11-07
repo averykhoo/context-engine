@@ -5,7 +5,7 @@ title: 'CE-145: amend INV-31 with the compaction clause first, then retire CE-14
 actor: owner
 decided: 2026-11-01
 session: 2026-10-31a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-23
 body_sha: sha256:cac85e3bb9d36aecdcff5de74aa06964248c6ad30d3ae807352f00ac277d4de0
 ---

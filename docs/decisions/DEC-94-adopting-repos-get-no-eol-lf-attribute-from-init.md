@@ -3,7 +3,7 @@ type: Decision
 id: DEC-94
 title: Adopting repos get no eol=lf attribute from init
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:2acf25a40043ce0d1a8bd0a55e64916327f2873c281b6ae437823274adf3de69

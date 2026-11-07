@@ -3,7 +3,7 @@ type: Decision
 id: DEC-127
 title: "The task set the owner asked for is a tasks: line in the session's ledger stub, written by a new op session tasks"
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:82f13e72b495f6f6ecce94c5335b01bacdffa8e0dfaeaebe2299bd7a310b638b

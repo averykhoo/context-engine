@@ -3,7 +3,7 @@ type: Decision
 id: DEC-15
 title: 'One name, context-engine: the CLI command and the MCP server; tools use underscores'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tags: [naming, mcp, cli]
 decided: 2026-10-09
 session: 2026-10-09a

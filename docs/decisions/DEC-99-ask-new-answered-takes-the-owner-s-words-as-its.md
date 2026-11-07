@@ -3,7 +3,7 @@ type: Decision
 id: DEC-99
 title: ask new --answered takes the owner's words as its value, the decision title in --decision-title
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:0dc6da8c970113edfe35b5f97e30fbcc2ebdfe6e3b3c1ec4f33945f074ecaf97

@@ -5,7 +5,7 @@ title: audio-workspace retires handoffShape and decisionsIndex, rewrites claudeM
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-8
 body_sha: sha256:adac287a6fadd3954fb15333c205b024e4d40024eb79eb713e6747c58aa6d29d
 ---

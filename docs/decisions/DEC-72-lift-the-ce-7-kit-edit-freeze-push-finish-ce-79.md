@@ -3,7 +3,7 @@ type: Decision
 id: DEC-72
 title: Lift the CE-7 kit-edit freeze; push, finish CE-79, and work CE-113 and CE-93
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-23
 session: 2026-10-23f
 body_sha: sha256:d606959b01d637ba203fbe9af39bc01854042787d95596fe9f3bca5d8e1f787d

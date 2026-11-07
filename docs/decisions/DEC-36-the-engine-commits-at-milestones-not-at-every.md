@@ -3,7 +3,7 @@ type: Decision
 id: DEC-36
 title: The engine commits at milestones, not at every write; CE-55 builds it
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13c
 body_sha: sha256:4469e609c2cd9e560cd625bafc3592bf4e7df3fa11d14613df0a1c9f4a649f22

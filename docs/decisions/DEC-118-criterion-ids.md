@@ -3,7 +3,7 @@ type: Decision
 id: DEC-118
 title: Criterion ids
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:c18dbc77ef5cee2453bef14a8d46759256526b557d47e9ad96d6c99f7822dd2f

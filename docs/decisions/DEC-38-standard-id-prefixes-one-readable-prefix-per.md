@@ -3,7 +3,7 @@ type: Decision
 id: DEC-38
 title: 'Standard id prefixes: one readable prefix per record kind in every repo, 2 to 5 capitals; tasks take a per-repo prefix'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13c
 body_sha: sha256:1a89871d2e88856250bb2a3b3df89bb50a3d27bf03cb1a32264ab25a140305dc

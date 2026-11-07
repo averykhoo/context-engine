@@ -3,7 +3,7 @@ type: Decision
 id: DEC-134
 title: Adopt intervals before zanzibar; zanzibar gets its own task (CE-167)
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-11-01
 session: 2026-11-01a
 body_sha: sha256:92868c46df9477bbc6fdfcb0a98929f4bc5ef6254d4835dca084508b2cc7ab8a

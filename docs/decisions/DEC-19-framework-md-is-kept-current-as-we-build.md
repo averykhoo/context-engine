@@ -3,7 +3,7 @@ type: Decision
 id: DEC-19
 title: FRAMEWORK.md is kept current as we build; archive only what the future must reference
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-09
 session: 2026-10-09d
 body_sha: sha256:2b1256c0766d747b96503c4ede8deb5b46188183512e745bbf3862a3d8219069

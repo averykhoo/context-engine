@@ -3,7 +3,7 @@ type: Decision
 id: DEC-105
 title: Only a closed session can be followed
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:1ea06bb767c5ca2d96a3bad7ef50e377d954ac7d8b2dcade25a86f22019a1789

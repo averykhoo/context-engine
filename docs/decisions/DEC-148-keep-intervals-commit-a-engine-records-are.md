@@ -5,7 +5,7 @@ title: 'Keep intervals commit A: engine records are prose to gate.py and fuzz CI
 actor: owner asked
 decided: 2026-11-03
 session: 2026-11-03a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-27
 ruled_by: claude-code/claude-opus-5-5
 body_sha: sha256:5c72f967e7ed8f4998ab9c29c1beae23e0304f2a608ccb806a822325e7c48d3f

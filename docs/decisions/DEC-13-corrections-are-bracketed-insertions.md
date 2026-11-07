@@ -5,7 +5,7 @@ title: "Corrections to append-only records are bracketed insertions; the typed w
 actor: owner
 decided: 2026-10-08
 session: 2026-10-08c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tags: [records, append-only]
 answers: ASK-2
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-08T19:00:00+08:00 }

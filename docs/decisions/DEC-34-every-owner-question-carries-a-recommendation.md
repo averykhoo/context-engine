@@ -3,7 +3,7 @@ type: Decision
 id: DEC-34
 title: Every owner question carries a recommendation, when one is cheap to reach
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13b
 body_sha: sha256:80e7bd2fe6fc848a442db7110b22b6a47cf6de7cbb7416a2e8fdb5844b7c1581

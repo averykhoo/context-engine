@@ -3,7 +3,7 @@ type: Decision
 id: DEC-109
 title: A residual stated at close uses the design-review residual line format plus a required affects field
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:f2091100e9b7be0ac4cc0e92ffa1a25e94a8cc2a1a2e8dc187127934e9b618a5

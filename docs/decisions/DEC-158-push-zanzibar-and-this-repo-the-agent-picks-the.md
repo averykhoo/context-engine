@@ -3,7 +3,7 @@ type: Decision
 id: DEC-158
 title: Push zanzibar and this repo; the agent picks the next NOW
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-11-05
 session: 2026-11-05a
 body_sha: sha256:6f06a56952efe82d8d3388a3202b3f20a348a99fa50fd6d8829603ffce655325

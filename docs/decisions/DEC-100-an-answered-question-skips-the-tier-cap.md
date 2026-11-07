@@ -3,7 +3,7 @@ type: Decision
 id: DEC-100
 title: An answered question skips the tier cap
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:9773d305c2c6feb87ae8a02ed1bfd028bdfbe070793b7b171dff2a46ce1e268c

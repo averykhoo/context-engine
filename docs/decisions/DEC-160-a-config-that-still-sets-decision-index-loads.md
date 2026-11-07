@@ -3,7 +3,7 @@ type: Decision
 id: DEC-160
 title: A config that still sets decision_index loads; nothing reads it, and orient names the key and the stored file to remove
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tags: [adoption]
 tasks: [CE-185]
 decided: 2026-11-06

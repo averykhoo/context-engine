@@ -3,7 +3,7 @@ type: Decision
 id: DEC-41
 title: A target repo's engine env is a pinned install kept inside that repo's folder
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-14
 session: 2026-10-14d
 body_sha: sha256:1c95f0c84124b349524d94b9e0c7d0ea8f2d219c9cd88746279ebec6a21f8c50

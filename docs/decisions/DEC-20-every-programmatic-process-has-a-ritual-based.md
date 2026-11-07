@@ -3,7 +3,7 @@ type: Decision
 id: DEC-20
 title: Every programmatic process has a ritual-based fallback (business continuity)
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-09
 session: 2026-10-09d
 body_sha: sha256:a4014ec57e28c3cdde1899e4ecdabcfeff1a5989c86b9b892dbe039c626091df

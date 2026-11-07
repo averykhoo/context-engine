@@ -3,7 +3,7 @@ type: Decision
 id: DEC-43
 title: Start CE-64, CE-77, CE-78 and CE-81 now; CE-7 waits until next week
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-14
 session: 2026-10-14g
 body_sha: sha256:dde68a9414b2ec57070fdc99ff084329dd36bd00cd5f4ef4dd259bafd56eb8df

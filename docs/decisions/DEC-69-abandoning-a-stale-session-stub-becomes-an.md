@@ -5,7 +5,7 @@ title: Abandoning a stale session stub becomes an engine op, run by start-of-ses
 actor: owner
 decided: 2026-10-22
 session: 2026-10-22b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-18
 body_sha: sha256:b9e0965f16b0b9455630980352fac7ba70b84359cbc0c1673000819e6a2d2a56
 amends: [DEC-29]

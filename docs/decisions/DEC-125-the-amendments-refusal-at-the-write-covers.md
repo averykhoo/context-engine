@@ -3,7 +3,7 @@ type: Decision
 id: DEC-125
 title: "The ## Amendments refusal at the write covers every append-only kind and is no longer behind G-I3's off switch"
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:3366d2affe7c546e63d360602eea5591ae3f7cb93a90d32dfc82273a4158f413

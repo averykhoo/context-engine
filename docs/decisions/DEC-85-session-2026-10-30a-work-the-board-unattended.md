@@ -3,7 +3,7 @@ type: Decision
 id: DEC-85
 title: "Session 2026-10-30a: work the board unattended through ultracode, fable's opinion on the rerank, then push"
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-30
 session: 2026-10-30a
 body_sha: sha256:ac584f3d5e040658785e94d7cf68b736b4f4ac6359fae3da7c279ed05ae65ef5

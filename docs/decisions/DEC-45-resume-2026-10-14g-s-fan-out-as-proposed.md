@@ -3,7 +3,7 @@ type: Decision
 id: DEC-45
 title: Resume 2026-10-14g's fan-out as proposed; watcher details into CE-83; file a follow-up-session link task; coordinator picks the order
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-15
 session: 2026-10-15a
 body_sha: sha256:f9620f3f39abe2400c515671a9f72b40ab452d1feb49046f67585fcf5f6f5e68

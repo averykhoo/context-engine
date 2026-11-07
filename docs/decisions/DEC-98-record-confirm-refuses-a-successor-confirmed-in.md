@@ -3,7 +3,7 @@ type: Decision
 id: DEC-98
 title: record confirm refuses a successor confirmed in the words that confirmed a story it supersedes; an exact repeat by the owner is quoted with when and where
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:ee23e25e17370e021f8f60ba5387d8060e51fbd0004973159c845d546d0459e7

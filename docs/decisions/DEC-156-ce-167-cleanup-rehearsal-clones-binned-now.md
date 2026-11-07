@@ -5,7 +5,7 @@ title: 'CE-167 cleanup: rehearsal clones binned now; worktree and backup after t
 actor: owner
 decided: 2026-11-04
 session: 2026-11-04a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-34
 body_sha: sha256:e118a61dde6fb3a723be539af5303f66797b94439c20e673cd283dc27bd677ec
 ---

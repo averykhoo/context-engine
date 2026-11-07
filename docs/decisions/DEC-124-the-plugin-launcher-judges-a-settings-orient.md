@@ -3,7 +3,7 @@ type: Decision
 id: DEC-124
 title: The plugin launcher judges a settings orient hook stale by its program and --root, not by running it
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:7424e8c22073355785db350f72236c6f7c6135c1263932af88eabba6dec42f78

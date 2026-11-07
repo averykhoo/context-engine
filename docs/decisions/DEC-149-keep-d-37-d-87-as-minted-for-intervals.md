@@ -5,7 +5,7 @@ title: Keep D-37..D-87 as minted for intervals' unnumbered log entries
 actor: owner asked
 decided: 2026-11-03
 session: 2026-11-03a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-28
 ruled_by: claude-code/claude-opus-5-5
 body_sha: sha256:15b983350f1e8a7e7e81cbd1eaf2e42b62644b212903d2c794ba2c860cf473f1

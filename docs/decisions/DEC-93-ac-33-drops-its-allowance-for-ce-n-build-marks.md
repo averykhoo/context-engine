@@ -3,7 +3,7 @@ type: Decision
 id: DEC-93
 title: AC-33 drops its allowance for (CE-n) build marks in FRAMEWORK.md
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:e3885e8cff08d0820e9ccc15f1e7a3174181ba1572dc16bb4aa837b77d48a1e9

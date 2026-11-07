@@ -3,7 +3,7 @@ type: Decision
 id: DEC-62
 title: audio-workspace cutover goes today on a local branch; asks LATER; engine commits exempt; charter and stories as drafts
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-19
 session: 2026-10-19d
 body_sha: sha256:d837d8a8d58cca6142db70166ca66d8f5d3ab1bd7d474e677a27cda3dd835461

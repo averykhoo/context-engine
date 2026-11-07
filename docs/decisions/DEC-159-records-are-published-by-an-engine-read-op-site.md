@@ -3,7 +3,7 @@ type: Decision
 id: DEC-159
 title: Records are published by an engine read op, site build, as stdlib HTML with bodies as escaped text; CI deploys it; nothing is stored
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tags: [publishing]
 tasks: [CE-185]
 decided: 2026-11-06

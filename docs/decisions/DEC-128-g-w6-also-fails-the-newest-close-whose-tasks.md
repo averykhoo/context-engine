@@ -3,7 +3,7 @@ type: Decision
 id: DEC-128
 title: 'G-W6 also fails the newest close whose tasks: ids are missing from its rows:'
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:ee39a6e1265291d05929a2982fb26a88e7c0d62b90bc0e830396a35ba0933823

@@ -3,7 +3,7 @@ type: Decision
 id: DEC-29
 title: Abandoning a stale session stub stays a by-hand rule for now; the window moves to 3 later sessions counted from last activity
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13a
 body_sha: sha256:0dfeebb8967b99ad88bdecdb71c0ebb7e4f2950f5b1bbddd0988caa69ac46c21

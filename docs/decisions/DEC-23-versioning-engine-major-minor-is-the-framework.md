@@ -3,7 +3,7 @@ type: Decision
 id: DEC-23
 title: 'Versioning: engine major.minor is the framework version it implements; G-D0 compares major.minor; contract says framework: 0.5'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-10
 session: 2026-10-10a
 body_sha: sha256:2072091afa670c34c7902e874235fe33ccf143c1ea232c037502f0f3af383367

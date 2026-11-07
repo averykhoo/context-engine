@@ -3,7 +3,7 @@ type: Decision
 id: DEC-26
 title: FRAMEWORK.md holds the framework only; history and owner answers archived
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-11
 session: 2026-10-11c
 body_sha: sha256:2853200d5eba6958c0cfb795b3ea70466709222d2fc1228c3de14406f4ba0041

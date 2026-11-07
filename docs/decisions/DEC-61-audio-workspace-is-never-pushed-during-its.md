@@ -3,7 +3,7 @@ type: Decision
 id: DEC-61
 title: 'audio-workspace is never pushed during its migration (demo hold): the cutover stays local'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-19
 session: 2026-10-19c
 body_sha: sha256:ac1d6e630c7af55fb72b4f4bc8345d793baf2850427ae25421dbf17e0807bc29

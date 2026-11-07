@@ -3,7 +3,7 @@ type: Decision
 id: DEC-90
 title: G-I3's blind spot gets a register entry
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:c225f342165d4bc39258b20dcd0937ec376d206e5a71036c6aef1790ad62b1b5

@@ -3,7 +3,7 @@ type: Decision
 id: DEC-130
 title: An op log line may carry as, mapping a session-keyed field to the key it was set to; G-W7 checks the field against it (hk.stamp_asked)
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:33e62945e3396be0c4df5ad532c3a958dc26cc1d8bdc044e40bad1ff73ecd52e

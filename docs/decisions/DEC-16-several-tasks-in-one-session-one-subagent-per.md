@@ -3,7 +3,7 @@ type: Decision
 id: DEC-16
 title: 'Several tasks in one session: one subagent per task, the top level only reports'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tags: [delegation, subagents, framework]
 decided: 2026-10-09
 session: 2026-10-09b

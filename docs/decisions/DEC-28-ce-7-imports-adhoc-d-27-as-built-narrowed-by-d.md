@@ -3,7 +3,7 @@ type: Decision
 id: DEC-28
 title: CE-7 imports adhoc D-27 as BUILT, narrowed by D-29
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13a
 body_sha: sha256:69ac364ecd32f10ae5dd32bbb7d3116affea44b82ae6b8a80b962400e95f8470

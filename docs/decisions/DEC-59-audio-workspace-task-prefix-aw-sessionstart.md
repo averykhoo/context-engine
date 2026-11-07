@@ -5,7 +5,7 @@ title: audio-workspace task prefix AW, SessionStart hook merged, backup by bundl
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-13
 body_sha: sha256:4860673303c7d15b38c9d4e49ddfdd39bfcd75881307899688a4db57880b5c91
 ---

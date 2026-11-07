@@ -3,7 +3,7 @@ type: Decision
 id: DEC-63
 title: Go ahead with CE-60 item 2, CE-58, CE-65, CE-83 and CE-91; CE-83's three open points stay as written
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-20
 session: 2026-10-20b
 body_sha: sha256:288ba154b0238fb6ff3148de405c76efb2c6ee816fe710c519418f611f3fc7d0

@@ -3,7 +3,7 @@ type: Decision
 id: DEC-101
 title: ask new --answered is exempt from the three-part question body check
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:79fea4debbad809bcad254fd551a54b47e4d084381787cecfdab832b3c2b4519

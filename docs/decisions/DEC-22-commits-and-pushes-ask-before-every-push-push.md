@@ -3,7 +3,7 @@ type: Decision
 id: DEC-22
 title: 'Commits and pushes: ask before every push, push only on green; one task per commit, task id in the title, Session trailer; repo is public'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-10
 session: 2026-10-10a
 body_sha: sha256:ff03d30bbc28ebb175e9544f6ce7460fb1b653b278bc95aaf9fc27f5fbe3c6a3

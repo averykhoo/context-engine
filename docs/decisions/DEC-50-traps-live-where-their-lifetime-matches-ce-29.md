@@ -3,7 +3,7 @@ type: Decision
 id: DEC-50
 title: Traps live where their lifetime matches (CE-29); CE-92 is released from the CE-7 hold, CE-93 stays held
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-15
 session: 2026-10-15e
 body_sha: sha256:165954e4f4c8df96e238a245b2735f766df2f811620dff8a46dc095467eeedd5

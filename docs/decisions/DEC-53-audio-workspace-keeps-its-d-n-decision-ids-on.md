@@ -5,7 +5,7 @@ title: audio-workspace keeps its D-n decision ids on import
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-7
 body_sha: sha256:a31daf803990b573551f7c7497279c5c6a4e64dace9457526c36a4f63344b948
 ---

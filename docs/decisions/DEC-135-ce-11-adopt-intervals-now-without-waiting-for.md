@@ -5,7 +5,7 @@ title: 'CE-11: adopt intervals now, without waiting for its 2.0.0 release'
 actor: owner
 decided: 2026-11-01
 session: 2026-11-01a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-24
 body_sha: sha256:b126f52c1145b414800ca377cc9ee85034b59acd9bb8778cfb7321578d1e5bae
 ---

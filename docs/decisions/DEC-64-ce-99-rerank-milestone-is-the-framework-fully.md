@@ -3,7 +3,7 @@ type: Decision
 id: DEC-64
 title: 'CE-99 rerank: milestone is the framework fully built; tasks carry required goals; the agent applies moves, the owner approves drops'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-20
 session: 2026-10-20b
 body_sha: sha256:1e956c7574e24259874638f87fe25af31e9aef605aa4e7424f9f14201254bdf6

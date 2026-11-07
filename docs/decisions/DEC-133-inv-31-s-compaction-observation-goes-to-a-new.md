@@ -2,7 +2,7 @@
 type: Decision
 id: DEC-133
 title: INV-31's compaction observation goes to a new dated evidence doc, not the frozen 2026-10-23 probe
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 actor: claude-code/claude-opus-5-5
 decided: 2026-11-01
 session: 2026-10-31a

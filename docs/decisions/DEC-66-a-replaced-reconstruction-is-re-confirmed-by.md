@@ -5,7 +5,7 @@ title: A replaced reconstruction is re-confirmed by asking the owner again, neve
 actor: owner
 decided: 2026-10-20
 session: 2026-10-20c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-16
 body_sha: sha256:a0be96041104165531fa56b269b098d73b401dec25c93a29b47f26f6abcc4367
 ---

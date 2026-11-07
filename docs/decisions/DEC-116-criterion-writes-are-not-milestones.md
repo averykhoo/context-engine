@@ -3,7 +3,7 @@ type: Decision
 id: DEC-116
 title: Criterion writes are not milestones
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:fff966fb9180fa67051af6c10fff3ca91a386d3d1d3605d84bb5c432f5b3e045

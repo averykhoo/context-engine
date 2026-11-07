@@ -3,7 +3,7 @@ type: Decision
 id: DEC-60
 title: The coordinator runs every task through ultracode subagents, even a single task, and is the default whenever the board is worked
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-19
 session: 2026-10-19a
 body_sha: sha256:160512b596e99d307295ed5413d5ffede028ec69fc01067e6bb65b3c299179e5

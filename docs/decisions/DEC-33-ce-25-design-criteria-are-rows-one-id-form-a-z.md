@@ -5,7 +5,7 @@ title: "CE-25 design: criteria are rows; one id form [A-Z]+-[1-9][0-9]* so goals
 actor: owner
 decided: 2026-10-13
 session: 2026-10-13b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-3
 body_sha: sha256:f616fbe30816f161fdbeb08f4c60ae389ea38dee2a8dba332b552590f321fe3a
 ---

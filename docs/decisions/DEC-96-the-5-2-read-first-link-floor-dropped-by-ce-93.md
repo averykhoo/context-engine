@@ -3,7 +3,7 @@ type: Decision
 id: DEC-96
 title: The §5.2 Read-first link floor dropped by CE-93 returns as a Not checked clause, not as a board item
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:c3c091c24aa750e925d608e96aceabfb533dbdf5fb5374600578f701906b159f

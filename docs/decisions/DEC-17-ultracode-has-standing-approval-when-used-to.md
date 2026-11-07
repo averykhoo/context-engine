@@ -3,7 +3,7 @@ type: Decision
 id: DEC-17
 title: Ultracode has standing approval when used to minimize token consumption
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-09
 session: 2026-10-09c
 body_sha: sha256:9640afc92974c7e7ff19bf19e81b74e2e43aac01bc18a3f243e7ade687ab9292

@@ -5,7 +5,7 @@ title: audio-workspace prunes CLAUDE.md and HANDOFF.md to the kit caps; a raised
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-10
 body_sha: sha256:13a5497f61739e0eaad47f300fcae7161a4a0354e4c2961c90c822ef3bbbdcb8
 ---

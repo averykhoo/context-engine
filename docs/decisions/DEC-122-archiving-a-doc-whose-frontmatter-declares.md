@@ -3,7 +3,7 @@ type: Decision
 id: DEC-122
 title: Archiving a doc whose frontmatter declares liveness turns that key FROZEN, keeping the old value in a comment
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tasks: [CE-96]
 code: [src/context_engine/archive.py::frontmatter, src/context_engine/archive.py::thawed_keys, src/context_engine/archive.py::archived]
 decided: 2026-10-31

@@ -3,7 +3,7 @@ type: Decision
 id: DEC-104
 title: A bare ask new with no body is refused; the CLI takes --body-file
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:921e50cdb7a69f65a9a6e7a0085b8769044a6292fb01d422c5b92e57666e6542

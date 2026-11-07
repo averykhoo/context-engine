@@ -3,7 +3,7 @@ type: Decision
 id: DEC-123
 title: A partial prune is doc archive --lines A-B, into one <stem>-pruned.md per source with one redirect row per prune
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tasks: [CE-96]
 code: [src/context_engine/working.py::Engine._prune, src/context_engine/working.py::_line_span, src/context_engine/archive.py::cut, src/context_engine/archive.py::pruned]
 decided: 2026-10-31

@@ -3,7 +3,7 @@ type: Decision
 id: DEC-114
 title: Build CE-144 (the optional ambiguous-bare-name check) rather than drop it, in G-D3 only
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:f070177beb9e7e4af57ac309744f9df3fec66308303ac451716defcdcebce8b4

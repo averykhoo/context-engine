@@ -5,7 +5,7 @@ title: adhoc's coordinator section goes, after its 2026-10-17 owner words are re
 actor: owner
 decided: 2026-10-22
 session: 2026-10-22b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-20
 body_sha: sha256:6bb5e35661f1a9b9b702c7e7098351d150facd64e409a468d1a8d645527c2718
 ---

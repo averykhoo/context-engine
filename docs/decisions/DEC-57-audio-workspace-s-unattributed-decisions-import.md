@@ -5,7 +5,7 @@ title: audio-workspace's unattributed decisions import with an explicit unrecord
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-11
 body_sha: sha256:4eadfdba1f1a32fe9d8fbca8720b545e80610de4dc64cc50e1583d4d2a158ae2
 ---

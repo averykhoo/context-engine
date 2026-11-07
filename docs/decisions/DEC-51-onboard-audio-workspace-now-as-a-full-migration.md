@@ -3,7 +3,7 @@ type: Decision
 id: DEC-51
 title: Onboard audio-workspace now as a full migration; vitest and smoke at push, not per commit
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-17
 session: 2026-10-17b
 body_sha: sha256:fb8846a1ed2ea384f716c71e5cbc38828557615d63ae40d0b5aeabef42e7d0fd

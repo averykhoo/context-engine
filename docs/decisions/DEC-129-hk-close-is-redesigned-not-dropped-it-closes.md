@@ -3,7 +3,7 @@ type: Decision
 id: DEC-129
 title: 'hk.close is redesigned, not dropped: it closes only on a git-checked Closes: trailer of a commit made outside the engine, or on a finished ledger entry naming the item closed, and a reopen outweighs either'
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:f45648d16437859e9f211112f2ec236d9563222dfe7e680b8a6d48a291cece46

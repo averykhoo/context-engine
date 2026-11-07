@@ -3,7 +3,7 @@ type: Decision
 id: DEC-113
 title: G-D3 reads backticked repo paths only in the docs a new [guards] paths list names
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:def0f79910065b0f18c5bee2047b65fceac241f02561712d1d6f922b1cff8486

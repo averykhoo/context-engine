@@ -3,7 +3,7 @@ type: Decision
 id: DEC-86
 title: Raise the Fan-out runbook's G-D1 max_lines from 90 to 110
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-30
 session: 2026-10-30a
 body_sha: sha256:6d4cd36faa570ff592fb187333a6e4d0560283ec5e11a8724db51871b5f3f98e

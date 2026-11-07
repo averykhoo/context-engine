@@ -3,7 +3,7 @@ type: Decision
 id: DEC-121
 title: doc archive names the pointers G-D3 newly reports after a move and rewrites none of them
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tasks: [CE-96]
 code: [src/context_engine/working.py::Engine._pointer_reds, src/context_engine/working.py::_pointer_note]
 decided: 2026-10-31

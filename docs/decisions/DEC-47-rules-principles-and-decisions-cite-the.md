@@ -3,7 +3,7 @@ type: Decision
 id: DEC-47
 title: Rules, principles and decisions cite the incident that justified them
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-15
 session: 2026-10-15c
 body_sha: sha256:d33be4009f91b5b24f7cbc333dcf82e79762e4f71c91181f415434c0af904864

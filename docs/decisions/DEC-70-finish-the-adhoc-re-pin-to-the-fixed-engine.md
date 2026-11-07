@@ -5,7 +5,7 @@ title: Finish the adhoc re-pin to the fixed engine rather than roll back
 actor: owner
 decided: 2026-10-22
 session: 2026-10-22b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-19
 body_sha: sha256:fd8c48f322e831b7192c4d6684d3c1290a27b5c31873182aba967639f7a848a9
 ---

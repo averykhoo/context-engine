@@ -3,7 +3,7 @@ type: Decision
 id: DEC-95
 title: init appends the op log merge=union line to .gitattributes without asking
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:e64fbd5aaad1380de7f352600115dac95eae538a0e42a5a74e81acbc98c46723

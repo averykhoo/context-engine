@@ -5,7 +5,7 @@ title: audio-workspace engine gate is tsc + lint over scope all; vitest and smok
 actor: owner
 decided: 2026-10-17
 session: 2026-10-17c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-12
 body_sha: sha256:77fcb31eca128bc4a7b622a0485720910fd0e12cf4f82204ee0b548fd2127b26
 ---

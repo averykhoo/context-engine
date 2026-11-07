@@ -3,7 +3,7 @@ type: Decision
 id: DEC-115
 title: Framework build status is generated on demand (context-engine coverage), not kept as a stored table
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:10d0792fbf5deff0f3361c5d9a5c7a0ae8ceff0cc9b6ac5244ddd99b60cf88dc

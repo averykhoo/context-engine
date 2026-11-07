@@ -3,7 +3,7 @@ type: Decision
 id: DEC-44
 title: 'The top-level session coordinates: told to do, check or verify something, it sends an agent'
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-14
 session: 2026-10-14g
 body_sha: sha256:f7b46d8b3bb3cb5021e0d3b77c4733c2c7de236322890b6d21af46a098910f04

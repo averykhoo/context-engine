@@ -3,7 +3,7 @@ type: Decision
 id: DEC-103
 title: "A question's parts are read mechanically: a 5-word recommendation, two options, a Context part"
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:25a9319c5414eb057605c56c711352fba383442205691715c229c027c5a645ec

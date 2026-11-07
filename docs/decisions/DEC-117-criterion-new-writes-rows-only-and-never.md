@@ -3,7 +3,7 @@ type: Decision
 id: DEC-117
 title: criterion new writes rows only and never guesses the table
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:0406e452689b41bc1eba3dd913ddc53af64f9635d22181bcad6d3e688cdfe479

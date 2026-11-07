@@ -3,7 +3,7 @@ type: Decision
 id: DEC-31
 title: A session closes by default when its requested work is done
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13a
 body_sha: sha256:831f4d819a676724f5d3c391a827c162c2d71873321cef05fbda2a83b361be36

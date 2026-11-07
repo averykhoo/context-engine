@@ -5,7 +5,7 @@ title: 'CE-126: fix subagent op-line mis-filing with a lane field (option B), ke
 actor: owner
 decided: 2026-10-26
 session: 2026-10-26c
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 answers: ASK-21
 body_sha: sha256:ab29db984bd5e9a94ea30a4cd4572a7e308aafb398dc891345b31820f7400476
 ---

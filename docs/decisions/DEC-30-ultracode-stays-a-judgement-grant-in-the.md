@@ -3,7 +3,7 @@ type: Decision
 id: DEC-30
 title: Ultracode stays a judgement grant in the contract, not the setting; the MCP instructions tell agents to ask for it when it would help
 actor: owner
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-13
 session: 2026-10-13a
 body_sha: sha256:205e158111eaa6e723c3e446a405625dc2c98ca73c950312f1da90263e4d0ea8

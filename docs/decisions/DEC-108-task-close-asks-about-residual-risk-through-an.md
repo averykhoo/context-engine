@@ -3,7 +3,7 @@ type: Decision
 id: DEC-108
 title: task close asks about residual risk through an optional statement plus a reply nudge, not a mandatory flag
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:f4d043ff2990aa096a2146baa8af32fff71811fbaab7a303f662460e68a55ee2

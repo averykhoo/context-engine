@@ -3,7 +3,7 @@ type: Decision
 id: DEC-92
 title: Linked batches reserve their ids with an id-reserve op, not a batch task new
 actor: agent (claude-opus-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 decided: 2026-10-31
 session: 2026-10-30a
 body_sha: sha256:1dc1d2636821e7e8742403e231e035adb715b5ac4c731039204e77487a4739e7
