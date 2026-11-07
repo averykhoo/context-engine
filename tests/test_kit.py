@@ -185,6 +185,10 @@ def test_the_kit_readme_names_the_mcp_connect_timeout_and_its_remedy():
     one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
     reg = one[one.index("The MCP server is optional") :]
     assert "MCP_TIMEOUT" in reg and "30 seconds" in reg and "33 to 36 seconds" in reg, "the registration section must name the limit, the measured start and the remedy"
+    # CE-156: a measured time carries its date and the Claude Code version it was measured on
+    # (docs/evidence/plugin-design-2026-10-14.md), so it is not read as current forever
+    measured = reg[reg.index("33 to 36 seconds") :].split("\n\n")[0]
+    assert "2026-10-14" in measured and "Claude Code 2.1.280" in measured, "the measured start must say when, and on which Claude Code version"
 
 
 def _hook_command(root: Path) -> str:

@@ -53,6 +53,19 @@ def test_every_cli_operation_has_a_runbook_section_with_its_reason():
     assert no_why == [], f"sections without a **Why:** line: {no_why}"
 
 
+def test_the_lint_section_names_every_guard_id_lint_reports():
+    """CE-156: § context-engine coverage marks built "a G-id lint reports (§ lint lists them)",
+    so a by-hand run reads § lint for that list; an id it never names (G-D6 was one, CE-141) is
+    marked done or unowned by hand while the engine says built. Each id of config.py::LINT_IDS
+    is named in bold in § lint, as each of its rules is led."""
+    from context_engine.config import LINT_IDS
+
+    lint = runbook_sections()["context-engine lint"]
+    assert "**G-D4**" in lint and "**G-W1**" in lint, "the § lint read must find the section's rules"
+    unnamed = [i for i in LINT_IDS if f"**{i}**" not in lint]
+    assert unnamed == [], f"{RUNBOOK.name} § context-engine lint never names {unnamed} in bold (config.LINT_IDS): give each its rule, or say it checks nothing"
+
+
 # -- the procedures runbook: every procedure's steps, in order, in one place (US-15, CE-24) ----
 
 PROCEDURES = RUNBOOK.with_name("procedures.md")

@@ -432,6 +432,18 @@ show --date=iso-strict <the upstream's full ref>`: `- the last push to <upstream
 <time>` when an open session's window (its `session.start` op line to its close, pause or
 abandon) holds that time, or the line saying it came while no session was open.
 
+Two parts ask the owner for what bootstrap left unfilled, shown after part 4 (their bytes come
+with parts 6 and 7's), each only when it has a line. `Templates still unfilled: ask the owner`:
+a line for the charter (`[guards] charter`, else `docs/charter.md`) and one for the criteria
+file (`[working] criteria`, else `docs/criteria.md`) when it is still the kit's template whole,
+or when it still holds one of the template's `*(...)*` placeholders, naming each (kit
+README § 2a). `Charter unconfirmed: ask the owner`: one line while the charter's frontmatter says
+`charter_status: unconfirmed`, an agent's reconstruction (off while `[guards] charter` is unset
+or G-I1 is off): bring it to the owner as an owner question, record the answer as a decision,
+then set `charter_status: confirmed` (FRAMEWORK §3.1, §11.4). Lint fails neither, since every
+repo starts from the templates and a migrated one from an unconfirmed charter, so orient asks at
+every session start until they are done.
+
 **Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: a contract that did not load, then work carried over from earlier sessions and live sessions,
 then new work; the banner leads as the context for the rest, but it is cut before any part but
@@ -457,7 +469,8 @@ to give, so stop and say why. Otherwise list each component of the spec's §2 ta
 and §6.n procedure heading, and each G-id it names, by class, G-ids in order of their letter and
 number. Give each one the first status that holds:
 
-1. **built**: a G-id `context-engine lint` reports (§ lint lists them);
+1. **built**: a G-id `context-engine lint` reports (§ lint lists every one, G-D6 among them,
+   which checks nothing in the engine);
 2. **deferred**: the newest coverage map's row for it has the class DEFERRED; note the row's
    reason, which says what un-defers it;
 3. **prose-only**: that row has the class PROSE-ONLY; note the row's home, where the rule lives;
@@ -608,7 +621,8 @@ Check every record, then the working state. `--working` does only the second hal
   *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
-- **G-D4** (only when `[guards]` lists `liveness` or `history` paths): read the first
+- **G-D4** (its liveness half only when `[guards]` lists `liveness` or `history` paths; its
+  freshness half, the `stale_after` grep at the end, always): read the first
   `liveness_lines` lines (10 by default) of each `.md` there. It declares its liveness by a
   frontmatter `liveness:` key (quotes and a `#` comment allowed; any other value is red), or by a
   line outside fenced code that opens a block (the first line, or one after a blank line, a
@@ -638,6 +652,11 @@ Check every record, then the working state. `--working` does only the second hal
   `§6`, `G-D5`) and is not a count. A list whose docs are all FROZEN or ACTIVE-PLAN is red. *Why: a count typed in prose is
   never re-derived, so it goes stale unseen (P5); delete it and point at what counts it, and put
   a rule's value or a label (`Step 3 checks`) in backticks.*
+- **G-D6**: nothing to check. The engine stores no generated index (listings are printed on
+  demand, FRAMEWORK §6.5), so there is none to compare with its regeneration; the id stays one
+  lint knows, so `[guards] off` may name it, and `coverage` reads it as built. *Why: the guard
+  is for a repo's own indexes still built by parsing prose, checked from a cutoff id (FRAMEWORK
+  §8.3), and the engine builds none.*
 - **G-T3**: in each file `[guards] existence` lists, skipping fenced code, blockquotes and lines
   with `*HISTORY —*`: every backticked name of a file (a path with a `/`, or a name ending in a
   text extension such as `.py` or `.md`) exists case-exact, and every `file::symbol` resolves as
@@ -1544,7 +1563,8 @@ Rows only, because where a new section goes and what it is called are choices fo
 1. Find the one row the id leads, in a criteria table (step 1 above). An id leading two rows is
    resolved first: the later row takes the next free id.
 2. Rewrite only the cells you change: status, criterion or from. Each changed cell becomes
-   ` <value> `; every other cell keeps its bytes (spacing, emphasis, an escaped `\|`, a missing
+   ` <value> `, but the last cell of a row with no closing pipe becomes ` <value>` (the row's
+   trailing spaces stay after it); every other cell keeps its bytes (spacing, emphasis, an escaped `\|`, a missing
    closing pipe), and the row keeps its line ending. A status is compared as lint reads it
    (`**Planned**` is already `planned`), so nothing is rewritten just to drop formatting.
 3. Make the checks of § criterion new step 3 on the values that change. Moving a row to `tested`
