@@ -804,3 +804,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** found after PASS
 - **control:** individual: the shared Engine._now_refill path is tested through close
 - **from:** CE-191, session 2026-11-07d
+
+## INV-114: working.py::Engine._criterion_prefixes shares its name with store.py::Store._criterion_prefixes, which works differently (upper-cased set read by regex over the whole file); a later editor may confuse them
+
+- **affects:** later editors of working.py and store.py
+- **why not eliminated:** renaming one is a cheap follow-up not worth widening a tiny task
+- **control:** individual: reviewer awareness; the two have different return shapes
+- **from:** CE-160, session 2026-11-07e
+
+## INV-115: CE-160's prefix check ignores logged criterion.new ids when the criteria table is empty: if every row was deleted, any prefix is accepted even though the log holds AC ids
+
+- **affects:** owner of a repo whose criteria were all deleted
+- **why not eliminated:** needs every row deleted, a rare state, and the remedy (a foreign prefix) is the CE-42 failure it narrows
+- **control:** individual: criterion new without --id still derives the prefix from rows, and lint flags mixed series
+- **from:** CE-160, session 2026-11-07e
