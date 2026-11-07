@@ -825,3 +825,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a wording nit in release notes, adopters pinning mid-day 2026-10-30 are the only ones misled
 - **control:** individual: fix the lines at the 0.6 release edit; the notes are reviewed by the owner at release
 - **from:** CE-157, session 2026-11-07e
+
+## INV-117: kit README § 3 says 'Only index.md and log.md are exempt', but store.py::Store.lint_bundles exempts index.md from needing a type yet still fails one with frontmatter beyond okf_version, so the wording is loose
+
+- **affects:** adopters reading the kit README
+- **why not eliminated:** wording slightly loose, does not change behaviour or block adopters
+- **control:** individual: kit README § 3 text, read by the adopter
+- **from:** CE-180, session 2026-11-07e
+
+## INV-118: the CE-180 test checks only that the RESERVED_MD names appear in kit README § 3, not that § 3 calls them exempt
+
+- **affects:** maintainers editing the kit README
+- **why not eliminated:** a doc test of presence, not of claim; the claim is not mechanically pinned
+- **control:** individual: tests/test_kit.py README section check
+- **from:** CE-180, session 2026-11-07e
