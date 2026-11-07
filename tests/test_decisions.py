@@ -1346,6 +1346,36 @@ def test_record_new_refuses_a_decision_preset_as_superseded_or_with_a_status(tmp
     assert len(list(e.store.records("decision"))) == 4 and [f for f in e.lint() if f.guard == "G-W4"] == []
 
 
+@pytest.mark.criterion("AC-187")
+@pytest.mark.parametrize("off", [[], ["G-D3"]], ids=["guards-on", "G-D3-off"])
+@pytest.mark.parametrize(
+    "fields, match",
+    [
+        ({"supersedes": "[D-1]"}, "`supersedes`"),
+        ({"superseded_by": "[D-1]"}, "`superseded_by`"),
+        ({"supersedes": "[D-1]", "superseded_by": "[D-2]"}, "`supersedes` and `superseded_by`"),
+        ({"supersedes": "[]"}, "`supersedes`"),
+    ],
+    ids=["supersedes", "superseded_by", "both", "empty"],
+)
+def test_record_new_refuses_a_decision_given_a_supersede_link(tmp_path, fields, match, off):
+    """CE-151: `record new decision --set supersedes=...` (or `superseded_by`) wrote a link on
+    one side only, which G-D3 then failed; `decision supersede` is the one route that writes both
+    sides. `record new` refuses either key before any byte, with G-D3 switched off too, its remedy
+    naming `decision supersede`; the same decision without the key is still created."""
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": off}}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    base = {"actor": "owner", "decision_status": "BUILT"}
+    with pytest.raises(Refusal, match=re.escape(f"would be created with {match}, which only `decision supersede` writes")) as got:
+        e.record_new("decision", "Linked", WORDS, {**base, **fields}, **W)
+    assert "decision supersede <old> <new>" in got.value.remedy
+    with pytest.raises(Refusal, match=re.escape(f"would be created with {match}")):
+        e.record_new("decision", "Linked", WORDS, {**base, **fields}, rid="D-9", **W)
+    assert not list(e.store.records("decision")) and not (tmp_path / "decisions").exists()
+    e.record_new("decision", "Unlinked", WORDS, base, **W)
+    assert len(list(e.store.records("decision"))) == 1
+
+
 @pytest.mark.criterion("AC-100")
 def test_guards_off_g_i3_switches_off_the_lint_and_its_write_time_twins(tmp_path):
     """G-I3 is a guard `[guards] off` may name (config.py::LINT_IDS), and naming it switches off the

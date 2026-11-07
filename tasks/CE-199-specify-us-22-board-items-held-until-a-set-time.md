@@ -10,7 +10,7 @@ goals: [G-3]
 source: session 2026-11-07d
 created: 2026-11-07
 moved: 2026-11-07d
-updated: 2026-11-07d
+updated: 2026-11-07e
 ---
 
 Specify US-22: how a board item can be held until a set time, and done only at or after it.
@@ -36,3 +36,5 @@ Output: criteria under US-22 (`criterion new --from US-22`), the story confirmed
 - working.py::Engine.orient (the "Rerank due" part)
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-opus-5-5): fe65fd8: CE-199: file the task that specifies US-22 (scheduled board items)

@@ -2107,6 +2107,9 @@ class Engine:
             if preset:
                 raise Refusal(f"the decision would be created with {preset}, which only `decision supersede` writes (a decision not superseded has no `status`; G-W4)",
                               f"record it with a `decision_status` that stands (not SUPERSEDED) and no `status`; then, if a later decision replaces it, `decision supersede <id> <new>` writes `{D.STATUS_KEY}: SUPERSEDED`, `status: deprecated` and both links together")
+            if links := [f"`{k}`" for k in ("supersedes", "superseded_by") if k in fields]:  # CE-151: a link set here is one-sided, which G-D3 then fails
+                raise Refusal(f"the decision would be created with {' and '.join(links)}, which only `decision supersede` writes, on both decisions at once (a one-sided link fails G-D3)",
+                              "record it without `supersedes` or `superseded_by`; then `decision supersede <old> <new>` marks <old> SUPERSEDED and writes `superseded_by` on it and `supersedes` on <new> together")
         if kind == self.w.decision and "G-I3" not in self.store.config.guards.off and (bad := G.delegation_problems(fields, body)):
             raise Refusal(f"the decision {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""),
                           f"for a ruling made on the owner's delegation (FRAMEWORK §6.5): `--set ruled_by=<who ruled>` (never `owner`, in any case) and an actor that is not the owner alone (`--set \"actor={G.DELEGATED_ACTOR}\"`), the body the owner's delegating words verbatim, then a `## Ruling` section holding the ruling; the owner's own decision has neither `ruled_by` nor `## Ruling`")

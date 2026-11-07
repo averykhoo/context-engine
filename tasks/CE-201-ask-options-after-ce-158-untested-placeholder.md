@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-11-07d
 created: 2026-11-07
 moved: 2026-11-07d
-updated: 2026-11-07d
+updated: 2026-11-07e
 ---
 
 Owner-question options after CE-158: an untested clause, a stale criterion row and loose wording.
@@ -31,3 +31,5 @@ Source: CE-158's verifier r2 (e4d2302), residuals that did not block PASS.
 - guards.py::ask_options
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-opus-5-5): e5815ba: CE-201: file CE-158's verifier residuals (placeholder test gap, AC-121 row, wording)

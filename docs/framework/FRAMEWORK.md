@@ -2274,9 +2274,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   its reasoning, or says which exemption leaves it without one (§5.3; `ask new` refuses the same
   at write time); a decision is `status: deprecated` exactly when its `decision_status` is
   SUPERSEDED, so a current decision is never hidden as history from the guards that skip
-  deprecated records (`record.new` refuses a decision given `status` or
-  `decision_status: SUPERSEDED`, whatever `[guards] off` names: only `decision.supersede` writes
-  them); an agent's call that is ACCEPTED is named by a logged `accept` line (`decision.accept`,
+  deprecated records (`record.new` refuses a decision given `status`,
+  `decision_status: SUPERSEDED`, `supersedes` or `superseded_by`, whatever `[guards] off` names:
+  only `decision.supersede` writes them, with both links); an agent's call that is ACCEPTED is named by a logged `accept` line (`decision.accept`,
   §6.5). Not checked: whether a question's parts are any good, a closed question, and whether
   whoever ran `decision.accept` reviewed the calls.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.

@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-11-07d
 created: 2026-11-07
 moved: 2026-11-07d
-updated: 2026-11-07d
+updated: 2026-11-07e
 ---
 
 manual-mode § context-engine orient omits seven parts orient emits; AC-110's row text is undated.
@@ -30,3 +30,5 @@ Source: CE-156's builder and verifier (a5b1570), outside CE-156's list.
 - docs/runbooks/manual-mode.md § context-engine orient
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-opus-5-5): a6fa1d8: CE-200: file CE-156's out-of-scope residuals (orient parts, AC-110 row)

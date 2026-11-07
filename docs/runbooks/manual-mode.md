@@ -775,7 +775,7 @@ the write-time stops that check the same rule are off with it (among them G-I1 a
 § context-engine record new for a story, G-I3 there and in § context-engine ask answer for a
 decision, G-W4 in § context-engine ask new). Two stops are no guard's twin and stay on: the
 `## Amendments` stop of record new and ask answer, and record new's stop on a decision given a
-`status` key or `decision_status: SUPERSEDED`. A path listed in `[guards]` that does not exist is
+`status` key, `decision_status: SUPERSEDED`, `supersedes` or `superseded_by`. A path listed in `[guards]` that does not exist is
 itself a failure.
 
 **Why:** lint is the check on the stored files. It catches what a write-time refusal cannot: hand edits, and
@@ -1625,9 +1625,10 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    `owner`, in any case) and an `actor` that is not the owner alone (`owner asked`), and its body
    is the owner's delegating words verbatim, then a `## Ruling` heading with the ruling under it;
    any other decision has no `## Ruling` heading (both checks off while `[guards] off` names
-   G-I3). Stop too, whatever `[guards] off` names, if a decision was given a `status` key or
-   `decision_status: SUPERSEDED`: only § context-engine decision supersede writes those, with
-   both links (G-W4 checks them at rest, but this stop is not behind its off switch). A
+   G-I3). Stop too, whatever `[guards] off` names, if a decision was given a `status` key,
+   `decision_status: SUPERSEDED`, `supersedes` or `superseded_by`: only § context-engine
+   decision supersede writes those, with both links (G-W4 and G-D3 check them at rest, but this
+   stop is not behind their off switches). A
    decision's `decision_status`, when you were not given one, is the status it is born with:
    `ACCEPTED` if it is the owner's own (`actor` is `owner` or `human:<id>`, in any case, and it has
    no `ruled_by`), else `PROVISIONAL` (an agent's call, or a ruling on the owner's delegation); a

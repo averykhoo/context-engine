@@ -10,7 +10,7 @@ goals: [G-1]
 source: session 2026-11-07b
 created: 2026-11-07
 moved: 2026-11-07b
-updated: 2026-11-07d
+updated: 2026-11-07e
 ---
 
 Trial sonnet builders under an opus verifier (DEC-173; shape from docs/evidence/article-takeaways-advice-2026-11-07a.md).
@@ -41,3 +41,4 @@ Decides: adopt if the median tokens per task fall by 30% or more and FAIL rounds
 - 2026-11-07d (claude-code/claude-opus-5-5): DEC-177 (owner) amends the trial shape: from CE-191 on, a task above DEC-173's size floor gets an opus planner first (reads the code; writes the behaviour, rejected options and edge cases as test inputs; records design calls as a PROVISIONAL decision), then the sonnet builder and the opus verifier. A task qualifies once the planner pins its design; a FRAMEWORK.md or contract change still keeps an opus builder. Per task, also record planner tokens and the verifier's DRIFT count. CE-161 is the last task run without a planner.
 - 2026-11-07d (claude-code/claude-opus-5-5): CE-161: NOT eligible (sonnet scout: a symptom report with a hedged fix, no criteria; Store.heads has many callers), so opus builder; does not count. 604k subagent tokens: scout 67k (sonnet), build 152k, verify r1 113k, fix r1 129k, verify r2 143k; 1 FAIL round (the fix covered broken frontmatter but not a non-UTF-8 body, still a crash under G-W4/G-W12/G-W13); no trap-class bug. Verifier r2 (first to count design calls): 7 SOUND, 1 minor DRIFT. Last task under the scout shape; from CE-191 the DEC-177 planner shape.
 - 2026-11-07d (claude-code/claude-opus-5-5): CE-191: TRIAL TASK 1 of 6 (DEC-177 shape). 792k subagent tokens: plan 145k (opus), build 140k (sonnet), verify r1 114k, fix r1 85k (sonnet), verify r2 98k, fix r2 92k (opus, ESCALATED), verify r3 118k. 2 FAIL rounds, escalated yes (1 of the 2 that drop the trial). Both FAILs were the same class: the close reads the board after it has written, and that read could refuse (no board kinds; an unparseable record); the planner's design placed the read there and its own 'every refusal before any write' claim missed both triggers, so the miss was shared by planner and builder. No trap-class bug reached the verifier (heredoc mangling hit the builder twice, self-caught). Verifier design calls: all SOUND, no DRIFT. Against baselines (CE-187 698k, CE-158 543k, CE-161 604k, all opus with 1 FAIL each) this task cost more, not 30% less.
+- 2026-11-07e (claude-code/claude-opus-5-5): df32f0a: CE-198: trial task 1 (CE-191) numbers
