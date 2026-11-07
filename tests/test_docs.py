@@ -283,6 +283,27 @@ def test_archive_refuses_what_it_cannot_move_unrepaired_and_writes_nothing(repo)
     assert snapshot(repo) == files
 
 
+@pytest.mark.parametrize("path, says", [
+    ("context.toml", "context.toml is the engine's config"),
+    ("./context.toml", "context.toml is the engine's config"),
+    ("ops.jsonl", "ops.jsonl is the engine's op log ([engine] oplog)"),
+])
+def test_archive_refuses_the_engines_own_control_files_and_writes_nothing(repo, path, says):
+    """CE-158 (CE-153's refusal, DEC-162): `doc archive` takes material that is not markdown
+    since CE-96, but never the engine's config or its op log: moved, every later command finds no
+    config, or starts a new op log, and only git puts it back."""
+    (repo / "ops.jsonl").write_text('{"op": "x"}\n', encoding="utf-8")
+    commit_all(repo, "an op log")
+    status, files = git(repo, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(repo)
+    for lines in ("", "1-1"):
+        with pytest.raises(Refusal) as r:
+            archive(repo, path, lines=lines)
+        assert r.value.message.startswith(says), r.value.message
+        assert "by hand" in r.value.remedy, r.value.remedy
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == status
+    assert snapshot(repo) == files
+
+
 @pytest.mark.criterion("AC-83")
 def test_archive_names_a_config_entry_left_pointing_at_the_old_path(tmp_path):
     root = tmp_path / "repo"

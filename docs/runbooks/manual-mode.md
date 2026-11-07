@@ -1048,8 +1048,9 @@ open while claiming an answer; clearing `answered:` instead would orphan the dec
 
 ### context-engine task section
 
-Replace the content under `## <name>` up to the next `## ` heading. Add the section at the end if
-it is missing. Never `## Log`: use `comment`. On an open NOW item carrying `review:`, check the
+Replace the content under `## <name>` up to the next `## ` heading. Add the section above `## Log`
+if it is missing (at the end if there is no Log), so the Log stays last. Never `## Log`: use
+`comment`. On an open NOW item carrying `review:`, check the
 result's `## Design review` as in `task promote`, and do not write it while a check fails. On a
 closed item, never `## Kill bar`: its close judged it (comment the correction, or reopen the
 item and run again).
@@ -1089,10 +1090,15 @@ As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null)
 `blocks: [...]` if it blocks items. The body states three parts, and the engine refuses one
 that lacks any (with `--body` or `--body-file`; with neither it refuses too): **context**, under
 `Context` or `Background`; **two or more options**, one list item (`- A. ...`, `1. ...`, `A)
-...`) or `###` heading each, under `Options`; and a **recommendation with its reasoning**, at
-least five words, or `none` saying which exemption applies (too costly to reach, or it needs
-human judgement) and why. A part is a heading (`## Options`), a bold label (`**Options:**`) or
-a plain one (`Options:`); a `<...>` placeholder counts as nothing. The template:
+...`), `###` heading or line led by a bold label (`**A:** ...`) each, under `Options`; and a
+**recommendation with its reasoning**, at least five words, or `none` saying which exemption
+applies (too costly to reach, or it needs human judgement) and why. A part is a heading (`##
+Options`), a bold label naming one of the parts (`**Options:**`) or, in a body that writes none
+of its parts as a heading or a bold label, a plain one (`Options:`); any other such line is text
+of the part it is in, and only the heading `## Log` ends the body (a `Log:` line is prose). A
+list item indented to the text of the one above it is its sub-bullet, and a list under a `###`
+or bold option is that option's text, so neither is another option. A `<...>` placeholder counts
+as nothing. The template:
 
 ```
 **Question:** <title>
@@ -1434,8 +1440,9 @@ or a passage of a doc (§ Pruning part of a doc, after them).
 
 1. The archive directory is `--to`, else `[working] archive` (the kit's default is
    `docs/archive`). Stop if the file is already in it, if a file of its name is already there
-   (choose another directory, or a dated name), or if it is named `README.md`, which is the
-   redirect table's name.
+   (choose another directory, or a dated name), if it is named `README.md`, which is the
+   redirect table's name, or if it is the engine's own `context.toml` or op log (`[engine]
+   oplog`): moved, every later command goes on without it.
 2. Move it: `git mv <file> <dir>/<name>`. Never repair it: no fixed links, no updated text. (The
    engine moves the file without staging it, and the next commit records the move; git shows a
    rename either way.)

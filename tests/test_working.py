@@ -480,9 +480,33 @@ def _ask(context="Two parsers disagree on CRLF.", options=("- A. Normalise on re
     return f"**Context:** {context}\n\n**Options:**\n\n" + "\n".join(options) + f"\n\n**Recommendation:** {rec}\n\n## Log\n"
 
 
+# CE-158: bodies `ask_parts` misread before, each refused though it states all three parts
+ASK_PLAIN_LOG = """Context: two parsers disagree on CRLF.
+Log: the run printed both outputs side by side.
+
+Options:
+1. Normalise on read.
+2. Normalise on write.
+
+Recommendation: 1, since every reader then sees one form.
+
+## Log
+"""
+ASK_MISREAD = [
+    _ask(options=("**A:** Normalise on read.", "", "**B:** Normalise on write.")),  # options as bold labels
+    _ask(options=("**A. Normalise on read.**", "**B. Normalise on write.**")),  # a whole option in bold
+    _ask(context="\nLog: the run printed both outputs side by side."),  # a prose `Log:` line ended the body
+    _ask(context="\nQuestion: which parser wins was first asked in CE-12."),  # a prose `Question:` line took the context
+    _ask(rec="\nA.\nBackground: every reader then sees one form, so nothing is normalised twice."),  # and the reasoning
+    ASK_PLAIN_LOG,  # in a body of plain labels too
+]
+
+
 @pytest.mark.criterion("AC-121")
 @pytest.mark.parametrize("body", [ASK_BODY, ASK_HEADINGS, ASK_PLAIN, _ask(rec="none (too costly): telling them apart needs a week-long trial run"),
-                                  _ask(options=("1) Normalise on read.", "2) Normalise on write.", "3) Leave it."))])
+                                  _ask(options=("1) Normalise on read.", "2) Normalise on write.", "3) Leave it.")),
+                                  _ask(options=("  - A. Normalise on read.", "  - B. Normalise on write.")),  # an indented list is still a list
+                                  *ASK_MISREAD])
 def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommendation(eng, body):
     """CE-44 (DEC-34 and its amendment): every ask records its context, several options and a
     recommendation with its reasoning, or says which exemption leaves it without one; headings,
@@ -501,6 +525,10 @@ def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommenda
     (_ask(options=("- A. Normalise on read.",)), "lists 1 option under"),
     (_ask(options=("Normalise on read, or on write.",)), "lists 0 options under"),
     (_ask(options=("- <option one>", "- <option two>")), "lists 0 options under"),
+    (_ask(options=("**A:** <option one>", "**B:** <option two>")), "lists 0 options under"),
+    (_ask(options=("- A. Normalise on read.", "  - which every parser then does",)), "lists 1 option under"),  # CE-158: a sub-bullet is no option
+    (_ask(options=("1. Normalise on read.", "   - which every parser then does", "\t- and the writer too")), "lists 1 option under"),
+    (_ask(options=("### A. Normalise on read", "", "- every parser then does", "- and the writer too")), "lists 1 option under"),  # a list under a `###` option is its text
     (_ask(rec=""), "has no recommendation"),
     (_ask(rec="<the option, and why in a line>"), "has no recommendation"),
     (_ask(rec="A."), "without reasoning (1 word;"),
@@ -548,6 +576,34 @@ def test_lint_g_w4_fails_an_open_question_lacking_a_part_and_passes_a_closed_one
     assert f"task section {good.id}" in found[rel].remedy and "**Recommendation:**" in found[rel].remedy
     eng.ask_answer(good.id, "this way", title="This way", **kw(key))  # closed: its answer is a decision, the question history
     assert rel not in {f.path for f in eng.lint() if f.guard == "G-W4"}
+
+
+@pytest.mark.criterion("AC-122")
+def test_lint_g_w4_remedy_task_section_clears_a_missing_part(eng):
+    """CE-158: G-W4's remedy, `task section <id> <part> "<text>"`, clears the failure it names:
+    a missing section goes in above `## Log` (okf.py::set_section), where `ask_parts` reads,
+    not after it, where it stops."""
+    key = started(eng)
+    q = eng.new("question", "Filed past ask new", body=_ask().split("**Recommendation:**")[0] + "## Log\n\n- 2026-10-08 (x): filed\n", **kw(key))
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert [f.message for f in found] == [f"{q.id} is open but has no recommendation: a `**Recommendation:**` part with the option and why"]
+    assert f'task section {q.id} <part> "<text>"' in found[0].remedy
+    eng.section(q.id, "Recommendation", "A, since every reader then sees one form.", **kw(key))
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    body = eng.store.read(q.path).body
+    assert body.index("## Recommendation") < body.index("## Log") and body.rstrip().endswith("- 2026-10-08 (x): filed"), body
+
+
+def test_set_section_adds_a_missing_section_above_the_log_and_keeps_the_rest():
+    """CE-158: a missing section goes in above `## Log`, so the Log stays the body's last section;
+    with no Log, or for the Log itself, it goes at the end; a present section is replaced in place."""
+    body = "Intro.\n\n## Traps\n\n- one\n\n## Log\n\n- a\n- b\n"
+    assert okf.set_section(body, "Read first", "- x.py") == "Intro.\n\n## Traps\n\n- one\n\n## Read first\n\n- x.py\n\n## Log\n\n- a\n- b\n"
+    assert okf.set_section(body, "Traps", "- two") == "Intro.\n\n## Traps\n\n- two\n\n## Log\n\n- a\n- b\n"
+    assert okf.set_section("Intro.\n", "Traps", "- one") == "Intro.\n\n## Traps\n\n- one\n"
+    assert okf.set_section("## Log\n", "Traps", "- one") == "## Traps\n\n- one\n\n## Log\n"
+    assert okf.set_section("Intro.\n\n## Logs\n\n- a\n", "Traps", "- one") == "Intro.\n\n## Logs\n\n- a\n\n## Traps\n\n- one\n"  # `Logs` is not the Log
+    assert okf.set_section("Intro.\n", "Log", "- a") == "Intro.\n\n## Log\n\n- a\n"
 
 
 @pytest.mark.criterion("AC-121")

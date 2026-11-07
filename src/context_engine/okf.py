@@ -314,10 +314,16 @@ def get_section(body: str, name: str) -> str | None:
 
 
 def set_section(body: str, name: str, text: str) -> str:
-    """Replace the content of ``## name``, appending the section if it is missing."""
+    """Replace the content of ``## name``. A missing section goes in above ``## Log``, a board
+    item's history, which stays its last section (CE-158, DEC-175: `ask_parts` stops at the Log, so a
+    part added after it was never read); with no Log, or for the Log itself, at the end."""
     text = text.strip("\n")
     span = _section_span(body, name)
     if span is None:
+        log = None if name == "Log" else re.search(r"^## Log[ \t]*\r?$", body, re.MULTILINE)
+        if log:
+            head = body[: log.start()].rstrip("\r\n")
+            return (head + "\n\n" if head else "") + f"## {name}\n\n{text}\n\n" + body[log.start() :]
         return body.rstrip("\n") + f"\n\n## {name}\n\n{text}\n"
     start, end = span
     tail = body[end:]

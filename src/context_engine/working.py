@@ -2954,9 +2954,14 @@ class Engine:
         unchanged to `<dir>/<stem>-pruned.md` under `## Pruned from <doc> on <date>`, with a row.
         Not a milestone (DEC-36): nothing is staged, and the next commit carries the writes with
         their op lines (a whole move shows in git as a rename). Nothing outside the archive is
-        rewritten: the reply names each pointer G-D3 newly reports, to repoint by hand."""
+        rewritten: the reply names each pointer G-D3 newly reports, to repoint by hand. The
+        engine's own control files, `context.toml` and the op log, are refused (CE-158)."""
         self._check(session, actor)
         rel, p = self._doc(path, markdown=False)
+        # CE-158 (CE-153, DEC-162): since CE-96 took other material, nothing refused the engine's own control files
+        control = {CONFIG_NAME: "the engine's config", PurePosixPath(self.store.config.oplog.strip().replace("\\", "/")).as_posix(): "the engine's op log ([engine] oplog)"}
+        if rel in control:
+            raise Refusal(f"{rel} is {control[rel]}: moved, every later command would go on without it (no config, or a new op log)", "leave it where it is, since the engine reads it there; to keep an old copy, copy it by hand into the archive with its row (manual-mode.md § context-engine doc archive)")
         md = p.suffix.lower() == ".md"
         span = _line_span(lines, rel) if str(lines).strip() else None
         if span and not md:

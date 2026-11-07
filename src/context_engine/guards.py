@@ -2285,15 +2285,22 @@ def delegation_problems(data, body: str) -> list[str]:
 # -- an owner question's three parts (FRAMEWORK §5.3; CE-44) ---------------------------------
 
 # The labels a question's body is split on, as a heading (`## Options`), a bold label
-# (`**Options:**`) or, for these names only, a plain one (`Options:`).
+# (`**Options:**`) or, in a body that writes none of its parts as a heading or a bold label, a
+# plain one (`Options:`). Only these names are bold or plain labels (CE-158, DEC-175): `**A:** ...` under
+# Options is an option, and only the heading `## Log` (the board's history) ends the body.
 ASK_LABELS = ("question", "context", "background", "why owner-only", "options", "recommendation", "blocks", "log")
+ASK_PARTS = tuple(x for x in ASK_LABELS if x != "log")  # the names a bold or a plain label opens: `Log:` in prose is prose
 ASK_LABEL_RE = re.compile(
     r"^[ \t]{0,3}(?:(?P<hashes>#{1,6})[ \t]+(?P<h>[^\n]*?)[ \t]*:?[ \t]*#*[ \t]*$"
     r"|\*\*(?P<b>[^*\n:]+?)[ \t]*(?::\*\*|\*\*[ \t]*:)[ \t]*(?P<brest>.*)$"
-    rf"|(?P<p>{'|'.join(re.escape(x) for x in ASK_LABELS)})[ \t]*:[ \t]*(?P<prest>.*)$)",
+    rf"|(?P<p>{'|'.join(re.escape(x) for x in ASK_PARTS)})[ \t]*:[ \t]*(?P<prest>.*)$)",
     re.IGNORECASE,
 )
-ASK_OPTION_RE = re.compile(r"^[ \t]{0,3}(?:(?:[-*+]|\d{1,2}[.)]|[A-Za-z][.)])[ \t]+|#{3,6}[ \t]+)(?P<text>\S.*)$")  # `- A ...`, `1. ...`, `A) ...`, `### A ...`
+# `- A ...`, `1. ...`, `A) ...` (tabs expanded first, CE-158: the indent is read, so a sub-bullet is no option), `### A ...`, `**A:** ...`
+ASK_OPTION_RE = re.compile(
+    r"^(?P<indent>[ ]{0,3})(?:(?:[-*+]|\d{1,2}[.)]|[A-Za-z][.)])[ \t]+(?P<text>\S.*)"
+    r"|#{3,6}[ \t]+(?P<htext>\S.*)|\*\*(?P<blabel>[^*\n]+?)\*\*[ \t]*(?P<btext>.*))$"
+)
 ASK_PLACEHOLDER_RE = re.compile(r"<[^<>\n]*>")  # a template's `<the option, and why>`, which says nothing
 ASK_NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
 ASK_EXEMPT_RE = re.compile(r"cost|judge?ment", re.IGNORECASE)  # which exemption a `none` takes: too costly, or human judgement
@@ -2302,32 +2309,71 @@ ASK_EXEMPT_RE = re.compile(r"cost|judge?ment", re.IGNORECASE)  # which exemption
 RECOMMENDATION_MIN_WORDS = 5
 
 
+def _ask_label(line: str, plain: bool) -> tuple[str, int, str] | None:
+    """The part a line opens, as (lower-cased name, level, the label line's own text), or None:
+    any heading; a bold label only for a name in ``ASK_PARTS``; a plain one only when ``plain``."""
+    m = ASK_LABEL_RE.match(line)
+    if not m:
+        return None
+    if m["hashes"]:
+        return m["h"].strip().rstrip(":").strip().lower(), len(m["hashes"]), ""
+    if m["b"]:
+        name = m["b"].strip().lower()
+        return (name, 2, m["brest"] or "") if name in ASK_PARTS else None
+    return (m["p"].strip().lower(), 2, m["prest"] or "") if plain else None
+
+
 def ask_parts(body: str) -> dict[str, str]:
     """A question's body split into its labelled parts (lower-cased label -> text, the label
-    line's own text first), up to `## Log`. A heading deeper than the part's own (`### A` under
-    `## Options`, or under a bold label) stays inside it, unless it is one of ``ASK_LABELS``."""
+    line's own text first), up to the heading `## Log`. A heading deeper than the part's own
+    (`### A` under `## Options`, or under a bold label) stays inside it, unless it is one of
+    ``ASK_LABELS``. A bold label opens a part only for a name in ``ASK_PARTS``, and a plain one
+    only in a body that writes none of its parts as a heading or a bold label (CE-158): any
+    other such line is text of the part it is in, so `**A:** ...` stays under Options and a
+    prose line led by `Log:` or `Question:` splits nothing."""
+    lines = body.replace("\r\n", "\n").split("\n")
+    plain = not any((lab := _ask_label(ln, False)) and lab[0] in ASK_PARTS for ln in lines)
     parts: dict[str, str] = {}
     current, level = None, 0
-    for line in body.replace("\r\n", "\n").split("\n"):
-        m = ASK_LABEL_RE.match(line)
-        if m and m["hashes"]:
-            name = m["h"].strip().rstrip(":").strip().lower()
-            if current is not None and len(m["hashes"]) > level and name not in ASK_LABELS:
+    for line in lines:
+        lab = _ask_label(line, plain)
+        if lab and current is not None and lab[1] > level and lab[0] not in ASK_LABELS:
+            lab = None  # a heading deeper than the part's own, `### B` under Options
+        if lab is None:
+            if current is not None:
                 parts[current] += line + "\n"
-                continue
-            current, level, rest = name, len(m["hashes"]), ""
-        elif m:
-            current, level, rest = (m["b"] or m["p"]).strip().lower(), 2, (m["brest"] if m["b"] else m["prest"]) or ""
-        elif current is not None:
-            parts[current] += line + "\n"
             continue
-        else:
-            continue
+        current, level, rest = lab
         if current == "log":
             break
         parts[current] = parts.get(current, "") + rest + "\n"
     parts.pop("log", None)
     return parts
+
+
+def ask_options(part: str) -> list[str]:
+    """The options an `Options` part lists (``ASK_OPTION_RE``): one per list item, `###` heading
+    or line led by a bold label (`**A:** ...`, or a whole option in bold). A list item indented to
+    the text of the item above it, or past it, is that item's sub-bullet, and a list under a `###`
+    or a bold option is that option's own text: neither is another option (CE-158). Tabs count as
+    four columns. One that says nothing but a template placeholder counts as none."""
+    out: list[str] = []
+    sub = None  # the column from which a list item belongs to the option above it
+    for ln in part.split("\n"):
+        m = ASK_OPTION_RE.match(ln.expandtabs(4))
+        if not m:
+            continue
+        if m["text"] is not None:
+            if sub is not None and len(m["indent"]) >= sub:
+                continue
+            text, sub = m["text"], m.start("text")
+        elif m["htext"] is not None:
+            text, sub = m["htext"], 0
+        else:
+            text, sub = (m["btext"] if m["btext"].strip() else m["blabel"]), 0
+        if _said(text):
+            out.append(text)
+    return out
 
 
 def _said(text: str) -> str:
@@ -2341,20 +2387,22 @@ def _said(text: str) -> str:
 def ask_problems(body: str) -> list[str]:
     """What an owner question's body lacks of the three parts every question states (FRAMEWORK
     §5.3, DEC-34 and its amendment): context (`Context` or `Background`); two or more options,
-    one list item or `###` heading each, under `Options`; and a recommendation with its reasoning
-    (at least ``RECOMMENDATION_MIN_WORDS`` words), or `none` saying which exemption applies (too
-    costly to reach, or it needs human judgement) and why. `ask new` refuses a body that lacks one;
-    G-W4 fails an open question that does. A part is a heading, a bold label or a plain label
-    (``ASK_LABEL_RE``); a template's `<...>` placeholder counts as nothing.
+    one list item, `###` heading or bold-led line each, under `Options` (``ask_options``: a
+    sub-bullet is no option); and a recommendation with its reasoning (at least
+    ``RECOMMENDATION_MIN_WORDS`` words), or `none` saying which exemption applies (too costly to
+    reach, or it needs human judgement) and why. `ask new` refuses a body that lacks one; G-W4
+    fails an open question that does. A part is a heading, a bold label or a plain label
+    (``ask_parts``); a template's `<...>` placeholder counts as nothing.
 
     Not checked: whether the context, the options or the reasoning are any good (a judgement),
-    that the recommendation names one of the options, and a closed question (its answer is a
-    decision; it is history)."""
+    that the recommendation names one of the options, a closed question (its answer is a
+    decision; it is history), and, in a body of plain labels only, a prose line led by a part's
+    name (`Options: ...`), which opens that part: only the writer knows it is prose."""
     parts = ask_parts(body)
     out: list[str] = []
     if not _said(parts.get("context", "") + parts.get("background", "")):
         out.append("states no context: a `**Context:**` part saying what led to the question")
-    options = [m["text"] for ln in parts.get("options", "").split("\n") if (m := ASK_OPTION_RE.match(ln)) and _said(m["text"])]
+    options = ask_options(parts.get("options", ""))
     if len(options) < 2:
         out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item each)")
     rec = _said(parts.get("recommendation", ""))
