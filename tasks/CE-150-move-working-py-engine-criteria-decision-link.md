@@ -4,13 +4,15 @@ id: CE-150
 title: Move working.py::Engine._criteria (decision link) onto guards.py::criteria_rows
 brief: It reads CRITERION_ROW_RE over raw text, counting ids in fenced code and non-criteria tables (CE-42 review D5)
 pri: NOW
-state: open
+state: closed
 deps: [CE-42]
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Move working.py::Engine._criteria (decision link) onto guards.py::criteria_rows.
@@ -27,3 +29,5 @@ Move working.py::Engine._criteria (decision link) onto guards.py::criteria_rows.
 
 - 2026-10-30a (claude-code/claude-opus-5-5): Declined in CE-42 because CE-41 cites working.py::Engine._criteria and tools/sabotage_ce5.py mutates it; both move with it. Same root (CE-25's one-parser row M): working.py::Engine.criterion_ids/_next_criterion use CRITERION_ROW_RE, which misses an indented '  | AC-5 |' row guards.py::criteria_rows reads, so the next id can fall below it (CE-42 verifier nit; the read-back still refuses a real duplicate).
 - 2026-10-30a (claude-code/claude-opus-5-5): Correction to the line above: the method is working.py::Engine._criterion_ids (read by Engine._next_criterion), not Engine.criterion_ids.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: decision link and id allocation read criteria as lint does (guards.py::criteria_rows); work in a77a9d1, decisions DEC-189..DEC-192
+  residual risk: INV-131, INV-132, INV-133, INV-134, INV-135, INV-136

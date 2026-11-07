@@ -923,3 +923,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the plan did not require it
 - **control:** individual: commit titles and the CE-179 close commit cite DEC-186..188
 - **from:** CE-179, session 2026-11-07e
+
+## INV-131: Fence exclusion not pinned: stripping fence markers before table_blocks in _criterion_ids left the AC-160 test green, and before criteria_rows in _criteria_read left the AC-40 test green, since each fence holds one row
+
+- **affects:** engine maintainers
+- **why not eliminated:** low risk because fence skipping lives in guards.py::prose which lint shares; fix is a header, separator and row inside the fence
+- **control:** reduce: the AC-160 and AC-40 tests in tests/ (weak on fences)
+- **from:** CE-150, session 2026-11-07e
+
+## INV-132: Changed AC-70 assertion in tests/test_intent.py stays green if _criteria_read returns the old raw row regex, as the chain fixture has no row the two parsers disagree on
+
+- **affects:** engine maintainers
+- **why not eliminated:** the new AC-40 test covers that difference instead
+- **control:** reduce: AC-40 test and tests/test_intent.py AC-70 assertion
+- **from:** CE-150, session 2026-11-07e
+
+## INV-133: manual-mode.md § context-engine decision link (both kit copies) describes the criterion check more loosely than the engine applies it; a by-hand follower could link AC-13 (table with no status column) or an id inside a fence, which the engine refuses; no lint guard checks criterion links in amends
+
+- **affects:** manual-mode users and runbook readers
+- **why not eliminated:** runbook wording not yet tightened and no lint guard; follow-on
+- **control:** individual: the engine refusal in decision link
+- **from:** CE-150, session 2026-11-07e
+
+## INV-134: decision link hint is built from the first criteria_rows problem of any kind, possibly unrelated to the target table; a duplicate-id problem reads as 'lint cannot read part of'
+
+- **affects:** engine users reading the hint
+- **why not eliminated:** wording slightly off, behaviour right
+- **control:** individual: the refusal itself still fires correctly
+- **from:** CE-150, session 2026-11-07e
+
+## INV-135: With the superset counting, --id AC-n is refused with 'already leads a row of <criteria>' when AC-n leads a row of a table that is not a criteria table; correct under P3 but the message does not name the table
+
+- **affects:** engine users allocating ids
+- **why not eliminated:** message lacks the table name
+- **control:** individual: the refusal in id allocation
+- **from:** CE-150, session 2026-11-07e
+
+## INV-136: store.py::Store._criterion_prefixes still uses its own raw regex (DEC-191), and tools/sabotage_ce5.py is stale in exactly the 5 named rows at parent 49af3b3 and at a77a9d1 (DEC-192)
+
+- **affects:** engine maintainers
+- **why not eliminated:** confirmed follow-ons, deliberately not done here
+- **control:** individual: DEC-191 and DEC-192 record them
+- **from:** CE-150, session 2026-11-07e
