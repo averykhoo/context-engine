@@ -9,6 +9,7 @@ decided: 2026-11-08
 session: 2026-11-07e
 decision_status: PROVISIONAL
 body_sha: sha256:52cd4d47b4599b73b69afb7e6b9a2f9227edf33b4d5698050c2fc9a5113d51fb
+supersedes: [DEC-107]
 ---
 
 Built per DEC-162, the owner's ruling that DEC-107 goes "on" (docs/evidence/owner-review-advice-2026-11-06b.md § 3), in CE-192.
