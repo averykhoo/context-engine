@@ -966,7 +966,9 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      pause left uncommitted in a shared tree can be lost to another session's close.
    - **The session's own commits** go through `context-engine commit <paths> -m <message>`: the
      paths by path, with the session's uncommitted op lines and the records they name, under
-     the same lock, whatever the policy, and with the `Session:` trailer. A plain `git commit -o`
+     the same lock, whatever the policy, and with the `Session:` and `Co-Authored-By:` trailers
+     (the second, as on every engine commit, names the actor's model unless the session names
+     another or none; an actor that is a person gets none). A plain `git commit -o`
      of a record whose op line is still uncommitted fails G-W7 on a clean checkout. `commit`
      runs no gate: the session runs it first, as before every commit of its own (§6.3 item 7).
      It runs lint and refuses when a failure sits on a path it would carry, and where `[gate]
@@ -1602,7 +1604,9 @@ procedures. The agent sessions absorb the cost:
    It sits in the message's last paragraph, the only one git reads as trailers, with every
    other trailer (`Co-Authored-By:`, `Closes:`) and no blank line among them: a `Session:` line
    followed by a blank line and another trailer is no trailer to git, so the commit reads as
-   foreign (the template is `manual-mode.md` § context-engine commit). One task per commit, its
+   foreign (the template is `manual-mode.md` § context-engine commit). The engine writes that
+   paragraph on every commit it makes, `Co-Authored-By:` included, read from the actor's model.
+   One task per commit, its
    id leading the title (`<id>: what changed`, the prefix the repo's own `[kinds.task]
    prefix`). The task's close carries `Closes: <id>` in its own commit
    (§5.5 rule 4), not its work commits; a commit made outside the engine that finishes a task

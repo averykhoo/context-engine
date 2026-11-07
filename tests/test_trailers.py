@@ -1,13 +1,18 @@
 """CE-64: an agent commit's `Session:` trailer sits where git reads it, the message's last
 paragraph, so procedures § Reconciling foreign commits never counts a session's own commit as
 foreign. Git, not the engine's own parser, reads every message back: the engine's commits, a
-message written to the documented template, and the template itself wherever a doc shows one."""
+message written to the documented template, and the template itself wherever a doc shows one.
+CE-197 (DEC-170): that paragraph also names the co-author, `Co-Authored-By:`, on every engine commit."""
 
 import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from context_engine import commit as C
+from context_engine import ops
+from context_engine.errors import Refusal
 
 from test_commit import git, mrepo, run, start  # noqa: F401 (mrepo is a fixture)
 
@@ -119,3 +124,135 @@ def test_no_documented_commit_message_puts_session_outside_the_last_paragraph():
                 bad.append(f"{where}: an inline commit with a -m after its Session: paragraph: {m.group(0)[:80]}")
     assert blocks >= 2, "the template (kit manual-mode and its copy) is among the fenced messages, so the scan is not vacuous"
     assert bad == [], "\n".join(bad)
+
+
+# -- CE-197 (DEC-170): every engine commit names its co-author, in the same trailer paragraph -----
+
+OPUS = "Claude Opus 5.5 <noreply@anthropic.com>"
+
+
+def _log(root, base: str) -> list[str]:
+    """`<Session> | <Co-Authored-By>` per commit after ``base``, as git itself reads the trailers."""
+    fmt = "%(trailers:key=Session,valueonly,separator=%x2C) | %(trailers:key=Co-Authored-By,valueonly,separator=%x2C)"
+    return git(root, "log", f"--format={fmt}", f"{base}..HEAD").splitlines()
+
+
+def test_every_engine_commit_names_the_actors_model_beside_session(mrepo):
+    """The milestone commits (a task close, owner words, a baton, a session close) and the
+    session's own commit each end in one trailer paragraph that git reads both lines from, the
+    co-author named from the actor's model id."""
+    base = git(mrepo, "rev-parse", "HEAD").strip()
+    c = run_start(mrepo, "claude-code/claude-opus-5-5")
+    run(mrepo, "task_new", c, title="Build the parser")
+    run(mrepo, "task_close", c, id="CE-1", msg="done in abc1234", body="Sabotage: dropped the check -> test_parser red")
+    run(mrepo, "record_new", c, kind="decision", title="Kept", body="Owner words.", fields={"actor": "owner", "decision_status": "BUILT"})
+    run(mrepo, "baton_add", c, step="a step", why="no time")
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a")
+    assert trailers(mrepo) == [f"Session: {c.session}", f"Co-Authored-By: {OPUS}"]
+    run(mrepo, "session_close", c, rows="CE-1", summary=["built"], guards="green", read="board")
+    log = _log(mrepo, base)
+    assert len(log) == 5, log
+    assert log == [f"{c.session} | {OPUS}"] * 5, log
+
+
+def run_start(root, actor):
+    c = ops.Caller(actor=actor)
+    run(root, "session_start", c)
+    return c
+
+
+def test_a_human_actors_commit_claims_no_co_author(mrepo):
+    """A person (`human:<id>`) running the engine commits with `Session:` alone."""
+    base = git(mrepo, "rev-parse", "HEAD").strip()
+    c = run_start(mrepo, "human:avery")
+    run(mrepo, "task_new", c, title="Build the parser")
+    run(mrepo, "task_close", c, id="CE-1", msg="done")
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a")
+    assert _log(mrepo, base) == [f"{c.session} | "] * 2
+
+
+@pytest.mark.parametrize("model, name", [
+    ("claude-opus-5-5", "Claude Opus 5.5"),
+    ("claude-sonnet-4-5-20250929", "Claude Sonnet 4.5"),
+    ("claude-opus-4", "Claude Opus 4"),
+    ("claude-3-5-haiku-20241022", "Claude 3.5 Haiku"),
+    ("claude-opus-5-5[1m]", "Claude Opus 5.5"),
+    ("us.anthropic.claude-sonnet-4-5-20250929-v1:0", "Claude Sonnet 4.5"),
+    ("claude-opus-4-1@20250805", "Claude Opus 4.1"),
+    ("opus", "Claude Opus"),
+    ("claude-x9z", "Claude"),
+    ("gpt-5", None),
+    ("test", None),
+])
+def test_a_model_id_reads_as_its_name(model, name):
+    assert C.model_name(model) == name
+
+
+def test_the_co_author_comes_from_the_flag_then_the_model_then_the_env_then_the_actor(monkeypatch):
+    actor = "claude-code/claude-opus-5-5"
+    assert C.co_author(actor) == OPUS
+    assert C.co_author("claude-code/test") == "Claude <noreply@anthropic.com>"  # a Claude harness, a model it cannot read
+    assert C.co_author("codex/gpt-5") is None  # no address to give: CE_CO_AUTHOR or --co-author names one
+    assert C.co_author("human:avery") is None and C.co_author("process:ci") is None
+    monkeypatch.setenv(C.CO_AUTHOR_ENV, "Env Bot <env@example.com>")
+    assert C.co_author(actor) == "Env Bot <env@example.com>"
+    assert C.co_author(actor, model="claude-haiku-4-5") == "Claude Haiku 4.5 <noreply@anthropic.com>"
+    assert C.co_author(actor, given="A B <a@b.c>", model="claude-haiku-4-5") == "A B <a@b.c>"
+    assert C.co_author(actor, given="none") is None
+    monkeypatch.setenv(C.CO_AUTHOR_ENV, "none")
+    assert C.co_author(actor) is None
+    monkeypatch.setenv(C.CO_AUTHOR_ENV, "not an address")
+    with pytest.raises(Refusal, match="CE_CO_AUTHOR is 'not an address'"):
+        C.co_author(actor)
+    assert C.co_author(actor, strict=False) == OPUS  # a milestone commit reads the actor instead
+    with pytest.raises(Refusal, match="not `<name> <email>`"):
+        C.co_author(actor, given="Claude")
+    with pytest.raises(Refusal, match="not a Claude model id"):
+        C.co_author(actor, model="gpt-5")
+
+
+def test_the_session_commit_takes_the_co_author_it_is_given_once(mrepo, monkeypatch):
+    c = run_start(mrepo, "claude-code/claude-opus-5-5")
+    n = 0
+
+    def commit(**kw):
+        nonlocal n
+        n += 1
+        (mrepo / "a.py").write_text(f"a = {n}\n", encoding="utf-8")
+        run(mrepo, "commit", c, paths=["a.py"], **kw)
+        return git(mrepo, "log", "-1", "--format=%B")
+
+    commit(message="CE-1: one", co_author="A B <a@b.c>")
+    assert trailers(mrepo) == [f"Session: {c.session}", "Co-Authored-By: A B <a@b.c>"]
+    commit(message="CE-1: two", model="claude-sonnet-4-5")
+    assert trailers(mrepo) == [f"Session: {c.session}", "Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"]
+    msg = commit(message="CE-1: three", co_author="none")
+    assert trailers(mrepo) == [f"Session: {c.session}"] and "Co-Authored-By" not in msg
+    monkeypatch.setenv(C.CO_AUTHOR_ENV, "Env Bot <env@example.com>")
+    commit(message="CE-1: four")
+    assert trailers(mrepo) == [f"Session: {c.session}", "Co-Authored-By: Env Bot <env@example.com>"]
+    monkeypatch.delenv(C.CO_AUTHOR_ENV)
+    # the old by-hand layout: the line as the message's last paragraph; the engine's address is the same, so it is not doubled
+    msg = commit(message=f"CE-1: five\n\nSabotage: x -> test_y red\n\nCo-Authored-By: {OPUS}\n")
+    assert msg.count("Co-Authored-By:") == 1, msg
+    assert trailers(mrepo) == [f"Co-Authored-By: {OPUS}", f"Session: {c.session}"], msg
+    msg = commit(message="CE-1: six\n\nco-authored-by: Claude <NOREPLY@anthropic.com>")  # any case, another name: the message's line stands
+    assert msg.lower().count("co-authored-by:") == 1, msg
+    with pytest.raises(Refusal, match="both --co-author and --model"):
+        commit(message="CE-1: seven", co_author="A B <a@b.c>", model="claude-opus-5-5")
+    with pytest.raises(Refusal, match="not `<name> <email>`"):
+        commit(message="CE-1: eight", co_author="Claude")
+
+
+def test_a_bad_ce_co_author_never_stops_a_milestone_commit(mrepo, monkeypatch):
+    """A milestone commit follows a write already made, so a malformed `CE_CO_AUTHOR` cannot refuse
+    it: the commit names the actor's model instead. The session's own commit, which writes nothing
+    first, refuses it (above)."""
+    c = run_start(mrepo, "claude-code/claude-opus-5-5")
+    monkeypatch.setenv(C.CO_AUTHOR_ENV, "not an address")
+    run(mrepo, "task_new", c, title="Build the parser")
+    _, line = run(mrepo, "task_close", c, id="CE-1", msg="done")
+    assert "; committed " in line, line
+    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}", f"Co-Authored-By: {OPUS}"]

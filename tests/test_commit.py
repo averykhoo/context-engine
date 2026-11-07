@@ -30,6 +30,7 @@ from context_engine.working import Engine
 from test_working import ACTOR, CONFIG, FRAMEWORK, LEDGER, NOTE, TODAY
 from conftest import ASK_BODY, _toml
 
+CLAUDE = "Claude <noreply@anthropic.com>"  # the Co-Authored-By value of ACTOR, `claude-code/test` (CE-197)
 EVERY = {**CONFIG, "engine": {**CONFIG["engine"], "commit": "every-write"}}  # the sweep's tests: each write commits
 
 
@@ -141,7 +142,7 @@ def test_a_write_commits_its_record_with_its_op_line_and_nothing_else(repo):
     msg = git(repo, "log", "-1", "--format=%B")
     assert msg.splitlines()[0] == "engine: new CE-1"
     trailers = subprocess.run(["git", "interpret-trailers", "--parse"], cwd=repo, input=msg, capture_output=True, text=True, check=True).stdout
-    assert trailers.splitlines() == [f"Session: {c.session}"]
+    assert trailers.splitlines() == [f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"]  # an agent actor's commit names it (CE-197)
 
 
 def test_a_library_call_commits_too(repo):
@@ -692,7 +693,7 @@ def test_a_task_close_commits_with_closes_its_body_and_what_rode_along(mrepo):
     assert msg.splitlines()[0] == "CE-1: close; done in abc1234", msg
     assert f"Ops: close CE-1, session.start {c.session}, new CE-1, comment CE-1" in msg, msg
     assert sabotage in msg
-    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}"], msg
+    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], msg
     assert git(mrepo, "status", "--porcelain").strip() == ""
 
 
@@ -707,7 +708,7 @@ def test_a_verdict_against_a_pre_registered_kill_bar_lands_in_the_log_the_reply_
     assert line.startswith("CE-1: closed (trial run); verdict KILL against its kill bar"), line
     msg = git(mrepo, "log", "-1", "--format=%B")
     assert "Verdict: KILL: best AUC 0.629 (results.md § 3) (against CE-1's ## Kill bar)" in msg, msg
-    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}"], msg
+    assert trailers(mrepo) == ["Closes: CE-1", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], msg
     body = (mrepo / "tasks").glob("CE-1-*.md").__next__().read_text(encoding="utf-8")
     assert f"closed: trial run\n  verdict against the kill bar: KILL: best AUC 0.629 (results.md § 3)\n" in body, body
 
@@ -816,8 +817,8 @@ def test_the_session_commit_carries_its_paths_with_the_op_log_and_the_records_it
     assert line == f"committed {head(mrepo)}: 5 paths", line
     assert files_at(mrepo) == sorted(["CLAUDE.md", "parser.py", "ops.jsonl", "ledger.md", task_file])
     msg = git(mrepo, "log", "-1", "--format=%B")
-    assert msg.startswith(f"CE-1: the parser\n\nOps: session.start {c.session}, new CE-1, comment CE-1\n\nSabotage: x -> test_y red\nSession: {c.session}\n"), msg
-    assert trailers(mrepo) == ["Sabotage: x -> test_y red", f"Session: {c.session}"], msg  # a trailer-shaped last paragraph takes the trailer
+    assert msg.startswith(f"CE-1: the parser\n\nOps: session.start {c.session}, new CE-1, comment CE-1\n\nSabotage: x -> test_y red\nSession: {c.session}\nCo-Authored-By: {CLAUDE}\n"), msg
+    assert trailers(mrepo) == ["Sabotage: x -> test_y red", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], msg  # a trailer-shaped last paragraph takes the trailer
     status = git(mrepo, "status", "--porcelain")
     assert status.splitlines() == ["M  HANDOFF.md", "?? wip.py"], status
     clone = tmp_path / "clone"
@@ -830,7 +831,7 @@ def test_the_session_commit_keeps_its_trailer_block_and_adds_session_to_it(mrepo
     c = start(mrepo)
     (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: a\n\nCo-Authored-By: Someone <s@example.com>\n")
-    assert trailers(mrepo) == ["Co-Authored-By: Someone <s@example.com>", f"Session: {c.session}"]
+    assert trailers(mrepo) == ["Co-Authored-By: Someone <s@example.com>", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"]  # another address: both
     msg = git(mrepo, "log", "-1", "--format=%B")
     assert msg.index("Ops: session.start") < msg.index("Co-Authored-By")  # what the engine adds goes before the trailers
     (mrepo / "a.py").write_text("a = 2\n", encoding="utf-8")
@@ -841,10 +842,10 @@ def test_the_session_commit_keeps_its_trailer_block_and_adds_session_to_it(mrepo
     assert git(mrepo, "log", "-1", "--format=%B").count("Session:") == 1  # the session's own trailer stands
     (mrepo / "a.py").write_text("a = 4\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: four\n\nSession: 2026-01-01a was the old key, in prose\n\nCloses: CE-1\n  continued")
-    assert trailers(mrepo) == ["Closes: CE-1 continued", f"Session: {c.session}"], trailers(mrepo)  # the prose line is no trailer
+    assert trailers(mrepo) == ["Closes: CE-1 continued", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], trailers(mrepo)  # the prose line is no trailer
     (mrepo / "a.py").write_text("a = 5\n", encoding="utf-8")
     run(mrepo, "commit", c, paths=["a.py"], message="CE-1: five\n\nSession: 2026-01-01a was the old key,\nso say it in prose")  # prose, not a trailer
-    assert trailers(mrepo) == [f"Session: {c.session}"], trailers(mrepo)
+    assert trailers(mrepo) == [f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], trailers(mrepo)
 
 
 def test_the_session_commit_with_no_paths_commits_the_op_log_and_what_it_names(mrepo):

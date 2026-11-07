@@ -69,7 +69,8 @@ CALLS = {
     "decision_relink": (["DEC-1", "a.py::f", "b.py::f"], {"id": "DEC-1", "old": "a.py::f", "new": "b.py::f"}),
     "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
     "decision_show": (["DEC-1", "--section", "Amendments"], {"id": "DEC-1", "section": "Amendments"}),
-    "commit": (["a.py", "src/b.py", "-m", "CE-1: title", "-m", "the body"], {"paths": ["a.py", "src/b.py"], "message": "CE-1: title\n\nthe body"}),
+    "commit": (["a.py", "src/b.py", "-m", "CE-1: title", "-m", "the body", "--co-author", "A B <a@b.c>"],
+               {"paths": ["a.py", "src/b.py"], "message": "CE-1: title\n\nthe body", "co_author": "A B <a@b.c>"}),
     "why": (["CE-1"], {"target": "CE-1"}),
     "decision_index": ([], {}),
     "site_build": (["out"], {"outdir": "out"}),
@@ -142,7 +143,8 @@ def _same(params: dict) -> dict:
 
 
 # A second call for an operation whose options exclude each other, which one call cannot carry both of
-MORE_CALLS = [("session_start", ["--continues", "2026-10-07b"], {"continues": "2026-10-07b"})]
+MORE_CALLS = [("session_start", ["--continues", "2026-10-07b"], {"continues": "2026-10-07b"}),
+              ("commit", ["-m", "CE-1: t", "--model", "claude-opus-5-5"], {"message": "CE-1: t", "model": "claude-opus-5-5"})]
 
 
 @pytest.mark.criterion("AC-18")

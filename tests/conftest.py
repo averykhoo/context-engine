@@ -61,6 +61,7 @@ def _no_machine_git_config(tmp_path_factory, monkeypatch):
     empty.touch()
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
+    monkeypatch.delenv("CE_CO_AUTHOR", raising=False)  # nor the machine's Co-Authored-By override (CE-197)
 
 
 @pytest.fixture

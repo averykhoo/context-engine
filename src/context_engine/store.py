@@ -160,6 +160,7 @@ class Store:
         self._held = False  # this Store holds the file lock (batch() holds it across an operation)
         self._missed: commit_mod.Outcome | None = None  # a pause commit that did not happen
         self._wrote: str | None = None  # the session of a write not yet committed
+        self._wrote_actor: str | None = None  # its actor: the commit's Co-Authored-By line comes from it (CE-197)
         self.commit_title: str | None = None  # the next commit's title, when an operation names it
         self.commit_always = False  # the next commit is made whatever the policy, `off` included (a pause)
         self.commit_milestone = False  # the next commit is a milestone's (`milestone()`)
@@ -607,6 +608,7 @@ class Store:
         """Holding the lock: commit what the writes since the last commit put in the op log, if
         the policy says now. Every one-shot setting is spent here, committed or not."""
         session, self._wrote = self._wrote, None
+        actor, self._wrote_actor = self._wrote_actor, None
         title, self.commit_title = self.commit_title, None
         always, self.commit_always = self.commit_always, False
         milestone, self.commit_milestone = self.commit_milestone, False
@@ -620,20 +622,23 @@ class Store:
             self.last_commit = commit_mod.Outcome()
             return
         try:
-            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
+            co = commit_mod.co_author(actor, strict=False)  # a bad CE_CO_AUTHOR cannot refuse a write already made
+            self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body,
+                                                 trailers=tuple(trailers), co_author=co)
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
             self._missed = self.last_commit
 
-    def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False) -> commit_mod.Outcome:
+    def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False, co_author: str | None = None) -> commit_mod.Outcome:
         """The session's own commit (`context-engine commit`): ``paths`` by path, with the op
         log lines HEAD lacks that this session's commit takes (``commit.select``; every line with
-        ``sweep``) and the files they name, under the lock, whatever the policy. It runs no gate:
-        the session runs it first."""
+        ``sweep``) and the files they name, under the lock, whatever the policy; ``co_author`` is
+        its resolved ``Co-Authored-By:`` value (``commit.co_author``), None for none. It runs no
+        gate: the session runs it first."""
         with self._lock():
             try:
-                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep)
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, co_author=co_author)
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 
@@ -724,6 +729,7 @@ class Store:
         with open(log, "a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         self._wrote = session
+        self._wrote_actor = actor
         self._lead.append(f"{op} {rec_id}")
 
     def new(self, kind_name: str, fields: dict[str, Any], body: str = "", *, session: str, actor: str, mechanical: bool = False) -> Record:

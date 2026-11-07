@@ -54,6 +54,17 @@ when the half-edit still parses. It is committed as it stands, and nothing is lo
 tree; the reply names the other session whose lines were carried. Under the milestone policy a
 record stays uncommitted until the next milestone, whoever makes it, so that window is wide; a
 half-edit that breaks the frontmatter stops the commit instead (INV-42).
+
+Every commit the engine makes ends in one trailer paragraph: a task close's ``Closes:``, then
+``Session:``, then a ``Co-Authored-By:`` line naming the agent that made the writes (CE-197,
+DEC-170), so no agent commit goes without it. ``co_author`` resolves that line, first hit wins: an
+explicit ``--co-author "<name> <email>"`` (or ``none``) or ``--model <id>`` on the session's own
+commit; ``CE_CO_AUTHOR`` in the environment (same forms); then the actor's model, read from
+``<harness>/<model>`` (``claude-code/claude-opus-5-5`` is ``Claude Opus 5.5
+<noreply@anthropic.com>``; a Claude harness with a model the engine cannot read is plain
+``Claude``). An actor with no ``/`` (``human:<id>``, ``process:<id>``) gets none: a person's commit
+never claims an agent co-wrote it. A ``Co-Authored-By:`` line with the same address already in the
+message's last paragraph wins, so a line written by hand is never doubled.
 """
 
 from __future__ import annotations
@@ -70,10 +81,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import okf
+from .errors import Refusal
 
 TITLE_MAX = 72
 OPS_MAX = 400  # characters of the `Ops:` line naming the op log lines a commit carries, when its title does not
 TRAILER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*: \S")  # `Token: value`, as git reads a trailer
+CO_AUTHOR_ENV = "CE_CO_AUTHOR"  # `<name> <email>`, or `none`: the Co-Authored-By line, over the actor's (CE-197)
+ANTHROPIC = "noreply@anthropic.com"
+CO_AUTHOR_RE = re.compile(r"^[^<>\n:]*[^<>\s:][^<>\n:]* <[^<>\s@]+@[^<>\s@]+>$")  # `Name <a@b>`
+CO_AUTHOR_OFF = ("none", "off")
+CLAUDE_ALIASES = ("opus", "sonnet", "haiku", "fable")  # a model alias Claude Code accepts for a model id
 NOTHING = ("nothing to commit", "no changes added to commit", "nothing added to commit")  # git's own words
 # Seconds. Provenance: JUDGEMENT, a hook may run a check. Wrong if a normal hook takes longer. It is
 # longer than the engine lock's own 30 s default, so a hook slower than that makes another
@@ -278,6 +295,91 @@ def _fit(head: str, parts: list[str], limit: int) -> str:
     return out
 
 
+def model_name(model: str) -> str | None:
+    """A Claude model id's name, as its Co-Authored-By line gives it: ``claude-opus-5-5`` is
+    ``Claude Opus 5.5``, ``claude-sonnet-4-5-20250929`` ``Claude Sonnet 4.5``, ``claude-3-5-haiku``
+    ``Claude 3.5 Haiku``, ``claude-opus-4`` ``Claude Opus 4``, an alias (``opus``) ``Claude Opus``.
+    A date, a ``[1m]`` context suffix, a ``@<date>`` or ``-v1:0`` version and a provider prefix
+    (``us.anthropic.``) are dropped; an id with any other part reads as plain ``Claude``. None
+    for a model that is not Claude's."""
+    m = re.sub(r"\[[^\]]*\]$", "", model.strip().lower()).split("@")[0]
+    m = m[m.index("claude-"):] if "claude-" in m else m
+    tokens = [t for t in re.split(r"[-_]", m) if t]
+    if tokens[:1] and tokens[0] in CLAUDE_ALIASES:
+        tokens = ["claude", *tokens]
+    if tokens[:1] != ["claude"]:
+        return None
+    out, num = ["Claude"], []
+    for t in tokens[1:]:
+        if re.fullmatch(r"\d{8}|v\d+(:\d+)?|latest", t):
+            continue
+        if re.fullmatch(r"\d{1,2}", t):
+            num.append(t)
+            continue
+        if not re.fullmatch(r"[a-z]+", t):
+            return "Claude"
+        if num:
+            out.append(".".join(num))
+            num = []
+        out.append(t.capitalize())
+    if num:
+        out.append(".".join(num))
+    return " ".join(out)
+
+
+def _given_co_author(value: str, where: str) -> str | None:
+    """``<name> <email>`` as given, or None for ``none``; anything else is refused."""
+    v = value.strip()
+    if v.lower() in CO_AUTHOR_OFF:
+        return None
+    if not CO_AUTHOR_RE.match(v):
+        raise Refusal(f"{where} is {value!r}, not `<name> <email>`",
+                      "give it as `Name <address>` (e.g. `Claude Opus 5.5 <noreply@anthropic.com>`), or `none` for no Co-Authored-By line")
+    return v
+
+
+def co_author(actor: str | None, given: str | None = None, model: str | None = None, *, strict: bool = True) -> str | None:
+    """The ``Co-Authored-By:`` value an engine commit by ``actor`` carries, or None for none
+    (CE-197). First hit wins: ``given`` (``<name> <email>``, or ``none``), ``model`` (a Claude
+    model id, ``model_name``), ``CE_CO_AUTHOR``, then the actor's own model. An actor with no
+    ``/`` (``human:<id>``, ``process:<id>``) gets none; ``<harness>/<model>`` with a Claude model gets that model's
+    name, and a harness named ``claude...`` with any other model plain ``Claude``. ``strict``
+    refuses a bad ``CE_CO_AUTHOR``; a milestone commit, which follows a write it cannot undo,
+    passes False and reads the actor instead."""
+    if given:
+        return _given_co_author(given, "--co-author")
+    if model:
+        name = model_name(model)
+        if name is None:
+            raise Refusal(f"--model {model!r} is not a Claude model id", "give the line itself: `--co-author \"<name> <email>\"`")
+        return f"{name} <{ANTHROPIC}>"
+    env = os.environ.get(CO_AUTHOR_ENV, "").strip()
+    if env:
+        try:
+            return _given_co_author(env, CO_AUTHOR_ENV)
+        except Refusal:
+            if strict:
+                raise
+    harness, sep, mod = (actor or "").strip().partition("/")
+    if not sep:
+        return None
+    name = model_name(mod)
+    if name:
+        return f"{name} <{ANTHROPIC}>"
+    return f"Claude <{ANTHROPIC}>" if harness.lower().startswith("claude") else None
+
+
+def _address(value: str) -> str:
+    m = re.search(r"<([^<>]*)>\s*$", value)
+    return (m.group(1) if m else value).strip().lower()
+
+
+def _has_co_author(para: str, value: str) -> bool:
+    """``para`` has a ``Co-Authored-By:`` line (in any case) naming ``value``'s address."""
+    want = _address(value)
+    return any(_address(ln.split(":", 1)[1]) == want for ln in para.split("\n") if ln.lower().startswith("co-authored-by:"))
+
+
 def _carried_by(lines: list[dict], session: str) -> str:
     others = _others(lines, session)
     if not others:
@@ -287,12 +389,14 @@ def _carried_by(lines: list[dict], session: str) -> str:
             f"session{'s' if len(others) != 1 else ''} {', '.join(others)}, with the files they name.")
 
 
-def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[str, ...] = (), body: str = "", trailers: tuple[str, ...] = ()) -> str:
+def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[str, ...] = (), body: str = "", trailers: tuple[str, ...] = (),
+            co_author: str | None = None) -> str:
     """An engine commit's message. The title is ``engine: <op> <id>, ...``, naming the session's
     own ops, this operation's first; an operation that names its own title (a pause, a task
     close) gets an ``Ops:`` line naming them instead, when there is more than one. Then the
     operation's ``body``, a paragraph naming any other session whose uncommitted lines go in, then
-    ``trailers`` and the ``Session:`` trailer, in one block."""
+    ``trailers``, the ``Session:`` trailer and the ``Co-Authored-By:`` one (``co_author``, when
+    there is one), in one block."""
     parts = _parts(lines, session, lead)
     paras = []
     if not title:
@@ -303,7 +407,7 @@ def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[s
         paras.append(body.strip())
     if _carried_by(lines, session):
         paras.append(_carried_by(lines, session))
-    paras.append("\n".join([*trailers, f"Session: {session}"]))
+    paras.append("\n".join([*trailers, f"Session: {session}", *([f"Co-Authored-By: {co_author}"] if co_author else [])]))
     return "\n\n".join([title, *paras]) + "\n"
 
 
@@ -336,11 +440,12 @@ def session_trailers(text: str) -> list[str]:
     return [ln.split(":", 1)[1].strip() for ln in paras[-1].split("\n") if ln.startswith("Session:")]
 
 
-def session_message(text: str, lines: list[dict], session: str) -> str:
+def session_message(text: str, lines: list[dict], session: str, co_author: str | None = None) -> str:
     """A session's own commit message as it wrote it, plus what the engine carries: an ``Ops:``
     line naming the uncommitted op log lines it takes in, and the paragraph naming other sessions, both
-    before the closing trailer paragraphs; and a ``Session:`` trailer in the last paragraph,
-    where ``git interpret-trailers`` reads it, unless the message has one already."""
+    before the closing trailer paragraphs; and in the last paragraph, where ``git
+    interpret-trailers`` reads them, a ``Session:`` trailer unless the message has one already,
+    then ``Co-Authored-By: <co_author>`` unless that paragraph names its address already."""
     paras = _paragraphs(text)
     tail = len(paras)
     while tail > 1 and _is_trailers(paras[tail - 1]):
@@ -351,11 +456,15 @@ def session_message(text: str, lines: list[dict], session: str) -> str:
     if _carried_by(lines, session):
         ours.append(_carried_by(lines, session))
     paras[tail:tail] = ours
-    if not session_trailers(text):
-        if tail + len(ours) < len(paras):
-            paras[-1] += f"\nSession: {session}"
+    ends_in_trailers = tail + len(ours) < len(paras)
+    add = [] if session_trailers(text) else [f"Session: {session}"]
+    if co_author and not (ends_in_trailers and _has_co_author(paras[-1], co_author)):
+        add.append(f"Co-Authored-By: {co_author}")
+    if add:
+        if ends_in_trailers:
+            paras[-1] += "\n" + "\n".join(add)
         else:
-            paras.append(f"Session: {session}")
+            paras.append("\n".join(add))
     return "\n\n".join(paras) + "\n"
 
 
@@ -364,14 +473,16 @@ def _others(lines: list[dict], session: str) -> tuple[str, ...]:
 
 
 def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
-           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False) -> Outcome:
+           trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False,
+           co_author: str | None = None) -> Outcome:
     """Commit ``session``'s uncommitted op lines (``select``; with ``sweep``, every line) with
     the files they name. Call it holding the lock.
 
     An engine commit's message is built from ``title``, ``lead``, ``body`` and ``trailers``
     (``message``). The session's own commit passes its message as ``text`` and its own
     ``paths``, relative to ``root`` (``session_message``); then every case that commits nothing
-    says why, since a commit was asked for."""
+    says why, since a commit was asked for. ``co_author`` is the resolved ``Co-Authored-By:``
+    value (``co_author()``), None for none."""
     asked = text is not None
     remedy = (f"commit by hand: `git commit -o {oplog} <the paths its uncommitted lines name>` with a "
               f"`Session: {session}` trailer (manual-mode § What every write does)")
@@ -402,7 +513,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     started = time.time()
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
-            how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers))
+            how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), co_author=co_author)
             return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep)
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
@@ -593,7 +704,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             untracked += [k[len(prefix):] for k, v in codes.items() if v == "??" and k.startswith(under)]
     untracked = list(dict.fromkeys(untracked))
     msg = tmp / "message"
-    msg.write_bytes((session_message(text, ops, session) if text is not None else message(ops, session, **how)).encode("utf-8"))
+    msg.write_bytes((session_message(text, ops, session, how["co_author"]) if text is not None else message(ops, session, **how)).encode("utf-8"))
     before = _rev(git, "HEAD")
     try:
         if left:  # another session's lines stay out: commit a partial op log from a temporary index

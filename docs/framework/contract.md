@@ -118,8 +118,9 @@ this role for every request, one task or several, and by default whenever the bo
 - An agent commit's message ends in one trailer paragraph: `Session: <key>` with every other
   trailer (`Co-Authored-By:`, and `Closes:` where FRAMEWORK §6.10 puts it), no blank line among
   them and nothing after. Git reads trailers only from the last paragraph, so a `Session:` line
-  anywhere else leaves the commit foreign. `context-engine commit` adds `Session:` there; the
-  template is in `docs/runbooks/manual-mode.md` § context-engine commit.
+  anywhere else leaves the commit foreign. `context-engine commit` adds `Session:` and
+  `Co-Authored-By:` there, as every engine commit does; the template is in
+  `docs/runbooks/manual-mode.md` § context-engine commit.
 - Push (§6.8): gate before every push; push only with permission; a background CI watcher for
   every push, keyed on the commit hash; the push is not done until the watcher reports; the
   watcher only watches. A release also follows `docs/runbooks/release.md`.

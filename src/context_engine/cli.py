@@ -289,6 +289,9 @@ def build() -> argparse.ArgumentParser:
     msg = co.add_mutually_exclusive_group(required=True)
     msg.add_argument("-m", "--message", action="append", help="a paragraph of the message, as `git commit -m`; repeat for each")
     msg.add_argument("-F", "--message-file", type=Path, help="read the message from a file")
+    who = co.add_mutually_exclusive_group()
+    who.add_argument("--co-author", default="", help="the Co-Authored-By line, `Name <email>`, or `none`; default: CE_CO_AUTHOR, else the actor's model")
+    who.add_argument("--model", default="", help="a Claude model id the Co-Authored-By line names (claude-opus-5-5: Claude Opus 5.5 <noreply@anthropic.com>)")
 
     ga = _sub(groups, "gate", "the scoped gate: run the repo's gate command and record its result per scope (FRAMEWORK §8.5 G-V1)").add_subparsers(dest="op", required=True)
     gr = _sub(ga, "run", "run [gate] `command` and append its result to the run ledger")

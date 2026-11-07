@@ -470,9 +470,9 @@ def criterion_set(e: Engine, c: Caller, id: str, status: str = "", text: str = "
 
 
 @op(write=True)
-def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None, sweep: bool = False) -> tuple[int, str]:
-    """Commit `paths` by path (`git commit -o`) with this session's op log lines HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` trailer. Another session's lines stay uncommitted unless they name a file the commit carries, and the reply says whose and how many were left; `sweep` takes every line (for a session known dead). It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
-    return 0, e.commit(paths or [], message, sweep=sweep, **c.kw)
+def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None, sweep: bool = False, co_author: str = "", model: str = "") -> tuple[int, str]:
+    """Commit `paths` by path (`git commit -o`) with this session's op log lines HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` and `Co-Authored-By:` trailers, in one last paragraph. The co-author is `co_author` (`<name> <email>`, or `none`), else the one `model` (a Claude model id) names, else `CE_CO_AUTHOR`, else the actor's model (`claude-code/claude-opus-5-5`: `Claude Opus 5.5 <noreply@anthropic.com>`); an actor with no `/` (`human:<id>`, `process:<id>`) gets none, and a line the message already has for that address stands. Another session's lines stay uncommitted unless they name a file the commit carries, and the reply says whose and how many were left; `sweep` takes every line (for a session known dead). It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
+    return 0, e.commit(paths or [], message, sweep=sweep, co_author=co_author, model=model, **c.kw)
 
 
 # -- the scoped gate (FRAMEWORK §8.5 G-V1, CE-78) ---------------------------------------------

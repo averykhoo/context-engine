@@ -1930,8 +1930,9 @@ instead of grepping a log.
 
 ### context-engine commit
 
-`context-engine commit [<paths> ...] -m "<title>" [-m "<paragraph>" ...] [--sweep]` (or `-F
-<file>`; over MCP `commit(paths, message, sweep)`). It takes your session's uncommitted op lines,
+`context-engine commit [<paths> ...] -m "<title>" [-m "<paragraph>" ...] [--sweep] [--co-author
+"<name> <email>" | --model <model-id>]` (or `-F <file>`; over MCP `commit(paths, message, sweep,
+co_author, model)`). It takes your session's uncommitted op lines,
 not another's (§ What every write does, **Commit the write**), and its reply names the lines it
 left: `left uncommitted: <n> op lines of <key>`. `--sweep` takes every line, whoever wrote it:
 use it once the owner, or housekeeping's stale-stub step, says that session is dead. **Run the gate first:** it runs none. When `[gate] require` names
@@ -1992,7 +1993,16 @@ Session: <key>
 Co-Authored-By: <name> <email>
 ```
 
-Through `context-engine commit`, leave `Session:` out: the engine adds it to that paragraph.
+Through `context-engine commit`, leave `Session:` and `Co-Authored-By:` out: the engine adds
+both to that paragraph, and so does every commit it makes of its own writes. The
+`Co-Authored-By:` value is, first hit wins: `--co-author "<name> <email>"` (`none` for no line);
+the name `--model <model-id>` reads; `CE_CO_AUTHOR` in the environment (`<name> <email>` or
+`none`); else the actor's model: `CE_ACTOR=claude-code/claude-opus-5-5` gives `Claude Opus 5.5
+<noreply@anthropic.com>`, and a `claude...` harness whose model it cannot read gives `Claude
+<noreply@anthropic.com>`. An actor with no `/` (`human:<id>`, `process:<id>`) gets none, so a
+person's commit never says an agent co-wrote it. A `Co-Authored-By:` line you leave in the
+message's last paragraph stands, and one for the same address is not added twice. By hand, write
+the line yourself, as the template does.
 
 **Why:** a milestone policy leaves board writes uncommitted in the tree, so a plain
 `git commit -o` of a record would commit it without its op line, and G-W7 fails that commit on a

@@ -1895,23 +1895,29 @@ class Engine:
         self._end(rid, "baton", "done", {"done": session, "evidence": evidence.strip()}, session=session, actor=actor, op="baton.done")
         return f"{rid}: done ({evidence.strip()[:80]})"
 
-    def commit(self, paths: list[str], message: str, *, session: str, actor: str, sweep: bool = False) -> str:
+    def commit(self, paths: list[str], message: str, *, session: str, actor: str, sweep: bool = False, co_author: str = "", model: str = "") -> str:
         """The session's own commit (FRAMEWORK §5.5 rule 4): ``paths`` by path, with this
         session's op log lines HEAD lacks and the files they name, so a record is never committed
         without its op line, nor a line without its record; another session's lines stay out
         unless they name a file the commit carries, and the reply names them (CE-125); ``sweep``
         takes every line, for a session known dead. Whatever the policy. It runs no gate: the
-        session runs the gate first, as before any commit."""
+        session runs the gate first, as before any commit. The message ends in one trailer
+        paragraph with ``Session:`` and ``Co-Authored-By:`` (CE-197): ``co_author``
+        (``<name> <email>``, or ``none``) or ``model`` (a Claude model id) names the second, over
+        ``CE_CO_AUTHOR`` and the actor's model (``commit.co_author``)."""
         self._check(session, actor)
+        if co_author and model:
+            raise Refusal("both --co-author and --model", "give one: --model derives the line that --co-author gives whole")
+        co = C.co_author(actor, given=co_author or None, model=model or None)
         if not message.strip():
-            raise Refusal("a commit with no message", "give one (`-m` on the CLI) whose title leads with the task id (FRAMEWORK §6.10); the engine adds the `Session:` trailer")
+            raise Refusal("a commit with no message", "give one (`-m` on the CLI) whose title leads with the task id (FRAMEWORK §6.10); the engine adds the `Session:` and `Co-Authored-By:` trailers")
         other = [k for k in C.session_trailers(message) if k != session]
         if other:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
         rels = [self._commit_path(x) for x in paths]
         GATE.check_commit(self.root, self.store.config.gate, rels)  # a code path needs a green gate run on its scope (CE-78)
         self._lint_carried(rels, session, sweep)
-        out = self.store.commit_paths(message, rels, session, sweep=sweep)
+        out = self.store.commit_paths(message, rels, session, sweep=sweep, co_author=co)
         if not out.sha:
             raise Refusal(f"not committed: {out.note or 'git made no commit'}",  # the note names any lines left behind
                           "fix what it names and run it again; by hand: manual-mode.md § context-engine commit")

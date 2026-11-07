@@ -1118,7 +1118,7 @@ def test_the_pause_commit_ends_with_a_session_trailer(eng):
     eng.pause_open("half-built parser", "run the gate", **kw(key))
     message = _git(root, "log", "-1", "--format=%B")
     trailers = subprocess.run(["git", "interpret-trailers", "--parse"], cwd=root, input=message, check=True, capture_output=True, text=True).stdout
-    assert trailers.splitlines() == [f"Session: {key}"], message
+    assert trailers.splitlines() == [f"Session: {key}", "Co-Authored-By: Claude <noreply@anthropic.com>"], message  # CE-197
 
 
 def test_the_runbook_pause_commit_carries_the_same_trailer():
