@@ -37,7 +37,7 @@ from . import gate as GATE
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import CONFIG_NAME, Config
 from .errors import Refusal
-from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coerce, key_order
+from .store import ACTOR_RE, ALIASES, BodyCheck, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a run (CE-108)
@@ -131,7 +131,8 @@ HK_RECEIPT_STANDIN = "hk run close: 00 writes, 00 op log lines"
 # The remedy of the write-time twin of G-D3's record citations (CE-183, DEC-205 to DEC-209)
 CITES_REMEDY = ("the text is stamped and never edited, so lint G-D3 would fail it for good: put an id of another repo in backticks "
                 "(`` `ASK-32` ``), saying which repo in the words around it, since G-D3 does not read inline code (in an owner's quote that is "
-                "markup, not a change of their words; a blockquote is the alternative); cite an id of this repo only once it exists "
+                "markup, not a change of their words; in a new record a blockquote is the alternative, but an amendment's first line follows its "
+                "`- **<key> (<actor>):**` prefix, so a `>` or a fence opened there hides nothing); cite an id of this repo only once it exists "
                 "(`task show` / `decision show` it) or this session reserved it (`id reserve`, then write it with `--id`); never a guessed "
                 "next number. Nothing was written")
 
@@ -2184,10 +2185,40 @@ class Engine:
         ids this session reserved (DEC-206); another session's do not. Off with G-D3."""
         if "G-D3" in self.store.config.guards.off:
             return
+        self._cites_refuse(what, G.new_text_refs(self, text, self._cite_allow(session, own)))
+
+    def _cite_allow(self, session: str, own: str = "") -> frozenset[str]:
+        """The ids the write-time twin of G-D3 lets pass beyond lint's set (DEC-206): ``own``, the id
+        being written, and the ids this session reserved, not another session's."""
         allow = {own} if own else set()
         allow |= {rid for rid, s in self.store.reserved_ids().items() if s == session}
-        if bad := G.new_text_refs(self, text, frozenset(allow)):
+        return frozenset(allow)
+
+    @staticmethod
+    def _cites_refuse(what: str, bad: list[str]) -> None:
+        if bad:
             raise Refusal(f"the text of the {what}, at {bad[0]}" + (f" (and {len(bad) - 1} more)" if len(bad) > 1 else ""), CITES_REMEDY)
+
+    def _entry_cites_known(self, what: str, session: str, actor: str, *, entry: bool = True) -> BodyCheck | None:
+        """G-D3's write-time twin for a write to a stored record's body (CE-183): the check
+        store.py::Store.amend, ::Store.correct and ::Store.update run on the body as the write would
+        leave it, before anything is written, refusing a citation that body adds and lint G-D3 would
+        fail at rest (guards.py::added_refs): the amendment as it stands under its
+        `- **<key> (<actor>):** ` prefix, or the correction in place with its `corrected:` entry, which
+        echoes the anchor. With ``entry``, line 1 is the new amendment's first line; without (a
+        correction), the text's first line. None when G-D3 is off."""
+        if "G-D3" in self.store.config.guards.off:
+            return None
+        allow = self._cite_allow(session)
+        head = f"\n- **{session} ({actor}):** "  # store.py::amended's entry, whose later lines are indented
+
+        def check(rid: str, before: str, after: str) -> None:
+            if entry and head in after:
+                first = after[: after.rfind(head) + 1].count("\n") + 1
+            else:  # the text's first line, as `record new` counts it: a body is written below a blank line
+                first = len(after) - len(after.lstrip("\n")) + 1
+            self._cites_refuse(what, G.added_refs(self, before, after, allow, first))
+        return check
 
     def _stale_after_check(self, fields: dict[str, Any], *, can_unset: bool) -> None:
         """G-D4's freshness half at write time (CE-155, DEC-203, DEC-204; FRAMEWORK §9.3): a
@@ -2250,15 +2281,14 @@ class Engine:
     @_milestone
     def amend(self, rid: str, text: str, *, session: str, actor: str) -> str:
         """Append a dated entry under ``## Amendments``; the text above it never changes."""
-        self._cites_known(text, f"amendment to {rid}", session)  # G-D3's twin (CE-183)
-        self.store.amend(rid, text, session=session, actor=actor)
+        self.store.amend(rid, text, session=session, actor=actor, check=self._entry_cites_known(f"amendment to {rid}", session, actor))  # G-D3's twin (CE-183)
         return f"{rid}: amendment added under ## Amendments"
 
     def correct(self, rid: str, after: str, text: str, *, session: str, actor: str) -> str:
         """A bracketed insertion into an append-only record (DEC-13): insert-only and logged; the
         stamp is kept, since it pins the words as typed."""
-        self._cites_known(text, f"correction to {rid}", session)  # G-D3's twin (CE-183)
-        _, inserted = self.store.correct(rid, after, text, session=session, actor=actor)
+        check = self._entry_cites_known(f"correction to {rid}, as its body would read with it", session, actor, entry=False)  # G-D3's twin (CE-183)
+        _, inserted = self.store.correct(rid, after, text, session=session, actor=actor, check=check)
         return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
 
     @_milestone
@@ -2318,11 +2348,11 @@ class Engine:
                 keys = {new: ["supersedes"], rid: [*keys[rid], "superseded_by"]}
             return keys
 
-        self._cites_known(why, f"reason for retiring {rid}", session)  # G-D3's twin (CE-183)
         head = f"retired (by {by}" + (f"; superseded by {new}" if new else "") + "): "
         # the successor first: its `supersedes` is idempotent, so if the story's write fails, a
         # retry (no story `retire` line logged yet) completes both
-        self.store.update([*([new] if new else []), rid], mutate, session=session, actor=actor, op="retire", amend={rid: head + why})
+        self.store.update([*([new] if new else []), rid], mutate, session=session, actor=actor, op="retire", amend={rid: head + why},
+                          check=self._entry_cites_known(f"reason for retiring {rid}", session, actor))  # G-D3's twin (CE-183)
         tail = f"; superseded by {new}, which now supersedes {rid}" if new else ""
         return f"{rid}: retired by {by} (status: deprecated){tail}; the reason is under ## Amendments"
 
@@ -2390,9 +2420,9 @@ class Engine:
             d.set("story_status", status)
             return {rid: ["story_status"]}
 
-        self._cites_known(words, f"confirmation of {rid}", session)  # G-D3's twin (CE-183)
         head = f"confirmed (by {by}" + ("; unspecified" if status == "unspecified" else "") + "): "
-        self.store.update([rid], mutate, session=session, actor=actor, op="confirm", amend={rid: head + words})
+        self.store.update([rid], mutate, session=session, actor=actor, op="confirm", amend={rid: head + words},
+                          check=self._entry_cites_known(f"confirmation of {rid}", session, actor))  # G-D3's twin (CE-183)
         return f"{rid}: confirmed by {by} (story_status: {status}); their words are under ## Amendments"
 
     # -- decisions (FRAMEWORK §6.5, CE-5) -----------------------------------------------

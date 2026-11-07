@@ -1550,7 +1550,7 @@ def test_every_op_writing_append_only_text_refuses_a_citation_no_record_has(tmp_
         "amend": (f"amendment to {d1}", lambda t: e.amend(d1, f"superseded in spirit by {t}", **W)),
         "confirm": (f"confirmation of {recon}", lambda t: e.confirm(recon, f"yes, per {t}", **W)),
         "retire": (f"reason for retiring {owned}", lambda t: e.retire(owned, f"replaced by {t}", by="owner", **W)),
-        "correct": (f"correction to {d1}", lambda t: e.correct(d1, "noon.", f"see {t}", **W)),
+        "correct": (f"correction to {d1}, as its body would read with it", lambda t: e.correct(d1, "noon.", f"see {t}", **W)),
         "ask_answer": (f"decision answering {q}", lambda t: e.ask_answer(q, f"yes, as {t} said", title="Layout B", **W)),
         "ask_answered": ("decision answering <the new question>", lambda t: e.ask_answered("Which layout?", f"see {t}", title="Layout B", **W)),
     }
@@ -1562,6 +1562,57 @@ def test_every_op_writing_append_only_text_refuses_a_citation_no_record_has(tmp_
     assert files(tmp_path) == before  # the question still open, no decision, no question filed
     call("`ASK-99`")
     assert files(tmp_path) != before and g_d3(e) == []
+
+
+def test_an_amendment_is_checked_as_it_will_stand_under_its_entry_prefix(tmp_path):
+    """CE-183 (fix round 1, D1): `record amend`, `confirm` and `retire` check the body as the write
+    leaves it (store.py::amended), not the bare text: the first line follows the
+    `- **<key> (<actor>):** ` prefix and the others are indented, so a `>`, a fence or a `## Log`
+    that would hide an id in the bare text hides nothing at rest, and is refused. Later lines keep
+    their blockquote and fence, and pass; an id the body already failed is lint's, not this write's,
+    so it does not block an amendment, but naming it again in the amendment does. Line 1 is the
+    amendment's first line."""
+    e = cites_engine(tmp_path)
+    d = dec(e)
+    recon = e.record_new("story", "Rebuilt", "words\n", {"actor": "agent (claude-x, reconstructed from the PRD)", "story_status": "unconfirmed", "date": "2026-10-12"}, **W).id
+    for call, what, line in ((lambda: e.amend(d, "> owner: see context-engine ASK-32", **W), f"amendment to {d}", 1),
+                             (lambda: e.amend(d, "```\nASK-32\n```", **W), f"amendment to {d}", 2),
+                             (lambda: e.amend(d, "note\n## Log\nper ASK-32", **W), f"amendment to {d}", 3),
+                             (lambda: e.confirm(recon, "> yes, as context-engine ASK-32 says", **W), f"confirmation of {recon}", 1)):
+        before = files(tmp_path)
+        with pytest.raises(Refusal, match=re.escape(f"the text of the {what}, at line {line}: names ASK-32, {NO_RECORD}")):
+            call()
+        assert files(tmp_path) == before
+    e.amend(d, "note\n> the owner: context-engine ASK-32\n\n```\nASK-33\n```\n*HISTORY —* ASK-34", **W)
+    assert g_d3(e) == []
+    old = cites_engine(tmp_path, off=["G-D3"])
+    red = dec(old, body="Per ASK-77.\n")
+    e = cites_engine(tmp_path)
+    assert [f.message for f in g_d3(e)] and all("ASK-77" in f.message for f in g_d3(e))
+    e.amend(red, "a later note", **W)  # the old red is lint's to report, not this write's to refuse
+    with pytest.raises(Refusal, match=re.escape(f"the text of the amendment to {red}, at line 1: names ASK-77")):
+        e.amend(red, "still per ASK-77", **W)
+
+
+def test_a_correction_is_checked_in_place_and_in_the_entry_that_echoes_its_anchor(tmp_path):
+    """CE-183 (fix round 1, D2): `record correct` writes its text in place and its anchor and text
+    again into a `corrected:` entry (okf.py::correction_entry), so it checks the body as it would
+    read: an anchor taken from a blockquote lands bare in the entry, and a backticked text inserted
+    after an unpaired backtick lands bare in its line; both are refused, numbered by the body's
+    lines from the text's first, as `record new` counts them. The same correction on a plain line,
+    its text backticked, is written."""
+    e = cites_engine(tmp_path)
+    quoted = dec(e, body="> the owner said context-engine ASK-32 settles it\n")
+    odd = dec(e, body="A stray ` backtick, then the anchor here.\n")
+    assert g_d3(e) == []
+    for rid, after, text, line in ((quoted, "ASK-32 settles it", "sic", 5), (odd, "anchor here", "`ASK-32`", 1)):
+        before = files(tmp_path)
+        with pytest.raises(Refusal, match=re.escape(f"the text of the correction to {rid}, as its body would read with it, at line {line}: names ASK-32, {NO_RECORD}")):
+            e.correct(rid, after, text, **W)
+        assert files(tmp_path) == before
+    plain = dec(e)
+    e.correct(plain, "noon.", "`ASK-32` of context-engine", **W)
+    assert g_d3(e) == []
 
 
 @pytest.mark.criterion("AC-101")

@@ -1731,8 +1731,10 @@ The only body change an append-only record takes (the engine takes the text as a
 written to a file and passed with `--file`). If the record is stamped, its hash must match
 first. If there is no `## Amendments` heading, add one at the end. Then append a blank line and
 `- **<key> (<actor>):** <first line>`, with further lines indented two spaces (blank lines stay
-blank). Stop first, as § context-engine record new step 2 does, if the text cites an id no
-record has.
+blank). Stop first, as § context-engine record new step 2 does, if the entry, read as it will
+stand, cites an id no record has: its first line follows the `- **<key> (<actor>):**` prefix, so
+a `>` or a fence opened there hides nothing, and its other lines are indented, so a `## ` line
+there is no heading.
 
 **Why:** owner intent changes by addition, so the original words and every change stay readable
 in order, and the hash above the heading still holds.
@@ -1746,7 +1748,9 @@ missing word, a `[sic]`. It only inserts.
    (LF, outer newlines stripped, one final `\n`; § The two hashes). Find `after` in it: it must
    occur exactly once (count overlapping matches); if it is missing or occurs twice, stop and
    pick a longer anchor. The anchor and the text are each one line, and stop as § context-engine
-   record new step 2 does if the text cites an id no record has.
+   record new step 2 does if the body as it would read, `[text]` in place and step 4's
+   `corrected:` entry (which repeats the anchor) included, cites an id no record has that it
+   did not cite before.
 3. Insert `[text]` right after it. Note the offset: the number of characters (not bytes) of the
    canonical text before the `[`.
 4. Append an amendment as in § context-engine record amend, with the text
@@ -1779,8 +1783,8 @@ name this step). `record retire <id> --by <who> --why "<words>" [--superseded-by
    the same. A story that an earlier `retire` line of the op log retired is final, even if a hand
    edit has since undone it: stop; restore it from git, and to bring its intent back, record a
    new story. A story already `retired` with no such line was retired by hand: retire it here,
-   so who and why are recorded. Stop as § context-engine record new step 2 does if `--why` cites
-   an id no record has.
+   so who and why are recorded. Stop as § context-engine record amend does if step 3's amendment
+   cites an id no record has.
 3. On the successor: add the story to `supersedes` (a list; a new key goes last). On the story:
    set `story_status: retired`, set `status: deprecated`, and with a successor add it to
    `superseded_by` (a list), each new key going last in that order. Then append an amendment
@@ -1825,8 +1829,8 @@ unconfirmed`): the owner read it and said it is what they meant. `record confirm
    confirmed it are recorded. Follow the story's `supersedes` links, and theirs in turn: if the
    words are those of a `confirmed (by <who>): <words>` amendment on any story found there
    (whitespace aside), stop, and ask the owner again; if they answer in the very same words,
-   quote them with when and where they said them. Stop as § context-engine record new step 2
-   does if the words cite an id no record has.
+   quote them with when and where they said them. Stop as § context-engine record amend does
+   if step 3's amendment cites an id no record has.
 3. Set `story_status: live`, or `unspecified` with `--status unspecified` when no criterion comes
    from the story yet (lint G-T1 fails a `live` story with none). Leave `actor` as it is. Then
    append an amendment as in § context-engine record amend, with the text `confirmed (by

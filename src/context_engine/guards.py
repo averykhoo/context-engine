@@ -777,9 +777,30 @@ def new_text_refs(e: Engine, text: str, allow: frozenset[str] = frozenset()) -> 
     text's first line. Beyond lint's set it lets ``allow`` pass: the id being written and ids
     this session reserved (DEC-206). The callers skip it when `[guards] off` names G-D3. An
     empty repo is checked too: the record being written is what lint will then read."""
-    known = record_ids(e)
-    lines = ((n - 3, line) for n, line in prose(CITE_STUB + text.replace("\r\n", "\n"), history=True))
-    return cite_problems(lines, known, e.store.alias_map(), id_series(e), {}, allow)
+    return _body_refs(text, record_ids(e), e.store.alias_map(), id_series(e), allow)
+
+
+def _body_refs(text: str, known: dict[str, Path], aliases, series: re.Pattern[str], allow: frozenset[str], first: int = 1) -> list[str]:
+    """``cite_problems`` on ``text``, a body read below a stub frontmatter, numbered so that its
+    line ``first`` is line 1."""
+    lines = ((n - 3 - (first - 1), line) for n, line in prose(CITE_STUB + text.replace("\r\n", "\n"), history=True))
+    return cite_problems(lines, known, aliases, series, {}, allow)
+
+
+def added_refs(e: Engine, before: str, after: str, allow: frozenset[str] = frozenset(), first: int = 1) -> list[str]:
+    """The write-time twin of ``record_refs`` for a write to a stored record's body (CE-183): what
+    G-D3 would fail in ``after``, the body as the write leaves it, that it does not already fail
+    in ``before``, the body now. Reading the body as it will stand, not the text passed in, is what
+    makes it exact: an amendment's first line follows its `- **<key> (<actor>):** ` prefix and its
+    other lines are indented (store.py::amended), so a `>`, a fence or a `## Log` that would hide an
+    id in the bare text hides nothing there; and `record correct` echoes its anchor and its text into
+    a `corrected:` entry (okf.py::correction_entry) as well as inserting the text in place. An
+    amendment or a correction never moves a line above it, so what the body already fails keeps its
+    line number and is left out (an old red is lint's, not this write's). Line numbers count from
+    line ``first`` of ``after``."""
+    known, aliases, series = record_ids(e), e.store.alias_map(), id_series(e)
+    old = set(_body_refs(before, known, aliases, series, allow, first))
+    return [p for p in _body_refs(after, known, aliases, series, allow, first) if p not in old]
 
 
 # -- G-T3 existence in normative text ----------------------------------------------------

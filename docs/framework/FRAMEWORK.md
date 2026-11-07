@@ -2182,8 +2182,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   alias of one), and a `<id> § <heading>` names a heading its target has; inline code, fences,
   blockquotes, history notes and a task's `## Log` are not read. A stamped text is never edited,
   so every operation that writes append-only text refuses such a citation before writing it,
-  allowing the id being written and ids the session reserved; an id of another repo goes in
-  backticks.
+  read as it will stand in the record (an amendment below its entry's prefix, a correction in
+  place and in the `corrected:` entry that repeats its anchor), allowing the id being written
+  and ids the session reserved; an id of another repo goes in backticks.
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
   (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is not a liveness
   word is red), or a line that opens a block (the first, or one after a blank line, a heading or

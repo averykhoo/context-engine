@@ -41,6 +41,9 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[a-z]+$")
 ACTOR_RE = re.compile(r"^(human:\S+|process:\S+|[A-Za-z0-9._-]+/[A-Za-z0-9._:+-]+)$")  # OKF §7
 OKF_STATUS = ("draft", "stable", "deprecated")  # OKF §5.4
 TOOL_OWNED = ("type", "id", "body_sha")
+# A caller's check of an append-only body a write is about to leave, (id, body now, body as it
+# would be written), which may refuse before anything is written (CE-183: G-D3's write-time twin)
+BodyCheck = Callable[[str, str, str], None]
 # A record's earlier ids, kept when an import renames it to the framework's form (FRAMEWORK §8.0.1,
 # §11.4): `D-27` on DEC-27, `1h` on a board item. Lookups resolve them (`Store.resolve`); every
 # write and G-D2 refuse one that is not one word, is the record's own id, has the form of a
@@ -900,8 +903,9 @@ class Store:
             self._log("stamp", record_id, rec.path, session, actor, ["body_sha"], False)
         return rec
 
-    def amend(self, record_id: str, text: str, *, session: str, actor: str) -> Record:
-        """Append a dated entry under ``## Amendments``: the only body change an append-only record takes."""
+    def amend(self, record_id: str, text: str, *, session: str, actor: str, check: BodyCheck | None = None) -> Record:
+        """Append a dated entry under ``## Amendments``: the only body change an append-only record
+        takes. ``check(id, body now, body as written)`` may refuse it before anything is written."""
         self._check_caller(session, actor)
         if not text.strip():
             raise Refusal("empty amendment", "say what changed and why")
@@ -912,16 +916,19 @@ class Store:
             bp = self.body_problem(rec.kind, rec.doc)
             if bp and rec.doc.get("body_sha"):
                 raise Refusal(f"{record_id} {bp[0]}", bp[1])
-            rec.doc.set_body(amended(rec.doc.body, text, session, actor))
+            before = rec.doc.body
+            rec.doc.set_body(amended(before, text, session, actor))
+            if check:
+                check(record_id, before, rec.doc.body)
             self._write(rec.path, rec.doc)
             self._log("amend", record_id, rec.path, session, actor, [], False)
         return rec
 
-    def correct(self, record_id: str, after: str, text: str, *, session: str, actor: str) -> tuple[Record, str]:
+    def correct(self, record_id: str, after: str, text: str, *, session: str, actor: str, check: BodyCheck | None = None) -> tuple[Record, str]:
         """Insert ``[text]`` after the one place ``after`` occurs in the original body and log a
         ``corrected:`` amendment (DEC-13). Insert-only: undoing the logged insertions gives back
         the words as typed (``okf.strip_corrections``), which ``body_sha`` still pins, so the
-        stamp is never replaced (G-D10)."""
+        stamp is never replaced (G-D10). ``check`` as for ``amend``."""
         self._check_caller(session, actor)
         if not after:
             raise Refusal("no anchor", "give the words the insertion goes right after")
@@ -939,7 +946,10 @@ class Store:
             if bp:
                 raise Refusal(f"{record_id} {bp[0]}", bp[1])
             body, pos, inserted = okf.insert_correction(rec.doc.body, after, text)
+            before = rec.doc.body
             rec.doc.set_body(amended(body, okf.correction_entry(pos, inserted, after), session, actor))
+            if check:
+                check(record_id, before, rec.doc.body)
             self._validate(rec.kind, rec.doc, rec.path)
             self._write(rec.path, rec.doc)
             self._log("correct", record_id, rec.path, session, actor, ["body"], False)
@@ -955,6 +965,7 @@ class Store:
         op: str,
         amend: dict[str, str] | None = None,
         one_line: str = "",
+        check: BodyCheck | None = None,
     ) -> dict[str, Record]:
         """Change the frontmatter of several records as one write: under one lock, every record
         is re-read, changed by ``mutate`` (which may refuse, and returns id -> changed keys), and
@@ -963,7 +974,8 @@ class Store:
         write, checked as ``amend`` checks it, so the change and its reason land together.
         ``one_line``: log the whole write as one op line with that label as its ``id`` and every
         record changed in ``ids`` and ``paths`` (``_log``'s ``many``; the changed keys must be the
-        same for each), instead of one line per record."""
+        same for each), instead of one line per record. ``check`` is called on each amended body as
+        ``amend`` calls it, before anything is written."""
         self._check_caller(session, actor)
         amend = amend or {}
         with self._lock():
@@ -983,6 +995,8 @@ class Store:
                 if bp and r.doc.get("body_sha"):
                     raise Refusal(f"{i} {bp[0]}", bp[1])
                 r.doc.set_body(amended(r.doc.body, text, session, actor))
+                if check:
+                    check(i, bodies[i], r.doc.body)
             for i, r in recs.items():
                 owned = [k for k in changed.get(i, ()) if k in TOOL_OWNED]
                 if owned:
