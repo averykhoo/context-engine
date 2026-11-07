@@ -4,13 +4,15 @@ id: CE-132
 title: Reword the kit contract's 'takes the op lines still uncommitted' at the next contract version bump (CE-125)
 brief: 'Wait for a version bump: changing it now turns G-D0 red in every adopting repo'
 pri: LATER
-state: open
+state: closed
 deps: [CE-187]
 goals: [G-2]
 source: session 2026-10-22b
 created: 2026-10-22
-moved: 2026-10-22b
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Reword the kit contract's 'takes the op lines still uncommitted' at the next contract version bump (CE-125).
@@ -28,3 +30,5 @@ Reword the kit contract's 'takes the op lines still uncommitted' at the next con
 - 2026-10-23f (claude-code/claude-opus-5-5): Also at the same bump (CE-113 verify-1, non-blocking 5): the kit contract's 'Who decides' sentence 'A call the owner delegates ("you decide") is still the one who made it' is hard to parse; reword to something like 'is still the call of whoever made it' (added by CE-113, 21a88d9).
 - 2026-10-30a (claude-code/claude-opus-5-5): From CE-84 (7920cbd, DEC-105): kit/contract.md § Procedures 'More work asked for after the close starts a new session' could add 'with `session start --follows <key>` when it fixes what the closed session left'. Not edited by CE-84, because the contract is held.
 - 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: bundle the three contract wording fixes into the contract version bump that CE-187 (the PROVISIONAL split) forces, since its 'Who decides' changes then; dep added on CE-187.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: Kit contract rewordings landed with the 0.6 bump (60c0434): 'still the call of whoever made it', '--follows <key>', 'another session's only where they name a file'; verifier PASS
+  residual risk: none
