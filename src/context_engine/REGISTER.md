@@ -839,3 +839,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a doc test of presence, not of claim; the claim is not mechanically pinned
 - **control:** individual: tests/test_kit.py README section check
 - **from:** CE-180, session 2026-11-07e
+
+## INV-119: task new --body-file test does not pin cli::_read's CRLF-to-LF step: a sabotage to read_bytes().decode('utf-8-sig') still passed, because the test reads the body back through the okf store, which normalises line endings, not the file bytes on disk
+
+- **affects:** engine maintainers
+- **why not eliminated:** real code is correct (read_text translates newlines); the test asserts only through the store
+- **control:** individual: test_working.py test of task new --body-file (the 'not in got' CR check, weak)
+- **from:** CE-174, session 2026-11-07e
+
+## INV-120: tools/linux_gate.py (CE-67) was not run for this change
+
+- **affects:** whoever pushes next
+- **why not eliminated:** it is a pre-push step and nothing was pushed
+- **control:** individual: CLAUDE.md § Gate pre-push rule and tools/linux_gate.py
+- **from:** CE-174, session 2026-11-07e
+
+## INV-121: DEC-179, DEC-180 and DEC-181 are PROVISIONAL (actor claude-code/claude-sonnet-5-5) and await owner review
+
+- **affects:** owner
+- **why not eliminated:** agent calls stay PROVISIONAL until the owner accepts them
+- **control:** individual: context-engine decision accept after owner review
+- **from:** CE-174, session 2026-11-07e
