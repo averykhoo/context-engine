@@ -739,7 +739,7 @@ class Engine:
                 except ValueError:
                     continue
                 if isinstance(o, dict) and o.get("session") == key and o.get("path") != self.w.ledger:  # this commit carries the ledger's
-                    left.append(str(o.get("path") or f"{o.get('op')} {o.get('id')}"))  # `id.reserve` names no path
+                    left += C.op_paths(o) or [f"{o.get('op')} {o.get('id')}"]  # `id.reserve` names no path
             # CE-131: the open board items it was working on, as the board records it (the last
             # session to write or move each), so a task it took up is not left looking owned
             claimed = [r.id for r in self._open_board() if key in (str(r.doc.get("updated") or ""), str(r.doc.get("moved") or ""))]
@@ -1779,10 +1779,10 @@ class Engine:
             given, missing = ("a ruling", "`ruled_by`") if ruling.strip() else ("`ruled_by`", "a ruling")
             raise Refusal(f"{given} without {missing}: a ruling made on the owner's delegation is recorded with both (FRAMEWORK §5.3)",
                           f"pass the ruling (`--ruling` or `--ruling-file`) and who made it (`--ruled-by`: the agent that ruled, or your own actor `{actor}` if you did), with the owner's delegating words as the words; for the owner's own answer, pass neither")
-        fields: dict[str, Any] = {"title": title, "actor": "owner", "decided": self.today(), "session": session, "decision_status": "PROVISIONAL", "answers": rid}
+        fields: dict[str, Any] = {"title": title, "actor": "owner", "decided": self.today(), "session": session, D.STATUS_KEY: self._born_status({"actor": "owner"}), "answers": rid}
         body = f'Owner, answering {rid}: *"{words.strip()}"*\n'
-        if ruled_by:
-            fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by}
+        if ruled_by:  # the ruler's call, not the owner's: PROVISIONAL until `decision accept` (CE-187)
+            fields = {**fields, "actor": G.DELEGATED_ACTOR, G.RULED_BY: ruled_by, D.STATUS_KEY: D.PROVISIONAL}
             body = (f'Owner, answering {rid} by delegating the ruling to {ruled_by}: *"{words.strip()}"*\n\n'
                     f"## Ruling\n\nRuled by {ruled_by} on the owner's delegation; only the quote above is the owner's words.\n\n{ruling}\n")
         if amends := G.amendments_in_new_text(body):  # whatever `[guards] off` says (CE-147)
@@ -2075,6 +2075,8 @@ class Engine:
                 fields[key] = session
         if kind == self.store.config.guards.stories:
             self._story_checks(fields)  # after the defaults: a story recorded today needs no `--set date`
+        if kind == self.w.decision:
+            self._born_checks(fields)
         if amends := G.amendments_in_new_text(body):  # every append-only kind, whatever `[guards] off` says (CE-147, DEC-125)
             raise Refusal(f"the {kind} {amends}", f"record the {kind}'s text without that line; once it exists, a later note goes in with `record amend <id> \"<text>\"`")
         if kind == self.w.decision:  # no guard's twin, so on whatever `[guards] off` says (CE-149, DEC-126): only `decision supersede` makes a decision history
@@ -2088,6 +2090,37 @@ class Engine:
         if rid.strip():
             return self.store.create_many(kind, [(rid.strip(), fields, body.strip("\n") + "\n")], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, body.strip("\n") + "\n", session=session, actor=actor)
+
+    def _accepts(self) -> bool:
+        """The decision kind's `decision_status` enum holds ACCEPTED, or it declares none. A repo
+        whose context.toml predates CE-187 lacks it: its owner decisions are born PROVISIONAL, as
+        before, until the upgrade adds it (G-D0 names the line)."""
+        allowed = self.store.config.kind(self._decision_kind()).enums.get(D.STATUS_KEY)
+        return allowed is None or D.ACCEPTED in allowed
+
+    def _born_status(self, fields: dict[str, Any]) -> str:
+        """The `decision_status` a new decision is born with (CE-187, DEC-162): ACCEPTED for the
+        owner's own (``decisions.owners_own``), where the enum allows it; else PROVISIONAL."""
+        return D.ACCEPTED if D.owners_own(fields) and self._accepts() else D.PROVISIONAL
+
+    def _born_checks(self, fields: dict[str, Any]) -> None:
+        """`record new decision`'s status at birth (CE-187): none given is the born status
+        (``_born_status``); PROVISIONAL on the owner's own decision is refused (it means an
+        agent's call awaiting review, and an owner's word awaits nothing), and so is ACCEPTED on
+        an agent's call (only `decision accept` marks a call reviewed, and logs it). BUILT,
+        DEFERRED and REJECTED are taken as given: they say what became of the decision."""
+        status = fields.get(D.STATUS_KEY)
+        if status in (None, ""):
+            fields[D.STATUS_KEY] = self._born_status(fields)
+            return
+        own = D.owners_own(fields)
+        if str(status) == D.PROVISIONAL and own and self._accepts():
+            raise Refusal(f"the decision is the owner's own (`actor: {fields.get('actor')}`, no `ruled_by`) but would be created PROVISIONAL, which means an agent's call awaiting review (DEC-162)",
+                          f"drop `--set {D.STATUS_KEY}=PROVISIONAL`: an owner's decision is born {D.ACCEPTED}; pass BUILT, DEFERRED or REJECTED only if that is what became of it; an agent's own call takes the agent's actor (P8)")
+        if str(status) == D.ACCEPTED and not own:
+            ruled = f", `ruled_by: {fields.get(G.RULED_BY)}`" if fields.get(G.RULED_BY) is not None else ""
+            raise Refusal(f"the decision is an agent's call (`actor: {fields.get('actor')}`{ruled}) but would be created {D.ACCEPTED}, which only a review gives it",
+                          f"record it {D.PROVISIONAL} (or leave `{D.STATUS_KEY}` out); once it has been reviewed, `decision accept <id>` marks it {D.ACCEPTED} and logs who did")
 
     def _story_checks(self, fields: dict[str, Any]) -> None:
         """The write-time twins of G-I2 and G-I1, by the same checks: a story's provenance from the
@@ -2318,6 +2351,8 @@ class Engine:
         changes = {k: coerce(kind, k, v) for k, v in raw.items()}
         if str(changes.get(D.STATUS_KEY)) == "SUPERSEDED":
             raise Refusal(f"`decision set` does not mark {rid} SUPERSEDED", f"use `decision supersede {rid} <new>`: it writes `superseded_by`, `supersedes` and `status: deprecated` with it")
+        if str(changes.get(D.STATUS_KEY)) == D.ACCEPTED:
+            raise Refusal(f"`decision set` does not mark {rid} {D.ACCEPTED}", f"use `decision accept {rid}`: it checks the decision is PROVISIONAL and logs the review (CE-187), and takes many ids and ranges in one call")
 
         def check(rec: Record) -> None:
             was = str(rec.doc.get(D.STATUS_KEY))
@@ -2334,6 +2369,58 @@ class Engine:
 
         self.store.set(rid, changes, session=session, actor=actor, unset=unset, check=check)
         return f"{rid}: set {_one([*raw, *unset])}"
+
+    def decision_accept(self, ids: list[str], *, owners: bool = False, session: str, actor: str) -> str:
+        """Mark PROVISIONAL decisions reviewed: each becomes ACCEPTED (`decision.accept`, CE-187,
+        DEC-162). ``ids`` are ids, aliases or ranges (`DEC-86..90`); ``owners`` adds every
+        PROVISIONAL decision that is the owner's own (``decisions.owners_own``): the born-ACCEPTED
+        rule applied to decisions recorded before it. All are checked before any is written, and
+        the write logs ONE op line (`accept`, every id in ``ids`` and every file in ``paths``).
+
+        Refused, writing nothing: no id and no ``owners``; an id that names no decision; a
+        decision that is not PROVISIONAL (named with its status: SUPERSEDED is history, BUILT a
+        task carried out, ACCEPTED already reviewed); a decision kind whose enum lacks ACCEPTED;
+        ``owners`` alone finding nothing. Not checked: that a human reviewed the calls (only the
+        caller knows; the op line records who said so). Not a milestone (DEC-36 names none like
+        it, and `decision set`, which it replaces for this, is none): its line rides along."""
+        self._check(session, actor)
+        if not ids and not owners:
+            raise Refusal("no decisions to accept", "name the PROVISIONAL decisions reviewed, as ids or ranges (`DEC-86..90`), or pass `--owners` for every owner's decision still PROVISIONAL")
+        kind = self._decision_kind()
+        if not self._accepts():
+            raise Refusal(f"the {kind} kind's `{D.STATUS_KEY}` enum in context.toml has no {D.ACCEPTED}",
+                          f"add {D.ACCEPTED} to the `{D.STATUS_KEY}` list in `enums` under [kinds.{kind}] (the kit's context.toml.template has the line; kit README § Upgrade)")
+        heads = sorted(self.store.heads(kind), key=lambda r: int(r.id.rsplit("-", 1)[1]))
+        known = {r.id for r in heads}
+        named: list[str] = []
+        missing: list[str] = []
+        for ref in D.expand_ids(ids):
+            rid, _ = self._decision(ref)
+            (named if rid in known else missing).append(rid)
+        if missing:
+            raise Refusal(f"no decision {D.compact_ids(missing)}", "check the ids (`decision find`); a range must not span a number no decision has")
+        named = list(dict.fromkeys(named))
+        swept: list[str] = []
+        if owners:
+            for r in heads:
+                if str(r.doc.get(D.STATUS_KEY)) == D.PROVISIONAL and D.owners_own(r.doc) and r.id not in named:
+                    swept.append(r.id)
+            if not swept and not named:
+                raise Refusal("no owner's decision is PROVISIONAL", "nothing to accept: an owner's decision recorded since CE-187 is born ACCEPTED")
+        todo = named + swept
+
+        def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
+            wrong = [(i, str(recs[i].doc.get(D.STATUS_KEY))) for i in todo if str(recs[i].doc.get(D.STATUS_KEY)) != D.PROVISIONAL]
+            if wrong:
+                said = "; ".join(f"{i} is {st}" + (f" (by {', '.join(D.as_list(recs[i].doc.get('superseded_by')))})" if st == "SUPERSEDED" else "") for i, st in wrong)
+                raise Refusal(f"only a PROVISIONAL decision is accepted: {said}",
+                              "drop those ids and run it again: a SUPERSEDED decision is history, a BUILT one a task carried out, an ACCEPTED one already reviewed")
+            for i in todo:
+                recs[i].doc.set(D.STATUS_KEY, D.ACCEPTED)
+            return {i: [D.STATUS_KEY] for i in todo}
+
+        self.store.update(todo, mutate, session=session, actor=actor, op=D.ACCEPT_OP, one_line=D.compact_ids(todo))
+        return f"accepted {len(todo)}: {D.compact_ids(todo)} (one `{D.ACCEPT_OP}` op line)"
 
     def _link_rel(self, target: str) -> str:
         if "::" in target or "/" in target:
@@ -3512,10 +3599,31 @@ class Engine:
         if block and block[0] == want:  # a block of another version is red above
             out += self._bootloader(rel, path, want, block[1])
             out += self._kit_runbooks()
+            out += self._accepted_enum()
         for ph in K.gate_placeholders():  # CE-71 (audit 2026-10-14a N1): the Gate stub left unfilled
             if ph in text:
                 out.append(Failure("G-D0", rel, f"still holds the kit's placeholder `{ph}`, so its gate names no command to run", f"replace it with the repo's own test command, keeping `&& context-engine lint` after it (kit README § 2a, step 2)"))
         return out
+
+    def _accepted_enum(self) -> list[Failure]:
+        """G-D0's config half for CE-187 (DEC-162): the decision kind's `decision_status` enum,
+        where it declares one, holds ACCEPTED, the status the installed kit's contract gives an
+        owner's decision at birth. `init` never edits an existing context.toml, so a repo
+        upgraded from a kit before it lacks the value, and its owner decisions are born
+        PROVISIONAL and `decision accept` refuses, while its contract says otherwise. Run only
+        for a repo with a kit block of this engine's version and a `[working] decision` kind.
+
+        Not checked: the enum's order, and a status the repo added of its own."""
+        if not self.w.decision:
+            return []
+        try:
+            kind = self.store.config.kind(self.w.decision)
+        except Refusal:
+            return []  # the config check names a missing kind
+        if self._accepts():
+            return []
+        return [Failure("G-D0", CONFIG_NAME, f"the {kind.name} kind's `{D.STATUS_KEY}` enum has no {D.ACCEPTED}, the status the kit's contract gives an owner's decision at birth (CE-187)",
+                        f"add {D.ACCEPTED} to `{D.STATUS_KEY}` in `enums` under [kinds.{kind.name}], as the engine's kit/context.toml.template has it (kit README § Upgrade); then `decision accept --owners` accepts the owner's decisions recorded PROVISIONAL before")]
 
     def _kit_runbooks(self) -> list[Failure]:
         """G-D0's runbook half (CE-50, closing INV-36's gap): every runbook the installed kit ships
@@ -3702,12 +3810,20 @@ class Engine:
         a decision not SUPERSEDED would hide it from the doc guards and G-I3, which read a
         deprecated decision as history. Off while `[working] decision` is unset.
 
-        Not checked: an unreadable record (the schema check reports it)."""
+        An agent's call (``decisions.owners_own`` false) that is ACCEPTED was accepted by a
+        logged `decision accept` (CE-187): its id is in an `accept` op line's ``ids``. `decision
+        set` refuses ACCEPTED and `record new` refuses it on an agent's call, so one without the
+        line is a hand edit that skipped the review's record. The owner's own decision is born
+        ACCEPTED and needs no line.
+
+        Not checked: an unreadable record (the schema check reports it); that whoever ran
+        `decision accept` reviewed the calls."""
         if not self.w.decision:
             return []
         st = self.store
         kind = st.config.kind(self.w.decision)
         out: list[Failure] = []
+        accepted: set[str] | None = None  # read from the op log the first time it is needed
         for path in st._files(kind):
             try:
                 doc = st.read(path)
@@ -3715,6 +3831,13 @@ class Engine:
                 continue  # the schema check reports an unreadable record
             rid, ds, status = st._id_of(kind, path), str(doc.get(D.STATUS_KEY)), doc.get("status")
             rel = st._rel(path)
+            if ds == D.ACCEPTED and not D.owners_own(doc):
+                if accepted is None:
+                    accepted = {str(i) for _, op in G._ops(self) if isinstance(op, dict) and op.get("op") == D.ACCEPT_OP
+                                for i in (op.get("ids") if isinstance(op.get("ids"), list) else [op.get("id")])}
+                if rid not in accepted:
+                    out.append(Failure("G-W4", rel, f"{rid} is an agent's call (`actor: {doc.get('actor')}`) and {D.ACCEPTED}, but no `decision accept` of it is logged, so nothing records that it was reviewed",
+                                       f"if it was reviewed, set `{D.STATUS_KEY}` back to {D.PROVISIONAL} (`git checkout` the file if a hand edit changed it) and run `decision accept {rid}`; if not, set it back to {D.PROVISIONAL}"))
             if ds != "SUPERSEDED" and status == "deprecated":
                 out.append(Failure("G-W4", rel, f"{rid} is `status: deprecated` but `{D.STATUS_KEY}: {ds}`, so a decision not superseded reads as history and the doc guards and G-I3 skip it",
                                    f"drop the `status` key (`git checkout` the file if a hand edit added it; a decision not superseded has none); a decision becomes history only through `decision supersede {rid} <new>`, which sets both keys"))

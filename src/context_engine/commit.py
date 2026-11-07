@@ -157,6 +157,16 @@ def left_behind(left: tuple[tuple[str, int], ...]) -> str:
             f"or once it is known dead, `context-engine commit --sweep` takes them")
 
 
+def op_paths(o: dict) -> list[str]:
+    """Every file an op line names: its ``path``, then each of its ``paths`` (a line that stands
+    for several records, CE-187: `decision accept`), in order, once each."""
+    out = [str(o["path"])] if o.get("path") else []
+    more = o.get("paths")
+    if isinstance(more, list):
+        out += [str(p) for p in more if p]
+    return list(dict.fromkeys(out))
+
+
 def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False) -> tuple[list[str], list[str]]:
     """Split uncommitted op lines into those a commit by ``session`` takes and those it leaves
     (CE-125): it takes its own lines; another session's line naming a path the commit carries
@@ -178,13 +188,13 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
     def own(o: dict | None, key: object = None) -> bool:
         return o.get("session") == session if o is not None else key in (None, session)
 
-    paths = {str(o["path"]) for o in parsed if o is not None and own(o) and o.get("path")} | set(given)
+    paths = {p for o in parsed if o is not None and own(o) for p in op_paths(o)} | set(given)
     under = tuple(g.rstrip("/") + "/" for g in given)
-    at = [str(o.get("path") or "") if o is not None else "" for o in parsed]
-    carried = lambda p: bool(p) and (p in paths or p.startswith(under))
+    at = [op_paths(o) if o is not None else [] for o in parsed]
+    carried = lambda ps: any(p in paths or p.startswith(under) for p in ps)
     taken, left = [], []
-    for ln, o, p, k in zip(lines, parsed, at, keys):
-        (taken if own(o, k) or carried(p) else left).append(ln)
+    for ln, o, ps, k in zip(lines, parsed, at, keys):
+        (taken if own(o, k) or carried(ps) else left).append(ln)
     return taken, left
 
 
@@ -580,8 +590,8 @@ def pending(root: Path, oplog: str, session: str | None = None) -> set[str]:
             o = json.loads(ln)
         except ValueError:
             continue
-        if isinstance(o, dict) and o.get("path"):
-            out.add(prefix + str(o["path"]))
+        if isinstance(o, dict):
+            out |= {prefix + p for p in op_paths(o)}
     return out
 
 
@@ -598,8 +608,8 @@ def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] =
             o = json.loads(ln)
         except ValueError:
             continue
-        if isinstance(o, dict) and o.get("path"):
-            out.add(str(o["path"]))
+        if isinstance(o, dict):
+            out |= set(op_paths(o))
     return out
 
 
@@ -668,7 +678,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             continue  # G-W7 reports it; the line still goes in with the op log
         if isinstance(o, dict):
             ops.append(o)
-    wanted = list(dict.fromkeys([oplog, *(str(o["path"]) for o in ops if o.get("path"))])) if fresh else []
+    wanted = list(dict.fromkeys([oplog, *(p for o in ops for p in op_paths(o))])) if fresh else []
     codes: dict[str, str] = {}
     asked = [CONFIG, *wanted, *(g for g in given if g not in wanted)]
     for i in range(0, len(asked), STATUS_CHUNK):

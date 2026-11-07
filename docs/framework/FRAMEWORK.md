@@ -220,7 +220,9 @@ every guard has been shown to fail.**
     reasoning; goals, priorities and genuine preferences that are not cheap to undo go to the
     owner;
   - an agent's call where the owner would otherwise decide is recorded PROVISIONAL and flagged
-    in the close digest, so the owner can push back (§5.3, §5.6);
+    in the close digest, so the owner can push back (§5.3, §5.6); it stays PROVISIONAL until the
+    owner has reviewed it and `decision.accept` marks it ACCEPTED, while a decision in the owner's
+    own words is born ACCEPTED (§6.5);
   - a consultation with another model is a recommendation, not an order.
 - **Ration what is raised:** standing owner questions are bounded by the NEXT cap (§5.3).
 
@@ -1318,7 +1320,7 @@ description: one line; this is what the decision listing shows
 actor: owner asked                # the vocabulary above
 decided: 2026-10-08
 session: 2026-10-08a
-decision_status: BUILT            # BUILT | PROVISIONAL | DEFERRED | SUPERSEDED | REJECTED
+decision_status: BUILT            # BUILT | ACCEPTED | PROVISIONAL | DEFERRED | SUPERSEDED | REJECTED
 status: deprecated                # OKF; derived by the engine, present only when SUPERSEDED
 supersedes: [D-157]
 superseded_by: []                 # backlink, maintained by the engine
@@ -1350,7 +1352,13 @@ append-only kind. `record.new` of any append-only kind, and `ask.answer`, refuse
 - `decision.set(id, fields, unset)` changes a decision's own keys (`decision_status`,
   `reopen_if`, `tags`, `title`, `description`) and refuses the rest: a link, the derived
   `status`, provenance (`actor`, `decided`, `ruled_by`, ...) and `verified` (an endorsement is
-  owner words), so it never writes half a link or re-attributes a decision;
+  owner words), so it never writes half a link or re-attributes a decision; it never sets
+  SUPERSEDED (`decision.supersede`) or ACCEPTED (`decision.accept`);
+- `decision.accept(ids, owners)` marks PROVISIONAL decisions reviewed, ACCEPTED, all in one write
+  logged as ONE op line (`ids` and `paths` list every record): ids, aliases and ranges (`D-86..90`)
+  in one call, and with `owners` every owner's own decision still PROVISIONAL (recorded before
+  owner decisions were born ACCEPTED). It refuses an id that names no decision and a decision
+  that is not PROVISIONAL, naming its status;
 - `decision.link(id, target, rel)` links a task, story, criterion, decision or `file::symbol`,
   checked to exist when linked (`relaxes` writes its backlink too); `decision.relink(id, old,
   new)` moves one `code:` link of a current decision when the code moves, checked the same way;
@@ -1379,8 +1387,18 @@ tag. Topic narratives ("why is it like this at all") stay as prose docs that lin
 Small engineering calls may live as task comments, and are promoted to a decision when they
 turn out to matter.
 
-**Status:** BUILT · PROVISIONAL · DEFERRED · SUPERSEDED · REJECTED. Rejected approaches are
-decisions with `reopen_if:`, so "what was rejected that touches X" is a query.
+**Status:** BUILT · ACCEPTED · PROVISIONAL · DEFERRED · SUPERSEDED · REJECTED. Rejected approaches are
+decisions with `reopen_if:`, so "what was rejected that touches X" is a query. PROVISIONAL means
+one thing: an agent's call (its own actor, or a ruling on the owner's delegation, `ruled_by`)
+awaiting the owner's review. A decision in the owner's own words (`actor: owner` or
+`human:<id>`, no `ruled_by`) is born **ACCEPTED**, by `record.new` and `ask.answer` alike: an
+owner's word awaits nothing, and `record.new` refuses it PROVISIONAL. An agent's call becomes
+ACCEPTED only through `decision.accept`, once reviewed; `record.new` refuses it ACCEPTED,
+`decision.set` refuses ACCEPTED, and lint (G-W4) fails an agent's call that is ACCEPTED with no
+logged `accept` line naming it. **BUILT** is for a decision a task carried out. A repo whose
+`context.toml` enum lacks ACCEPTED (from before it) records the owner's decisions PROVISIONAL, as
+before, and G-D0 names the missing value; once it is added, `decision.accept(owners=True)`
+applies the born-ACCEPTED rule to those recorded before, in one line.
 
 **Links:**
 - `supersedes` / `superseded by`;
@@ -1947,7 +1965,9 @@ that does not trigger fails silently (P7), and the contract must hold in every s
   contract (`contract` in `[engine]`, `CLAUDE.md` by default) and the version in its kit block's
   begin marker; a kit block of the engine's version must be the kit's block text, and the file
   it imports must equal the installed engine's `kit/contract.md`, line endings aside. A missing
-  contract, line or file fails too, each naming the remedy. `orient` opens with these failures,
+  contract, line or file fails too, each naming the remedy. With a kit block of the engine's
+  version, the decision kind's `decision_status` enum must hold ACCEPTED (§6.5; `init` never edits
+  an existing `context.toml`). `orient` opens with these failures,
   so a session whose contract did not load is told at once.
 - **Upgrade procedure:** read the release notes (`RELEASE-NOTES.md` beside this document) from
   the pinned version on; bump the engine's pinned ref (rebuild its environment,
@@ -2256,7 +2276,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   SUPERSEDED, so a current decision is never hidden as history from the guards that skip
   deprecated records (`record.new` refuses a decision given `status` or
   `decision_status: SUPERSEDED`, whatever `[guards] off` names: only `decision.supersede` writes
-  them). Not checked: whether a question's parts are any good, and a closed question.
+  them); an agent's call that is ACCEPTED is named by a logged `accept` line (`decision.accept`,
+  §6.5). Not checked: whether a question's parts are any good, a closed question, and whether
+  whoever ran `decision.accept` reviewed the calls.
 - **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` where it is set (a

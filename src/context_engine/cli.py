@@ -261,6 +261,9 @@ def build() -> argparse.ArgumentParser:
     dset.add_argument("id", help="the decision's id")
     dset.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="a field to set; repeat for each")
     dset.add_argument("--unset", action="append", default=[], metavar="KEY", help="a field to remove; repeat for each")
+    dac = _sub(dc, "accept", "mark PROVISIONAL decisions reviewed (ACCEPTED): ids and ranges like DEC-86..90, in one write and one op line")
+    dac.add_argument("ids", nargs="*", help="the decision ids, aliases or ranges, comma- or space-separated")
+    dac.add_argument("--owners", action="store_true", help="also every owner's own decision still PROVISIONAL (recorded before owner decisions were born ACCEPTED)")
     dl = _sub(dc, "link", "link a decision to a task, story, criterion, decision or file::symbol")
     dl.add_argument("id", help="the decision's id")
     dl.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")
@@ -377,6 +380,7 @@ CLI_OPS = {
     ("record", "confirm"): "record_confirm",
     ("decision", "supersede"): "decision_supersede",
     ("decision", "set"): "decision_set",
+    ("decision", "accept"): "decision_accept",
     ("decision", "link"): "decision_link",
     ("decision", "relink"): "decision_relink",
     ("decision", "find"): "decision_find",

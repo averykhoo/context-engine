@@ -31,7 +31,7 @@ CONFIG = {
     "kinds": {
         "task": {"type": "Task", "prefix": "CE", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
         "question": {"type": "Question", "prefix": "ASK", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
-        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT"]}, "types": {"decided": "date", "session": "key"}},
+        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT", "ACCEPTED"]}, "types": {"decided": "date", "session": "key"}},
         "baton": {"type": "Baton", "prefix": "BTN", "dir": "working", "mode": "stamped", "required": ["title", "session", "state"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key"}},
         "pause": {"type": "Pause", "prefix": "PAU", "dir": "working", "mode": "stamped", "required": ["title", "session", "state", "branch", "resume_step"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key", "uncommitted": "list"}},
     },

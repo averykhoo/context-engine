@@ -81,6 +81,10 @@ These hold for every operation below. The per-operation sections only list what 
 changed. `mechanical` is `true` only for housekeeping and the `--mechanical` flag. `as`, only on
 `hk.stamp_asked` lines, maps a session-keyed field to the key it was set to when that is not the
 writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the field against it).
+`ids` and `paths`, only on a line that stands for several records (`decision accept`), list each
+record's id and file, in the same order; `id` is then the list folded into ranges (`D-4..6, D-9`)
+and `path` the first file. Every file in `paths` goes into the commit that carries the line, as
+`path` does.
 
 | Operation | `op` | `id`, `path` | `fields` |
 |---|---|---|---|
@@ -102,6 +106,7 @@ writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
+| decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status"]` |
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
@@ -113,7 +118,7 @@ writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the
 
 | Kind | Id | Directory | Mode | Required keys | Enums and types |
 |---|---|---|---|---|---|
-| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
+| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, ACCEPTED, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
 | story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
 | task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
@@ -530,10 +535,12 @@ Check every record, then the working state. `--working` does only the second hal
 - **G-W4**: on every board item, `state: closed` if and only if `status: deprecated`; no
   open question carries `answered:` (an answered question never reopens, § task reopen); every
   open question's body states its context, two or more options and a recommendation with its
-  reasoning, as § ask new says; and on every decision, `decision_status: SUPERSEDED` if and only
-  if `status: deprecated`. *Why: the owner answers a question in one line only when it carries
+  reasoning, as § ask new says; on every decision, `decision_status: SUPERSEDED` if and only
+  if `status: deprecated`; and every decision that is `ACCEPTED` and not the owner's own (its
+  `actor` is not `owner` or `human:<id>`, or it has `ruled_by`) is named in the `ids` of an
+  `accept` op log line (§ decision accept). *Why: the owner answers a question in one line only when it carries
   what they need to decide; the doc guards and G-I3 skip a deprecated decision as history, so a
-  hand-set `status` hides one.*
+  hand-set `status` hides one; an agent's call accepted by hand leaves no record of its review.*
 - **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt; its
   `guards:` text matches `[working] gate_receipt` where that is set; and where it has a
@@ -568,7 +575,10 @@ Check every record, then the working state. `--working` does only the second hal
   the contract's own directory, that exists and equals the engine's `kit/contract.md` once line
   endings are ignored (`git diff --no-index --ignore-cr-at-eol`). *Why: Claude Code loads the
   framework's rules through that import, and the framework owns the file; a missing or edited
-  copy means a session runs on rules nobody shipped.*
+  copy means a session runs on rules nobody shipped.* With that kit block, and a decision kind
+  (`[working] decision`) whose `decision_status` enum lists values, the enum holds `ACCEPTED`.
+  *Why: `init` never edits an existing `context.toml`, so an upgraded repo keeps the old enum, and
+  its owner decisions are born PROVISIONAL against its contract.*
 - **G-D1**: for each `[[routes]]` entry with `max_lines`, `max_bytes` or `max_width`, the routed
   file (or each `.md` under a routed directory) has at most that many lines and bytes, and no
   line wider than that many characters except table rows (lines starting `|`). *Why: a place
@@ -1148,12 +1158,13 @@ or demoted to LATER.
    (the engine takes them as an argument, or written to a file and passed with `--file`). Open with `answered:` means someone reopened it by hand (G-W4): restore `state: closed` and
    `status: deprecated` from git and change the answer through its decision, as in `task reopen`.
 2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
-   `decision_status: PROVISIONAL`, `answers: ASK-n`. Body:
+   `decision_status: ACCEPTED` (`PROVISIONAL` if the decision kind's enum lacks `ACCEPTED`), `answers: ASK-n`. Body:
    `Owner, answering ASK-n: *"<words>"*`. Stamp its `body_sha` at once.
    **If the owner delegated the ruling** ("you decide", and an agent or another human made the
    call; the engine takes the ruling with `--ruling` or `--ruling-file` and who made it with
    `--ruled-by`, both or neither): the words are only the owner's delegating words, `actor: owner
-   asked`, add `ruled_by: <who ruled>` (never `owner`), and the body is
+   asked`, `decision_status: PROVISIONAL` (the ruler's call, reviewed later through § context-engine
+   decision accept), add `ruled_by: <who ruled>` (never `owner`), and the body is
    `Owner, answering ASK-n by delegating the ruling to <who ruled>: *"<words>"*`, a blank line,
    `## Ruling`, a blank line, `Ruled by <who ruled> on the owner's delegation; only the quote above
    is the owner's words.`, a blank line, then the ruling. Stop if the words hold a `## Ruling`
@@ -1572,7 +1583,15 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    any other decision has no `## Ruling` heading (both checks off while `[guards] off` names
    G-I3). Stop too, whatever `[guards] off` names, if a decision was given a `status` key or
    `decision_status: SUPERSEDED`: only § context-engine decision supersede writes those, with
-   both links (G-W4 checks them at rest, but this stop is not behind its off switch). For every
+   both links (G-W4 checks them at rest, but this stop is not behind its off switch). A
+   decision's `decision_status`, when you were not given one, is the status it is born with:
+   `ACCEPTED` if it is the owner's own (`actor` is `owner` or `human:<id>`, in any case, and it has
+   no `ruled_by`), else `PROVISIONAL` (an agent's call, or a ruling on the owner's delegation); a
+   decision kind whose enum lacks `ACCEPTED` (a `context.toml` from before it) gives the owner's
+   own `PROVISIONAL` too. Stop if the owner's own is given `PROVISIONAL` (that means a call
+   awaiting review, and the owner's word awaits nothing) while the enum has `ACCEPTED`, or if an
+   agent's call is given `ACCEPTED` (only § context-engine decision accept marks a call reviewed,
+   and logs it); `BUILT`, `DEFERRED` and `REJECTED` are taken as given. For every
    kind, whatever `[guards] off` names, stop if the text holds a `## Amendments` line: the text
    below it would fall outside `body_sha` and read as a later amendment (a later note goes in with
    § context-engine record amend, once the record exists).
@@ -1748,18 +1767,52 @@ operation owns. Values take the kind's declared types, as in § context-engine t
 - the key is `reopen_if` and the decision would not be REJECTED after the change, or the change
   moves a decision off REJECTED and keeps its `reopen_if` (unset it in the same call);
 - the new `decision_status` is `SUPERSEDED`: use `decision supersede <id> <new>`;
+- the new `decision_status` is `ACCEPTED`: use `decision accept <id>`, which checks the decision
+  is PROVISIONAL and logs the review;
 - the decision is already SUPERSEDED and the change touches `decision_status`: a superseded
   decision stays superseded; to bring it back, record a new decision and supersede the one that
   replaced it.
 
 Re-read the file, then change only the named keys in place (a new key goes last). The body and
-`body_sha` do not change. Log one `set` line with the changed keys. **Move an owner's decision's status (PROVISIONAL to BUILT, or
-to REJECTED or DEFERRED) only on the owner's words, recorded first** (`record amend <id>
+`body_sha` do not change. Log one `set` line with the changed keys. **Move an owner's decision's status (to BUILT, REJECTED or
+DEFERRED) only on the owner's words, recorded first** (`record amend <id>
 "<words>"`): the engine cannot tell whether the owner said so, so this rule is the only control.
 
 **Why:** a decision's status, tags and `reopen_if` are not covered by `body_sha`, so they can be
 kept current without touching the words; but the keys other operations own carry a rule
 (both directions of a link, the derived OKF status, who decided), and a raw edit would skip it.
+
+### context-engine decision accept
+
+`decision accept <ids>` marks PROVISIONAL decisions reviewed: each becomes `ACCEPTED`. Run it once
+the owner has reviewed the agent's calls named (the close digest flags each one), never before.
+`<ids>` are ids, aliases or ranges (`D-4..9`, or `D-4..D-9`: one prefix, low to high, at most 500),
+comma- or space-separated, in any number. `--owners` adds every decision still PROVISIONAL that is
+the owner's own (`actor` is `owner` or `human:<id>`, in any case, and no `ruled_by`): the born-ACCEPTED
+rule of § context-engine record new applied to decisions recorded before it, once, after the
+upgrade that added `ACCEPTED`. Spell out the ranges, then refuse, and write nothing, when:
+- no id is given and no `--owners`;
+- the decision kind's `decision_status` enum in `context.toml` has no `ACCEPTED`: add it, as the
+  kit's `context.toml.template` has it;
+- an id names no decision (a range must not span a number no decision has), or a record that is
+  not a decision;
+- a decision named is not PROVISIONAL: say which, with its status (a SUPERSEDED one is history,
+  with the decision that replaced it; a BUILT one a task carried out; an ACCEPTED one already
+  reviewed);
+- `--owners` alone finds no owner's decision still PROVISIONAL.
+
+Check every decision first; then, on each, replace `decision_status: PROVISIONAL` with
+`decision_status: ACCEPTED` in place. The body and `body_sha` do not change. Log ONE `accept` line
+for all of them, not one per decision: `id` the ids folded into ranges, `path` the first file,
+`ids` and `paths` every id and file in order, `fields` `["decision_status"]`. It is not a milestone:
+the line rides along to the next commit, which carries every file in `paths`.
+
+**Why:** PROVISIONAL means one thing, an agent's call awaiting the owner's review:
+an owner's own word is born ACCEPTED, so the review queue holds only calls someone
+must still look at. One op for a whole review, in one line, keeps a review of sixty calls from
+being sixty `decision set` lines. `decision set` refuses ACCEPTED so that every acceptance is in
+the op log; lint (G-W4) fails an agent's call that is ACCEPTED with no `accept` line naming it.
+Whether the owner really reviewed the calls is the caller's word: the line records who said so.
 
 ### context-engine decision link
 

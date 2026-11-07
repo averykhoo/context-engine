@@ -711,7 +711,13 @@ class Store:
         for r in done:
             log(r)
 
-    def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool, as_: dict[str, str] | None = None) -> None:
+    def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool, as_: dict[str, str] | None = None,
+             many: list[Record] | None = None) -> None:
+        """One op log line. ``many``: the line stands for every record listed (CE-187: `decision
+        accept` writes one line for all it accepts); it carries them in ``ids`` and ``paths``,
+        the first of them in ``id``'s place is ``rec_id`` (a label) and in ``path`` the first
+        record's, so a reader of ``path`` alone still finds a file (``commit.op_paths`` reads
+        every one)."""
         entry: dict[str, Any] = {
             "at": _now(),
             "session": session,
@@ -724,6 +730,9 @@ class Store:
         }
         if as_:
             entry["as"] = dict(as_)
+        if many:
+            entry["ids"] = [r.id for r in many]
+            entry["paths"] = [self._rel(r.path) for r in many]
         log = self.root / self.config.oplog
         log.parent.mkdir(parents=True, exist_ok=True)
         with open(log, "a", encoding="utf-8", newline="\n") as f:
@@ -865,12 +874,16 @@ class Store:
         actor: str,
         op: str,
         amend: dict[str, str] | None = None,
+        one_line: str = "",
     ) -> dict[str, Record]:
         """Change the frontmatter of several records as one write: under one lock, every record
         is re-read, changed by ``mutate`` (which may refuse, and returns id -> changed keys), and
         validated before any of them is written. ``mutate`` never changes a body; ``amend`` (id ->
         text) appends a dated entry under ``## Amendments`` of an append-only record in the same
-        write, checked as ``amend`` checks it, so the change and its reason land together."""
+        write, checked as ``amend`` checks it, so the change and its reason land together.
+        ``one_line``: log the whole write as one op line with that label as its ``id`` and every
+        record changed in ``ids`` and ``paths`` (``_log``'s ``many``; the changed keys must be the
+        same for each), instead of one line per record."""
         self._check_caller(session, actor)
         amend = amend or {}
         with self._lock():
@@ -897,7 +910,19 @@ class Store:
                 self._validate(r.kind, r.doc, r.path)
             todo = [(i, r) for i, r in recs.items() if changed.get(i) or i in amend]
             fields = {i: list(changed.get(i) or ()) + (["body"] if i in amend else []) for i, _ in todo}
-            self._write_all([r for _, r in todo], lambda r: self._log(op, r.id, r.path, session, actor, fields[r.id], False))
+            if one_line and todo:
+                written = [r for _, r in todo]
+                keys = list(dict.fromkeys(k for i, _ in todo for k in fields[i]))
+                logged: list[bool] = []
+
+                def once(r: Record) -> None:  # `_write_all` logs per record; this line stands for all of them
+                    if not logged:
+                        logged.append(True)
+                        self._log(op, one_line, written[0].path, session, actor, keys, False, many=written)
+
+                self._write_all(written, once)
+            else:
+                self._write_all([r for _, r in todo], lambda r: self._log(op, r.id, r.path, session, actor, fields[r.id], False))
         return recs
 
     def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:

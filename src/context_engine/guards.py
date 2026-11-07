@@ -43,6 +43,7 @@ from . import ledger as L
 from . import okf
 from . import review as R
 from .bootstrap import ENGINE_DIR
+from .commit import op_paths
 from .config import CONFIG_NAME, LIVENESS
 from .errors import Refusal
 from .store import ALIASES, OKF_STATUS, Failure, key_order
@@ -1369,14 +1370,15 @@ def op_records(e: Engine) -> list[Failure]:
     for n, op in _ops(e):
         if not isinstance(op, dict) or op.get("op") == "doc.archive":
             continue
-        rel, rid = op.get("path"), str(op.get("id") or "")
-        if not isinstance(rel, str) or not rel or not any(k.id_re.match(rid) for k in st.config.kinds.values()):
+        rids = [str(i) for i in op["ids"]] if isinstance(op.get("ids"), list) else [str(op.get("id") or "")]  # a line for several records names each (CE-187)
+        if not any(k.id_re.match(rid) for k in st.config.kinds.values() for rid in rids):
             continue
-        if rel in seen:
-            first, line, count = seen[rel]
-            seen[rel] = (first, line, count + 1)
-        elif not (e.root / rel).is_file():
-            seen[rel] = (n, op, 1)
+        for rel in op_paths(op):
+            if rel in seen:
+                first, line, count = seen[rel]
+                seen[rel] = (first, line, count + 1)
+            elif not (e.root / rel).is_file():
+                seen[rel] = (n, op, 1)
     return [
         Failure("G-W7", st.config.oplog,
                 f"line {n} ({op.get('op')} {op.get('id')}, session {op.get('session')})" + (f" and {count - 1} more name" if count > 1 else " names") + f" {rel}, which is not in the tree: the op line was committed without the record it wrote",

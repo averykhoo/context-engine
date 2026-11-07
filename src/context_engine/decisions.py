@@ -47,6 +47,13 @@ from .okf import AMENDMENTS_HEADING
 LINK_FIELDS = ("supersedes", "superseded_by", "relaxes", "narrowed_by", "creates", "amends", "retires", "tasks", "code", "refs")
 BACKLINK = {"supersedes": "superseded_by", "superseded_by": "supersedes", "relaxes": "narrowed_by", "narrowed_by": "relaxes"}
 STATUS_KEY = "decision_status"
+# CE-187 (DEC-162): an owner's own decision is born ACCEPTED (their word awaits nothing); an
+# agent's call, its own actor or a ruling on the owner's delegation (`ruled_by`), is born
+# PROVISIONAL and stays so until `decision accept` marks it reviewed. BUILT: a task carried it out.
+ACCEPTED, PROVISIONAL = "ACCEPTED", "PROVISIONAL"
+ACCEPT_OP = "accept"  # the op log line `decision accept` writes, one for every decision it accepts
+OWNERS_OWN_RE = re.compile(r"owner|human:\S+", re.IGNORECASE)  # guards.py::LONE_HUMAN_RE: one human's own words and call
+RANGE_RE = re.compile(r"(?P<prefix>[A-Za-z]+)-(?P<lo>\d+)\.\.(?:(?P<prefix2>[A-Za-z]+)-)?(?P<hi>\d+)")
 INDEX_TITLE = "# Decisions"
 INDEX_NOTE = "Printed on demand from each decision's frontmatter by `context-engine decision index`; never stored."
 UNTAGGED = "untagged"
@@ -69,6 +76,63 @@ class Row:
 
     def tags(self) -> list[str]:
         return [str(t) for t in (self.get("tags") or [])]
+
+
+def owners_own(data: Any) -> bool:
+    """A decision whose words and call are one human's own: its `actor` is `owner` or
+    `human:<id>` (any case, CE-138) and it names no `ruled_by` (a ruling on the owner's
+    delegation is the ruler's call, FRAMEWORK §6.5). ``data``: the frontmatter, a mapping or a
+    Document. Such a decision is born ACCEPTED (CE-187)."""
+    return bool(OWNERS_OWN_RE.fullmatch(str(data.get("actor") or "").strip())) and data.get("ruled_by") is None
+
+
+def expand_ids(tokens: list[str]) -> list[str]:
+    """Ids as given, each range (`DEC-86..90`, or `DEC-86..DEC-90`) spelled out in order, every id
+    once. A range must run upward within one prefix and hold at most 500 ids; a token that is not
+    a range is kept as it is (the caller checks that it names a record)."""
+    out: list[str] = []
+    for t in tokens:
+        t = t.strip()
+        if not t:
+            continue
+        if ".." not in t:
+            out.append(t)
+            continue
+        m = RANGE_RE.fullmatch(t)
+        if not m or (m["prefix2"] and m["prefix2"] != m["prefix"]):
+            raise Refusal(f"{t!r} is not a range of ids", "write a range as `DEC-86..90` (or `DEC-86..DEC-90`): one prefix, the low id first")
+        lo, hi = int(m["lo"]), int(m["hi"])
+        if lo > hi:
+            raise Refusal(f"the range {t} runs downward", f"write it low to high: `{m['prefix']}-{hi}..{lo}`")
+        if hi - lo >= 500:
+            raise Refusal(f"the range {t} holds {hi - lo + 1} ids", "name at most 500 in one range; split it")
+        out += [f"{m['prefix']}-{n}" for n in range(lo, hi + 1)]
+    return list(dict.fromkeys(out))
+
+
+def compact_ids(ids: list[str]) -> str:
+    """``ids`` as one label, consecutive numbers of a prefix folded into a range (`DEC-86..90`):
+    the `id` of the one op line `decision accept` writes."""
+    parts: list[str] = []
+    run: list[tuple[str, int]] = []
+
+    def flush() -> None:
+        if run:
+            (p, a), (_, b) = run[0], run[-1]
+            parts.append(f"{p}-{a}" if a == b else f"{p}-{a}..{b}")
+            run.clear()
+
+    for i in ids:
+        p, _, n = i.rpartition("-")
+        if not n.isdigit():
+            flush()
+            parts.append(i)
+            continue
+        if run and (run[-1][0] != p or run[-1][1] + 1 != int(n)):
+            flush()
+        run.append((p, int(n)))
+    flush()
+    return ", ".join(parts)
 
 
 def as_list(value: Any) -> list[str]:

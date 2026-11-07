@@ -410,6 +410,12 @@ def decision_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = 
 
 
 @op(write=True)
+def decision_accept(e: Engine, c: Caller, ids: list[str] | None = None, owners: bool = False) -> tuple[int, str]:
+    """Mark PROVISIONAL decisions reviewed: each becomes ACCEPTED, in one write and ONE op line. `ids`: ids, aliases or ranges (`DEC-86..90`); `owners`: also every owner's own decision still PROVISIONAL (recorded before owner decisions were born ACCEPTED). Refused: an id that names no decision, or a decision that is not PROVISIONAL (SUPERSEDED, BUILT, ACCEPTED: each named)."""
+    return 0, e.decision_accept(list(ids or []), owners=owners, **c.kw)
+
+
+@op(write=True)
 def decision_link(e: Engine, c: Caller, id: str, target: str, rel: str = "") -> tuple[int, str]:
     """Link a decision to a task, story, criterion or `file::symbol`; `rel` is tasks, creates, amends, retires, relaxes, code or refs (inferred for tasks and code). An alias (an earlier id) is linked as the record it names."""
     return 0, e.link(id, target, rel, **c.kw)

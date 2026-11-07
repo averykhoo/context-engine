@@ -311,6 +311,11 @@ commit messages and code comments keep the old ids.
    `true` reads as `"milestones"`, so the engine stops committing every write and commits at
    milestones: write `"every-write"` to keep the old behaviour. `false` reads as `"off"`. Keep
    `true` or `false` until every machine runs this engine: an older one refuses the words.
+   Add `ACCEPTED` to the decision kind's `decision_status` enum, after `BUILT`, as the new
+   `context.toml.template` has it (framework 0.6: an owner's decision is born ACCEPTED; G-D0 names
+   it while it is missing), then run `context-engine decision accept --owners` once: it marks
+   every owner's decision still PROVISIONAL ACCEPTED, in one op line. An agent's calls stay
+   PROVISIONAL until the owner reviews them and `decision accept <ids>` takes them.
 3. `context-engine lint`; fix every failure (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).

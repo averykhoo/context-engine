@@ -65,6 +65,7 @@ CALLS = {
     "record_confirm": (["US-1", "--by", "human:avery", "--status", "unspecified", "the words"], {"id": "US-1", "by": "human:avery", "status": "unspecified", "words": "the words"}),
     "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
     "decision_set": (["DEC-1", "--set", "tags=a", "--unset", "reopen_if"], {"id": "DEC-1", "fields": {"tags": "a"}, "unset": ["reopen_if"]}),
+    "decision_accept": (["DEC-1..3,", "DEC-5", "--owners"], {"ids": ["DEC-1..3", "DEC-5"], "owners": True}),
     "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
     "decision_relink": (["DEC-1", "a.py::f", "b.py::f"], {"id": "DEC-1", "old": "a.py::f", "new": "b.py::f"}),
     "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
@@ -222,7 +223,7 @@ def test_every_write_in_a_session_returns_one_line(root):
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
     # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
-    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
+    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "decision_accept", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
 
 
 @pytest.mark.criterion("AC-19")
