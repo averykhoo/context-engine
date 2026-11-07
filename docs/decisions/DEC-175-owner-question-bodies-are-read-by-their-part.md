@@ -30,3 +30,13 @@ An agent's call under P8 (cheap to undo), made by CE-158's builder in session 20
 **Reopen if:** an open question that states its three parts is refused or failed by G-W4 under these rules, or one that lacks a part passes.
 
 Task: CE-158.
+
+## Amendments
+
+- **2026-11-07d (claude-code/claude-opus-5-5):** CE-158 fix round 1 (agent's call under P8, claude-code/claude-opus-5-5, session 2026-11-07d; not owner words). The verifier found the option rule above passed a question with one option and refused one with two: a bold-led line counted as an option wherever it sat (`- A. ...` then `  **Why:** ...` read as two options; `### A` then `**Pros:**` and `**Cons:**` as three), and a bold line took every list item after it as its own text (`**Pick one**` above `- A` and `- B` read as one option). The "Reopen if" above was met. The rule now (guards.py::ask_options):
+
+  - The options are the list items and `###` headings under Options. Only where it has neither (placeholders aside) are the bold-led lines the options, so a bold intro or note beside a list (`**Pick one**`, `**Note:** ...`) is no option.
+  - A bold-led line follows the same nesting rule as a list item: indented to the text of the item above it, it is that item's text; under a `###` option, it is that option's text.
+  - A bold line owns only what is indented past it: `**A:** ...` with `  - detail` under it is one option, and a list at the bold line's own column after `**Pick one**` is the options.
+
+  Options weighed: a bold line owns nothing, as CommonMark nests no list in a paragraph (rejected: a bold option with indented detail bullets would read its first bullet as the only option); a bold line owns everything after it, as before (rejected: it is the false refusal found). Left unread: an intro written bold with its list indented under it (`**Pick one**` then `  - A`) reads as one option, the bold line; write the list at the bold line's column. "What stays unread" above now holds only where Options has no list item and no `###` heading.
