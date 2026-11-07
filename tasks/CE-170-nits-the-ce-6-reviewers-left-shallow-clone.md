@@ -4,13 +4,15 @@ id: CE-170
 title: 'Nits the CE-6 reviewers left: shallow-clone docstring, hk.run signature, an untested dry branch'
 brief: Small follow-ups from CE-6's 2026-11-01b review and verify; none blocks
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-3]
 source: session 2026-11-01b
 created: 2026-11-01
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 The CE-6 reviewers and final verifier (2026-11-01b) left these unaddressed; none blocked the close:
@@ -29,3 +31,6 @@ The CE-6 reviewers and final verifier (2026-11-01b) left these unaddressed; none
 - CE-6's close commit (b756f65) and log
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: Nit bullets done (bullet 3 dropped, code removed by CE-185): hk comment refuses a non-board record as not a task, test_ci needs integer fetch-depth 0, shallow-clone and hk.run wording; DEC-196..199 PROVISIONAL, await owner review; gate.md row 27 keeps 'full history' on purpose (DEC-199). Commits 0955566 c2452a9 93e4fc3 02d3219 a87fb90
+  residual risk: INV-141, INV-142

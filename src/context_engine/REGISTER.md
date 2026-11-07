@@ -993,3 +993,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the hint is wanted on every resume and cannot know the pause landed
 - **control:** individual: the hint wording (if you take up its request)
 - **from:** CE-152, session 2026-11-07e
+
+## INV-141: Engine._comment_problem calls Engine._board(), which raises a Refusal ('[working] names no board kinds') in a repo with no board kinds; reachable only through single-item hk_comment
+
+- **affects:** an operator running hk_comment in a repo without board kinds
+- **why not eliminated:** edge case outside any board-using repo, and the refusal carries a sensible remedy
+- **control:** individual: the Refusal text from Engine._board names the fix
+- **from:** CE-170, session 2026-11-07e
+
+## INV-142: The brief's 'record new decision --file' form needs '--set actor=' (a template or engine-default question outside CE-170)
+
+- **affects:** an agent following the brief verbatim
+- **why not eliminated:** out of CE-170 scope, not yet decided whether template or engine default should supply actor
+- **control:** individual: the refusal on a missing actor names the flag
+- **from:** CE-170, session 2026-11-07e
