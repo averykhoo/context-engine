@@ -706,3 +706,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the receipt is new, and old engines cannot know it
 - **control:** individual: RELEASE-NOTES says every machine on the repo needs this engine or later
 - **from:** CE-195, session 2026-11-06f
+
+## INV-100: Local commit 3219e82 carries three Sabotage: lines that git parses as trailers
+
+- **affects:** anyone reading 3219e82's trailers
+- **why not eliminated:** rewriting history in a shared tree was not asked for
+- **control:** individual: DEC-172; commits after 77ac0b7 keep Sabotage lines as body
+- **from:** CE-197, session 2026-11-07a
+
+## INV-101: CE_CO_AUTHOR set in a human's environment still adds a Co-Authored-By line
+
+- **affects:** humans running the engine
+- **why not eliminated:** first-hit-wins precedence puts the env var above the actor
+- **control:** individual: --co-author none / unset CE_CO_AUTHOR (manual-mode § context-engine commit)
+- **from:** CE-197, session 2026-11-07a
