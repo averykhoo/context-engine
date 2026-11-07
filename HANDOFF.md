@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). The banner holds durable lines only, replaced when one changes;
 no session history here (that is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-06f)
+## Banner (2026-11-07a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -21,8 +21,8 @@ no session history here (that is `docs/ledger/session-log.md`). The banner carri
 - **Every push: gate, then `tools/linux_gate.py` (CI is Linux, this machine Windows: CE-67), then a CI watcher.**
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`).
-- **Trailers (CE-197):** `context-engine commit` adds only `Session:`; pass `-m "Co-Authored-By: ..."` as the last paragraph,
-  so both sit in one trailer paragraph with no blank line between.
+- **Trailers (CE-197, DEC-171, DEC-172):** every engine commit writes `Session:` and `Co-Authored-By:` (named from
+  `CE_ACTOR`'s model; `--co-author`/`--model` or `CE_CO_AUTHOR` override) in one last paragraph; do not add them by hand.
 - **Procedures: `docs/runbooks/procedures.md`**, by hand in `manual-mode.md`; when the engine errors, do it by hand (US-11).
 - **CRLF (CE-46):** merge with `git -c core.autocrlf=false`; kit copies must stay LF and byte-equal.
 - **Owner rules:** `fable` only when asked (DEC-18); every process has a by-hand fallback (DEC-20). **The repo is PUBLIC:

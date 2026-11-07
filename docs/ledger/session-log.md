@@ -7,12 +7,37 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-07a · kind: open
+## 2026-11-07a · kind: close
 
-- **opened:** 2026-11-07T08:43:17+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-06f
-- **start head:** a885bdea63a8db7549a2425d29cb9bebed962208
 - **tasks:** CE-197
+- **rows:** DEC-170 (new, owner); CE-197 (closed, INV-100, INV-101); DEC-171, DEC-172 (new,
+  PROVISIONAL)
+- **receipts:**
+  - guards: gate 1493 passed (2026-11-07, gate status --require code+readers green); lint inside the
+    gate
+  - read: orient; CE-197; procedures.md Session start, Intake, Housekeeping
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: set
+- **summary** (the owner digest):
+  - CE-197 built on DEC-170: every engine commit writes Co-Authored-By beside Session, named from
+    CE_ACTOR's model (claude-opus-5-5 -> Claude Opus 5.5).
+  - Overrides: --co-author/--model on commit (CLI and MCP), CE_CO_AUTHOR; plain Claude fallback;
+    none for human/process actors (DEC-171).
+  - DEC-172 (PROVISIONAL): trailers join the last paragraph only if it already holds
+    Session/Closes/-by, so Sabotage lines stay body; replaces CE-55's rule.
+  - Independent verify PASS on round 4 (r1-r3 FAILed on runbook drift and an unpinned key); ~926k
+    subagent tokens, all opus.
+  - Fable on the XDA takeaways: TRIAL sonnet builders (next 6 pinned-design tasks, opus verifier),
+    ADOPT a size floor; docs/evidence/article-takeaways-advice-2026-11-07a.md.
+  - Not pushed: tools/linux_gate.py not run yet; local gate 1493 passed.
+- **Still owed:**
+  - owner: decide the article takeaways (trial sonnet builders; size floor) per the fable advice
+    doc; it narrows DEC-45/DEC-60
+  - owner: push origin/main (9 commits ahead) after tools/linux_gate.py; restart Claude Code so the
+    MCP commit tool gets the new options
+  - owner: push of audio-workspace ba31e29d (carried)
+- **start head:** a885bdea63a8db7549a2425d29cb9bebed962208
 
 ---
 
