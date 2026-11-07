@@ -3,13 +3,13 @@ type: Task
 id: CE-201
 title: 'ask_options after CE-158: untested placeholder clause, stale AC-121 row, loose refusal wording'
 brief: The placeholder test must be seen red first; AC-121 changes only through criterion set
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-11-07d
 created: 2026-11-07
-moved: 2026-11-07d
+moved: 2026-11-07e
 updated: 2026-11-07e
 ---
 
