@@ -1826,6 +1826,8 @@ class Engine:
             raise Refusal("no questions named", "pass the ids raised in chat")
         for rid in ids:
             self._is_question(rid)
+            if not ID_RE.fullmatch(rid):  # the line is read back with ID_RE: another form would drop out of every check unseen (CE-152)
+                raise Refusal(f"{rid} is not read back from an `asked:` line, which reads ids of capital letters, a hyphen and digits", "say in the close's digest that it was raised; a question prefix of capital letters only makes it checkable")
         led = self.read_ledger()
         stub = led.get(session)
         if stub is None or stub.kind != "open":
@@ -2045,9 +2047,24 @@ class Engine:
         return f"{rec.id}: pause recorded on {branch} ({len(dirty)} uncommitted paths){self.store.last_commit.line()}"
 
     def pause_resume(self, rid: str, *, session: str, actor: str) -> str:
+        """Mark the pause record resumed, and say which of the paused session's tasks are still open
+        that this session has not named. It names them, never applies them: housekeeping also resumes
+        a pause whose paths all landed, and that session is not taking up the owner's request, so
+        the procedures § Resume step stays the one that runs `session tasks` (CE-152)."""
         self._check(session, actor)
         self._end(rid, "pause", "done", {"resumed": session}, session=session, actor=actor, op="pause.resume")
-        return f"{rid}: resumed by {session}"
+        out = f"{rid}: resumed by {session}"
+        paused = str(self.store.get(rid).doc.get("session") or "")
+        led = self.read_ledger()
+        entry, mine = led.get(paused), led.get(session)
+        if entry is None:
+            return out
+        named = set(ID_RE.findall(mine.field(L.TASKS) or "")) if mine is not None else set()
+        theirs = [i for i in dict.fromkeys(ID_RE.findall(entry.field(L.TASKS) or "")) if i not in named]
+        left = [i for i, state in self._task_states(theirs) if state != "closed"]
+        if not left:
+            return out
+        return f"{out}; {paused} named tasks still open that this session does not: {', '.join(left)} (if you take up its request, `session tasks {' '.join(left)}`)"
 
     def _carried(self) -> list[Record]:
         return [r for role in ("baton", "pause") if getattr(self.w, role) for r in self.store.heads(getattr(self.w, role)) if r.doc.get("state") == "open"]

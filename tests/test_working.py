@@ -443,6 +443,23 @@ def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
     assert eng.read_ledger().get(key).receipt("asked") == q.id  # carried from the stub
 
 
+@pytest.mark.criterion("AC-11")
+def test_ask_raised_refuses_a_question_id_its_line_would_not_read_back_and_writes_nothing(tmp_path):
+    """CE-152: the `asked:` line is read back with ID_RE, so an id of another form (`Ask-1`) would be
+    written and then drop out of every check unseen; the refusal comes before any `last_asked` stamp."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["kinds"]["question"]["prefix"] = "Ask"
+    e = _engine(tmp_path / "odd", cfg)
+    key = started(e)
+    q = e.ask_new("Pick a colour?", body=ASK_BODY, pri="NEXT", **kw(key))
+    assert q.id == "Ask-1"
+    ledger, qfile = e.root / "ledger.md", q.path
+    before = (ledger.read_bytes(), qfile.read_bytes())
+    with pytest.raises(Refusal, match=re.escape("Ask-1 is not read back from an `asked:` line")):
+        e.ask_raised([q.id], **kw(key))
+    assert (ledger.read_bytes(), qfile.read_bytes()) == before
+
+
 ASK_HEADINGS = """## Question
 
 Which index layout?
@@ -1446,6 +1463,56 @@ def test_pause_open_records_branch_and_dirty_paths_from_git_and_commits_only_its
     status = _git(root, "status", "--porcelain")
     assert "wip.py" in status and "M  HANDOFF.md" in status
     assert rec.id in out and re.search(r"; committed [0-9a-f]{7,}$", out), out
+
+
+def _pause_record(eng, paused):
+    return eng.store.new("pause", {"title": "half-built", "session": paused, "state": "open", "created": TODAY.isoformat(), "branch": "main", "resume_step": "run the gate",
+                                   "uncommitted": [], "evidence": "none", "deferred": []}, "**In flight:** x\n\n**Resume step:** y\n", session=paused, actor=ACTOR)
+
+
+@pytest.mark.criterion("AC-156")
+def test_pause_resume_names_the_paused_sessions_open_tasks_this_session_has_not_named(eng):
+    """CE-152: the reply names the paused session's tasks still open that the resumer has not named
+    (not a closed one, not one already named), and applies nothing: the procedures step does."""
+    paused = started(eng)
+    one, two, three = (task(eng, paused, t).id for t in ("One", "Two", "Three"))
+    eng.session_tasks([one, two, three], **kw(paused))
+    eng.close(three, msg="done", **kw(paused))
+    rec = _pause_record(eng, paused)
+    eng.session_pause(paused, actor=ACTOR, rows="x", deferred="y")
+    key = started(eng)
+    eng.session_tasks([one], **kw(key))
+    before = (eng.root / "ledger.md").read_bytes()
+    out = eng.pause_resume(rec.id, **kw(key))
+    assert out == f"{rec.id}: resumed by {key}; {paused} named tasks still open that this session does not: {two} (if you take up its request, `session tasks {two}`)"
+    assert (eng.root / "ledger.md").read_bytes() == before
+    assert eng.read_ledger().get(key).field(L.TASKS) == one
+
+
+@pytest.mark.criterion("AC-156")
+def test_pause_resume_says_nothing_more_when_the_paused_session_named_no_tasks(eng):
+    """CE-152: no tasks line, a session resuming its own pause, a paused session with no ledger entry,
+    and a paused session whose every task the resumer named or closed: the plain reply, no error."""
+    paused = started(eng)
+    eng.session_pause(paused, actor=ACTOR, rows="x", deferred="y")
+    rec = _pause_record(eng, paused)
+    key = started(eng)
+    assert eng.pause_resume(rec.id, **kw(key)) == f"{rec.id}: resumed by {key}"  # no tasks line
+
+    own = _pause_record(eng, key)
+    assert eng.pause_resume(own.id, **kw(key)) == f"{own.id}: resumed by {key}"  # its own pause
+
+    ghost = _pause_record(eng, "2026-10-01z")
+    assert eng.read_ledger().get("2026-10-01z") is None
+    assert eng.pause_resume(ghost.id, **kw(key)) == f"{ghost.id}: resumed by {key}"  # no entry
+
+    other = started(eng)
+    done = task(eng, other, "Done").id
+    eng.session_tasks([done], **kw(other))
+    eng.close(done, msg="done", **kw(other))
+    eng.session_pause(other, actor=ACTOR, rows="x", deferred="y")
+    last = _pause_record(eng, other)
+    assert eng.pause_resume(last.id, **kw(key)) == f"{last.id}: resumed by {key}"  # every task closed
 
 
 def test_pause_open_lists_paths_as_they_are_on_disk_not_as_git_quotes_them(eng):
