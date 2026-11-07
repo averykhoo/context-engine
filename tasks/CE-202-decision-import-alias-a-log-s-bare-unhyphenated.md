@@ -29,3 +29,5 @@ Today `decisions.py::plan_import` writes `aliases: [<old id>]` only when an entr
 - CE-171, DEC-213
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-sonnet-5-5): Correction: the import entry point is working.py::Engine.import_log (class Engine), not Working.import_log as the brief and CE-171's commit ea3ddb4 say; the G-D2 alias check is called from there.

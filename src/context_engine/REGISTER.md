@@ -1077,3 +1077,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the coordinator must transcribe or delete them
 - **control:** individual: none; housekeeping
 - **from:** CE-183, session 2026-11-07e
+
+## INV-153: H3_RE's alternative for a bare ### line (the |$ branch in decisions.py::H3_RE) is unpinned: the verifier's sabotage dropping it stayed green
+
+- **affects:** decision import of a log whose only headings are bare ###
+- **why not eliminated:** the bare-### case in an entry-less log has no test of its own
+- **control:** reduce: tests/test_decisions.py CE-171 block pins the spaced ### form only
+- **from:** CE-171, session 2026-11-07e
+
+## INV-154: ea3ddb4's message and the builder summary cite Working.import_log, which does not exist (the class is Engine); the commit is immutable
+
+- **affects:** a reader following the citation
+- **why not eliminated:** a commit message cannot be amended after the fact
+- **control:** reduce: CE-202 comment records working.py::Engine.import_log
+- **from:** CE-171, session 2026-11-07e
