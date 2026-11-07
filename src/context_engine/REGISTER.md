@@ -783,3 +783,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the parse check is what makes the skip visible
 - **control:** individual: only the lint op calls it; orient does not
 - **from:** CE-161, session 2026-11-07d
+
+## INV-111: Through the CLI and MCP, '; committed <sha>' lands after the WARNING on line 1, so AC-186's 'ends its first line with' holds exactly only for the Engine reply
+
+- **affects:** anyone parsing the close reply
+- **why not eliminated:** found after PASS; cosmetic
+- **control:** individual: the WARNING text is unchanged and still on line 1
+- **from:** CE-191, session 2026-11-07d
+
+## INV-112: With housekeeping, a close whose hk close emptied NOW says G-W5 twice (line-1 WARNING and the hk block)
+
+- **affects:** anyone reading the close reply
+- **why not eliminated:** found after PASS; cosmetic
+- **control:** individual: both carry the same remedy
+- **from:** CE-191, session 2026-11-07d
+
+## INV-113: ask answer and a demoting promote share the fixed board read but only close is tested with an unparseable sibling record
+
+- **affects:** those two ops
+- **why not eliminated:** found after PASS
+- **control:** individual: the shared Engine._now_refill path is tested through close
+- **from:** CE-191, session 2026-11-07d
