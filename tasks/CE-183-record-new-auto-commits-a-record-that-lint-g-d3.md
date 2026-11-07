@@ -2,14 +2,14 @@
 type: Task
 id: CE-183
 title: record new auto-commits a record that lint G-D3 then fails (bare foreign ids), and a stamped body cannot be fixed
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-04a
 created: 2026-11-04
-moved: 2026-11-04a
-updated: 2026-11-04a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 record new auto-commits a record that lint G-D3 then fails (bare foreign ids), and a stamped body cannot be fixed.
