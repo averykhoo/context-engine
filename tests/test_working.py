@@ -567,6 +567,47 @@ def test_ask_new_takes_its_body_from_a_file_and_refuses_none_through_the_cli(eng
     assert "Recommendation: none (needs human judgement)" in eng.store.read(next(eng.store.heads("question")).path).body
 
 
+def test_task_new_takes_its_body_from_a_file_through_the_cli(eng, capsys, tmp_path):
+    """CE-174: `task new --body-file` reads a body a command line cannot carry (CE-167: 181 KB),
+    as `ask new` and `task close` do: a BOM is dropped, CRLF reads as LF, `--body` and
+    `--body-file` together are a usage error, a missing or non-UTF-8 file is a refusal, and an
+    empty file is no body (the default one), as `--body ""` is."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    count = lambda: len(list(eng.store.heads("task")))
+    body = ('A "quoted" word, C:\\path\\x and a line\n--not-a-flag\n\n## Traps\n\n- one\n\n## Read first\n\n- two\n\n## Log\n\n- 2026-11-08 (x): filed\n' + "padding line of the long body\n" * 7000)
+    assert len(body) >= 200_000
+    p = tmp_path / "body.md"
+    p.write_bytes(("\ufeff" + body.replace("\n", "\r\n")).encode("utf-8"))
+    assert main([*base, "task", "new", "From a file", "--body-file", str(p)]) == 0, capsys.readouterr().err
+    (item,) = eng.store.heads("task")
+    got = eng.store.read(item.path).body
+    assert got == "\n" + body.strip("\n") + "\n"
+    assert "\r" not in got and "\ufeff" not in got
+    capsys.readouterr()
+
+    with pytest.raises(SystemExit) as both:  # both spellings: argparse's usage error, nothing filed
+        main([*base, "task", "new", "Both", "--body", "x", "--body-file", str(p)])
+    assert both.value.code == 2
+    assert "not allowed with argument" in capsys.readouterr().err
+    assert count() == 1
+
+    assert main([*base, "task", "new", "Missing", "--body-file", str(tmp_path / "none.md")]) == 2
+    assert "there is no file" in capsys.readouterr().err
+    assert count() == 1
+
+    (tmp_path / "u16.md").write_text("some words", encoding="utf-16")
+    assert main([*base, "task", "new", "Wide", "--body-file", str(tmp_path / "u16.md")]) == 2
+    assert "is not UTF-8" in capsys.readouterr().err
+    assert count() == 1
+
+    (tmp_path / "empty.md").write_text("\n  \n", encoding="utf-8")
+    assert main([*base, "task", "new", "Empty file", "--body-file", str(tmp_path / "empty.md")]) == 0, capsys.readouterr().err
+    (made,) = [t for t in eng.store.heads("task") if t.id != item.id]
+    text = eng.store.read(made.path).body
+    assert text.startswith("\nEmpty file.") and "## Traps" in text, text
+
+
 @pytest.mark.criterion("AC-122")
 def test_lint_g_w4_fails_an_open_question_lacking_a_part_and_passes_a_closed_one(eng):
     """CE-44: G-W4 re-checks an open question's stored body, so it catches one filed past `ask
