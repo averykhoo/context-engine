@@ -73,7 +73,7 @@ FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[`~]*[ \t]*$", r
 OPEN_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})", re.MULTILINE)  # left after FENCE_RE: a fence never closed
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 LINT_RE = re.compile(r"context[-_]engine\s+lint")  # a gate running lint: `context-engine lint` or `-m context_engine lint`
-BEGIN, END = "<!-- context-engine kit 0.5 begin -->", "<!-- context-engine kit 0.5 end -->"
+BEGIN, END = "<!-- context-engine kit 0.6 begin -->", "<!-- context-engine kit 0.6 end -->"
 # any kit version's begin marker: an older block is the one an upgrade replaces, never a second one
 ANY_BEGIN = re.compile(r"<!-- context-engine kit (\S+) begin -->")
 # kit file -> where it goes in the repo

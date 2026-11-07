@@ -486,11 +486,11 @@ def test_merge_settings_refuses_a_settings_file_changed_after_its_plan_and_keeps
 
 @pytest.mark.criterion("AC-57")
 def test_an_inline_kit_block_is_left_for_the_upgrade_and_the_contract_still_lands(tmp_path):
-    inline = f"# Ours\n\n{B.BEGIN}\nframework: 0.5\n\n### Gate\n\n`make test && context-engine lint`\n{B.END}\n"
+    inline = f"# Ours\n\n{B.BEGIN}\nframework: 0.6\n\n### Gate\n\n`make test && context-engine lint`\n{B.END}\n"
     (tmp_path / "CLAUDE.md").write_text(inline, encoding="utf-8")
     out = B.init(tmp_path)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == inline
-    assert f"CLAUDE.md (holds a kit 0.5 block that inlines the rules: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
+    assert f"CLAUDE.md (holds a kit 0.6 block that inlines the rules: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
     assert (tmp_path / B.CONTRACT_DEST).exists()
     assert "## 4. Upgrade" in (B.KIT / "README.md").read_text(encoding="utf-8")
     boot = tmp_path / "boot"

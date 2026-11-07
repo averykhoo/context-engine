@@ -1,6 +1,6 @@
 # The framework contract
 
-framework: 0.5
+framework: 0.6
 
 This repo runs the context-engineering framework (FRAMEWORK.md, in the engine repo at the
 pinned ref) through the record engine, `context-engine`. `§` references below are FRAMEWORK

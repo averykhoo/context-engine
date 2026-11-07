@@ -1634,16 +1634,16 @@ def test_a_malformed_route_is_refused_at_load(tmp_path, route, says):
 GATE_STUB = "<this repo's own test command>"  # the kit's Gate placeholder, which G-D0 fails (CE-71)
 
 
-def pinned(eng, text, version="0.5.0.dev0", name="CLAUDE.md"):
+def pinned(eng, text, version="0.6.0.dev0", name="CLAUDE.md"):
     (eng.root / name).write_text(text, encoding="utf-8", newline="")
     return [(f.path, f.message, f.remedy) for f in eng.lint_contract(version)]
 
 
 @pytest.mark.criterion("AC-35")
-@pytest.mark.parametrize("text", ["framework: 0.5\n", "# c\n\nframework: 0.5.*\n", "framework: 0.5 (engine mode since CE-8)\r\n", "framework:0.5"])
+@pytest.mark.parametrize("text", ["framework: 0.6\n", "# c\n\nframework: 0.6.*\n", "framework: 0.6 (engine mode since CE-8)\r\n", "framework:0.6"])
 def test_a_framework_pin_equal_to_the_engines_major_minor_passes(eng, text):
     assert pinned(eng, text) == []
-    assert pinned(eng, text, version="0.5.17") == []  # the engine's patch number is its own
+    assert pinned(eng, text, version="0.6.17") == []  # the engine's patch number is its own
 
 
 @pytest.mark.criterion("AC-35")
@@ -1668,19 +1668,19 @@ def test_a_framework_pin_with_another_major_minor_fails_lint_naming_the_remedy(e
 ])
 def test_a_missing_or_garbled_framework_pin_fails_lint(eng, text, says):
     [(_, message, remedy)] = pinned(eng, text)
-    assert message.startswith(says) and "framework: 0.5" in remedy
+    assert message.startswith(says) and "framework: 0.6" in remedy
 
 
 @pytest.mark.criterion("AC-35")
 def test_every_pin_and_the_kit_block_marker_must_match(eng):
-    stale = "framework: 0.5\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
+    stale = "framework: 0.6\n\n<!-- context-engine kit 0.5 begin -->\nframework: 0.5\n<!-- context-engine kit 0.5 end -->\n"
     got = pinned(eng, stale)
-    assert [m for _, m, _ in got] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)", "holds the kit 0.4 block, but the installed engine is framework 0.5"]
+    assert [m for _, m, _ in got] == ["`framework: 0.5` does not match the installed engine 0.6.0.dev0 (framework 0.6)", "holds the kit 0.5 block, but the installed engine is framework 0.6"]
     assert "kit/bootloader.md" in got[1][2]
-    current = "framework: 0.5\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8").replace(GATE_STUB, "make test")
+    current = "framework: 0.6\n\n" + (K.KIT / K.BOOTLOADER).read_text(encoding="utf-8").replace(GATE_STUB, "make test")
     copy_contract(eng)
     assert pinned(eng, current) == []
-    assert [m for _, m, _ in pinned(eng, current.replace("0.5", "0.4"))] == ["`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)"] * 2 + ["holds the kit 0.4 block, but the installed engine is framework 0.5"]
+    assert [m for _, m, _ in pinned(eng, current.replace("0.6", "0.5"))] == ["`framework: 0.5` does not match the installed engine 0.6.0.dev0 (framework 0.6)"] * 2 + ["holds the kit 0.5 block, but the installed engine is framework 0.6"]
 
 
 # -- G-D0's bootloader half (CE-38): the kit block and the contract it imports ----------------
@@ -1713,7 +1713,7 @@ def test_a_missing_import_target_fails_g_d0(eng):
 
 
 @pytest.mark.criterion("AC-58")
-@pytest.mark.parametrize("edit", [lambda t: t.replace("Never reuse or renumber an id.", "Never reuse an id."), lambda t: t + "\nour own rule\n", lambda t: t.replace("framework: 0.5", "framework: 0.6")])
+@pytest.mark.parametrize("edit", [lambda t: t.replace("Never reuse or renumber an id.", "Never reuse an id."), lambda t: t + "\nour own rule\n", lambda t: t.replace("framework: 0.6", "framework: 0.7")])
 def test_an_imported_contract_that_is_not_the_engines_fails_g_d0(eng, edit):
     copy_contract(eng, edit((K.KIT / K.CONTRACT).read_text(encoding="utf-8")))
     [(path, message, remedy)] = pinned(eng, booted())
@@ -1748,16 +1748,16 @@ def test_a_contract_that_is_not_utf8_is_a_red_and_orient_still_runs(eng, where):
 @pytest.mark.criterion("AC-58")
 def test_the_inline_block_from_before_the_bootloader_fails_g_d0_naming_the_upgrade(eng):
     copy_contract(eng)
-    inline = f"# Ours\n\n{K.BEGIN}\nframework: 0.5\n\n### Gate\n\n`make test`\n{K.END}\n"
+    inline = f"# Ours\n\n{K.BEGIN}\nframework: 0.6\n\n### Gate\n\n`make test`\n{K.END}\n"
     [(path, message, remedy)] = pinned(eng, inline)
-    assert path == "CLAUDE.md" and message == "holds a kit 0.5 block that copies the framework's rules instead of importing them"
+    assert path == "CLAUDE.md" and message == "holds a kit 0.6 block that copies the framework's rules instead of importing them"
     assert "`## Gate`" in remedy and "kit/bootloader.md" in remedy and "kit README § Upgrade" in remedy
 
 
 @pytest.mark.criterion("AC-58")
 @pytest.mark.parametrize("edit, says", [
-    (lambda t: t.replace("is never\nedited here", "may be\nedited here"), "the text between the kit 0.5 markers is not the engine's kit/bootloader.md block"),
-    (lambda t: t.replace(f"{K.END}\n", ""), "has the kit 0.5 begin marker but no end marker after it"),
+    (lambda t: t.replace("is never\nedited here", "may be\nedited here"), "the text between the kit 0.6 markers is not the engine's kit/bootloader.md block"),
+    (lambda t: t.replace(f"{K.END}\n", ""), "has the kit 0.6 begin marker but no end marker after it"),
 ])
 def test_a_hand_edited_bootloader_fails_g_d0(eng, edit, says):
     copy_contract(eng)
@@ -1787,7 +1787,7 @@ def test_a_missing_contract_fails_lint_and_the_contract_can_be_mapped(eng, tmp_p
     assert (f.path, f.message) == ("CLAUDE.md", "the contract CLAUDE.md does not exist") and "[engine]" in f.remedy
     (tmp_path / "context.toml").write_text(_toml({**CONFIG, "engine": {**CONFIG["engine"], "contract": "AGENTS.md"}}), encoding="utf-8")
     mapped = Engine(tmp_path, today=lambda: TODAY)
-    assert pinned(mapped, "framework: 0.4\n", name="AGENTS.md")[0][:2] == ("AGENTS.md", "`framework: 0.4` does not match the installed engine 0.5.0.dev0 (framework 0.5)")
+    assert pinned(mapped, "framework: 0.4\n", name="AGENTS.md")[0][:2] == ("AGENTS.md", "`framework: 0.4` does not match the installed engine 0.6.0.dev0 (framework 0.6)")
 
 
 # -- the other working-state guards (G-W1, G-W2, G-W5, G-W6) -------------------------------

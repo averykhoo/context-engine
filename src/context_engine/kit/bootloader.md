@@ -1,5 +1,5 @@
-<!-- context-engine kit 0.5 begin -->
-framework: 0.5
+<!-- context-engine kit 0.6 begin -->
+framework: 0.6
 
 This repo runs the context-engineering framework through `context-engine`. Its rules are the file
 imported on the next line, which the framework owns: an upgrade replaces it whole, so it is never
@@ -8,7 +8,7 @@ not in your context, read that file; if it is missing, run the engine's lint
 (`<engine-python> -m context_engine lint`), which names the fix.
 
 @docs/framework/contract.md
-<!-- context-engine kit 0.5 end -->
+<!-- context-engine kit 0.6 end -->
 
 ## Gate
 

@@ -9,6 +9,29 @@ first. A version's notes are added on top; an earlier version's notes are not re
 status is not here: it is on the board, and `context-engine coverage` prints it for each
 component, procedure and guard.
 
+## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
+
+- **An owner's decision is born ACCEPTED; an agent's call stays PROVISIONAL until reviewed.**
+  `record new` and `ask answer` give a decision in the owner's own words (`actor: owner` or
+  `human:<id>`, no `ruled_by`) `decision_status: ACCEPTED`; an agent's call, or a ruling on the
+  owner's delegation, is born PROVISIONAL. `decision accept <ids>` (MCP `decision_accept`) marks
+  reviewed calls ACCEPTED: ids, aliases and ranges (`D-86..90`) in one write and ONE `accept` op
+  line, which carries `ids` and `paths` (a new shape: every reader of an op line's `path` reads
+  `paths` too). `record new` refuses PROVISIONAL on the owner's own decision and ACCEPTED on an
+  agent's call; `decision set` refuses ACCEPTED; lint (G-W4) fails an agent's call ACCEPTED with
+  no `accept` line naming it. FRAMEWORK §6.5; DEC-162, CE-187.
+  **Upgrade:** add `ACCEPTED` to the decision kind's `decision_status` enum in `context.toml`
+  (after `BUILT`, as `context.toml.template` has it; G-D0 names it while it is missing), then run
+  `context-engine decision accept --owners` once: the owner's decisions recorded PROVISIONAL
+  before become ACCEPTED in one op line (DEC-174). Instructions that record owner words with
+  `--set decision_status=PROVISIONAL` drop it. Until the enum has ACCEPTED, the engine records
+  owner decisions PROVISIONAL as before.
+- **The contract** (`src/context_engine/kit/contract.md`): "Who decides" says a delegated ruling is PROVISIONAL like
+  any agent's call, and a new "Decision status" rule says when a decision is ACCEPTED; `context-engine
+  commit` is described as it works since CE-125 (this session's lines, and another's only where
+  they name a file the commit carries); a close's follow-up session starts with `session start
+  --follows <key>` (CE-132). Copy the new contract and bootloader block in (kit README § 4).
+
 ## 0.5, from 2026-10-30: changes since the cut
 
 - **A close is one call, and the banner holds durable lines only.** `session close` (MCP
