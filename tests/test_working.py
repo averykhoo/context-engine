@@ -18,6 +18,7 @@ from context_engine import ledger as L
 from context_engine import okf
 from context_engine.cli import main
 from context_engine.errors import Refusal
+from context_engine.guards import ask_options
 from context_engine.working import Engine, status_paths
 
 from conftest import ASK_BODY, _toml
@@ -502,6 +503,7 @@ ASK_MISREAD = [
     _ask(options=("**Pick one**", "- A. Normalise on read.", "- B. Normalise on write.")),  # a bold intro above the list is no option
     _ask(options=("**Note:** both are rough.", "- A. Normalise on read.", "- B. Normalise on write.")),  # nor a bold note
     _ask(options=("**A:** Normalise on read.", "  - every parser then does", "**B:** Normalise on write.")),  # a bold option's sub-bullet
+    _ask(options=("- <option>", "**A:** Normalise on read.", "**B:** Normalise on write.")),  # CE-201: a template's placeholder list item hides no bold options
 ]
 
 
@@ -537,6 +539,7 @@ def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommenda
     (_ask(options=("**Note:** both are rough.", "- A. Normalise on read.")), "lists 1 option under"),  # a bold note beside one list item is no option
     (_ask(options=("**A:** Normalise on read.", "  **Why:** every parser then does it.")), "lists 1 option under"),  # a bold note under a bold option is its text
     (_ask(options=("- A. Normalise on read.", "  **Why:** every parser then does it.", "  - and the writer too")), "lists 1 option under"),  # and leaves the item's sub-bullets its own
+    (_ask(options=("**A:** Normalise on read.", "**B:** Normalise on write.", "- Note: both are rough.")), "lists 1 option under"),  # CE-201: a list item beside bold options makes the list the options
     (_ask(rec=""), "has no recommendation"),
     (_ask(rec="<the option, and why in a line>"), "has no recommendation"),
     (_ask(rec="A."), "without reasoning (1 word;"),
@@ -550,7 +553,19 @@ def test_ask_new_refuses_a_question_lacking_a_part_and_writes_nothing(eng, body,
     with pytest.raises(Refusal, match=re.escape(says)) as exc:
         eng.ask_new("Which way?", body=body, **kw(key))
     assert "**Context:**" in exc.value.remedy and "none (needs human judgement)" in exc.value.remedy and "--body-file" in exc.value.remedy
+    assert "`###` heading each" in exc.value.remedy  # CE-201: the remedy says what counts as an option
     assert list(eng.store.heads("question")) == []
+
+
+@pytest.mark.criterion("AC-121")
+def test_ask_options_reads_bold_lines_only_where_options_has_no_list_item_or_heading():
+    """CE-201 (DEC-175 amended): list items and `###` headings are the options; bold-led lines
+    are only where Options has neither, a placeholder-only item aside. Two shapes are pinned as
+    read."""
+    assert ask_options("- <option>\n**A:** read\n**B:** write\n") == ["read", "write"]
+    assert ask_options("**A:** read\n  - x\n**B:** write\n") == ["read", "write"]  # control: indented detail is A's own
+    assert ask_options("**A:** read\n- x\n- y\n") == ["x", "y"]  # shape 1: unindented bullets under a bold option are the options
+    assert ask_options("**A:** read\n**B:** write\n- note: both rough\n") == ["note: both rough"]  # shape 2: a list item beside bold options wins
 
 
 @pytest.mark.criterion("AC-121")
@@ -616,12 +631,12 @@ def test_lint_g_w4_fails_an_open_question_lacking_a_part_and_passes_a_closed_one
     good = eng.ask_new("Which way?", body=ASK_BODY, **kw(key))
     past = eng.new("question", "Filed past ask new", body="**Question:** which?\n\n## Log\n", **kw(key))
     assert [(f.path, f.message) for f in eng.lint() if f.guard == "G-W4"] == [
-        (past.path.relative_to(eng.root).as_posix(), f"{past.id} is open but states no context: a `**Context:**` part saying what led to the question (and 2 more: lists 0 options under `**Options:**`, not two or more (one list item each); has no recommendation: a `**Recommendation:**` part with the option and why)")]
+        (past.path.relative_to(eng.root).as_posix(), f"{past.id} is open but states no context: a `**Context:**` part saying what led to the question (and 2 more: lists 0 options under `**Options:**`, not two or more (one list item or `###` heading each, or one bold-led line each where it has neither); has no recommendation: a `**Recommendation:**` part with the option and why)")]
     text = good.path.read_text(encoding="utf-8")
     good.path.write_text(text.replace("- B. that way\n", ""), encoding="utf-8")  # a hand edit drops an option
     found = {f.path: f for f in eng.lint() if f.guard == "G-W4"}
     rel = good.path.relative_to(eng.root).as_posix()
-    assert found[rel].message == f"{good.id} is open but lists 1 option under `**Options:**`, not two or more (one list item each)"
+    assert found[rel].message == f"{good.id} is open but lists 1 option under `**Options:**`, not two or more (one list item or `###` heading each, or one bold-led line each where it has neither)"
     assert f"task section {good.id}" in found[rel].remedy and "**Recommendation:**" in found[rel].remedy
     eng.ask_answer(good.id, "this way", title="This way", **kw(key))  # closed: its answer is a decision, the question history
     assert rel not in {f.path for f in eng.lint() if f.guard == "G-W4"}

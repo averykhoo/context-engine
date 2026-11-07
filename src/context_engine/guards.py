@@ -2360,7 +2360,13 @@ def ask_options(part: str) -> list[str]:
     sub-bullet; everything under a `###` option, a list or a bold `**Pros:**` line, is its text;
     and a line indented past a bold option is that option's text. None of those is another option
     (CE-158, DEC-175). Tabs count as four columns. One that says nothing but a template
-    placeholder counts as none."""
+    placeholder counts as none.
+
+    Two shapes read as the CommonMark reader would, and are pinned as such (CE-201): a bold
+    option with unindented bullets under it reads as those bullets (`**A:** read` then `- x`,
+    `- y` is the options x and y); bold options beside an unindented list item read as that
+    list (`**A:** ...`, `**B:** ...`, `- note` is one option). Indent a note under its option,
+    or write the options as list items."""
     items: list[str] = []  # list items and `###` headings
     bold: list[str] = []  # bold-led lines that no option above owns
     sub = None  # the column from which a line belongs to the option above it
@@ -2404,7 +2410,10 @@ def ask_problems(body: str) -> list[str]:
 
     Not checked: whether the context, the options or the reasoning are any good (a judgement),
     that the recommendation names one of the options, a closed question (its answer is a
-    decision; it is history), and, in a body of plain labels only, a prose line led by a part's
+    decision; it is history), that bold options and a list are not mixed (a bold option with
+    unindented bullets under it reads as those bullets; bold options beside an unindented list
+    item read as the list, so indent a note under its option or write the options as list
+    items: ``ask_options``, CE-201), and, in a body of plain labels only, a prose line led by a part's
     name (`Options: ...`), which opens that part: only the writer knows it is prose."""
     parts = ask_parts(body)
     out: list[str] = []
@@ -2412,7 +2421,7 @@ def ask_problems(body: str) -> list[str]:
         out.append("states no context: a `**Context:**` part saying what led to the question")
     options = ask_options(parts.get("options", ""))
     if len(options) < 2:
-        out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item each)")
+        out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item or `###` heading each, or one bold-led line each where it has neither)")
     rec = _said(parts.get("recommendation", ""))
     words = len(rec.split())
     if not rec:
@@ -2424,7 +2433,7 @@ def ask_problems(body: str) -> list[str]:
     return out
 
 
-ASK_REMEDY = ("give the question a `**Context:**` part, two or more `**Options:**` (one list item each) and a `**Recommendation:**` "
+ASK_REMEDY = ("give the question a `**Context:**` part, two or more `**Options:**` (one list item or `###` heading each, or one bold-led line each where it has neither) and a `**Recommendation:**` "
               "with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>` (FRAMEWORK §5.3; "
               "manual-mode.md § context-engine ask new has the template)")
 
