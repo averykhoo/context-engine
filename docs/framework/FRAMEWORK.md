@@ -1405,7 +1405,8 @@ applies the born-ACCEPTED rule to those recorded before, in one line.
 - `relaxes` / `narrowed by`;
 - `creates / amends / retires: S-n, C-n`. These feed the census and trace-check, **not** a
   freshness guard (P13);
-- `tasks`, `code` (`file` or `file::symbol`) and `refs` (any other record), which `why()` reads.
+- `tasks`, `code` (`file` or `file::symbol`) and `refs` (any other record, a decision this one
+  relates to without narrowing or replacing it included), which `why()` reads.
 
 **Amendments** are dated entries under `## Amendments`, keyed by session and actor, never edits
 to the body.
@@ -2120,6 +2121,13 @@ doc measured before the trial starts.
   names who really ruled, a text written by hand with a `## Amendments` line of its own (at rest
   it reads as a real amendment; the writes refuse one whatever `[guards] off` names, §6.5), and a
   superseded decision (history). Off while `[working] decision` is unset.
+- **G-I4:** no two current decisions share a title. Titles are compared with case and
+  runs of whitespace ignored, and each decision after the first of a shared title, in id order,
+  fails, naming the earlier ones; a superseded decision is history and is not read. A decision
+  recorded to replace another shares its title until `decision.supersede` runs, so the check is
+  lint's, not the write's. Not checked: titles that differ in a word or in punctuation (a
+  paraphrase), and two current decisions that conflict in meaning under different titles (no
+  semantic check). Off while `[working] decision` is unset.
 
 The correctness chain's guards (G-I1, G-I2, G-T1, G-T2, G-T6) read what config names: `[guards]
 charter`, `stories` (the story kind) and `tests`, the claim pattern `[guards] claim` (one group,

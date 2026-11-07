@@ -46,6 +46,16 @@ component, procedure and guard.
   refusing: after its title, else first after its frontmatter, else as its first line; it refuses,
   writing nothing, only when that line would fall outside G-D4's window. FRAMEWORK §7.2; DEC-200,
   DEC-201, DEC-202, CE-172.
+- **Lint G-I4 fails two current decisions with one title.** Each decision that is not `status:
+  deprecated` and whose title, case and runs of whitespace aside, equals an earlier one's (in id
+  order) fails, naming the earlier ids; its remedy is `decision supersede` when one replaces the
+  other, or a retitle with `decision set <id> --set title=...`. No write refuses a duplicate, since
+  a replacement shares its title until the supersede runs; `[guards] off` may name G-I4, and it is
+  off without `[working] decision`. `decision link` to a decision without `--rel` now names `--rel
+  refs` (a decision it only relates to) beside `--rel relaxes` (one it narrows): those are the
+  relates and narrows links. FRAMEWORK §6.5, §8.1 G-I4; DEC-162, DEC-214 to DEC-217, CE-189.
+  **Upgrade:** a repo with two current decisions of one title supersedes one (`decision supersede
+  <old> <new>`) or retitles one before the first lint under this engine.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

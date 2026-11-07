@@ -18,7 +18,8 @@ The correctness chain (G-I1, G-I2, G-T1, G-T2, G-T6; CE-25) reads ``[guards] cha
 and red when a set path is missing or a source yields nothing (no goal row, no criterion row, no
 claim), so a reworded table or a pattern that does not fit cannot pass by finding nothing.
 G-I3 (CE-113) reads the ``[working] decision`` kind's current records: a ruling made on the owner's
-delegation names who ruled (`ruled_by`) and keeps the owner's words apart from it.
+delegation names who ruled (`ruled_by`) and keeps the owner's words apart from it. G-I4 (CE-189)
+reads them too: no two current decisions share a title.
 
 ``framework_status`` (CE-141) is no guard: it reads what G-D12 reads, the board and the guard ids lint
 reports, and gives each item of the spec one build status, on demand (`context-engine coverage`).
@@ -2526,6 +2527,46 @@ def delegated_rulings(e: Engine) -> list[Failure]:
     return out
 
 
+def decision_titles(e: Engine) -> list[Failure]:
+    """G-I4 (CE-189, DEC-162): no two current decisions (`[working] decision`; a `status:
+    deprecated` one is history, as G-I3 reads it) share a title, compared case-folded with runs of
+    whitespace collapsed. Each record after the first of a shared title, in id-number order, fails,
+    naming the earlier ones. A decision recorded to replace another shares its title until
+    `decision supersede` runs, so this is lint's check and no write refuses it. Off while
+    `[working] decision` is unset.
+
+    Not checked: titles that differ in a word or in punctuation (a paraphrase reads as two
+    decisions), two current decisions that conflict in meaning under different titles (no semantic
+    detection, DEC-162), and a superseded decision (history)."""
+    if not e.w.decision:
+        return []
+    st = e.store
+    kind = st.config.kind(e.w.decision)
+    seen: dict[str, list[tuple[int, str, str, str]]] = {}
+    for path in st._files(kind):
+        try:
+            doc = st.read(path)
+        except Exception:
+            continue  # the schema check reports an unreadable record
+        if doc.get("status") == "deprecated":
+            continue
+        title = str(doc.get("title") or "")
+        key = " ".join(title.split()).casefold()
+        if not key:
+            continue  # the schema check reports a missing title
+        rid = str(doc.get("id"))
+        m = kind.id_re.match(rid)
+        seen.setdefault(key, []).append((int(m.group(1)) if m else 10**9, rid, title, st._rel(path)))
+    out = []
+    for recs in seen.values():
+        recs.sort()
+        for i, (_, rid, title, rel) in enumerate(recs[1:], 1):
+            earlier = [r[1] for r in recs[:i]]
+            out.append(Failure("G-I4", rel, f"{rid} has the same title as {', '.join(earlier)} (`{title}`), and none of them is superseded, so one decision is recorded twice or two current decisions conflict",
+                               f"if {rid} replaces {earlier[-1]}, run `decision supersede {earlier[-1]} {rid}`; if both stand, retitle one to say how it differs: `decision set <id> --set title=\"<title>\"`"))
+    return out
+
+
 def story_fields(e: Engine) -> list[Failure]:
     """G-I2: every story (`[guards] stories`) that is not retired has an actor from the
     vocabulary (`owner`, `human:<id>`, `agent (reconstructed from ...)`), a date and a
@@ -2699,4 +2740,4 @@ def source_problems(cid: str, source: str, known: set[str], names: str) -> list[
 
 
 def intent(e: Engine) -> list[Failure]:
-    return goals(e) + story_fields(e) + delegated_rulings(e) + specified(e) + claims(e) + sources(e)
+    return goals(e) + story_fields(e) + delegated_rulings(e) + decision_titles(e) + specified(e) + claims(e) + sources(e)

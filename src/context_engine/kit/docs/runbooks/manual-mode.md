@@ -772,6 +772,16 @@ first bullet's check that every record parses.
   names). *Why:
   a ruling stamped `actor: owner`, or quoted as the owner's words, becomes frozen owner intent that
   nobody can amend away (FRAMEWORK §6.5).*
+- **G-I4**, duplicate titles (only when `[working] decision` is set). No two decisions that are
+  not `status: deprecated` have the same `title`, compared with case ignored and each run of
+  spaces read as one space; REJECTED and DEFERRED decisions count. Taking the decisions in id
+  order (by number, so 9 before 10), each one after the first of a shared title fails, naming the
+  earlier ones. Fix it with `decision supersede <earlier> <later>` when the later replaces the
+  earlier, or else retitle one to say how it differs (§ context-engine decision set). Not read:
+  titles that differ in a word or in punctuation, two decisions that conflict in meaning under
+  different titles, and a superseded decision. *Why: two current records with one title are one
+  decision recorded twice (a replacement recorded with the old title and never superseded in) or
+  two that conflict; either way `decision find` shows both as standing.*
 - **G-D12** (only when `[guards]` sets `coverage_spec` or `coverage_maps`; red if only one is
   set, if the spec is missing, or if the `coverage_maps` glob is absolute or has a `..`, matches
   no file, or matches a file with no `YYYY-MM-DD` in its name): outside fenced code in the spec,
@@ -1941,7 +1951,9 @@ Whether the owner really reviewed the calls is the caller's word: the line recor
 
 Add `<target>` to one link field of a decision. `--rel` names the field; without it, a board
 item's id goes to `tasks` and anything with `::` or `/` to `code`; a decision needs
-`--rel relaxes` (which also adds this decision to the other's `narrowed_by`). Check the target
+`--rel relaxes` for one this decision narrows (which also adds this decision to the other's
+`narrowed_by`) or `--rel refs` for one it only relates to; one it replaces is § context-engine
+decision supersede. Check the target
 first: a record id must exist; a criterion id must be a row (`| AC-n |`) of the criteria file
 `[working] criteria` names; any other id is refused; a `code` path must be written from the
 repo root with `/` (no `\`, no `..`, no leading `/` or drive), name a file (not a directory or

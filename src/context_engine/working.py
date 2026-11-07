@@ -2556,7 +2556,7 @@ class Engine:
             if kind in (self.w.board or ()):
                 return "tasks"
             if kind == self._decision_kind():
-                raise Refusal(f"{target} is a decision", "use `decision supersede`, or `--rel relaxes` for a decision this one narrows")
+                raise Refusal(f"{target} is a decision", "use `decision supersede` for a decision this one replaces, `--rel relaxes` for one it narrows (it also writes the other's `narrowed_by`), or `--rel refs` for one it only relates to")
         raise Refusal(f"cannot tell how {target!r} is linked", f"pass --rel, one of {', '.join(LINK_RELS)}")
 
     def _code_exists(self, target: str) -> None:

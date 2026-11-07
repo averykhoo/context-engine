@@ -1838,3 +1838,98 @@ def test_task_set_refuses_a_bad_or_expired_stale_after_from_the_cli(eng, value, 
     assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "task", "set", tid, "--set", f"stale_after={value}"]) == 2
     assert "stale_after" in capsys.readouterr().err
     assert path.read_bytes() == before
+
+
+# -- G-I4: no two current decisions share a title (CE-189, DEC-162) ---------------------------------
+
+
+def g_i4(e):
+    return [f for f in e.lint() if f.guard == "G-I4"]
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_fails_the_later_of_two_current_decisions_with_one_title(eng):
+    dec(eng, "Layout B"), dec(eng, "Layout B")
+    got = g_i4(eng)
+    assert [f.path for f in got] == [eng.store._rel(eng.store.get("D-2").path)]
+    assert got[0].message.startswith("D-2 has the same title as D-1 (`Layout B`)")
+    assert "decision supersede D-1 D-2" in got[0].remedy and "decision set <id> --set title=" in got[0].remedy
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_names_every_earlier_holder_of_the_title(eng):
+    for _ in range(3):
+        dec(eng, "Layout B")
+    got = {f.path: f.message for f in g_i4(eng)}
+    rel = {rid: eng.store._rel(eng.store.get(rid).path) for rid in ("D-1", "D-2", "D-3")}
+    assert set(got) == {rel["D-2"], rel["D-3"]}
+    assert got[rel["D-2"]].startswith("D-2 has the same title as D-1 (")
+    assert got[rel["D-3"]].startswith("D-3 has the same title as D-1, D-2 (")
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_ignores_case_and_runs_of_whitespace(eng):
+    dec(eng, "Layout B"), dec(eng, "LAYOUT   b")
+    got = g_i4(eng)
+    assert len(got) == 1 and got[0].message.startswith("D-2 has the same title as D-1 (`LAYOUT")
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_passes_titles_that_differ_in_a_word_or_in_punctuation(eng):
+    dec(eng, "Layout B"), dec(eng, "Layout B."), dec(eng, "Layout C")
+    assert g_i4(eng) == []
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_passes_once_one_of_the_pair_is_superseded(eng):
+    """The DEC-91/DEC-92 case: a replacement recorded with the old title, then superseded in."""
+    dec(eng, "Layout B"), dec(eng, "Layout B")
+    assert len(g_i4(eng)) == 1
+    eng.supersede("D-1", "D-2", **W)
+    assert g_i4(eng) == []
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_counts_rejected_and_built_decisions_as_current(eng):
+    dec(eng, "Layout B", status="REJECTED"), dec(eng, "Layout B", status="BUILT")
+    assert [f.message[:3] for f in g_i4(eng)] == ["D-2"]
+
+
+@pytest.mark.criterion("AC-191")
+def test_guards_off_g_i4_silences_it(tmp_path):
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "guards": {"off": ["G-I4"]}}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    dec(e, "Layout B"), dec(e, "Layout B")
+    assert G.decision_titles(e) != [] and g_i4(e) == []
+
+
+@pytest.mark.criterion("AC-191")
+def test_g_i4_is_off_with_no_working_decision(tmp_path):
+    working = {k: v for k, v in CONFIG["working"].items() if k != "decision"}
+    (tmp_path / "context.toml").write_text(_toml({**CONFIG, "working": working}), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
+    dec(e, "Layout B"), dec(e, "Layout B")
+    assert len(list(e.store.records("decision"))) == 2
+    assert G.decision_titles(e) == []
+
+
+@pytest.mark.criterion("AC-191")
+def test_lint_g_i4_orders_by_id_number_not_file_name(eng):
+    """D-10's file name sorts before D-9's, but D-9 is the earlier decision."""
+    for n in range(1, 11):
+        dec(eng, "Dup" if n >= 9 else f"Distinct {n}")
+    got = g_i4(eng)
+    assert [f.path for f in got] == [eng.store._rel(eng.store.get("D-10").path)]
+    assert got[0].message.startswith("D-10 has the same title as D-9 (")
+    assert "decision supersede D-9 D-10" in got[0].remedy
+
+
+def test_link_to_a_decision_without_rel_names_refs_and_relaxes_and_refs_writes_no_backlink(eng):
+    """DEC-162's relates link is `refs` (CE-5): the refusal for a bare decision target names it."""
+    a, b = dec(eng, "Strict rule"), dec(eng, "A related rule")
+    with pytest.raises(Refusal) as err:
+        eng.link(b, a, **W)
+    assert "--rel refs" in err.value.remedy and "--rel relaxes" in err.value.remedy and "decision supersede" in err.value.remedy
+    assert eng.link(b, a, "refs", **W) == f"{b}: refs + {a}"
+    assert eng.store.get(b).doc.get("refs") == [a]
+    assert eng.store.get(a).doc.get("narrowed_by") is None

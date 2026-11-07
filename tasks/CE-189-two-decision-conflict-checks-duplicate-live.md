@@ -28,3 +28,5 @@ Source: DEC-162, adopting docs/evidence/owner-review-advice-2026-11-06b.md § 2.
 - docs/evidence/owner-review-advice-2026-11-06b.md § 2
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-opus-5-5): Built (uncommitted, for verification): new intent guard G-I4 (guards.py::decision_titles, FRAMEWORK §8.1), two current decisions with one title; the relates/narrows half was already built in CE-5 as `refs` and `relaxes`/`narrowed_by`, so only working.py::Engine._link_rel remedy and manual-mode § context-engine decision link now name `--rel refs`. AC-191; DEC-214 to DEC-217.
