@@ -762,3 +762,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** by design, DEC-175 amended
 - **control:** individual: manual-mode § ask new says to write the list at the bold line's column
 - **from:** CE-158, session 2026-11-07d
+
+## INV-108: In full lint G-D11 reports a record that does not parse a second time, though the runbook says every other guard passes over it
+
+- **affects:** anyone reading lint output
+- **why not eliminated:** cosmetic, found after PASS
+- **control:** individual: manual-mode § context-engine lint
+- **from:** CE-161, session 2026-11-07d
+
+## INV-109: A NOW item that does not parse drops out of the G-W5 caps, so lint can add a misleading NOW-short failure beside its schema failure
+
+- **affects:** anyone reading lint output
+- **why not eliminated:** the skip is whole-run by design (DEC-176)
+- **control:** individual: the schema failure names the file first
+- **from:** CE-161, session 2026-11-07d
+
+## INV-110: lint --working now reads every record whole: 5.4s more on this tree (measured 2026-11-07)
+
+- **affects:** sessions running lint --working
+- **why not eliminated:** the parse check is what makes the skip visible
+- **control:** individual: only the lint op calls it; orient does not
+- **from:** CE-161, session 2026-11-07d

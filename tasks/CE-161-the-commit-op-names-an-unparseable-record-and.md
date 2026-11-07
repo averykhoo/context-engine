@@ -4,13 +4,15 @@ id: CE-161
 title: The commit op names an unparseable record and refuses only for records it carries
 brief: CE-134 residual (d6a2fa5); a hand edit is legal and caught by lint, not by a crash
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-5]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-07d
 updated: 2026-11-07d
+status: deprecated
+closed: 2026-11-07d
 ---
 
 The commit op names an unparseable record and refuses only for the records it carries.
@@ -29,3 +31,5 @@ Source: CE-134's close (d6a2fa5), residual. Through the `commit` op the first re
 ## Log
 
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: G-5: a legal hand edit crashes every commit without naming the file, and commit refuses even for records it does not carry.
+- 2026-11-07d (claude-code/claude-opus-5-5): closed: built and verified (independent PASS, round 2): a record that does not parse is a lint failure naming it, never a crash; commit refuses only when it carries it
+  residual risk: INV-108, INV-109, INV-110
