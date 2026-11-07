@@ -2352,28 +2352,36 @@ def ask_parts(body: str) -> dict[str, str]:
 
 
 def ask_options(part: str) -> list[str]:
-    """The options an `Options` part lists (``ASK_OPTION_RE``): one per list item, `###` heading
-    or line led by a bold label (`**A:** ...`, or a whole option in bold). A list item indented to
-    the text of the item above it, or past it, is that item's sub-bullet, and a list under a `###`
-    or a bold option is that option's own text: neither is another option (CE-158). Tabs count as
-    four columns. One that says nothing but a template placeholder counts as none."""
-    out: list[str] = []
-    sub = None  # the column from which a list item belongs to the option above it
+    """The options an `Options` part lists (``ASK_OPTION_RE``): one per list item or `###`
+    heading; or, in a part that lists neither (placeholders aside), one per line led by a bold
+    label (`**A:** ...`, or a whole option in bold), so a bold intro or note above a list
+    (`**Pick one**`, `**Note:** ...`) is no option. A line indented to the text of the list item
+    above it, or past it, is that item's own text, a bold note (`  **Why:** ...`) as much as a
+    sub-bullet; everything under a `###` option, a list or a bold `**Pros:**` line, is its text;
+    and a line indented past a bold option is that option's text. None of those is another option
+    (CE-158, DEC-175). Tabs count as four columns. One that says nothing but a template
+    placeholder counts as none."""
+    items: list[str] = []  # list items and `###` headings
+    bold: list[str] = []  # bold-led lines that no option above owns
+    sub = None  # the column from which a line belongs to the option above it
     for ln in part.split("\n"):
         m = ASK_OPTION_RE.match(ln.expandtabs(4))
         if not m:
             continue
+        if m["htext"] is not None:
+            items.append(m["htext"])
+            sub = 0  # a `###` option owns everything under it
+            continue
+        if sub is not None and len(m["indent"]) >= sub:
+            continue  # the text of the option above: a sub-bullet, or a bold note under it
         if m["text"] is not None:
-            if sub is not None and len(m["indent"]) >= sub:
-                continue
-            text, sub = m["text"], m.start("text")
-        elif m["htext"] is not None:
-            text, sub = m["htext"], 0
+            items.append(m["text"])
+            sub = m.start("text")
         else:
-            text, sub = (m["btext"] if m["btext"].strip() else m["blabel"]), 0
-        if _said(text):
-            out.append(text)
-    return out
+            bold.append(m["btext"] if m["btext"].strip() else m["blabel"])
+            sub = len(m["indent"]) + 1  # a bold line owns only what is indented past it
+    said = [t for t in items if _said(t)]
+    return said or [t for t in bold if _said(t)]
 
 
 def _said(text: str) -> str:
@@ -2387,8 +2395,8 @@ def _said(text: str) -> str:
 def ask_problems(body: str) -> list[str]:
     """What an owner question's body lacks of the three parts every question states (FRAMEWORK
     §5.3, DEC-34 and its amendment): context (`Context` or `Background`); two or more options,
-    one list item, `###` heading or bold-led line each, under `Options` (``ask_options``: a
-    sub-bullet is no option); and a recommendation with its reasoning (at least
+    one list item or `###` heading each, under `Options`, or one bold-led line each where it has
+    neither (``ask_options``: a sub-bullet or a note is no option); and a recommendation with its reasoning (at least
     ``RECOMMENDATION_MIN_WORDS`` words), or `none` saying which exemption applies (too costly to
     reach, or it needs human judgement) and why. `ask new` refuses a body that lacks one; G-W4
     fails an open question that does. A part is a heading, a bold label or a plain label

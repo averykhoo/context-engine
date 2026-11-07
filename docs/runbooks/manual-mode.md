@@ -1090,15 +1090,18 @@ As `task new` with kind question, default `pri: NEXT`, plus `last_asked:` (null)
 `blocks: [...]` if it blocks items. The body states three parts, and the engine refuses one
 that lacks any (with `--body` or `--body-file`; with neither it refuses too): **context**, under
 `Context` or `Background`; **two or more options**, one list item (`- A. ...`, `1. ...`, `A)
-...`), `###` heading or line led by a bold label (`**A:** ...`) each, under `Options`; and a
-**recommendation with its reasoning**, at least five words, or `none` saying which exemption
-applies (too costly to reach, or it needs human judgement) and why. A part is a heading (`##
+...`) or `###` heading each, under `Options`, or, where it has neither, one line led by a bold
+label (`**A:** ...`) each; and a **recommendation with its reasoning**, at least five words,
+or `none` saying which exemption applies (too costly to reach, or it needs human judgement) and
+why. A part is a heading (`##
 Options`), a bold label naming one of the parts (`**Options:**`) or, in a body that writes none
 of its parts as a heading or a bold label, a plain one (`Options:`); any other such line is text
 of the part it is in, and only the heading `## Log` ends the body (a `Log:` line is prose). A
-list item indented to the text of the one above it is its sub-bullet, and a list under a `###`
-or bold option is that option's text, so neither is another option. A `<...>` placeholder counts
-as nothing. The template:
+line indented to the text of the list item above it is that item's text (a sub-bullet, or a bold
+`**Why:**` note), everything under a `###` option is its text, and a line indented past a bold
+option is its text, so none of them is another option; beside a list, a bold intro or note
+(`**Pick one**`, `**Note:** ...`) is no option either. A `<...>` placeholder counts as nothing.
+The template:
 
 ```
 **Question:** <title>

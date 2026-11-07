@@ -499,6 +499,9 @@ ASK_MISREAD = [
     _ask(context="\nQuestion: which parser wins was first asked in CE-12."),  # a prose `Question:` line took the context
     _ask(rec="\nA.\nBackground: every reader then sees one form, so nothing is normalised twice."),  # and the reasoning
     ASK_PLAIN_LOG,  # in a body of plain labels too
+    _ask(options=("**Pick one**", "- A. Normalise on read.", "- B. Normalise on write.")),  # a bold intro above the list is no option
+    _ask(options=("**Note:** both are rough.", "- A. Normalise on read.", "- B. Normalise on write.")),  # nor a bold note
+    _ask(options=("**A:** Normalise on read.", "  - every parser then does", "**B:** Normalise on write.")),  # a bold option's sub-bullet
 ]
 
 
@@ -529,6 +532,11 @@ def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommenda
     (_ask(options=("- A. Normalise on read.", "  - which every parser then does",)), "lists 1 option under"),  # CE-158: a sub-bullet is no option
     (_ask(options=("1. Normalise on read.", "   - which every parser then does", "\t- and the writer too")), "lists 1 option under"),
     (_ask(options=("### A. Normalise on read", "", "- every parser then does", "- and the writer too")), "lists 1 option under"),  # a list under a `###` option is its text
+    (_ask(options=("- A. Normalise on read.", "  **Why:** every parser then does it.")), "lists 1 option under"),  # a bold note under a list item is its text
+    (_ask(options=("### A. Normalise on read", "**Pros:** cheap", "**Cons:** slow")), "lists 1 option under"),  # and under a `###` option
+    (_ask(options=("**Note:** both are rough.", "- A. Normalise on read.")), "lists 1 option under"),  # a bold note beside one list item is no option
+    (_ask(options=("**A:** Normalise on read.", "  **Why:** every parser then does it.")), "lists 1 option under"),  # a bold note under a bold option is its text
+    (_ask(options=("- A. Normalise on read.", "  **Why:** every parser then does it.", "  - and the writer too")), "lists 1 option under"),  # and leaves the item's sub-bullets its own
     (_ask(rec=""), "has no recommendation"),
     (_ask(rec="<the option, and why in a line>"), "has no recommendation"),
     (_ask(rec="A."), "without reasoning (1 word;"),
