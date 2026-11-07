@@ -741,3 +741,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** rewording costs another contract bump
 - **control:** individual: the existing never-hand-edit-what-an-op-owns convention; manual-mode § context-engine decision accept
 - **from:** CE-187, session 2026-11-07d
+
+## INV-105: manual-mode § orient still omits seven parts orient emits, so a by-hand orient misses them
+
+- **affects:** agents in manual mode
+- **why not eliminated:** outside CE-156's list
+- **control:** individual: CE-200
+- **from:** CE-156, session 2026-11-07d
