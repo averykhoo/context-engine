@@ -3,14 +3,14 @@ type: Task
 id: CE-156
 title: Runbook and kit README text the 2026-10-30a builds left stale
 brief: 'Both runbooks are kit copies kept byte-equal: fix each line in both'
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-11-06c
+moved: 2026-11-07d
+updated: 2026-11-07d
 ---
 
 Runbook and kit README text the 2026-10-30a builds left stale.
