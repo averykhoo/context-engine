@@ -3,13 +3,15 @@ type: Task
 id: CE-179
 title: 'G-W4: a bulk import does not derive status: deprecated from state: closed'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-6]
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 G-W4: a bulk import does not derive status: deprecated from state: closed.
@@ -25,3 +27,5 @@ G-W4: a bulk import does not derive status: deprecated from state: closed.
 ## Log
 
 - 2026-11-03b (claude-code/claude-opus-5-5): Found in CE-167 (first-hand): G-W4 wants status: deprecated on every closed item, but Store.create_many does not derive it from state: closed (249 lines). Fix: derive the OKF status at import. Evidence: docs/evidence/ce167-zanzibar-cutover-2026-11-03.md § Engine findings
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: derive status: deprecated from state: closed at Store.new/create_many; a contradicting status is refused (commits 082b797, 154fab7, 80ea02e, 74afb9c; DEC-186..188)
+  residual risk: INV-128, INV-129, INV-130

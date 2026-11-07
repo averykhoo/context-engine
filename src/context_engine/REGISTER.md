@@ -902,3 +902,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** DEC-184 chose prose over a pin
 - **control:** individual: DEC-184
 - **from:** CE-200, session 2026-11-07e
+
+## INV-128: The refusal path through Store.new is not tested; T2 tests only derivation and no engine caller reaches that refusal today
+
+- **affects:** a future caller of Store.new that passes a contradicting status
+- **why not eliminated:** no caller reaches the refusal so a test was not required by the plan
+- **control:** reduce: tests/test_store.py derivation test (T2)
+- **from:** CE-179, session 2026-11-07e
+
+## INV-129: AC-189 'its other keys unchanged' is not asserted directly; only the doc state/status and the caller-dict-unchanged asserts cover it
+
+- **affects:** a change to derivation that alters other keys unnoticed
+- **why not eliminated:** indirect asserts were judged enough by the verifier
+- **control:** reduce: tests/test_store.py caller-dict-unchanged and doc state/status asserts
+- **from:** CE-179, session 2026-11-07e
+
+## INV-130: DEC-186..188 are not linked to CE-179 by decision link
+
+- **affects:** a reader tracing CE-179 to its decisions
+- **why not eliminated:** the plan did not require it
+- **control:** individual: commit titles and the CE-179 close commit cite DEC-186..188
+- **from:** CE-179, session 2026-11-07e
