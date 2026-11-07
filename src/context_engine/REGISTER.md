@@ -748,3 +748,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** outside CE-156's list
 - **control:** individual: CE-200
 - **from:** CE-156, session 2026-11-07d
+
+## INV-106: ask_options' placeholder clause is untested: a sabotage of it stayed green
+
+- **affects:** owner-question refusals
+- **why not eliminated:** found by the final verifier, after PASS
+- **control:** individual: CE-201
+- **from:** CE-158, session 2026-11-07d
+
+## INV-107: A bold intro with its list indented under it reads as one option (a known false refusal)
+
+- **affects:** agents writing owner questions
+- **why not eliminated:** by design, DEC-175 amended
+- **control:** individual: manual-mode § ask new says to write the list at the bold line's column
+- **from:** CE-158, session 2026-11-07d
