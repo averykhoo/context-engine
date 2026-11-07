@@ -1566,7 +1566,9 @@ it. Neither is a milestone: the next commit carries the file and the op line.
    every row of the file and every id a `criterion.new` op line created, so an id is never handed
    out twice (P3), even after a row was deleted. Sessions drafting at once in separate worktrees do
    not see each other's rows: take ids from a block handed out for the purpose and pass `--id`.
-   G-D2 and the duplicate-row check (G-T1, G-T2, G-T6) red a clash once the work is merged.
+   A given id keeps the rows' prefix (any prefix while there are no rows): a second prefix leaves
+   the next id unclear, so the engine refuses one. G-D2 and the duplicate-row check (G-T1, G-T2,
+   G-T6) red a clash once the work is merged.
 3. Check what the row will say, as the guards will read it. Its source names at least one story or
    decision that exists (G-T6). Its status is `planned`, `tested`, `manual`, `deviates` or `retired`.
    `tested` or `manual` only once a test or driver claims the id under `[guards] tests` (the

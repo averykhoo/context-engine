@@ -3,7 +3,7 @@ type: Task
 id: CE-151
 title: record new refuses a decision given --set supersedes or --set superseded_by
 brief: Only decision supersede writes a supersede link, both sides at once (CE-149 residual, 345a14a)
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-2]

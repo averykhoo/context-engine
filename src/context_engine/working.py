@@ -2536,11 +2536,16 @@ class Engine:
         logged = {str(op.get("id")) for _, op in G._ops(self) if isinstance(op, dict) and op.get("op") == "criterion.new"}
         return set(CRITERION_ROW_RE.findall(raw.replace("\r\n", "\n"))), logged
 
+    @staticmethod
+    def _criterion_prefixes(raw: str) -> list[str]:
+        """The id prefixes leading the criteria tables' rows, sorted (one, or none, in a file the ops wrote)."""
+        rows = [cells[0] for p in CR.places(raw) for _, cells in p.table.body if cells and G.ROW_ID_RE.fullmatch(cells[0])]
+        return sorted({r.rsplit("-", 1)[0] for r in rows})
+
     def _next_criterion(self, raw: str) -> str:
         """The next criterion id: the rows' prefix (AC with none), above every row and every logged
         `criterion.new` (DEC-118)."""
-        rows = [cells[0] for p in CR.places(raw) for _, cells in p.table.body if cells and G.ROW_ID_RE.fullmatch(cells[0])]
-        prefixes = sorted({r.rsplit("-", 1)[0] for r in rows})
+        prefixes = self._criterion_prefixes(raw)
         if len(prefixes) > 1:
             raise Refusal(f"the criteria rows use {len(prefixes)} id prefixes ({', '.join(prefixes)}), so the next id is not clear", "pass --id with the next free id of the series you mean")
         prefix = prefixes[0] if prefixes else CR.PREFIX
@@ -2557,6 +2562,10 @@ class Engine:
             kind = None
         if kind is not None:
             raise Refusal(f"{cid} is in the {kind.name} series ({kind.prefix}-n), not a criterion id", "give a criterion id, or leave --id out for the next free one")
+        prefixes = self._criterion_prefixes(raw)  # CE-160: a second prefix leaves `criterion new` with no next id
+        if prefixes and cid.rsplit("-", 1)[0] not in prefixes:
+            raise Refusal(f"{cid} is outside the criteria rows' series ({', '.join(f'{x}-n' for x in prefixes)}): a row with a second prefix leaves every later `criterion new` without --id refused",
+                          f"give an id of the rows' series ({', '.join(f'{x}-n' for x in prefixes)}), or leave --id out for the next free one")
         rows, logged = self._criterion_ids(raw)
         if cid in rows:
             raise Refusal(f"{cid} already leads a row of {self.w.criteria}", "ids are never reused (P3): leave --id out for the next free one; to change that row, `criterion set`")

@@ -3,14 +3,14 @@ type: Task
 id: CE-160
 title: criterion new --id refuses a prefix outside the rows' series
 brief: CE-42 residual (f85e632); a foreign prefix blocks every later criterion new
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 criterion new --id refuses a prefix outside the rows' series.

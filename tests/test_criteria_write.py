@@ -126,6 +126,23 @@ def test_a_criterion_write_is_one_line_over_the_mcp_path_and_rides_along(repo):
     assert code == 0 and line == "AC-4: criterion rewritten (docs/criteria.md line 17)", line
 
 
+@pytest.mark.criterion("AC-188")
+def test_a_given_id_outside_the_rows_series_is_refused_and_an_empty_file_takes_any_prefix(repo):
+    """CE-160: `--id REQ-1` in a file of AC rows wrote a second prefix, and every later
+    `criterion new` without --id was then refused with '2 id prefixes'. A given id outside the
+    rows' series is refused, writing nothing; one in the series is taken; with no rows yet, the
+    first id sets the series and the next id follows it."""
+    e = Engine(repo)
+    msg = refused(repo, e.criterion_new, "h", "US-1", under="Core", rid="REQ-1", **W)
+    assert "REQ-1 is outside the criteria rows' series (AC-n)" in msg
+    assert e.criterion_new("g", "US-1", under="Core", rid="AC-30", **W).startswith("AC-30: ")
+    assert e.criterion_new("h", "US-1", under="Core", **W).startswith("AC-31: ")
+    kit = "# Criteria\n\nLIVING.\n\n| Id | Criterion | Story | Status |\n|---|---|---|---|\n"
+    write(repo, "docs/criteria.md", kit)
+    assert e.criterion_new("a", "US-1", rid="REQ-1", **W).startswith("REQ-1: ")
+    assert e.criterion_new("b", "US-1", **W).startswith("REQ-2: ")
+
+
 # -- criterion set: only the cells given (AC-161) -----------------------------------------------
 
 
