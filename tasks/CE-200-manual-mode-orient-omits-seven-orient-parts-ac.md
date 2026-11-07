@@ -3,13 +3,13 @@ type: Task
 id: CE-200
 title: manual-mode § orient omits seven orient parts; AC-110's row is undated
 brief: Both runbook copies byte-equal; AC-110 changes through criterion set
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-11-07d
 created: 2026-11-07
-moved: 2026-11-07d
+moved: 2026-11-07e
 updated: 2026-11-07e
 ---
 
