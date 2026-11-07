@@ -860,3 +860,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** agent calls stay PROVISIONAL until the owner accepts them
 - **control:** individual: context-engine decision accept after owner review
 - **from:** CE-174, session 2026-11-07e
+
+## INV-122: The DEC-175 amendment has its dated header twice and the inner date (2026-11-08) does not match the session label; meaning intact
+
+- **affects:** readers of DEC-175
+- **why not eliminated:** a record correct by a later session cleans it; the verifier writes no record
+- **control:** individual: record correct on DEC-175
+- **from:** CE-201, session 2026-11-07e
+
+## INV-123: Builder sabotages S2 (max by len), S3 (sub = len(indent)), S4 (message and remedy reverts) were checked by reading the code, not re-run
+
+- **affects:** maintainers trusting the guard
+- **why not eliminated:** S1-class behaviour was re-run first-hand with a different sabotage and each goes red for the stated reason
+- **control:** individual: the sabotage rule (CLAUDE.md, DEC-11) and the pinned tests in tests/test_working.py
+- **from:** CE-201, session 2026-11-07e
+
+## INV-124: Shape-1 false pass stays by design: a bold option with unindented bullets reads as those bullets
+
+- **affects:** owners asking questions in that shape
+- **why not eliminated:** DEC-175 reopen condition; judged not worth a rule
+- **control:** reduce: pinned test and the 'Not checked' notes in guards.py::ask_options and guards.py::ask_problems
+- **from:** CE-201, session 2026-11-07e

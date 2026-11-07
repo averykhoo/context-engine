@@ -4,13 +4,15 @@ id: CE-201
 title: 'ask_options after CE-158: untested placeholder clause, stale AC-121 row, loose refusal wording'
 brief: The placeholder test must be seen red first; AC-121 changes only through criterion set
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-11-07d
 created: 2026-11-07
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Owner-question options after CE-158: an untested clause, a stale criterion row and loose wording.
@@ -33,3 +35,5 @@ Source: CE-158's verifier r2 (e4d2302), residuals that did not block PASS.
 ## Log
 
 - 2026-11-07e (claude-code/claude-opus-5-5): e5815ba: CE-201: file CE-158's verifier residuals (placeholder test gap, AC-121 row, wording)
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: ask_options placeholder clause tested, refusal wording and AC-121 follow DEC-175 (5c14448, 67df045)
+  residual risk: INV-122, INV-123, INV-124
