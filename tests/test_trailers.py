@@ -126,6 +126,30 @@ def test_no_documented_commit_message_puts_session_outside_the_last_paragraph():
     assert bad == [], "\n".join(bad)
 
 
+def test_every_by_hand_commit_recipe_ends_in_session_and_co_author(tmp_path):
+    """CE-197: manual mode's inline `git commit --only` recipes (Commit the write, pause open),
+    run as written, give a commit git reads `Session:` and `Co-Authored-By:` from, so committing by
+    hand does not drop the line the engine writes."""
+    import shlex
+    text = (KIT / "docs" / "runbooks" / "manual-mode.md").read_text(encoding="utf-8")
+    recipes = [r for r in re.findall(r"`(git commit --only [^`]*)`", text) if "Session: <key>" in r]
+    assert len(recipes) >= 2, recipes
+    key = "2026-10-14z"
+    root = tmp_path / "plain"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    git(root, "config", "user.email", "t@example.com")
+    git(root, "config", "user.name", "t")
+    for n, recipe in enumerate(recipes):
+        argv = shlex.split(recipe)
+        argv = argv[2:argv.index("--")]  # drop `git commit`, and the paths: a file of our own stands in
+        argv = [fill(a, key) for a in argv]
+        (root / "a.py").write_text(f"a = {n}\n", encoding="utf-8")
+        git(root, "add", "a.py")
+        git(root, "commit", "-q", *argv, "--", "a.py")
+        assert trailers(root) == [f"Session: {key}", f"Co-Authored-By: {AUTHOR}"], recipe
+
+
 # -- CE-197 (DEC-170): every engine commit names its co-author, in the same trailer paragraph -----
 
 OPUS = "Claude Opus 5.5 <noreply@anthropic.com>"

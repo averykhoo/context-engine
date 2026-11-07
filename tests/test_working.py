@@ -1127,7 +1127,7 @@ def test_the_runbook_pause_commit_carries_the_same_trailer():
 
     runbook = (Path(__file__).resolve().parents[1] / "docs" / "runbooks" / "manual-mode.md").read_text(encoding="utf-8")
     section = runbook.split("### context-engine pause open", 1)[1].split("\n### ", 1)[0]
-    assert '-m "Session: <key>"' in section
+    assert '--trailer "Session: <key>" --trailer "Co-Authored-By: <name> <email>"' in section  # one trailer paragraph (CE-197)
 
 
 @pytest.mark.criterion("AC-15")
