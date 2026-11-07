@@ -723,6 +723,91 @@ def test_close_sets_state_and_derives_status_in_place(eng):
     assert (doc.get("state"), doc.get("status"), doc.get("closed")) == ("open", None, None)
 
 
+def _board_fields(state="closed", **extra):
+    return {"title": "Imported", "pri": "LATER", "state": state, "created": TODAY, **extra}
+
+
+def _import(eng, key, kind, items):
+    return eng.store.create_many(kind, [(rid, f, "Body.\n") for rid, f in items], session=key, actor=ACTOR, op="import")
+
+
+def _written(eng, rid):
+    (path,) = (eng.root / "tasks").glob(f"{rid}-*.md")
+    return okf.parse(path.read_text(encoding="utf-8"))
+
+
+def _oplog(eng):
+    log = eng.root / "ops.jsonl"
+    return [json.loads(ln) for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip()] if log.exists() else []
+
+
+@pytest.mark.criterion("AC-189")
+@pytest.mark.parametrize("extra", [{}, {"status": None}, {"status": ""}], ids=["absent", "none", "blank"])
+@pytest.mark.parametrize("kind, rid", [("task", "CE-7"), ("question", "ASK-7")])
+def test_an_import_of_a_closed_board_item_derives_status_deprecated(eng, kind, rid, extra):
+    """CE-179: a closed item created through the store (as a bulk import does) is G-W4-clean."""
+    key = started(eng)
+    fields = _board_fields(**extra)
+    before = dict(fields)
+    _import(eng, key, kind, [(rid, fields)])
+    doc = _written(eng, rid)
+    assert (doc.get("state"), doc.get("status")) == ("closed", "deprecated")
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    last = _oplog(eng)[-1]
+    assert last["op"] == "import" and "status" in last["fields"]
+    assert fields == before  # the caller's dict is not changed
+
+
+@pytest.mark.criterion("AC-189")
+def test_store_new_derives_status_for_a_closed_board_item(eng):
+    key = started(eng)
+    rec = eng.store.new("task", _board_fields(), "Body.\n", **kw(key))
+    assert okf.parse(rec.path.read_text(encoding="utf-8")).get("status") == "deprecated"
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+@pytest.mark.criterion("AC-189")
+def test_an_import_keeps_the_status_its_state_agrees_with(eng):
+    key = started(eng)
+    _import(eng, key, "task", [("CE-7", _board_fields(status="deprecated")), ("CE-8", _board_fields("open")), ("CE-9", _board_fields("open", status="draft"))])
+    assert _written(eng, "CE-7").get("status") == "deprecated"
+    assert "status" not in _written(eng, "CE-8").data
+    assert _written(eng, "CE-9").get("status") == "draft"
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+@pytest.mark.criterion("AC-189")
+@pytest.mark.parametrize("state, status", [("closed", "stable"), ("closed", "draft"), ("open", "deprecated")])
+def test_an_import_whose_status_contradicts_its_state_is_refused_and_writes_nothing(eng, state, status):
+    key = started(eng)
+    n = len(_oplog(eng))
+    with pytest.raises(Refusal, match="G-W4"):
+        _import(eng, key, "task", [("CE-7", _board_fields()), ("CE-8", _board_fields(state, status=status))])
+    assert not (eng.root / "tasks").exists() or list((eng.root / "tasks").glob("CE-*")) == []
+    assert not any(o["op"] == "import" for o in _oplog(eng)[n:])
+
+
+@pytest.mark.criterion("AC-189")
+def test_with_g_w4_off_an_import_still_derives_but_refuses_no_contradiction(eng):
+    cfg = copy.deepcopy(CONFIG)
+    cfg["guards"]["off"] = [*cfg["guards"]["off"], "G-W4"]
+    (eng.root / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    eng = Engine(eng.root, today=lambda: TODAY)
+    key = started(eng)
+    _import(eng, key, "task", [("CE-7", _board_fields()), ("CE-8", _board_fields(status="stable"))])
+    assert _written(eng, "CE-7").get("status") == "deprecated"
+    assert _written(eng, "CE-8").get("status") == "stable"
+
+
+@pytest.mark.criterion("AC-189")
+def test_a_closed_record_of_a_kind_off_the_board_gets_no_status(eng):
+    key = started(eng)
+    fields = {"title": "Off the board", "actor": "owner", "decided": TODAY, "session": key, "decision_status": "BUILT", "state": "closed"}
+    (rec,) = _import(eng, key, "decision", [("DEC-7", fields)])
+    doc = okf.parse(rec.path.read_text(encoding="utf-8"))
+    assert doc.get("state") == "closed" and "status" not in doc.data
+
+
 @pytest.mark.criterion("AC-12")
 @pytest.mark.parametrize("msg", ["", "   "])
 def test_close_without_a_message_is_refused(eng, msg):

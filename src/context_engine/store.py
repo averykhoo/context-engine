@@ -801,8 +801,27 @@ class Store:
         self._wrote_actor = actor
         self._lead.append(f"{op} {rec_id}")
 
+    def _board_status(self, kind: Kind, fields: dict[str, Any], rid: str) -> dict[str, Any]:
+        """The fields a board item (`[working] board`) is created with (CE-179): a closed one gets
+        `status: deprecated` derived from `state: closed` (FRAMEWORK §9.3). One whose `status`
+        contradicts its `state` is refused, as G-W4's write-time twin, unless `[guards] off` names
+        G-W4; the derivation runs whatever `off` says. Returns a new dict, never the caller's."""
+        if kind.name not in self.config.working.board:
+            return fields
+        closed = fields.get("state") == "closed"
+        status = fields.get("status")
+        if status in (None, ""):
+            return {**fields, "status": "deprecated"} if closed else fields
+        if closed != (status == "deprecated") and "G-W4" not in self.config.guards.off:
+            raise Refusal(
+                f"{rid} would be written `state: {fields.get('state')}` with `status: {status}`, which G-W4 fails",
+                "a closed board item is `status: deprecated` and an open one is not: drop `status` and the engine derives it from `state`",
+            )
+        return fields
+
     def new(self, kind_name: str, fields: dict[str, Any], body: str = "", *, session: str, actor: str, mechanical: bool = False) -> Record:
-        """Create a record with the next free id in its series."""
+        """Create a record with the next free id in its series. A board item created closed gets
+        `status: deprecated`, and one whose `status` contradicts its `state` is refused (CE-179)."""
         self._check_caller(session, actor)
         kind = self.config.kind(kind_name)
         clash = [k for k in TOOL_OWNED if k in fields]
@@ -811,6 +830,7 @@ class Store:
         with self._lock():
             used = self.ids_in_use(kind) | self._numbers(kind, self.reserved_ids(kind))  # a reserved id is never handed out again
             rid = f"{kind.prefix}-{max(used, default=0) + 1}"
+            fields = self._board_status(kind, fields, rid)
             slug = slugify(str(fields.get("title", "")))
             path = self.root / kind.dir / (f"{rid}-{slug}.md" if slug else f"{rid}.md")
             doc = okf.new_document({"type": kind.type, "id": rid, **fields}, body)
@@ -989,7 +1009,9 @@ class Store:
         """Write several new records with ids the caller chose (an import keeps every id), all or
         nothing: each id must be free and each record valid before any file is written. An id
         another session reserved (`id reserve`) is not free; one this session reserved is. Each
-        item is (id, fields, body); append-only records are stamped when they are created."""
+        item is (id, fields, body); append-only records are stamped when they are created. A board
+        item (`[working] board`) closed at creation gets `status: deprecated` (FRAMEWORK §9.3, G-W4),
+        and one whose `status` contradicts its `state` is refused (CE-179)."""
         self._check_caller(session, actor)
         kind = self.config.kind(kind_name)
         out: list[Record] = []
@@ -1010,6 +1032,7 @@ class Store:
                 clash = [k for k in TOOL_OWNED if k in fields]
                 if clash:
                     raise Refusal(f"`{clash[0]}` is set by the engine", f"drop `{clash[0]}` from the fields")
+                fields = self._board_status(kind, fields, rid)
                 slug = slugify(str(fields.get("title", "")))
                 path = self.root / kind.dir / (f"{rid}-{slug}.md" if slug else f"{rid}.md")
                 doc = okf.new_document({"type": kind.type, "id": rid, **fields}, body)
