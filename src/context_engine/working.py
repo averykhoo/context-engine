@@ -401,6 +401,12 @@ class Engine:
         D1), so a repo's first close under CE-195 cuts it; a banner already written this session
         (`banner set` before the close) gives `banner: set`.
 
+        When the close leaves NOW below its cap while board items stay open (G-W5 red, whoever
+        emptied NOW and whether `hk run close` did), the first line of the reply ends with a
+        WARNING that gives G-W5's message and the `task promote <id> NOW` remedy, for the owner
+        digest. It is a warning, never a refusal (DEC-162: a close once everything asked for is
+        done is legitimate), and nothing of it is written to the entry.
+
         Not checked: whether the banner kept still holds only true lines (judgement: a durable
         line that went false is the closer's to rewrite)."""
         self._check(key, actor)
@@ -478,6 +484,8 @@ class Engine:
         named = ID_RE.findall(self.read_ledger().get(key).field(L.TASKS) or "")
         still = [rid for rid, state in self._task_states(named) if state != "closed"]
         out += f"; the owner's named tasks still open: {_one(still)} (the rows say how each ended; the digest should too)" if still else ""
+        if left := self._now_refill():  # the board as the close leaves it, after housekeeping (CE-191, DEC-162)
+            out += f"; WARNING: {left}; say so in the owner digest"
         return out + (f"\n{done}" if done else "")
 
     @staticmethod
@@ -772,7 +780,7 @@ class Engine:
 
     def _now_short(self, open_: list[Record]) -> str | None:
         """G-W5's NOW rule: while anything is open, NOW holds exactly its cap. The failure's
-        message when ``open_`` breaks it, else None (read by G-W5 and by `close`, CE-36)."""
+        message when ``open_`` breaks it, else None (read by G-W5, by `close` and by `session close`, CE-36, CE-191)."""
         cap = self.w.caps.get("NOW")
         if cap is None or not open_:
             return None
@@ -1115,7 +1123,17 @@ class Engine:
         reply, with the remedy; never refuse, never promote: the next NOW item is the owner's call.
         Quiet when G-W5 is off, and when NOW is still at or over its cap (refilling is then not
         the remedy; G-W5 says what is)."""
-        if was != ["NOW"] or "G-W5" in self.store.config.guards.off:
+        if was != ["NOW"]:
+            return ""
+        left = self._now_refill()
+        return f"; {left}" if left else ""
+
+    def _now_refill(self) -> str:
+        """G-W5's message and remedy for a NOW below its cap while items stay open, without the
+        leading "; ", or "" when there is nothing to say (CE-36, CE-191): G-W5 is off, there is no
+        NOW cap, NOW is at or over its cap, or nothing is open. Shared by `_now_left` (which op
+        emptied NOW) and `session_close` (the board as the close leaves it), so the two cannot drift."""
+        if "G-W5" in self.store.config.guards.off:
             return ""
         open_ = self._open_board()
         cap = self.w.caps.get("NOW")
@@ -1126,7 +1144,7 @@ class Engine:
             return ""
         nxt = [r.id for r in open_ if r.doc.get("pri") == "NEXT"]
         where = f"NEXT holds {_one(nxt)}" if nxt else "NEXT is empty; `task list` shows the rest"
-        return f"; G-W5 is red until NOW is refilled: {short}; ask the owner which item to `task promote <id> NOW` ({where})"
+        return f"G-W5 is red until NOW is refilled: {short}; ask the owner which item to `task promote <id> NOW` ({where})"
 
     # -- design review and the residual-risk register (FRAMEWORK §5.2, §7.4) ------------
 

@@ -226,6 +226,17 @@ def test_every_write_in_a_session_returns_one_line(root):
     assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "decision_accept", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
 
 
+@pytest.mark.criterion("AC-186")
+def test_session_close_with_an_empty_now_and_an_open_item_warns_on_its_one_line(root):
+    """CE-191: the warning is the end of the one line a write returns (AC-19), not an error."""
+    srv = server(root)
+    call(srv, "session_start", {"actor": ACTOR})
+    call(srv, "task_new", {"title": "Later", "brief": "b"})
+    r = call(srv, "session_close", {"rows": "CE-1", "summary": ["built it"], "guards": "green", "read": "board"})
+    assert not r.is_error, text(r)
+    assert "\n" not in text(r) and "; WARNING: G-W5 is red until NOW is refilled: " in text(r), text(r)
+
+
 @pytest.mark.criterion("AC-19")
 def test_a_read_over_the_cap_is_cut_at_a_line_and_says_where_the_rest_is(root):
     cfg = {**CONFIG, "working": {**CONFIG["working"], "read_max_bytes": 400}}

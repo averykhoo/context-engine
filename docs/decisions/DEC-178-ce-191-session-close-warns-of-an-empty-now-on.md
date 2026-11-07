@@ -7,6 +7,7 @@ decision_status: PROVISIONAL
 decided: 2026-11-07
 session: 2026-11-07d
 body_sha: sha256:c3db650a018a964e3bf0f286d851bb6e30b0ceca726f9574e47196aae56d08d9
+tasks: [CE-191]
 ---
 
 The planner's call on CE-191's open shape (DEC-162 fixed only "a warning, not a refusal"). Cheap to undo: one reply clause and two runbook paragraphs.

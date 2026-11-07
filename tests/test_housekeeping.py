@@ -631,6 +631,19 @@ def test_session_close_does_the_clean_close_in_one_call_and_one_commit(eng, caps
     assert entry.receipt("banner") == f"kept {now}" and entry.receipt("housekeeping") is None and _g(eng, "G-W1") == []
 
 
+@pytest.mark.criterion("AC-186")
+def test_the_close_warns_of_the_now_that_its_own_housekeeping_emptied(eng):
+    """CE-191: `hk close` closes the NOW item inside the call, so the board is read after it: G-W5 is
+    green before the close and the warning is on the reply's first line, ahead of housekeeping's block."""
+    now, x = _owed(eng)
+    eng.promote(x["a"], "NOW", **kw(now))
+    assert _g(eng, "G-W5") == []
+    out = eng.session_close(now, actor=ACTOR, rows=f"{x['a']} (closed)", summary=["s"], receipts=receipts(asked=x["q"]), housekeeping=True)
+    assert eng.store.get(x["a"]).doc.get("state") == "closed"  # closed by hk close, not by the closer
+    assert out.splitlines()[0].endswith("NOW holds 0 (none); the cap is exactly 1; ask the owner which item to `task promote <id> NOW` (NEXT is empty; `task list` shows the rest); say so in the owner digest"), out
+    assert "\nhk run close:" in out
+
+
 @pytest.mark.criterion("AC-185")
 def test_a_refused_one_call_close_writes_nothing_not_even_housekeeping(eng):
     now, x = _owed(eng)

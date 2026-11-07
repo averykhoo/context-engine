@@ -410,7 +410,7 @@ def test_close_refuses_rows_that_do_not_say_how_a_named_task_ended(eng):
         eng.session_close(key, actor=ACTOR, rows=f"{one} (closed); CE-22 (new)", summary=["y"], receipts=receipts())
     assert (eng.root / "ledger.md").read_bytes() == before
     out = eng.session_close(key, actor=ACTOR, rows=f"{one} (closed); {two} (open: waits on the owner)", summary=["y"], receipts=receipts())
-    assert out.endswith(f"; the owner's named tasks still open: {two} (the rows say how each ended; the digest should too)"), out
+    assert f"; the owner's named tasks still open: {two} (the rows say how each ended; the digest should too); WARNING: G-W5 is red until NOW is refilled: " in out, out  # CE-191: the tasks sit at LATER
     entry = eng.read_ledger().get(key)
     assert entry.kind == "close" and entry.field(L.TASKS) == f"{one}, {two}"
     assert guards(eng, "G-W6") == []
@@ -855,6 +855,121 @@ def test_the_close_says_nothing_of_g_w5_when_it_is_off_or_now_stays_at_or_over_i
                         f"ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id})")
     e.promote(nxt.id, "NOW", **kw(key))  # the remedy it names works
     assert guards(e, "G-W5") == []
+
+
+# -- a close that leaves NOW short warns, and never refuses (CE-191, DEC-162, AC-186) -----------------
+
+WARN = "; WARNING: G-W5 is red until NOW is refilled: "
+DIGEST = "; say so in the owner digest"
+
+
+def _closed(key, banner="; banner kept 2026-10-07b"):
+    return f"session {key} closed: ledger entry written (1-line summary){banner}"
+
+
+@pytest.mark.criterion("AC-186")
+@pytest.mark.parametrize("next_", [2, 0])
+def test_a_session_close_that_leaves_now_empty_while_items_stay_open_warns_on_its_first_line(eng, next_):
+    """CE-191: the close succeeds and writes its entry as it would; the reply's one line ends with
+    G-W5's text and the promote remedy, for the digest. Nothing of it reaches the entry."""
+    key = started(eng)
+    now = task(eng, key, "Now", pri="NOW")
+    nxt = [task(eng, key, f"Next {i}", pri="NEXT").id for i in range(next_)]
+    later = task(eng, key, "Later")
+    eng.close(now.id, "done", **kw(key))
+    out = eng.session_close(key, actor=ACTOR, rows=f"{now.id} (closed)", summary=["y"], receipts=receipts())
+    assert "\n" not in out  # AC-19: one line
+    assert out.startswith(f"session {key} closed: ledger entry written (1-line summary)")
+    where = f"NEXT holds {', '.join(nxt)}" if nxt else "NEXT is empty; `task list` shows the rest"
+    short = "NOW holds 0 (none); the cap is exactly 1"
+    assert out.endswith(f"{WARN}{short}; ask the owner which item to `task promote <id> NOW` ({where}){DIGEST}"), out
+    entry = eng.read_ledger().get(key)
+    assert entry.kind == "close" and "WARNING" not in entry.text and "G-W5" not in entry.text
+    assert [f.message for f in guards(eng, "G-W5")] == [short]  # the warning and the guard agree
+    assert [eng.store.get(i).doc.get("pri") for i in [*nxt, later.id]] == ["NEXT"] * next_ + ["LATER"]  # nothing promoted
+
+
+@pytest.mark.criterion("AC-186")
+def test_a_session_close_says_nothing_of_g_w5_when_it_is_green_off_or_over_its_cap(tmp_path):
+    """CE-191: quiet, and the reply is exactly what it was before, when NOW holds an item, when
+    nothing is open, when G-W5 is off, and when NOW is over its cap (refilling is not the remedy)."""
+    e = _engine(tmp_path / "a", copy.deepcopy(CONFIG))
+    key = started(e)
+    task(e, key, "Now", pri="NOW")
+    task(e, key, "Later")
+    assert e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts()) == _closed(key)  # (a) NOW holds one
+
+    e = _engine(tmp_path / "b", copy.deepcopy(CONFIG))
+    key = started(e)
+    only = task(e, key, "Only")
+    e.close(only.id, "done", **kw(key))
+    assert e.session_close(key, actor=ACTOR, rows=f"{only.id} (closed)", summary=["y"], receipts=receipts()) == _closed(key)  # (b) nothing open
+    assert guards(e, "G-W5") == []
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["guards"] = {"off": [*cfg["guards"]["off"], "G-W5"]}
+    e = _engine(tmp_path / "c", cfg)
+    key = started(e)
+    task(e, key, "Later")
+    assert e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts()) == _closed(key)  # (c) G-W5 off
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["caps"] = {"NOW": 3}
+    e = _engine(tmp_path / "d", cfg)
+    key = started(e)
+    for i in range(3):
+        task(e, key, f"N{i}", pri="NOW")
+    cfg["working"]["caps"] = {"NOW": 1}  # the owner lowers the cap: NOW is over it (the stub stays)
+    (tmp_path / "d" / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    e = Engine(tmp_path / "d", today=lambda: TODAY)
+    assert e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts()) == _closed(key)  # (d) over the cap
+    assert guards(e, "G-W5")[0].message.startswith("NOW holds 3 (") and guards(e, "G-W5")[0].message.endswith("); the cap is exactly 1")
+
+    cfg = copy.deepcopy(CONFIG)
+    cfg["working"]["caps"] = {"NOW": 2}
+    e = _engine(tmp_path / "e", cfg)
+    key = started(e)
+    b = task(e, key, "B", pri="NOW")
+    nxt = task(e, key, "Next", pri="NEXT")
+    out = e.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())  # (e) below a cap of 2: speaks
+    assert out.endswith(f"{WARN}NOW holds 1 ({b.id}); the cap is exactly 2; ask the owner which item to `task promote <id> NOW` (NEXT holds {nxt.id}){DIGEST}"), out
+
+
+@pytest.mark.criterion("AC-186")
+def test_a_session_close_warns_of_an_empty_now_whoever_emptied_it(eng):
+    """CE-191: the close hands the board on, so it says what it hands on; NOW was never filled
+    this session (two LATER items only), and the close still warns."""
+    key = started(eng)
+    task(eng, key, "One")
+    task(eng, key, "Two")
+    out = eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts=receipts())
+    assert out.endswith(f"{WARN}NOW holds 0 (none); the cap is exactly 1; ask the owner which item to `task promote <id> NOW` (NEXT is empty; `task list` shows the rest){DIGEST}"), out
+
+
+@pytest.mark.criterion("AC-186")
+def test_a_session_close_with_an_empty_now_is_refused_for_the_same_reasons_as_ever(eng):
+    """CE-191: the warning never refuses and never softens a refusal: with NOW empty and items open
+    a malformed close is refused with its own message, before any write."""
+    key = started(eng)
+    task(eng, key, "One")
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="the summary has 8 lines"):
+        eng.session_close(key, actor=ACTOR, rows="x", summary=[f"line {i}" for i in range(8)], receipts=receipts())
+    with pytest.raises(Refusal, match="no `read` receipt"):
+        eng.session_close(key, actor=ACTOR, rows="x", summary=["y"], receipts={"guards": "gate green", "read": " "})
+    assert (eng.root / "ledger.md").read_bytes() == before
+
+
+@pytest.mark.criterion("AC-186")
+def test_cli_session_close_with_an_empty_now_exits_zero_and_prints_the_warning(eng, capsys):
+    key = started(eng)
+    nxt = task(eng, key, "Next", pri="NEXT")
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    capsys.readouterr()
+    assert main([*base, "session", "close", "--rows", "x", "--summary", "y", "--guards", "gate green", "--read", "board only", "--no-housekeeping"]) == 0
+    out = capsys.readouterr().out
+    assert "WARNING: G-W5 is red until NOW is refilled" in out and f"`task promote <id> NOW` (NEXT holds {nxt.id})" in out and out.rstrip().endswith("say so in the owner digest"), out
+    assert eng.read_ledger().get(key).kind == "close"
 
 
 @pytest.mark.criterion("AC-12")

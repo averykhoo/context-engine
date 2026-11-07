@@ -223,7 +223,8 @@ back to read the thread.
 ### context-engine session close
 
 The close in one call: steps 1 to 3 check everything before anything is written, then step 4
-runs the close housekeeping, step 5 writes the entry, and step 6 the banner when one was given.
+runs the close housekeeping, step 5 writes the entry, step 6 the banner when one was given, and
+step 7 reads the board the close leaves.
 The engine makes them one commit; by hand, commit them together at the end.
 
 1. Your stub must exist and still say `kind: open`. A session closes or pauses only once. The
@@ -283,13 +284,22 @@ The engine makes them one commit; by hand, commit them together at the end.
    Op log: `session.close`, fields `["kind"]`.
 6. With a new banner, do § context-engine banner set's steps 2, 3 and 5, under your session
    key.
+7. Last, count the open board items and those at NOW, as the close leaves them (step 4 may have
+   closed one). If NOW holds fewer than its cap (`[working.caps]`, 1 by default) while any item is
+   open, G-W5 is red: the close stands (a warning, never a refusal), but say so in the owner
+   digest, with G-W5's message, naming the NEXT items (or saying NEXT is empty), and ask the owner
+   which one to promote (§ context-engine task promote). Do not pick it yourself. The engine says
+   the same at the end of its reply's first line, after `WARNING:`, whoever emptied NOW; it says
+   nothing when NOW is at or over its cap, when nothing is open, or when `[guards] off` names G-W5.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
 what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
 One call that checks first and writes last is what makes a close cheap enough to make after
 every reply; the banner is left alone unless a durable line changed, because orient
 reads the rest from the records, and the `banner: kept` receipt is what lets G-W1 tell a close
-that kept the banner from one that forgot it.
+that kept the banner from one that forgot it. An empty NOW at the close is a warning, not a
+refusal: a close once everything asked for is done is legitimate, and the next NOW item is the
+owner's pick, so the close only makes sure the owner hears of it.
 
 ### context-engine session pause
 
