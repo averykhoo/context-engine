@@ -965,3 +965,31 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** confirmed follow-ons, deliberately not done here
 - **control:** individual: DEC-191 and DEC-192 record them
 - **from:** CE-150, session 2026-11-07e
+
+## INV-137: DEC-194 claim that a missing id stays listed in the pause-resume hint is not pinned by a test (filter changed to state not in closed/missing kept T3 and T4 green; probe shows the code is right)
+
+- **affects:** engine maintainers
+- **why not eliminated:** the plan did not ask for this test and the code is correct today
+- **control:** reduce: none yet, a test pinning a hand-added missing id in the hint would guard it
+- **from:** CE-152, session 2026-11-07e
+
+## INV-138: ask raised refusal remedy (say in the close digest that it was raised) dead-ends for a NOW/NEXT Ask- question because working.py::Engine.session_close still refuses with the asked receipt does not name Ask-1 (its check also uses ID_RE)
+
+- **affects:** sessions closing with a raised NOW/NEXT Ask- question
+- **why not eliminated:** predates this change and the remedy text was pinned by the plan
+- **control:** reduce: session_close refusal and its own remedy, demoting the question to LATER
+- **from:** CE-152, session 2026-11-07e
+
+## INV-139: the new pause_resume hint reply is tested only through the Python API, no CLI or MCP test covers it (ops.py::pause_resume passes the string through unchanged)
+
+- **affects:** engine maintainers
+- **why not eliminated:** pass-through is trivial and the plan asked only for the API test
+- **control:** reduce: tests/test_working.py API tests of pause_resume
+- **from:** CE-152, session 2026-11-07e
+
+## INV-140: a housekeeping resume of a landed pause now also prints the open-tasks hint, so a session could name tasks it was not asked for
+
+- **affects:** sessions resuming a landed pause
+- **why not eliminated:** the hint is wanted on every resume and cannot know the pause landed
+- **control:** individual: the hint wording (if you take up its request)
+- **from:** CE-152, session 2026-11-07e
