@@ -3,14 +3,14 @@ type: Task
 id: CE-161
 title: The commit op names an unparseable record and refuses only for records it carries
 brief: CE-134 residual (d6a2fa5); a hand edit is legal and caught by lint, not by a crash
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-5]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07d
+updated: 2026-11-07d
 ---
 
 The commit op names an unparseable record and refuses only for the records it carries.
