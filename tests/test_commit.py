@@ -1061,14 +1061,49 @@ def test_a_sweep_never_commits_a_record_whose_frontmatter_does_not_parse(repo):
     good = rec.read_bytes()
     rec.write_bytes(good.replace(b"pri: LATER", b"pri: LATER\nlabels: [half"))  # mid-edit, by hand
     before = count(repo)
-    with pytest.raises(Refusal, match="frontmatter is not valid YAML"):
-        run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)
+    with pytest.raises(Refusal, match=rf"lint fails on what this commit carries: schema {re.escape(theirs)}: does not parse: frontmatter is not valid YAML"):
+        run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)  # lint's failure, naming the file (CE-161)
     out = eng(repo).store.commit_paths("Adopt a dead session's lines", [], a.session, sweep=True)  # the commit `commit` runs after its lint
     assert not out.sha and f"{theirs} does not parse (frontmatter is not valid YAML" in out.note, out
     assert count(repo) == before and theirs not in git(repo, "ls-files")
     rec.write_bytes(good)  # the edit is finished (here: undone)
     _, line = run(repo, "commit", a, message="Adopt a dead session's lines", sweep=True)
     assert line.startswith(f"committed {head(repo)}") and theirs in files_at(repo), line
+
+
+UNPARSEABLE = {  # a hand edit in progress, four ways, and (a regex) what the refusals say of it
+    "yaml": (lambda b: b.replace(b"pri: LATER", b"pri: LATER\nlabels: [half"), r"frontmatter is not valid YAML"),
+    "fence": (lambda b: b.replace(b"\n---\n", b"\n", 1), r"frontmatter has no closing `---` line"),
+    "not-utf8": (lambda b: b + b"\n\xff half-pasted\n", r"is not UTF-8 \(invalid start byte at byte"),
+    "fm-not-utf8": (lambda b: b.replace(b"pri: LATER", b"pri: LATER\nnote: \xff"), r"(frontmatter )?is not UTF-8 \(invalid start byte at byte"),
+}
+
+
+@pytest.mark.criterion("AC-78")
+@pytest.mark.parametrize("how", sorted(UNPARSEABLE))
+def test_a_record_that_does_not_parse_is_a_lint_failure_and_stops_no_commit_that_leaves_it_out(repo, how):
+    """CE-161: a hand edit is legal (G-5) and caught by lint, not by a crash. A record left
+    mid-edit is a `schema` failure naming its file, in `lint` and `lint --working`, and a read
+    outside lint that meets it refuses naming the file. A commit that does not carry it goes in
+    (it once refused, from lint raising, naming no file); one that carries it refuses (above)."""
+    a, b, key, theirs = _two(repo)
+    rec = repo / theirs
+    good = rec.read_bytes()
+    breaks, says = UNPARSEABLE[how]
+    rec.write_bytes(breaks(good))
+    for working in (False, True):
+        named = [f for f in eng(repo).lint(working=working) if f.path == theirs and f.guard == "schema"]
+        assert len(named) == 1 and re.match(rf"does not parse: {says}", named[0].message), (working, named)
+        assert str(repo) not in named[0].message, named  # the file is the failure's path, said once
+    rid = re.match(r"tasks/([A-Z]+-\d+)-", theirs)[1]
+    for op, kw in [("task_show", {"id": rid}), *([("task_list", {})] if how != "not-utf8" else [])]:  # a list reads no body (AC-13)
+        with pytest.raises(Refusal, match=rf"{re.escape(theirs)} does not parse: {says}"):
+            run(repo, op, a, **kw)
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    assert line.startswith(f"committed {head(repo)}") and f"left uncommitted: 2 op lines of {key}" in line, line
+    assert "a.py" in files_at(repo) and theirs not in git(repo, "ls-files")
+    assert rec.read_bytes() == breaks(good)  # the hand edit is the owner's: untouched
 
 
 @pytest.mark.criterion("AC-78")

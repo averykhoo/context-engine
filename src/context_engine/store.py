@@ -168,6 +168,7 @@ class Store:
         self.commit_trailers: list[str] = []  # the next commit's trailers before `Session:` (a task close's `Closes:`)
         self._lead: list[str] = []  # `<op> <id>` of the lines logged since the last commit point: this operation's
         self.last_commit = commit_mod.Outcome()  # what the newest commit attempt did
+        self._skip_unreadable = 0  # open skipping_unreadable() scopes (lint's, CE-161)
 
     # -- reading -----------------------------------------------------------------------
 
@@ -187,22 +188,46 @@ class Store:
         return m.group(1) if m else None
 
     def read(self, path: Path) -> okf.Document:
-        return okf.parse(path.read_bytes().decode("utf-8"))
+        """Parse a file. A Refusal says what does not parse but not which file: the caller names it."""
+        try:
+            text = path.read_bytes().decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise Refusal(f"is not UTF-8 ({e.reason} at byte {e.start})", "save the file as UTF-8") from None
+        return okf.parse(text)
+
+    @contextmanager
+    def skipping_unreadable(self) -> Iterator[None]:
+        """Within it, ``heads`` and ``records`` pass over a record that does not parse, where they
+        would refuse: lint runs in it, and its schema check reports that record by name (CE-161)."""
+        self._skip_unreadable += 1
+        try:
+            yield
+        finally:
+            self._skip_unreadable -= 1
+
+    def _each(self, kind_name: str, parse: Callable[[Path], okf.Document]) -> Iterator[Record]:
+        """Every record of a kind, parsed by ``parse``. One that does not parse (a hand edit in
+        progress, legal under G-5) is refused naming its file, or passed over within
+        ``skipping_unreadable`` (CE-161)."""
+        kind = self.config.kind(kind_name)
+        for path in self._files(kind):
+            rid = self._id_of(kind, path)
+            if not rid:
+                continue
+            try:
+                doc = parse(path)
+            except Refusal as r:
+                if self._skip_unreadable:
+                    continue
+                raise Refusal(f"{self._rel(path)} does not parse: {r.message}", f"{r.remedy}; `context-engine lint` names every such record") from None
+            yield Record(rid, kind, path, doc)
 
     def heads(self, kind_name: str) -> Iterator[Record]:
         """Every record of a kind with its frontmatter only (``doc.body`` is empty, AC-13)."""
-        kind = self.config.kind(kind_name)
-        for path in self._files(kind):
-            rid = self._id_of(kind, path)
-            if rid:
-                yield Record(rid, kind, path, okf.read_head(path))
+        return self._each(kind_name, okf.read_head)
 
     def records(self, kind_name: str) -> Iterator[Record]:
-        kind = self.config.kind(kind_name)
-        for path in self._files(kind):
-            rid = self._id_of(kind, path)
-            if rid:
-                yield Record(rid, kind, path, self.read(path))
+        return self._each(kind_name, self.read)
 
     def find(self, record_id: str) -> Path:
         kind = self.config.kind_for_id(record_id)
@@ -216,7 +241,11 @@ class Store:
 
     def get(self, record_id: str) -> Record:
         path = self.find(record_id)
-        return Record(record_id, self.config.kind_for_id(record_id), path, self.read(path))
+        try:
+            doc = self.read(path)
+        except Refusal as r:  # named, as `_each` names it (CE-161)
+            raise Refusal(f"{self._rel(path)} does not parse: {r.message}", f"{r.remedy}; `context-engine lint` names every such record") from None
+        return Record(record_id, self.config.kind_for_id(record_id), path, doc)
 
     # -- aliases: a record's earlier ids (FRAMEWORK §8.0.1) ------------------------------
 
@@ -457,7 +486,10 @@ class Store:
             return []
         return [decisions.Row(r.id, Path(os.path.relpath(r.path, base)).as_posix(), dict(r.doc.data)) for r in self.heads(name)]
 
-    def lint(self) -> list[Failure]:
+    def lint(self, unreadable_only: bool = False) -> list[Failure]:
+        """The schema check of every record (and G-D10, G-D11). A record that does not parse is a
+        `schema` failure naming it, the hand edit's or the tool's (CE-161); ``unreadable_only``
+        reports only those, for the guards that pass over such a record (`lint --working`)."""
         out: list[Failure] = []
         for kind in self.config.kinds.values():
             for path in self._files(kind):
@@ -467,14 +499,15 @@ class Store:
                 try:
                     doc = self.read(path)
                 except Refusal as r:
-                    out.append(Failure("schema", rel, r.message, r.remedy))
+                    out.append(Failure("schema", rel, f"does not parse: {r.message}", r.remedy))
+                    continue
+                if unreadable_only:
                     continue
                 out += [Failure("schema", rel, m, rem) for m, rem in self.problems(kind, doc, path)]
                 bp = self.body_problem(kind, doc)
                 if bp:
                     out.append(Failure("G-D10", rel, *bp))
-        out += self.lint_bundles()
-        return out
+        return out if unreadable_only else out + self.lint_bundles()
 
     def lint_bundles(self) -> list[Failure]:
         """G-D11: every non-reserved .md in a bundle directory has frontmatter with a `type`, and

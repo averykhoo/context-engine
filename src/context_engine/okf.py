@@ -193,9 +193,12 @@ def read_head(path) -> Document:
             if line.rstrip(b"\r\n") == b"---":
                 break
             lines.append(line)
-        else:
-            raise Refusal(f"{path} has no closing `---` line", "add a `---` line after the last key")
-    fm = b"".join(lines).decode("utf-8").replace("\r\n", "\n")
+        else:  # unnamed, as `parse` says it: the caller names the file (CE-161)
+            raise Refusal("frontmatter has no closing `---` line", "add a `---` line after the last key")
+    try:
+        fm = b"".join(lines).decode("utf-8").replace("\r\n", "\n")
+    except UnicodeDecodeError as e:
+        raise Refusal(f"frontmatter is not UTF-8 ({e.reason} at byte {e.start} of it)", "save the file as UTF-8") from None
     return Document(fm_lines=fm.splitlines(keepends=True), body="", newline="\n", data=_load(fm))
 
 

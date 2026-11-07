@@ -520,11 +520,15 @@ script, so a repo on another host publishes the same site.
 
 ### context-engine lint
 
-Check every record, then the working state. `--working` does only the second half.
+Check every record, then the working state. `--working` does only the second half, and the
+first bullet's check that every record parses.
 
-- **schema**: every record in a kind's directory whose name starts with its id parses (valid
-  YAML, a closing `---`), has the right `type` and `id`, every required key, enum values in
-  range, values of the declared type, and an OKF `status` from draft/stable/deprecated.
+- **schema**: every record in a kind's directory whose name starts with its id parses (UTF-8,
+  valid YAML, a closing `---`), has the right `type` and `id`, every required key, enum values in
+  range, values of the declared type, and an OKF `status` from draft/stable/deprecated. A record
+  that does not parse fails here by name, and every other guard passes over it. *Why: a hand
+  edit is legal, so one left half-done is a failure naming the file, never a crash of lint or
+  of a commit that does not carry it.*
 - **G-D10**: every append-only record (decision, story) has `body_sha`; its `corrected:` lines
   each match the body; and with them undone, the body hash above matches `body_sha`. *Why:
   owner words are verbatim, so a rewrite must show up, and so must a bracket whose `corrected:`

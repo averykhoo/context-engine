@@ -3534,7 +3534,8 @@ class Engine:
 
     def lint(self, working: bool = False) -> list[Failure]:
         """Every guard (`working`: the working-state guards alone), less those `[guards] off` names."""
-        found = self.lint_working() + G.tool_owned(self) + G.mechanical_closes(self) if working else self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract() + G.lint(self)
+        with self.store.skipping_unreadable():  # a record that does not parse is a schema failure, never a crash (CE-161)
+            found = self.store.lint(unreadable_only=True) + self.lint_working() + G.tool_owned(self) + G.mechanical_closes(self) if working else self.store.lint() + self.lint_working() + self.lint_routes() + self.lint_contract() + G.lint(self)
         off = set(self.store.config.guards.off)
         return [f for f in found if f.guard not in off]
 
