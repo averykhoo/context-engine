@@ -3,14 +3,14 @@ type: Task
 id: CE-154
 title: 'doc archive --lines: pointer reds, liveness and the uncommitted check'
 brief: CE-96 verifier findings 2 and 3 and the rest (654ea03)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 doc archive --lines: pointer reds, liveness and the uncommitted check.
