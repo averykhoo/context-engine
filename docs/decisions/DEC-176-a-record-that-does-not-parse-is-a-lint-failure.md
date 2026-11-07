@@ -20,3 +20,11 @@ How:
 So `working.py::Engine._lint_carried` sees the failure at the record's path and refuses a commit only when it carries that path, naming it; a commit of other paths goes in.
 
 Alternatives not taken: making `Store.heads` always skip a broken record (silent everywhere outside lint); catching the exception around each guard in lint (a guard that raised would lose every other failure it would have found).
+
+## Amendments
+
+- **2026-11-07d (claude-code/claude-opus-5-5):** CE-161 fix round 1 (an independent verifier's FAIL): "does not parse" is the whole file's, as `store.py::Store.read` parses it, not only the frontmatter `Store.heads` reads. A board record whose head parsed but whose body is not UTF-8 was still yielded by `Store.heads` inside lint, and the guards that read a head's body raised: G-W4 on an open question (`working.py::Engine.lint_working`, unnamed) and G-W12/G-W13 on a reviewed item (`working.py::Engine.lint_review` through `Store.get`), so `Engine._lint_carried` refused every commit.
+
+  Now, within `Store.skipping_unreadable`, `Store._each` also passes over a record whose whole file does not parse (`Store._whole_parses`, asked once per file and filled by `Store.lint` as it reads every record; reset when the outermost scope opens and closes). Outside lint, `Store.heads` still reads only the frontmatter (AC-13).
+
+  Alternative not taken: catching the Refusal at each body read inside lint. It fixes the three reads found today but not the next guard that reads a head's body, and it leaves the record visible to the other guards, which the runbook's "every other guard passes over it" does not allow.
