@@ -1995,7 +1995,11 @@ Co-Authored-By: <name> <email>
 ```
 
 Through `context-engine commit`, leave `Session:` and `Co-Authored-By:` out: the engine adds
-both to that paragraph, and so does every commit it makes of its own writes. The
+both to that paragraph, and so does every commit it makes of its own writes. A work commit has
+no `Closes:`, so its message ends in the `Sabotage:` lines; the engine reads a last paragraph
+with no `Session:`, `Closes:` or `<who>-by:` trailer (`Co-Authored-By:`, `Signed-off-by:`) as
+body, and puts its two lines in a paragraph of their own after it, so the `Sabotage:` lines
+stay body. The
 `Co-Authored-By:` value is, first hit wins: `--co-author "<name> <email>"` (`none` for no line);
 the name `--model <model-id>` reads; `CE_CO_AUTHOR` in the environment (`<name> <email>` or
 `none`); else the actor's model: `CE_ACTOR=claude-code/claude-opus-5-5` gives `Claude Opus 5.5

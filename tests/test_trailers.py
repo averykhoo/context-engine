@@ -93,6 +93,36 @@ def test_a_message_written_to_the_documented_template_carries_its_trailers(tmp_p
     assert trailers(mrepo) == ["Closes: CE-1", f"Co-Authored-By: {AUTHOR}", f"Session: {c.session}"]
 
 
+def test_a_work_commit_to_the_template_keeps_its_sabotage_lines_as_body(mrepo):
+    """CE-197: a work commit has no `Closes:` (FRAMEWORK §6.10 item 1), so the template with the
+    lines the doc says to leave out ends in its `Sabotage:` paragraph. Through the engine, git reads
+    `Session:` and `Co-Authored-By:` as the trailers and the `Sabotage:` lines stay body."""
+    c = start(mrepo)
+    (mrepo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    drop = ("Closes:", "Session:", "Co-Authored-By:")
+    msg = "\n".join(ln for ln in fill(template(), c.session).split("\n") if not ln.startswith(drop))
+    assert C._paragraphs(msg)[-1].startswith("Sabotage: "), "the message ends in the Sabotage paragraph"
+    run(mrepo, "commit", c, paths=["a.py"], message=msg)
+    assert trailers(mrepo) == [f"Session: {c.session}", f"Co-Authored-By: {AUTHOR}"]
+    assert re.search(r"^Sabotage: ", git(mrepo, "log", "-1", "--format=%b"), re.M), "the Sabotage line is still in the body"
+
+
+@pytest.mark.parametrize("last, joined", [
+    ("Sabotage: a -> test_b red", False),
+    ("Sabotage: a -> test_b red\nRefs: CE-1", False),
+    ("Signed-off-by: A <a@example.com>", True),
+    ("Sabotage: a -> test_b red\nCloses: CE-1", True),
+    ("CO-AUTHORED-BY: B <b@example.com>", True),
+])
+def test_the_engine_adds_to_a_closing_trailer_paragraph_only(last, joined):
+    """`session_message` puts `Session:` and `Co-Authored-By:` in the last paragraph only when that
+    paragraph already holds a closing trailer (`Session:`, `Closes:`, a `<who>-by:`); otherwise
+    they open a paragraph of their own, so `Token: value` body lines never turn into trailers."""
+    out = C._paragraphs(C.session_message(f"CE-1: x\n\nwhy\n\n{last}\n", [], "k", AUTHOR))
+    ours = f"Session: k\nCo-Authored-By: {AUTHOR}"
+    assert out[2:] == ([f"{last}\n{ours}"] if joined else [last, ours]), out
+
+
 def _docs() -> list[Path]:
     """Every living text that prescribes how a commit message ends (frozen FRAMEWORK-v*.md excepted)."""
     files = [REPO / "CLAUDE.md", REPO / "docs" / "framework" / "FRAMEWORK.md", REPO / "docs" / "framework" / "contract.md"]

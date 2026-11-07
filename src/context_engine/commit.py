@@ -90,6 +90,10 @@ CO_AUTHOR_ENV = "CE_CO_AUTHOR"  # `<name> <email>`, or `none`: the Co-Authored-B
 ANTHROPIC = "noreply@anthropic.com"
 CO_AUTHOR_RE = re.compile(r"^[^<>\n:]*[^<>\s:][^<>\n:]* <[^<>\s@]+@[^<>\s@]+>$")  # `Name <a@b>`
 CO_AUTHOR_OFF = ("none", "off")
+# A trailer key that makes a last paragraph the closing trailer one the engine adds to. A last
+# paragraph of other `Token: value` lines (`Sabotage:`, sabotage.md step 5) is body: the engine
+# opens a paragraph after it rather than turn it into trailers (CE-197).
+CLOSING_KEYS = ("session", "closes")  # and every `<who>-by` key: Co-Authored-By, Signed-off-by, Reviewed-by
 CLAUDE_ALIASES = ("opus", "sonnet", "haiku", "fable")  # a model alias Claude Code accepts for a model id
 NOTHING = ("nothing to commit", "no changes added to commit", "nothing added to commit")  # git's own words
 # Seconds. Provenance: JUDGEMENT, a hook may run a check. Wrong if a normal hook takes longer. It is
@@ -431,6 +435,13 @@ def _is_trailers(para: str) -> bool:
     return bool(TRAILER_RE.match(lines[0])) and all(TRAILER_RE.match(ln) or ln[:1].isspace() for ln in lines[1:])
 
 
+def _closing(para: str) -> bool:
+    """``para`` is a closing trailer paragraph: trailer-shaped, with a line whose key (in any case)
+    is one of ``CLOSING_KEYS`` or ends in ``-by``."""
+    keys = [ln.split(":", 1)[0].lower() for ln in para.split("\n") if not ln[:1].isspace()]
+    return _is_trailers(para) and any(k in CLOSING_KEYS or k.endswith("-by") for k in keys)
+
+
 def session_trailers(text: str) -> list[str]:
     """The key of every ``Session:`` trailer in a commit message: in its last paragraph, the only
     one git reads as trailers, and never its title."""
@@ -445,7 +456,9 @@ def session_message(text: str, lines: list[dict], session: str, co_author: str |
     line naming the uncommitted op log lines it takes in, and the paragraph naming other sessions, both
     before the closing trailer paragraphs; and in the last paragraph, where ``git
     interpret-trailers`` reads them, a ``Session:`` trailer unless the message has one already,
-    then ``Co-Authored-By: <co_author>`` unless that paragraph names its address already."""
+    then ``Co-Authored-By: <co_author>`` unless that paragraph names its address already. A last
+    paragraph that holds no closing trailer (``_closing``: ``Sabotage:`` lines, say) stays
+    body: the engine's trailers open a paragraph of their own after it."""
     paras = _paragraphs(text)
     tail = len(paras)
     while tail > 1 and _is_trailers(paras[tail - 1]):
@@ -456,7 +469,7 @@ def session_message(text: str, lines: list[dict], session: str, co_author: str |
     if _carried_by(lines, session):
         ours.append(_carried_by(lines, session))
     paras[tail:tail] = ours
-    ends_in_trailers = tail + len(ours) < len(paras)
+    ends_in_trailers = tail + len(ours) < len(paras) and _closing(paras[-1])
     add = [] if session_trailers(text) else [f"Session: {session}"]
     if co_author and not (ends_in_trailers and _has_co_author(paras[-1], co_author)):
         add.append(f"Co-Authored-By: {co_author}")

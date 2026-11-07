@@ -817,8 +817,9 @@ def test_the_session_commit_carries_its_paths_with_the_op_log_and_the_records_it
     assert line == f"committed {head(mrepo)}: 5 paths", line
     assert files_at(mrepo) == sorted(["CLAUDE.md", "parser.py", "ops.jsonl", "ledger.md", task_file])
     msg = git(mrepo, "log", "-1", "--format=%B")
-    assert msg.startswith(f"CE-1: the parser\n\nOps: session.start {c.session}, new CE-1, comment CE-1\n\nSabotage: x -> test_y red\nSession: {c.session}\nCo-Authored-By: {CLAUDE}\n"), msg
-    assert trailers(mrepo) == ["Sabotage: x -> test_y red", f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], msg  # a trailer-shaped last paragraph takes the trailer
+    assert msg.startswith(f"CE-1: the parser\n\nOps: session.start {c.session}, new CE-1, comment CE-1\n\nSabotage: x -> test_y red\n\nSession: {c.session}\nCo-Authored-By: {CLAUDE}\n"), msg
+    # a last paragraph of Sabotage lines holds no closing trailer, so it stays body (CE-197)
+    assert trailers(mrepo) == [f"Session: {c.session}", f"Co-Authored-By: {CLAUDE}"], msg
     status = git(mrepo, "status", "--porcelain")
     assert status.splitlines() == ["M  HANDOFF.md", "?? wip.py"], status
     clone = tmp_path / "clone"
