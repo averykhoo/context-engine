@@ -1007,3 +1007,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** out of CE-170 scope, not yet decided whether template or engine default should supply actor
 - **control:** individual: the refusal on a missing actor names the flag
 - **from:** CE-170, session 2026-11-07e
+
+## INV-143: freeze refuses a doc whose H1 falls outside G-D4's window even when 'first after its frontmatter' would fit (frontmatter of about 7-8 lines, then H1 and a blank)
+
+- **affects:** adopters freezing a doc with long frontmatter
+- **why not eliminated:** the spec says refuse rather than fall back
+- **control:** individual: the post-check in working.py::Engine.doc_freeze refuses and writes nothing; the adopter places the line by hand per manual-mode
+- **from:** CE-172, session 2026-11-07e
+
+## INV-144: freezing a doc of '# D\n', '# D' or '' leaves it ending in a blank line
+
+- **affects:** adopters freezing near-empty docs
+- **why not eliminated:** spec-intended, cosmetic
+- **control:** individual: tests/test_docs.py cases g and h pin the result
+- **from:** CE-172, session 2026-11-07e
+
+## INV-145: half of the doc_freeze post-check is unpinned: weakening it to got.word != 'FROZEN' (dropping the line comparison) leaves every test green
+
+- **affects:** a future change to doc_freeze that makes the branch reachable
+- **why not eliminated:** that half cannot be reached today, so it is extra protection
+- **control:** individual: none beyond the other half of the post-check, which is pinned by test_freeze_refuses_what_it_cannot_freeze_and_writes_nothing
+- **from:** CE-172, session 2026-11-07e
