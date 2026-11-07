@@ -3,14 +3,14 @@ type: Task
 id: CE-152
 title: 'Session task lines: asked drops ids ID_RE cannot read back; pause resume does not re-apply tasks'
 brief: CE-112 residuals (358dde6); refuse or keep, never drop an id silently
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Session task lines: the asked line drops an id ID_RE cannot read back; pause resume does not re-apply a paused entry's tasks.
