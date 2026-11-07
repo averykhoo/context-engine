@@ -2,14 +2,14 @@
 type: Task
 id: CE-179
 title: 'G-W4: a bulk import does not derive status: deprecated from state: closed'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-03b
 created: 2026-11-04
-moved: 2026-11-03b
-updated: 2026-11-03b
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 G-W4: a bulk import does not derive status: deprecated from state: closed.
