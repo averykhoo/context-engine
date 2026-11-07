@@ -1028,3 +1028,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** that half cannot be reached today, so it is extra protection
 - **control:** individual: none beyond the other half of the post-check, which is pinned by test_freeze_refuses_what_it_cannot_freeze_and_writes_nothing
 - **from:** CE-172, session 2026-11-07e
+
+## INV-146: The null and ~ spellings of an empty stale_after are not tested separately from the empty string
+
+- **affects:** engine maintainers
+- **why not eliminated:** they take the same store.py::coerce path as the tested empty-string case
+- **control:** reduce: test_record_new_task_set_and_decision_set_refuse_a_bad_or_expired_stale_after[empty-*]
+- **from:** CE-155, session 2026-11-07e
+
+## INV-147: Timestamp forms YAML might read but fromisoformat rejects (lowercase t or z) are refused at write time
+
+- **affects:** record writers using unusual timestamp spellings
+- **why not eliminated:** refusing is safe, since lint's guards.py::instant would be red on the stored string anyway
+- **control:** reduce: guards.py::instant via lint G-D4
+- **from:** CE-155, session 2026-11-07e
+
+## INV-148: The CLI test for task set checks only that stale_after appears in stderr, not the reason
+
+- **affects:** engine maintainers
+- **why not eliminated:** the engine-level tests pin the reasons
+- **control:** reduce: test_record_new_task_set_and_decision_set_refuse_a_bad_or_expired_stale_after
+- **from:** CE-155, session 2026-11-07e

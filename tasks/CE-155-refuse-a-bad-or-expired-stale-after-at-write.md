@@ -4,13 +4,15 @@ id: CE-155
 title: Refuse a bad or expired stale_after at write time
 brief: CE-136 residual (a7f128b); today only lint and the gate go red afterwards
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Refuse a bad or expired stale_after at write time.
@@ -26,3 +28,6 @@ Source: CE-136's close (a7f128b), residual. `record new --set stale_after=2026-1
 - guards.py::stale
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: record new, task set and decision set refuse a bad or expired stale_after at write time (cdd9d7f; decisions DEC-203, DEC-204)
+  residual risk: INV-146, INV-147, INV-148
