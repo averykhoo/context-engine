@@ -1400,8 +1400,9 @@ nothing, so the question would come back as overdue though the owner saw it.
 ### context-engine hk run
 
 `context-engine hk run start` after `session start`, and `hk run close` before `session close`,
-which runs it itself, first, unless given `--no-housekeeping` (MCP `hk_run(phase, check)`;
-`--check` lists the plan and writes nothing). By hand, do the rows of
+which runs it itself, first, unless given `--no-housekeeping` (MCP `hk_run(phase, check,
+anyway)`; `--check` lists the plan and writes nothing; `--anyway` runs a plan bigger than
+`[housekeeping] max_writes`, on the owner's word, step 5). By hand, do the rows of
 procedures.md § Housekeeping in order:
 
 1. **start:** § context-engine session abandon with `--stale`, § context-engine hk stamp, then §

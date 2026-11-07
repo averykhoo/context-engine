@@ -2071,7 +2071,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
 | Gate | `gate.status(require)`: each gate scope's content id and whether a green run covers it (§8.5 G-V1); the run itself is CLI only (`gate run`), out of the MCP's scope |
-| **Housekeeping (`hk_`)** | `hk.run(phase, check)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11); `hk.expire_batons` (CLI `baton expire`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's; it waits on the board as its own item, with G-V2's floors) |
+| **Housekeeping (`hk_`)** | `hk.run(phase, check, anyway)` (CLI `hk run <start\|close>`: each phase's tier-0 operations in order, §6.11; `anyway` runs a plan bigger than `[housekeeping] max_writes`, on the owner's word, G-W10); `hk.expire_batons` (CLI `baton expire`); `hk.close(id, commit, ledger, scan)` (CLI `hk close`; checks the `Closes:` trailer in git, §6.11); `hk.stamp_asked` (CLI `hk stamp`: `last_asked` from `asked` receipts); `hk.comment(id, text, commit, scan, since)` (CLI `hk comment`: a commit becomes a dated comment on the task its title leads with, §6.11); not built: `hk.ratchet` (no ratcheting floor exists until G-V2's; it waits on the board as its own item, with G-V2's floors) |
 
 The `hk_` set has its own prefix so a housekeeping agent's allowlist can name only those tools
 (§6.11).
@@ -2321,8 +2321,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   conversation loses only its prose judgement. Lint runs in every session's gate, so a live
   session past the window that has not touched turns other sessions' gates red: at the same
   moment housekeeping may abandon it, so only its visibility is new. Not checked: a shallow
-  clone (CI's checkout), whose cut-off commits could make a live session look stale; there it
-  reports nothing.
+  clone (CI fetches full history for this reason, G-W9 above), whose cut-off commits could
+  make a live session look stale; there it reports nothing.
 - **G-W12:** an open NOW item carrying `review` has a design review that passes the promotion
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.

@@ -1418,8 +1418,8 @@ def mechanical_closes(e: Engine) -> list[Failure]:
     before that close shows no reopen since (`ledger_close_outweighed`). One failure per close
     line.
 
-    A cited commit git does not know fails in a full clone; in a shallow one (CI's checkout), or
-    with no git at all, its citation is trusted, as G-W7 trusts the op log.
+    A cited commit git does not know fails in a full clone; in a shallow one (a `--depth` clone; CI
+    fetches full history, AC-180), or with no git at all, its citation is trusted, as G-W7 trusts the op log.
 
     Not checked: a commit a shallow clone does not have; a close line edited by hand to cite other evidence
     (that is a body edit G-W7 does not see); whether the work is really done."""

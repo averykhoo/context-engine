@@ -418,6 +418,22 @@ def test_hk_comment_writes_one_dated_mechanical_comment_and_refuses_what_is_not_
 
 
 @pytest.mark.criterion("AC-174")
+def test_hk_comment_refuses_a_record_that_is_not_on_the_board_as_not_a_task(eng):
+    """A decision has no `state`: it is refused as not a task, not as "closed" (CE-170)."""
+    me, a, _ = _board(eng)
+    dec = eng.record_new("decision", "A call", "Words.", {"actor": "owner", "decision_status": "BUILT"}, **kw(me)).id
+    sha = _agent_commit(eng.root, f"{dec}: the call", me, "d.txt")
+    before = (eng.root / "ops.jsonl").read_bytes()
+    with pytest.raises(Refusal, match=rf"{dec} is a decision, not a task") as r:
+        eng.hk_comment(dec, sha, text="this commit carried the call out", **kw(me))
+    assert "is closed" not in r.value.message and "open task" in r.value.remedy, (r.value.message, r.value.remedy)
+    with pytest.raises(Refusal, match=rf"{dec} is a decision, not a task") as r:
+        eng.hk_comment(dec, sha, **kw(me))  # derived: the title leads with the id
+    assert "is closed" not in r.value.message, r.value.message
+    assert (eng.root / "ops.jsonl").read_bytes() == before  # nothing written
+
+
+@pytest.mark.criterion("AC-174")
 def test_hk_comment_scan_comments_its_range_once_and_leaves_closes_to_hk_close(eng):
     me, a, b = _board(eng)
     one = _agent_commit(eng.root, f"{a.id}: step one", me, "1.txt")

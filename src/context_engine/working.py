@@ -1474,6 +1474,8 @@ class Engine:
         rid, short = rec.id, full[:7]
         if self.w.question and rec.kind.name == self.w.question:
             return f"{rid} is an owner question: housekeeping comments only on tasks"
+        if rec.kind.name not in self._board():
+            return f"{rid} is a {rec.kind.name}, not a task: housekeeping comments only on tasks"
         if rec.doc.get("state") != "open":
             return f"{rid} is closed"
         if rid in closes:
@@ -1562,9 +1564,9 @@ class Engine:
         history without reading git. One item: ``rid`` and ``commit``, which must be in HEAD's
         history; with no ``text`` the comment is ``<short sha>: <subject>`` and the title must lead
         with ``rid``; a given ``text`` is tier 1's (a model wrote it) and passes the same prose
-        checks. Refused, each with its remedy: an owner question, a closed item, a commit whose
-        `Closes:` trailers name the item (`hk close` closes on it, and a log citing it would block
-        that), and a hash the item's log already cites. ``scan`` comments every such commit in
+        checks. Refused, each with its remedy: an owner question, a record that is not on the
+        board, a closed item, a commit whose `Closes:` trailers name the item (`hk close` closes on
+        it, and a log citing it would block that), and a hash the item's log already cites. ``scan`` comments every such commit in
         this session's range (``hk_comment_plan``) and lists what it skipped.
 
         Not checked: a commit outside the range (a session that never scans leaves its range
@@ -3859,9 +3861,9 @@ class Engine:
         (``stale_stubs``, the window `session abandon --stale` uses). Its remedy asks the owner first,
         since a live session that only reads looks the same until it runs `session touch`.
 
-        Not checked: a shallow clone (CI's checkout at depth 1), where the commits that are a
-        session's last activity may be cut off, so a live session would look stale: there G-W11
-        reports nothing. The window of 3 is provisional and unmeasured."""
+        Not checked: a shallow clone (a `--depth` clone; CI fetches full history, AC-180), where
+        the commits that are a session's last activity may be cut off, so a live session would look
+        stale: there G-W11 reports nothing. The window of 3 is provisional and unmeasured."""
         if not any(e.kind == "open" for e in led.entries):
             return []
         if (L._git(self.root, "rev-parse", "--is-shallow-repository") or "").strip() == "true":
