@@ -1528,11 +1528,29 @@ def test_the_write_time_check_allows_this_sessions_reserved_ids_and_the_records_
     assert g_d3(eng) == []
 
 
-def test_the_write_time_check_is_off_with_g_d3(tmp_path):
-    """CE-183 (DEC-205): the check is G-D3's twin, so `[guards] off` naming G-D3 turns it off."""
+@pytest.mark.parametrize("op", ["record_new", "amend", "confirm", "retire", "correct", "ask_answer", "ask_answered"])
+def test_the_write_time_check_is_off_with_g_d3(tmp_path, op):
+    """CE-183 (DEC-205): the check is G-D3's twin, so `[guards] off` naming G-D3 turns it off, for
+    every op that writes append-only text: the new-text check (`record new`, `ask answer`,
+    `ask new --answered`) and the stored-body one (`record amend`, `confirm`, `retire`, `correct`,
+    fix round 2). The bare id is written, and lint G-D3, switched back on, fails it, except in the
+    retired story, which lint no longer reads (`status: deprecated`, guards.py::record_refs)."""
     e = cites_engine(tmp_path, off=["G-D3"])
-    rid = dec(e, body=FOREIGN)
-    assert "ASK-32" in e.store.get(rid).doc.body
+    d1 = dec(e)
+    recon = e.record_new("story", "Rebuilt", "words\n", {"actor": "agent (claude-x, reconstructed from the PRD)", "story_status": "unconfirmed", "date": "2026-10-12"}, **W).id
+    owned = e.record_new("story", "Owned", "words\n", {"actor": "owner", "story_status": "live", "date": "2026-10-12"}, **W).id
+    q = e.ask_new("Which index layout?", body=ASK_BODY, **W).id
+    {
+        "record_new": lambda: dec(e, body=FOREIGN),
+        "amend": lambda: e.amend(d1, "superseded in spirit by ASK-32", **W),
+        "confirm": lambda: e.confirm(recon, "yes, per ASK-32", **W),
+        "retire": lambda: e.retire(owned, "replaced by ASK-32", by="owner", **W),
+        "correct": lambda: e.correct(d1, "noon.", "see ASK-32", **W),
+        "ask_answer": lambda: e.ask_answer(q, "yes, as ASK-32 said", title="Layout B", **W),
+        "ask_answered": lambda: e.ask_answered("Which layout?", "see ASK-32", title="Layout B", **W),
+    }[op]()
+    assert any(b"ASK-32" in v for v in files(tmp_path).values())
+    assert any("names ASK-32" in f.message for f in g_d3(cites_engine(tmp_path))) != (op == "retire")
 
 
 @pytest.mark.parametrize("op", ["amend", "confirm", "retire", "correct", "ask_answer", "ask_answered"])
