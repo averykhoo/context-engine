@@ -40,7 +40,6 @@ from .errors import Refusal
 from .store import ACTOR_RE, ALIASES, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
-CRITERION_ROW_RE = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|", re.MULTILINE)  # the rows guards.py::ROW_ID_RE reads
 KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a run (CE-108)
 VERDICTS = ("KILL", "PASS", "VOID")  # the bar fired; it did not; the run cannot judge it
 VERDICT_RE = re.compile(rf"(?:{'|'.join(VERDICTS)}):\s*\S.*")
@@ -2469,12 +2468,19 @@ class Engine:
         if problem:
             raise Refusal(*problem)
 
-    def _criteria(self) -> set[str]:
-        """The criterion ids: the first cell of each table row of ``[working] criteria``."""
+    def _criteria_read(self) -> tuple[set[str], list[tuple[str, str]]]:
+        """The criterion ids of ``[working] criteria`` as lint reads them (``guards.criteria_rows``: the
+        id leading each row of a table with `status` and source columns, indented or not, outside fenced
+        code), and the problems that stop a row being read; both empty with no file (CE-150)."""
         path = self.root / self.w.criteria if self.w.criteria else None
         if path is None or not path.is_file():
-            return set()
-        return set(CRITERION_ROW_RE.findall(path.read_bytes().decode("utf-8", errors="replace")))
+            return set(), []
+        rows, problems = G.criteria_rows(G._text(path))
+        return {r.id for r in rows}, problems
+
+    def _criteria(self) -> set[str]:
+        """The criterion ids `decision link` and `why` accept: ``_criteria_read``'s."""
+        return self._criteria_read()[0]
 
     # -- criteria rows (FRAMEWORK §3.3, §6.2 step 3, CE-42) ----------------------------------
 
@@ -2531,10 +2537,13 @@ class Engine:
         return note, claim
 
     def _criterion_ids(self, raw: str) -> tuple[set[str], set[str]]:
-        """(every id leading a table row of the criteria file, as `decision link` reads them;
-        every id a logged `criterion.new` line created): an id in either is never handed out again (P3)."""
+        """(every id leading a body row of any table of the criteria file outside fenced code, indented or
+        not, a criteria table or not (``guards.table_blocks``, the one table parser): a superset of the rows
+        lint reads, so a row lint cannot read still holds its id (CE-150); every id a logged `criterion.new`
+        line created): an id in either is never handed out again (P3)."""
         logged = {str(op.get("id")) for _, op in G._ops(self) if isinstance(op, dict) and op.get("op") == "criterion.new"}
-        return set(CRITERION_ROW_RE.findall(raw.replace("\r\n", "\n"))), logged
+        rows = {cells[0] for t in G.table_blocks(raw.replace("\r\n", "\n")) for _, cells in t.body if cells and G.ROW_ID_RE.fullmatch(cells[0])}
+        return rows, logged
 
     @staticmethod
     def _criterion_prefixes(raw: str) -> list[str]:
@@ -2714,8 +2723,10 @@ class Engine:
                 self.store.find(target)  # refuses an id that is not a record
             elif target not in self._criteria():
                 crit = f" or a criterion in {self.w.criteria}" if self.w.criteria else " (no `[working] criteria` file is set, so no criterion id can be checked)"
+                unread = self._criteria_read()[1]
+                hint = f"; lint cannot read part of {self.w.criteria} ({unread[0][0]})" if unread else ""
                 series = ", ".join(k.prefix + "-n" for k in self.store.config.kinds.values())
-                raise Refusal(f"{target} is not a record{crit}", f"link an id that exists: a record ({series}) or a criterion row of the criteria file")
+                raise Refusal(f"{target} is not a record{crit}{hint}", f"link an id that exists: a record ({series}) or a criterion row of the criteria file")
         ids = [rid, target] if rel == "relaxes" else [rid]
 
         def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:

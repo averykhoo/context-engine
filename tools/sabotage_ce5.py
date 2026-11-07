@@ -33,7 +33,7 @@ S = [
     ("AC-40", W, '("::" in target and v == target.split("::")[0])', "False", T + " -k why_lists"),
     ("AC-40", W, '            if missing:\n                raise Refusal(f"{file} has no', '            if False:\n                raise Refusal(f"{file} has no', T + " -k checks_the_target"),
     ("AC-40", W, "            elif target not in self._criteria():", "            elif False:", T + " -k checks_the_target"),
-    ("AC-40", W, 'CRITERION_ROW_RE = re.compile(r"^\\|\\s*([A-Z]+-\\d+)\\s*\\|", re.MULTILINE)', 'CRITERION_ROW_RE = re.compile(r"\\b([A-Z]+-\\d+)\\b")', T + " -k checks_the_target"),
+    ("AC-40", W, "        return {r.id for r in rows}, problems", "        return set(G.ID_RE.findall(G._text(path))), problems", T + " -k checks_the_target"),
     ("AC-40", W, "        path = self.root / self.w.criteria if self.w.criteria else None", '        path = self.root / (self.w.criteria or "criteria.md")', T + " -k no_criteria_file"),
     ("AC-40", W, "if status and str(d.get(D.STATUS_KEY)).upper() != status.upper():", "if False:", T + " -k find_filters"),
     # AC-41: the listing is printed in its order (CE-185: no index is stored any more)

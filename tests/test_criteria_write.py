@@ -247,3 +247,17 @@ def test_lint_reds_an_id_leading_two_rows_and_an_id_two_criterion_new_lines_crea
     write(repo, "ops.jsonl", json.dumps(line) + "\n" + json.dumps({**line, "session": "2026-10-30b"}) + "\n")
     msgs = [f.message for f in Engine(repo).lint() if f.guard == "G-D2"]
     assert any(m.startswith("AC-3 was created twice") for m in msgs), msgs
+
+
+@pytest.mark.criterion("AC-160")
+def test_the_next_id_counts_an_indented_row_and_any_table_but_not_fenced_code(repo):
+    """CE-150: allocation reads rows with guards.py::table_blocks, the parser lint uses. An indented
+    row counts, so does an id-led row of a table that is not a criteria table (a row lint cannot read
+    still holds its id, P3), and an example inside a fence does not."""
+    write(repo, "docs/criteria.md", "# Criteria\n\n## Core\n\n" + HEADER + "| AC-1 | a | US-1 | tested |\n  | AC-5 | e | US-1 | planned |\n\n```text\n| AC-50 | an example in a fence | US-1 | planned |\n```\n")
+    e = Engine(repo)
+    assert "AC-5 already leads a row" in refused(repo, e.criterion_new, "h", "US-1", rid="AC-5", **W)
+    assert e.criterion_new("f", "US-1", **W).startswith("AC-6: ")  # a raw-text read gave AC-51
+    write(repo, "docs/criteria.md", "# Criteria\n\n" + HEADER + "| AC-1 | a | US-1 | tested |\n\n| id | note |\n|---|---|\n| AC-30 | not a criteria table |\n")
+    e = Engine(repo)
+    assert e.criterion_new("f", "US-1", **W).startswith("AC-31: ")

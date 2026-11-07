@@ -433,9 +433,9 @@ def test_a_row_of_a_criteria_table_not_led_by_a_plain_id_is_red_and_a_legacy_id_
         "docs/criteria.md: line 10: a row of a table of criteria is led by `AC 6`, which is not an id, so the row is not read",
     ]
     assert all_reds(make(chain)) == {"G-T1": stray, "G-T2": stray, "G-T6": [*stray, "docs/criteria.md: line 9: AC-05 comes from US-99, which is neither a story nor a decision"]}
-    from context_engine import guards as G, working
-    for cell in ("AC-4", "AC-05", "**AC-4**", "AC 6", "`AC-4`", "ac-4", "AC-"):
-        assert bool(G.ROW_ID_RE.fullmatch(cell)) == bool(working.CRITERION_ROW_RE.match(f"| {cell} |")), cell
+    from context_engine import guards as G
+    text = (chain / "docs/criteria.md").read_text(encoding="utf-8")
+    assert make(chain)._criteria() == {r.id for r in G.criteria_rows(text)[0]} == {"AC-1", "AC-2", "AC-3", "AC-05", "AC-7"}
 
 
 @pytest.mark.criterion("AC-65")

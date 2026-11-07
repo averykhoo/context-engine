@@ -1824,7 +1824,7 @@ ID_FORM = r"[A-Z]+-[1-9][0-9]*"  # every id the framework mints: a capital prefi
 # still resolves (P3); the store's ids are `prefix-digits` too (config.py::Kind.id_re).
 READ_FORM = r"[A-Z]+-[0-9]+"
 ID_RE = re.compile(rf"(?<![\w-]){READ_FORM}(?![\w-])")
-ROW_ID_RE = re.compile(READ_FORM)  # a criterion row's whole first cell: the rows working.py::CRITERION_ROW_RE reads
+ROW_ID_RE = re.compile(READ_FORM)  # a criterion row's whole first cell (criteria_rows; working.py::Engine._criterion_ids reads it too)
 PIPE_RE = re.compile(r"(?<!\\)\|")  # a cell boundary; a GFM-escaped `\|` stays inside its cell
 GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the standard id form
 STORY_STATUSES = ("live", "unspecified", "unconfirmed", "retired")  # FRAMEWORK §3.2

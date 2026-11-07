@@ -41,7 +41,7 @@ def eng(tmp_path):
     (tmp_path / "context.toml").write_text(_toml(CONFIG), encoding="utf-8")
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "mod.py").write_text("class Store:\n    def lint(self):\n        pass\n", encoding="utf-8")
-    (tmp_path / "criteria.md").write_text("| id | criterion |\n| --- | --- |\n| AC-7 | a criterion |\n\nAC-8 is named in prose, not a row.\n", encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| id | criterion | from | status |\n| --- | --- | --- | --- |\n| AC-7 | a criterion | US-1 | planned |\n\nAC-8 is named in prose, not a row.\n", encoding="utf-8")
     return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
 
 
@@ -516,7 +516,7 @@ def test_relink_refuses_writing_nothing_unless_it_moves_an_existing_code_link_of
 def test_link_refuses_a_criterion_id_when_no_criteria_file_is_set(tmp_path):
     cfg = {**CONFIG, "working": {k: v for k, v in CONFIG["working"].items() if k != "criteria"}}
     (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
-    (tmp_path / "criteria.md").write_text("| AC-7 | a criterion |\n", encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| id | criterion | from | status |\n|---|---|---|---|\n| AC-7 | a criterion | US-1 | planned |\n", encoding="utf-8")
     e = Engine(tmp_path)
     rid = dec(e)
     with pytest.raises(Refusal, match=r"no `\[working\] criteria` file"):
@@ -918,7 +918,7 @@ DEC_CONFIG = {**CONFIG, "kinds": {**CONFIG["kinds"], "decision": {**CONFIG["kind
 def deng(tmp_path):
     """A repo whose decision kind is DEC-n, adopting a log written as D-n (adhoc's case)."""
     (tmp_path / "context.toml").write_text(_toml(DEC_CONFIG), encoding="utf-8")
-    (tmp_path / "criteria.md").write_text("| id | criterion |\n| --- | --- |\n| AC-7 | a criterion |\n", encoding="utf-8")
+    (tmp_path / "criteria.md").write_text("| id | criterion | from | status |\n| --- | --- | --- | --- |\n| AC-7 | a criterion | US-1 | planned |\n", encoding="utf-8")
     return Engine(tmp_path, today=lambda: dt.date(2026, 10, 12))
 
 
@@ -1474,3 +1474,23 @@ def test_lint_g_i3_fails_a_hand_edited_capitalised_owner(eng):
         assert [f.path for f in got] == [eng.store._rel(path)] and says in got[0].message, got
     path.write_text(good, encoding="utf-8")
     assert g_i3(eng) == []
+
+
+@pytest.mark.criterion("AC-40")
+def test_link_reads_a_criterion_as_lint_reads_its_row(eng):
+    """CE-150: a criterion is a row guards.py::criteria_rows reads (a table with `status` and source
+    columns, indented or not, outside fenced code). A table lint cannot read as criteria is named in the refusal."""
+    rid = dec(eng)
+    with pytest.raises(Refusal) as r:
+        eng.link(rid, "AC-999", "amends", **W)
+    assert "lint cannot read" not in str(r.value)
+    (eng.root / "criteria.md").write_text(
+        "# Criteria\n\n| id | criterion | from | status |\n|---|---|---|---|\n| AC-7 | a | US-1 | planned |\n  | AC-11 | an indented row | US-1 | planned |\n\n"
+        "```text\n| AC-12 | an example in a fence | US-1 | planned |\n```\n\n| id | note |\n|---|---|\n| AC-13 | a table with no status or from column |\n",
+        encoding="utf-8")
+    eng.link(rid, "AC-11", "amends", **W)
+    assert eng.store.get(rid).doc.get("amends") == ["AC-11"]
+    with pytest.raises(Refusal, match="not a record or a criterion"):
+        eng.link(rid, "AC-12", "amends", **W)
+    with pytest.raises(Refusal, match=r"lint cannot read part of criteria\.md"):
+        eng.link(rid, "AC-13", "amends", **W)
