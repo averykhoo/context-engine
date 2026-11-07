@@ -331,6 +331,14 @@ your own `context-engine commit` does not run the gate, so run the gate before i
 and before every push. Guards the engine does not
 run yet are checked by hand (FRAMEWORK §11.1).
 
+**A CI that skips prose changes** (a `paths-ignore` of `**.md`, or a gate that treats `README`
+files as code) misreads the engine's writes, which are all prose but not all `.md`: the op log
+(`docs/ledger/ops.jsonl`) is JSON lines, `doc archive` writes the archive directory's redirect
+table (`docs/archive/README.md`) and moves material that is not markdown into that directory
+byte for byte, and `context.toml` is config. Name them as prose in the filter, beside `**.md`:
+`context.toml`, `docs/ledger/**` and `docs/archive/**` (or wherever `[engine] oplog` and
+`[working] archive` point). Otherwise every engine write runs the full CI.
+
 ## Runbooks
 
 The kit ships the runbooks, and `init` copies them into the repo's `docs/runbooks/`, so a repo can

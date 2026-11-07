@@ -191,6 +191,19 @@ def test_the_kit_readme_names_the_mcp_connect_timeout_and_its_remedy():
     assert "2026-10-14" in measured and "Claude Code 2.1.280" in measured, "the measured start must say when, and on which Claude Code version"
 
 
+def test_the_kit_readme_names_the_engine_writes_a_docs_only_ci_filter_misses():
+    """CE-173: the op log is `.jsonl` and `doc archive` writes a `README.md`, so a CI that skips
+    `**.md` runs in full on every engine write; § 5 names the template's own paths as prose."""
+    readme = " ".join((B.KIT / "README.md").read_text(encoding="utf-8").split())
+    five = readme[readme.index("## 5. The gate") : readme.index("## Runbooks")]
+    template = tomllib.loads((B.KIT / "context.toml.template").read_text(encoding="utf-8"))
+    oplog, archive = template["engine"]["oplog"], template["working"]["archive"]
+    assert oplog.endswith(".jsonl") and f"`{oplog}`" in five, "the op log, by the path the template gives it"
+    assert f"`{archive}/README.md`" in five, "the redirect table `doc archive` writes"
+    for glob in ("`context.toml`", f"`{oplog.rsplit('/', 1)[0]}/**`", f"`{archive}/**`", "`**.md`"):
+        assert glob in five, f"§ 5 names {glob} as prose for a CI filter"
+
+
 def _hook_command(root: Path) -> str:
     import json
 
