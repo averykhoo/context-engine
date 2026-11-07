@@ -3,14 +3,14 @@ type: Task
 id: CE-158
 title: 'G-W4 owner-question parts: a remedy that does not clear, and options misread'
 brief: CE-44 verifier residuals (3371106), all in guards.py::ask_parts
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07d
+updated: 2026-11-07d
 ---
 
 G-W4 owner-question parts: a remedy that does not clear, and options misread.
