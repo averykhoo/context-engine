@@ -1952,10 +1952,12 @@ counted. By hand: check that first, then:
 4. The message is your text, then the engine's lines, then your closing trailer paragraphs: `Ops:
    <op> <id>, ...` naming the op lines the commit carries, and the `Also carries ...` paragraph
    when another session's lines go in. Then `Session: <key>` and the `Co-Authored-By:` line (below), added to your last paragraph when
-   that is a trailer paragraph (every line `Token: value`, or indented to continue the one
-   before), else as a paragraph of its own: git reads trailers only there. A last paragraph
-   that has the `Session:` trailer already keeps it, and one naming another session is
-   refused.
+   that is a closing trailer paragraph (every line `Token: value`, or indented to continue the
+   one before, and one of them `Session:`, `Closes:` or a `<who>-by:` such as `Signed-off-by:`),
+   else as a paragraph of its own, so a last paragraph of `Sabotage:` lines stays body: git reads
+   trailers only from the last paragraph. A closing paragraph that has the `Session:` trailer
+   already keeps it, as it keeps a `Co-Authored-By:` naming the same address, and one naming
+   another session is refused.
 5. With no line left behind: `git commit --only -F <message file> -- <your paths>
    docs/ledger/ops.jsonl <the paths the lines name>`; if it fails, `git rm -q --cached` what step 3
    added. With lines left behind, never `--only` on the op log (it would carry their lines

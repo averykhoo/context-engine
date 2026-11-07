@@ -498,7 +498,8 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     value (``co_author()``), None for none."""
     asked = text is not None
     remedy = (f"commit by hand: `git commit -o {oplog} <the paths its uncommitted lines name>` with a "
-              f"`Session: {session}` trailer (manual-mode § What every write does)")
+              f"last trailer paragraph of `Session: {session}` and, for an agent, its `Co-Authored-By:` "
+              f"(manual-mode § context-engine commit)")
     set_env = [v for v in GIT_ENV if os.environ.get(v)]
     if set_env:
         return Outcome(note=f"{', '.join(set_env)} is set (inside a git hook?), so a commit would go to that repo or index; outside it, {remedy}")

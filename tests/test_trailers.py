@@ -123,6 +123,17 @@ def test_the_engine_adds_to_a_closing_trailer_paragraph_only(last, joined):
     assert out[2:] == ([f"{last}\n{ours}"] if joined else [last, ours]), out
 
 
+def test_the_engine_joins_a_last_paragraph_holding_only_session(tmp_path):
+    """A message whose last paragraph is its own `Session:` trailer is closing: `Co-Authored-By:`
+    joins it rather than opening a paragraph after it, which would leave git reading no `Session:`
+    and the commit foreign."""
+    msg = C.session_message("CE-1: x\n\nwhy\n\nSession: k\n", [], "k", AUTHOR)
+    assert C._paragraphs(msg)[2:] == [f"Session: k\nCo-Authored-By: {AUTHOR}"], msg
+    p = subprocess.run(["git", "interpret-trailers", "--parse"], cwd=tmp_path, input=msg.encode("utf-8"),
+                       capture_output=True, check=True)
+    assert p.stdout.decode("utf-8").splitlines() == ["Session: k", f"Co-Authored-By: {AUTHOR}"]
+
+
 def _docs() -> list[Path]:
     """Every living text that prescribes how a commit message ends (frozen FRAMEWORK-v*.md excepted)."""
     files = [REPO / "CLAUDE.md", REPO / "docs" / "framework" / "FRAMEWORK.md", REPO / "docs" / "framework" / "contract.md"]
