@@ -2037,7 +2037,10 @@ on a branch; nothing is written if any check fails.
    also lists every `#`/`## ` heading kept inside an entry, by line, so check that each belongs
    where it landed (a group heading with an intro under it, such as `## Earlier` followed by a
    paragraph, lands in the entry above, and an appendix after the last entry lands in that
-   entry: move it above the first entry in the copy).
+   entry: move it above the first entry in the copy), and, in a list of its own, every `###` to
+   `######` heading kept inside one (sub-headings, kept as text). A log with no entry heading
+   stops the import, naming its `###` headings. Line numbers in the output are those of the file
+   given: after normalising a copy, they are the copy's.
    The import stops, naming every such line at once, on a line it cannot read:
    - a `### ` heading that starts with an id but is not an entry heading (`### D-107 FIX`,
      `### D-4 (amended)`, a letter id such as `### D-159b -- ...`, and an entry heading not at
@@ -2081,8 +2084,8 @@ on a branch; nothing is written if any check fails.
 6. Stamp every record and log one `import` line each.
 7. The id map, one table row per record (`| id in the log | record | status | title |`, a
    rejected row's first cell `(rejected table row <n>)`), under a title and a FROZEN line, saved
-   as an evidence doc, with a `## Not imported` and a `## Headings kept inside entries` list
-   (step 2); `--dry-run` prints it, ready to save, after its summary, and writes nothing to the
+   as an evidence doc, with a `## Not imported`, a `## Headings kept inside entries` and a
+   `## Sub-headings kept inside entries` list (step 2); `--dry-run` prints it, ready to save, after its summary, and writes nothing to the
    repo, not even the lock file. Every entry the import set BUILT because the log gave no status is
    reviewed, and `decision set <id> --set decision_status=<status>` corrects any that was parked,
    deferred or not built.

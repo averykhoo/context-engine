@@ -18,7 +18,10 @@ engine do the reading, the locking and the writing.
   last to the end of the log), keeping any ``#``/``## `` heading inside it, its own
   ``## Amendments`` among them, except for headings with no text of their own just before the
   next entry or the end (a log's date groups). Whatever is left out (before the first entry,
-  bar the rejected table; those empty headings) is named by line in the import's output. A
+  bar the rejected table; those empty headings) is named by line in the import's output, and the
+  dry run lists every heading kept inside an entry, the `#`/`## ` ones apart from the `###` to
+  `######` ones (CE-171); line numbers are those of the text given. A log with no entry heading
+  refuses, naming its `###` headings. A
   heading it cannot read refuses, naming every such line: a ``### `` heading that starts with an
   id but is not an entry (``### D-107 FIX``, ``### D-159b -- ...``, `` ### D-2 -- ...``,
   ``### **D-2** -- ...``) unless it stands under its own entry's ``## Amendments``; an
@@ -198,6 +201,8 @@ IDLIKE_RE = re.compile(rf"^ {{0,3}}###[ \t]+[*_\[`]*(?P<id>{ID})(?P<suffix>[A-Za
 SHAPED_RE = re.compile(rf"^ {{0,3}}(?P<hashes>#{{1,2}}|#{{4,6}})[ \t]+[*_\[`]*(?P<id>{ID})\b.*\*\(.*\)\*")
 HEADING_TAIL = re.compile(rf"^(?P<title>.*?)[ \t]+\*\((?P<attr>.*?)\)\*(?:[ \t]+{DASH}[ \t]+(?P<note>.*))?$")
 SECTION_RE = re.compile(r"^#{1,2} ")  # a `#` or `## ` heading: inside an entry it is kept
+DEEPER_RE = re.compile(r"^ {0,3}#{3,6}(?:[ \t]|$)")  # a `###` to `######` heading (CommonMark): inside an entry it is text, listed apart (CE-171)
+H3_RE = re.compile(r"^ {0,3}###(?:[ \t]|$)")  # a `###` heading (CommonMark): named when a log has no entry heading (CE-171)
 FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
 COMMENT_RE = re.compile(r"^ {0,3}<!--")  # an HTML comment block (CommonMark type 2): it runs to the line holding `-->`
 DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
@@ -271,6 +276,7 @@ class Parsed:
     rejected: Table | None
     inner: list[tuple[int, str, str]]  # every `#`/`## ` heading kept inside an entry: (line, entry id, heading)
     problems: list[Problem]
+    deeper: list[tuple[int, str, str]]  # every `###` to `######` heading kept inside an entry as text, the same way (CE-171)
 
 
 def _num(rid: str) -> int:
@@ -439,6 +445,7 @@ def parse_log(text: str) -> Parsed:
     starts = [i for i in sorted(heads) if heads[i] == "entry"]
     first = starts[0] if starts else len(lines)
     inner: list[tuple[int, str, str]] = []
+    deeper: list[tuple[int, str, str]] = []
     entries: list[Entry] = []
     table = _rejected(lines, h, first, problems)
     held = {table.line - 1, *range(table.at - 1, table.at + 1 + len(table.rows))} if table else set()  # the rejected table's lines become records
@@ -458,6 +465,8 @@ def parse_log(text: str) -> Parsed:
         excluded.extend(reversed(empty))
         amends = None  # the line of this entry's own `## Amendments`
         for i in range(start, end):
+            if i < stop and i not in h.hidden and DEEPER_RE.match(lines[i]):  # its own `if`: the chain below would shadow some
+                deeper.append((i + 1, rid, lines[i].strip()))
             if i >= stop:
                 if amends is None and heads.get(i) == "section" and AMENDMENTS_HEADING.match(lines[i]):
                     amends = i
@@ -489,7 +498,7 @@ def parse_log(text: str) -> Parsed:
     problems += [_shaped(i + 1, ln) for i, ln in enumerate(lines) if i not in h.hidden and SHAPED_RE.match(ln)]
     problems.sort(key=lambda p: p.line)
     excluded.sort(key=lambda x: x.first)
-    return Parsed(entries, excluded, table, inner, problems)
+    return Parsed(entries, excluded, table, inner, problems, deeper)
 
 
 def refusal(problems: list[Problem]) -> Refusal:
@@ -526,6 +535,25 @@ IMPORT_LATER = (
 REJECTED_LABEL = "(rejected table row {n})"
 
 
+def _no_entries(text: str) -> Refusal:
+    """The refusal of a log with no entry heading, saying why: its `###` headings outside fences
+    and comments, none of which is an entry's, or that it has none (CE-171). ``parse_log`` stays a
+    pure reader; this is the importer's refusal, not a ``Problem`` (no one line is wrong)."""
+    lines = text.replace("\r\n", "\n").split("\n")  # as parse_log splits it, so the numbers are the same
+    hidden = _headings(lines).hidden
+    h3 = [i + 1 for i, ln in enumerate(lines) if i not in hidden and H3_RE.match(ln)]
+    if h3:
+        more = h3[1:]
+        also = f"; also line{'s' if len(more) > 1 else ''} {', '.join(map(str, more[:8]))}{', ...' if len(more) > 8 else ''}" if more else ""
+        why = f"none of its {len(h3)} `###` headings starts with an id and a dash (line {h3[0]}: {lines[h3[0] - 1].strip()[:80]!r}{also})"
+    else:
+        why = "it has no `###` heading outside code fences and comments"
+    return Refusal(
+        f"the log has no `### <id> -- title *(actor, date)*` entries: {why}",
+        f"in a copy of the log, write each entry's heading `### D-<n> -- <title> *(<actor>, <date>)*` ({UNRECORDED_HOW}), then import the copy; or point the import at a single-file decision log",
+    )
+
+
 def plan_import(
     text: str, prefix: str, used: set[int], source: str, aliases: dict[str, list[str]] | None = None, rejected: dict[str, str] | None = None
 ) -> tuple[list[Entry], list[str], Parsed]:
@@ -542,7 +570,7 @@ def plan_import(
         raise refusal(parsed.problems)
     entries = parsed.entries
     if not entries:
-        raise Refusal("the log has no `### <id> -- title *(actor, date)*` entries", "point the import at a single-file decision log")
+        raise _no_entries(text)
     aliases = aliases or {}
     for e in entries:
         e.old, e.id = e.id, f"{prefix}-{_num(e.id)}"
@@ -634,6 +662,8 @@ def plan_import(
         notes.append(f"{len(own)} entries' own `## Amendments` kept as their records' amendments (not stamped)")
     if parsed.inner:
         notes.append(f"{len(parsed.inner)} `#`/`## ` headings kept inside {len({i for _, i, _ in parsed.inner})} entries")
+    if parsed.deeper:
+        notes.append(f"{len(parsed.deeper)} `###` to `######` headings kept inside {len({i for _, i, _ in parsed.deeper})} entries as text")
     if parsed.excluded:
         notes.append("not imported: " + excluded_line(parsed.excluded))
     gone = [e for e in entries if e.fields["decision_status"] == "SUPERSEDED"]
@@ -661,12 +691,16 @@ def excluded_line(excluded: list[Excluded]) -> str:
 
 
 def layout(parsed: Parsed) -> str:
-    """For the dry run's evidence doc: every range no entry holds, and every `#`/`## ` heading
-    kept inside an entry, by line, so a reader can check each was placed as meant."""
+    """For the dry run's evidence doc: every range no entry holds; every `#`/`## ` heading kept
+    inside an entry, by line, so a reader can check each was placed as meant (the short, risky
+    list: a log's own structure folded into the entry above); and, apart, every `###` to `######`
+    heading kept inside one as text (CE-171)."""
     out = ["## Not imported", ""]
     out += [f"- line{'s' if x.last > x.first else ''} {x.first}{f'-{x.last}' if x.last > x.first else ''}: {x.why}: {x.head[:80]!r}" for x in parsed.excluded] or ["- nothing: every line is in an entry"]
     out += ["", "## Headings kept inside entries", ""]
-    out += [f"- line {n}, in {rid}: {h[:80]!r}" for n, rid, h in parsed.inner] or ["- none"]
+    out += [f"- line {n}, in {rid}: {h[:80]!r}" for n, rid, h in parsed.inner] or ["- none at `#` or `## `"]
+    out += ["", "## Sub-headings kept inside entries", ""]
+    out += [f"- line {n}, in {rid}: {h[:80]!r}" for n, rid, h in parsed.deeper] or ["- none"]
     return "\n".join(out) + "\n"
 
 

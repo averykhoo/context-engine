@@ -14,3 +14,7 @@ updated: 2026-11-07e
 ---
 
 From the CE-11 intervals cutover (2026-11-02a): (1) decision import on a log whose headings it does not recognise reports 0 entries and 0 problems and exits clean; it should refuse. (2) The dry run lists only # and ## headings kept inside entries and said none where 55 ### and 10 #### lines sat inside entries. (3) The import output gives line numbers of the normalised copy, not the original log. (4) With a prefix equal to the log one, no record gets an alias, so the bare unhyphenated D17 form (about 287 uses in intervals) cannot be aliased at import.
+
+## Log
+
+- 2026-11-07e (claude-code/claude-opus-5-5): Part 4 (bare D17 alias at import) split to CE-202 (DEC-213); parts 1-3 built under CE-171 (DEC-210, DEC-211, DEC-212).

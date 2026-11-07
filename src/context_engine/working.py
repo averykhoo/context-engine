@@ -3022,7 +3022,7 @@ class Engine:
             doc = (
                 f"# Decision id map: {source} into {kind.dir}\n\nFROZEN. Printed by `context-engine decision import --dry-run` on "
                 f"{self.today().isoformat()}, session {session}; the import gives each record below its id, and the old id, where "
-                f"there was one, stays in its `{ALIASES}` (FRAMEWORK §11.4). Line numbers are the log's.\n\n{D.id_map(planned)}\n{D.layout(parsed)}"
+                f"there was one, stays in its `{ALIASES}` (FRAMEWORK §11.4). Line numbers are those of {source}, the file this import read.\n\n{D.id_map(planned)}\n{D.layout(parsed)}"
             )
             return f"dry run, nothing written: would import {summary} into {kind.dir}{after}\n\nSave everything below this line as the id map's evidence doc, then import:\n\n{doc}"
         self.store.create_many(kind.name, items, session=session, actor=actor, op="import")

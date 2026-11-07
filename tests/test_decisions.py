@@ -909,6 +909,62 @@ def test_the_dry_run_doc_names_each_line_left_out_and_each_heading_kept_inside_a
     assert "## Headings kept inside entries\n\n- line 11, in D-3: '## 1. An inner section'\n- line 32, in D-2: '## Amendments'\n- line 42, in D-1: \"## 1. The last entry's own section\"\n- line 46, in D-1: '## Amendments'\n" in doc
 
 
+
+# -- CE-171: an entry-less log refuses saying why; sub-headings are listed; line numbers are the file's --
+
+NO_ENTRIES = "# Log\n\n### 2026-10-06 -- the owner chose X\n\nBody.\n\n```md\n### in a fence\n```\n\n### Earlier notes\n\nMore.\n"
+
+
+@pytest.mark.criterion("AC-42")
+def test_an_import_of_a_log_with_no_entry_headings_refuses_naming_its_headings(eng):
+    path = write_log(eng, NO_ENTRIES)
+    for dry in (False, True):
+        with pytest.raises(Refusal) as r:
+            eng.import_log(path, dry_run=dry, **W)
+        msg = r.value.message
+        assert msg.startswith("the log has no `### <id> -- title *(actor, date)*` entries: none of its 2 `###` headings starts with an id and a dash")
+        assert msg.endswith("(line 3: '### 2026-10-06 -- the owner chose X'; also line 11)")  # line 8 is in a fence: not named
+        assert "line 8" not in msg and "### D-<n> -- <title> *(<actor>, <date>)*" in r.value.remedy
+    assert main(["--root", str(eng.root), "--session", S, "--actor", ACTOR, "decision", "import", path]) == 2
+    assert not (eng.root / "decisions").exists() and not (eng.root / "ops.jsonl").exists()
+    with pytest.raises(Refusal) as r:
+        eng.import_log(write_log(eng, "# Log\n\nJust prose.\n"), **W)
+    assert r.value.message == "the log has no `### <id> -- title *(actor, date)*` entries: it has no `###` heading outside code fences and comments"
+    many = "# Log\n\n" + "".join(f"### note {n}\n\n" for n in range(1, 12))
+    with pytest.raises(Refusal) as r:
+        eng.import_log(write_log(eng, many), **W)
+    assert r.value.message.endswith("none of its 11 `###` headings starts with an id and a dash (line 3: '### note 1'; also lines 5, 7, 9, 11, 13, 15, 17, 19, ...)")
+
+
+EDGES = "### D-1 -- one *(owner, 2026-10-01)*\n\nBody.\n\n####### seven\n###no-space\n\n    #### indented code\n\n   ###### three-space\n###\n\nEnd.\n"
+
+
+@pytest.mark.criterion("AC-42")
+def test_the_dry_run_doc_lists_each_sub_heading_kept_inside_an_entry(eng):
+    dry = lambda text: eng.import_log(write_log(eng, text), dry_run=True, **W).split("then import:\n\n")[1]  # noqa: E731 (a dry run writes nothing)
+    doc = dry(SHAPED)
+    assert doc.endswith("## Sub-headings kept inside entries\n\n- line 34, in D-2: \"### D-2 FIX (2026-10-03) -- folded under its parent's amendments\"\n- line 48, in D-1: \"### D-1 FIX -- under the last entry's own amendments\"\n")
+    assert "line 17" not in doc and "line 23" not in doc  # a `###` in a fence and in a comment is text, not a heading
+    assert dry(LOG).endswith("## Sub-headings kept inside entries\n\n- line 24, in D-3: '#### a sub-heading inside an entry'\n")
+    edges = "## Headings kept inside entries\n\n- none at `#` or `## `\n\n## Sub-headings kept inside entries\n\n- line 10, in D-1: '###### three-space'\n- line 11, in D-1: '###'\n"
+    assert dry(EDGES).endswith(edges)  # not `#######`, `###no-space` or a 4-space-indented line: CommonMark reads none as a heading
+    assert dry("### D-1 -- one *(owner, 2026-10-01)*\n\nBody.\n").endswith("## Headings kept inside entries\n\n- none at `#` or `## `\n\n## Sub-headings kept inside entries\n\n- none\n")
+    out = eng.import_log(write_log(eng, SHAPED), **W)
+    assert "4 `#`/`## ` headings kept inside 3 entries; 2 `###` to `######` headings kept inside 2 entries as text;" in out
+
+
+@pytest.mark.criterion("AC-42")
+def test_import_line_numbers_are_the_files_through_crlf_and_a_bom(eng):
+    path = eng.root / "decisions-copy.md"
+    path.write_bytes("﻿# Log\r\n\r\nIntro.\r\n\r\n### D-1 -- one *(owner, 2026-10-01)*\r\n\r\nBody.\r\n\r\n#### sub\r\n".encode("utf-8"))  # bytes: write_text would translate newlines on Windows
+    dry = eng.import_log(path.name, dry_run=True, **W)
+    assert "; not imported: lines 1-3 (before the first entry, from '# Log')" in dry.splitlines()[0]
+    assert "- line 9, in D-1: '#### sub'\n" in dry and "Line numbers are those of decisions-copy.md, the file this import read." in dry
+    eng.import_log(path.name, **W)
+    body = eng.store.get("D-1").doc.body
+    assert body.strip("\n") == "Body.\n\n#### sub" and "\r" not in body and "﻿" not in body
+
+
 # -- DEC-37: an import renames to the framework's form, and each old id stays an alias --------------
 
 DEC_CONFIG = {**CONFIG, "kinds": {**CONFIG["kinds"], "decision": {**CONFIG["kinds"]["decision"], "prefix": "DEC"}}}
