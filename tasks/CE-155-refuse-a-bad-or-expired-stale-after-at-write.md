@@ -3,14 +3,14 @@ type: Task
 id: CE-155
 title: Refuse a bad or expired stale_after at write time
 brief: CE-136 residual (a7f128b); today only lint and the gate go red afterwards
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Refuse a bad or expired stale_after at write time.
