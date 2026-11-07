@@ -7,6 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-07c · kind: close
+
+- **continues:** 2026-11-07b
+- **rows:** CE-198 (commented, NEXT); CE-187 (read, NOW)
+- **receipts:**
+  - guards: not run
+  - read: orient; task show CE-187; procedures § Housekeeping
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Owner asked what is next; answered: CE-187 (NOW), as trial task 1 of CE-198 (sonnet builder,
+    opus verifier).
+  - Housekeeping: hk comment on CE-198 for fc317a7; no stale stubs, foreign commits or pauses.
+- **Still owed:**
+  - owner: say go to start CE-187
+  - owner: restart Claude Code so the MCP commit tool gets CE-197's options
+- **start head:** 5fc4109aabb405f3f19e779abb3eb35096410fa4
+
+---
+
 ## 2026-11-07b · kind: close
 
 - **continues:** 2026-11-07a

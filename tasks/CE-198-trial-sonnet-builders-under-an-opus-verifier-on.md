@@ -10,7 +10,7 @@ goals: [G-1]
 source: session 2026-11-07b
 created: 2026-11-07
 moved: 2026-11-07b
-updated: 2026-11-07b
+updated: 2026-11-07c
 ---
 
 Trial sonnet builders under an opus verifier (DEC-173; shape from docs/evidence/article-takeaways-advice-2026-11-07a.md).
@@ -34,3 +34,5 @@ Decides: adopt if the median tokens per task fall by 30% or more and FAIL rounds
 - DEC-173
 
 ## Log
+
+- 2026-11-07c (claude-code/claude-opus-5-5): fc317a7: CE-198: file the sonnet-builder trial; CLAUDE.md points to DEC-173's trial and size floor
