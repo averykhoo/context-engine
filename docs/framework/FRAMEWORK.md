@@ -2108,7 +2108,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Group | Tools |
 |---|---|
 | Session | `session.start(follows, continues)` (a link back to a closed session, §5.5 rule 1); `session.close(rows, summary, guards, read, asked, owed, banner, seen, housekeeping)` (guards to owed are its receipts and owed list; it runs `hk run close` first unless `housekeeping` is false, and sets the banner only when given `banner` with the `seen` hash, §6.3); `session.pause(rows, deferred)`; `session.abandon(key, force, stale)` (another session's stale stub, §7.1); `session.tasks(ids)` (the tasks the owner asked for, §6.2 item 7); `session.touch` (a live session that only reads resets its staleness, §7.1) |
-| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12); `site.build(outdir)`: the records as a static HTML site in a new or empty directory outside the tracked tree, never stored (§6.5; CI publishes it) |
+| Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure, guard and operation of this text with its build status (G-D12); `site.build(outdir)`: the records as a static HTML site in a new or empty directory outside the tracked tree, never stored (§6.5; CI publishes it) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `import(path, kind)`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
@@ -2306,12 +2306,15 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   frontmatter with a `type`; every `index.md` has no frontmatter (except an `okf_version` key at
   the bundle root) and the list shape. That `status` agrees with the record's own state key is
   G-W4. Not checked: an `index.md`'s list shape.
-- **G-D12:** coverage: every component (§2's table), procedure (§5.6 and the §6 headings) and
-  G-id this document names is owned, by a table row of the newest dated coverage map or by a
-  board item, open or closed, that names it. A map row owns only its own table's class, in
+- **G-D12:** coverage: every component (§2's table), procedure (§5.6 and the §6 headings),
+  G-id and operation (each backticked `noun.verb` name §8.0.2 gives, file names aside) this
+  document names is owned, by a table row of the newest dated coverage map or by a board item,
+  open or closed, that names it; an operation the engine registers owns itself, so only an
+  unregistered one needs a row or an item. A map row owns only its own table's class, in
   that table's key column (`Component`; `§` beside `Procedure`, or beside `Ritual` in older
-  maps; `Guard`). A renamed component still counts under its former name (`Invariants`,
-  `Law / NFRs`), in a map row or a board item alike. Config: `[guards] coverage_spec` and `coverage_maps`
+  maps; `Guard`; `Operation`). A renamed component still counts under its former name
+  (`Invariants`, `Law / NFRs`), and an operation under its tool name (`hk_run`), in a map row or
+  a board item alike. Config: `[guards] coverage_spec` and `coverage_maps`
   (a repo-relative glob; the newest by the date and session letters in its file name, ordered
   as session keys). With neither set, the guard is off; with only one set, a missing spec, a
   glob that is absolute or climbs out with `..`, no matching map, or an undated one, it is red.
@@ -2319,9 +2322,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   id format cannot pass by finding nothing; the floors and patterns are the engine's and fit
   this document, so a repo whose spec they do not fit switches G-D12 off. The map is frozen: a
   failure clears with a new dated map or a board item, never an edit. `coverage()` reads the
-  same sources and gives each item one build status: built (a guard lint reports), deferred or
-  prose-only (the newest map's row says so), open work (an open board item owns it), done (only
-  closed ones do), map only, or unowned. It is generated on demand, never stored, so it cannot
+  same sources and gives each item one build status: built (a guard lint reports, a guard an
+  operation enforces at write time, such as G-W8 and G-W10, or an operation the engine
+  registers), deferred or prose-only (the newest map's row says so; an open board item does not
+  outrank it, since a mention cannot tell work from an aside), open work (an open board item
+  owns it), done (only closed ones do), map only, or unowned. It is generated on demand, never stored, so it cannot
   go stale; a closed item is the board's word that the work is done, not proof of it.
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or

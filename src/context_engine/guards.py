@@ -1564,18 +1564,25 @@ def mechanical_closes(e: Engine) -> list[Failure]:
 # spec's format changed under the pattern, so the class is red rather than silently unchecked.
 # Floors: provenance: JUDGEMENT, CE-30; FRAMEWORK.md held 23 components, 14 procedures (then called
 # rituals) and 41 G-ids on 2026-10-13a (counted by these patterns); wrong if the spec is trimmed
-# below them on purpose.
+# below them on purpose. The operations' floor: provenance: JUDGEMENT, CE-164 (DEC-283); §8.0.2
+# named 39 by OPERATION_RE on 2026-11-08 at 6688e49 (38 at 77e043e); wrong if §8.0.2 is trimmed
+# below it on purpose.
 COMPONENT_SECTION_RE = re.compile(r"^##\s+2\.\s")  # §2 "The components at a glance": its table
 COMPONENT_RE = re.compile(r"^\|\s*\d+\s*\|[^|]*\|\s*\*\*(?P<name>[^*|]+?)\*\*")  # `| 1 | Intent | **Charter** |`
 PROCEDURE_RE = re.compile(r"^###\s+(?P<num>5\.6|6\.\d+)\s+(?P<name>.+?)\s*$")  # `### 6.1 Session start`
 GID_RE = re.compile(r"(?<![\w-])G-[A-Z]\d+(?!\w)")  # `G-D3`
-COVERAGE_FLOORS = {"component": 20, "procedure": 10, "G-id": 30}
+OPERATION_SECTION_RE = re.compile(r"^###\s+8\.0\.2\s")  # §8.0.2 "Three entry points, one library": its operations
+# A backticked `noun.verb` followed by `(` or the closing backtick (`hk.run`, `ask.answer(id, words)`);
+# a verb that is a file extension makes a file name (`gate.md`), not an operation.
+OPERATION_RE = re.compile(r"`(?P<name>[a-z]+\.(?!(?:md|toml|json|ya?ml|py|txt)`)[a-z_]+)(?=[(`])")
+COVERAGE_FLOORS = {"component": 20, "procedure": 10, "G-id": 30, "operation": 30}
 MAP_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})([a-z]*)")
 # Where a coverage map's table owns each class: (the headers, any one of which marks the table; the
 # header of the column holding the key). A component row's `§` cell is not a procedure, nor is a
 # guard row's. `Ritual` is the procedures' old name (DEC-39): frozen maps keep it, new maps say
 # `Procedure`, and both count.
-MAP_COLUMNS = {"component": (("Component",), "Component"), "procedure": (("Procedure", "Ritual"), "§"), "G-id": (("Guard",), "Guard")}
+MAP_COLUMNS = {"component": (("Component",), "Component"), "procedure": (("Procedure", "Ritual"), "§"), "G-id": (("Guard",), "Guard"),
+               "operation": (("Operation",), "Operation")}
 # A §2 component's earlier names (DEC-39), so a frozen map's row under the old name still owns it.
 COMPONENT_ALIASES = {
     "Residual-risk register": ("Invariants",),
@@ -1589,13 +1596,18 @@ class Owned:
     """One thing the spec names that something must own: its class, its key, and how to name it."""
 
     cls: str
-    key: str  # a component's name, `§6.4`, or `G-D3`
+    key: str  # a component's name, `§6.4`, `G-D3`, or an operation's `hk.run`
     label: str
     name: str = ""  # a procedure's heading text, `Session start`
 
     def names(self) -> tuple[str, ...]:
-        """The key, then a component's earlier names (`COMPONENT_ALIASES`)."""
-        return (self.key, *COMPONENT_ALIASES.get(self.key, ())) if self.cls == "component" else (self.key,)
+        """The key, then a component's earlier names (`COMPONENT_ALIASES`), or an operation's
+        registered name (`hk_run`, as its MCP tool is named)."""
+        if self.cls == "component":
+            return (self.key, *COMPONENT_ALIASES.get(self.key, ()))
+        if self.cls == "operation":
+            return (self.key, self.key.replace(".", "_"))
+        return (self.key,)
 
     def in_cell(self, cell: str) -> bool:
         """A map row names it: the cell is the key or an earlier name (a component's cell may add a
@@ -1609,8 +1621,10 @@ class Owned:
 
 
 def spec_items(text: str) -> dict[str, list[Owned]]:
-    """Every component (§2's table), procedure (§5.6 and §6.n headings) and G-id the spec names, by
-    class, outside fenced code; each key once, in order of first appearance."""
+    """Every component (§2's table), procedure (§5.6 and §6.n headings), G-id and operation
+    (§8.0.2's backticked `noun.verb` names, `OPERATION_RE`) the spec names, by class, outside
+    fenced code; each key once, in order of first appearance. An operation §8.0.2 writes bare
+    (`list`, `.set`) is not extracted."""
     out: dict[str, list[Owned]] = {c: [] for c in COVERAGE_FLOORS}
     seen: set[tuple[str, str]] = set()
 
@@ -1619,11 +1633,16 @@ def spec_items(text: str) -> dict[str, list[Owned]]:
             seen.add((item.cls, item.key))
             out[item.cls].append(item)
 
-    section = False
+    section = ops_section = False
     for _, line in prose(text):
         h = HEADING_RE.match(line)
         if h and len(h.group(1)) <= 2:
             section = bool(COMPONENT_SECTION_RE.match(line))
+        if h and len(h.group(1)) <= 3:
+            ops_section = bool(OPERATION_SECTION_RE.match(line))
+        if ops_section:
+            for m in OPERATION_RE.finditer(line):
+                add(Owned("operation", m["name"], f"operation {m['name']}"))
         m = COMPONENT_RE.match(line)
         if section and m:
             name = m["name"].strip()
@@ -1634,6 +1653,14 @@ def spec_items(text: str) -> dict[str, list[Owned]]:
         for gid in GID_RE.findall(line):
             add(Owned("G-id", gid, f"guard {gid}"))
     return out
+
+
+def _registered(key: str) -> bool:
+    """An operation the engine carries: its name, the dot as an underscore, is in `ops.OPS`
+    (imported here, since ops imports this module)."""
+    from .ops import OPS
+
+    return key.replace(".", "_") in OPS
 
 
 def coverage_maps(root: Path, pattern: str) -> tuple[list[Path], list[Path]]:
@@ -1681,19 +1708,24 @@ def map_rows(text: str) -> dict[str, dict[str, dict[str, str]]]:
 
 
 def coverage(e: Engine) -> list[Failure]:
-    """G-D12: every component (§2's table), procedure (§5.6, §6.n headings) and G-id the spec
-    (`[guards] coverage_spec`) names is owned: a table row of the newest coverage map
-    (`[guards] coverage_maps`, a repo-relative glob; newest by the date and session letters in
-    the file name) names it in its class's key column (`MAP_COLUMNS`: `Component`; `§` in a
-    table with a `Procedure` or `Ritual` column; `Guard`), or a board item, open or closed,
-    names it; a component's earlier name (`COMPONENT_ALIASES`) counts as its name. Red when
-    a class extracts fewer than its floor (`COVERAGE_FLOORS`), so a reworded format cannot pass
-    by finding nothing; when only one of the two keys is set; when the spec is missing; when the
-    glob is not repo-relative or matches nothing; and when a matching map has no date in its name.
+    """G-D12: every component (§2's table), procedure (§5.6, §6.n headings), G-id and operation
+    (§8.0.2's backticked `noun.verb` names) the spec (`[guards] coverage_spec`) names is owned:
+    an operation the engine registers (`ops.OPS`, the dot as an underscore) owns itself; else a
+    table row of the newest coverage map (`[guards] coverage_maps`, a repo-relative glob; newest
+    by the date and session letters in the file name) names it in its class's key column
+    (`MAP_COLUMNS`: `Component`; `§` in a table with a `Procedure` or `Ritual` column; `Guard`;
+    `Operation`), or a board item, open or closed, names it; a component's earlier name
+    (`COMPONENT_ALIASES`) counts as its name, and an operation's registered name (`hk_run`) as
+    its. Red when a class extracts fewer than its floor (`COVERAGE_FLOORS`), so a reworded format
+    cannot pass by finding nothing; when only one of the two keys is set; when the spec is
+    missing; when the glob is not repo-relative or matches nothing; and when a matching map has
+    no date in its name.
 
     Not checked: whether a board item's mention is ownership or a passing reference (a
     judgement; the map's one-class-per-table layout carries it), whether a map row's class is
-    right, the rest of the spec (§3, §7 and §9 are context), and maps other than the newest."""
+    right, the rest of the spec (§3, §7 and §9 are context; operations only in §8.0.2, and not
+    the ones it writes bare, `list` or `.set`), whether a registered operation does what the
+    spec says, and maps other than the newest."""
     out, items, newest = coverage_sources(e)
     if out or items is None or newest is None:
         return out
@@ -1703,6 +1735,8 @@ def coverage(e: Engine) -> list[Failure]:
     board = [_text(p) for p in sorted({p for k in e.w.board for p in e.store._files(e.store.config.kind(k))})]  # tasks and questions may share a directory
     for cls in COVERAGE_FLOORS:
         for item in items[cls]:
+            if cls == "operation" and _registered(item.key):
+                continue
             if not any(item.in_cell(c) for c in cells[cls]) and not any(item.in_text(t) for t in board):
                 out.append(Failure("G-D12", g.coverage_spec, f"{item.label} is owned by no row of {map_rel} and named by no board item", f"file a board item that names {item.key} (`task new`), or write a new dated coverage map with a row for it; the map is frozen, never edit it"))
     return out
@@ -1710,8 +1744,9 @@ def coverage(e: Engine) -> list[Failure]:
 
 def coverage_sources(e: Engine) -> tuple[list[Failure], dict[str, list[Owned]] | None, Path | None]:
     """G-D12's checks of its own config, spec and maps (`coverage`), then what it reads: (the
-    failures; the spec's items by class and the newest map, both None unless there are no
-    failures). Off (nothing, and no items) while neither key is set."""
+    failures; the spec's items by class (components, procedures, G-ids, operations) and the newest
+    map, both None unless there are no failures). Off (nothing, and no items) while neither key
+    is set."""
     g = e.store.config.guards
     if not (g.coverage_spec or g.coverage_maps):
         return [], None, None
@@ -1737,7 +1772,7 @@ def coverage_sources(e: Engine) -> tuple[list[Failure], dict[str, list[Owned]] |
     items = spec_items(_text(spec))
     for cls, floor in COVERAGE_FLOORS.items():
         if len(items[cls]) < floor:
-            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, PROCEDURE_RE, GID_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
+            out.append(Failure("G-D12", g.coverage_spec, f"{len(items[cls])} {cls}s extracted, under the floor of {floor}: the spec's format no longer matches the pattern, so they would go unchecked", "the patterns and floors are the engine's (guards.py: COMPONENT_RE, PROCEDURE_RE, GID_RE, OPERATION_RE, COVERAGE_FLOORS) and fit FRAMEWORK.md's format: change them in the engine with a provenance note if FRAMEWORK changed on purpose; a repo whose spec they do not fit switches G-D12 off (`[guards] off = [\"G-D12\"]`, or unset both coverage_spec and coverage_maps)"))
     return (out, None, None) if out else ([], items, maps[0])
 
 
@@ -1746,10 +1781,11 @@ def coverage_sources(e: Engine) -> tuple[list[Failure], dict[str, list[Owned]] |
 
 # What `framework_status` says of each item G-D12 reads, in the order its rules are tried. Built
 # from G-D12's own sources, so there is no second list to keep in step: the spec's items, the
-# newest coverage map's rows, the board, and the guard ids lint reports (`config.LINT_IDS`). It is
+# newest coverage map's rows, the board, the guard ids lint reports (`config.LINT_IDS`), the G-ids
+# an operation enforces (`ENFORCED`) and the operations the engine registers (`ops.OPS`). It is
 # printed on demand, never stored, so it cannot go stale.
 STATUS_RULES = (
-    ("built", "a guard `context-engine lint` reports"),
+    ("built", "a guard `context-engine lint` reports or an operation enforces (`ENFORCED`), or an operation the engine registers"),
     ("deferred", "the coverage map's row says DEFERRED; its note is the row's reason, with what un-defers it"),
     ("prose-only", "the coverage map's row says PROSE-ONLY: a rule, no tool; its note is where the rule lives"),
     ("open work", "an open board item owns it: the map row's item, or one that names it"),
@@ -1757,6 +1793,14 @@ STATUS_RULES = (
     ("map only", "the map's row names no item this board holds, and no board item names it; its note is the row's class"),
     ("unowned", "no map row and no board item (G-D12 is red for it)"),
 )
+# G-ids no lint guard reports but an operation refuses or counts at write time: G-id -> (the
+# operation's `file::symbol`, the tested criterion that pins it). `framework_status` reads them as
+# built; tests/test_coverage_status.py checks every home resolves and every criterion is tested
+# (DEC-285, CE-164).
+ENFORCED = {
+    "G-W8": ("working.py::Engine.session_close", "AC-11"),
+    "G-W10": ("working.py::Engine.hk_run", "AC-177"),
+}
 STATUS_SHOWN = 5  # open items listed per row before `+n more`; provenance: JUDGEMENT, CE-141; wrong if a row's Board cell is routinely cut
 
 
@@ -1775,18 +1819,22 @@ def _row_class(row: dict[str, str]) -> str:
 
 
 def framework_status(e: Engine) -> tuple[str, dict[str, list[ItemStatus]]]:
-    """(the newest coverage map's repo-relative path; by class, each component, procedure and
-    G-id the spec names with its build status). The first of `STATUS_RULES` that holds decides:
-    a G-id lint reports is built; else the newest map's DEFERRED or PROSE-ONLY row says so; else
-    an open board item that owns it (the item the map row's class names, or any naming it as
-    G-D12 reads a mention) makes it open work; else a closed one makes it done; else a map row
-    alone leaves it map only, and nothing at all unowned. Refused while G-D12's own config, spec
-    or maps are off or broken (its failure is the reason). Built at read time and never stored,
-    so it needs no guard that it is current (DEC-115).
+    """(the newest coverage map's repo-relative path; by class, each component, procedure, G-id
+    and operation the spec names with its build status; G-ids by letter and number, operations
+    by name). The first of `STATUS_RULES` that holds decides: a G-id lint reports or an
+    operation enforces (`ENFORCED`), or an operation the engine registers, is built; else the
+    newest map's DEFERRED or PROSE-ONLY row says so (an open board item does not outrank it,
+    DEC-286); else an open board item that owns it (the item the map row's class names, or any
+    naming it as G-D12 reads a mention) makes it open work; else a closed one makes it done; else
+    a map row alone leaves it map only, and nothing at all unowned. Refused while G-D12's own
+    config, spec or maps are off or broken (its failure is the reason). Built at read time and
+    never stored, so it needs no guard that it is current (DEC-115).
 
     Not checked: whether a closed item built what it names (a close is the board's word, as
     G-D12 takes a mention as ownership), what an open item does with it (a passing mention reads
-    as open work), and whether an old map row's class still holds (a later map replaces it)."""
+    as open work), whether a registered operation does what the spec says, the operations
+    §8.0.2 writes bare (`list`, `.set`), and whether an old map row's class still holds (a later
+    map replaces it)."""
     from .config import LINT_IDS
 
     out, items, newest = coverage_sources(e)
@@ -1803,6 +1851,8 @@ def framework_status(e: Engine) -> tuple[str, dict[str, list[ItemStatus]]]:
     for cls, its in items.items():
         if cls == "G-id":
             its = sorted(its, key=lambda i: (i.key[2], int(i.key[3:])))
+        elif cls == "operation":
+            its = sorted(its, key=lambda i: i.key)
         result[cls] = [_item_status(i, rows[cls], board, ids, LINT_IDS) for i in its]
     return newest.relative_to(e.root).as_posix(), result
 
@@ -1847,6 +1897,11 @@ def _item_status(item: Owned, rows: dict[str, dict[str, str]], board: list[tuple
     board_cell = "; ".join(parts) or "none"
     if item.cls == "G-id" and item.key in lint_ids:
         return ItemStatus(item, "built", board_cell, "lint reports it")
+    if item.cls == "G-id" and item.key in ENFORCED:
+        home, crit = ENFORCED[item.key]
+        return ItemStatus(item, "built", board_cell, f"{home} enforces it ({crit})")
+    if item.cls == "operation" and _registered(item.key):
+        return ItemStatus(item, "built", board_cell, f"the engine registers it (`{item.key.replace('.', '_')}`)")
     if cls.startswith("DEFERRED"):
         return ItemStatus(item, "deferred", board_cell, (row or {}).get("Reason", ""))
     if cls.startswith("PROSE-ONLY"):
@@ -1865,6 +1920,7 @@ STATUS_TABLES = (  # class -> (heading, its columns before Status)
     ("component", "Components (§2)", ("Component",)),
     ("procedure", "Procedures (§5.6, §6)", ("§", "Procedure")),
     ("G-id", "Guards (§8)", ("Guard",)),
+    ("operation", "Operations (§8.0.2)", ("Operation",)),
 )
 
 

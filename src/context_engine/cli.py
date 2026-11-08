@@ -111,7 +111,7 @@ def build() -> argparse.ArgumentParser:
 
     _sub(groups, "orient", "the session-start read in one capped response: banner, batons and pauses, the board's NOW and NEXT, questions to raise, the top item")
     _sub(groups, "routes", "where each framework component lives ([[routes]] in context.toml)")
-    _sub(groups, "coverage", "FRAMEWORK's components, procedures and guards with their build status, generated from G-D12's spec and coverage map, the board and lint")
+    _sub(groups, "coverage", "FRAMEWORK's components, procedures, guards and operations with their build status, generated from G-D12's spec and coverage map, the board, lint and the engine's operations")
     lint = _sub(groups, "lint", "run the guards: failures only, each with its remedy; exits 1 when any fails")
     lint.add_argument("--working", action="store_true", help="working-state guards only")
 

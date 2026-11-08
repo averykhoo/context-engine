@@ -189,7 +189,7 @@ def routes(e: Engine, c: Caller) -> tuple[int, str]:
 
 @op(write=False, rest="`context-engine coverage` in a shell")
 def coverage(e: Engine, c: Caller) -> tuple[int, str]:
-    """FRAMEWORK's components, procedures and guards, each with its build status (built, deferred, open work, done, ...), generated on demand from the spec, the newest coverage map, the board and the guards lint reports; never stored."""
+    """FRAMEWORK's components, procedures, guards and operations, each with its build status (built, deferred, open work, done, ...), generated on demand from the spec, the newest coverage map, the board, the guards lint reports and the operations the engine registers; never stored."""
     return 0, GD.render_status(e).rstrip("\n")
 
 

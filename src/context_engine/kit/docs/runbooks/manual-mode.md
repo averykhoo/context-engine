@@ -553,13 +553,17 @@ can check it (G-R1) and every repo can carry its own (FRAMEWORK §2).
 Read the files G-D12 reads (`[guards] coverage_spec` and `coverage_maps`; § lint): with
 neither set, or G-D12 red on its config, its spec's extraction or its maps, there is no status
 to give, so stop and say why. Otherwise list each component of the spec's §2 table, each §5.6
-and §6.n procedure heading, and each G-id it names, by class, G-ids in order of their letter and
-number. Give each one the first status that holds:
+and §6.n procedure heading, each G-id it names, and each operation §8.0.2 names (§ lint, G-D12),
+by class, G-ids in order of their letter and number, operations by name. Give each one the first
+status that holds:
 
 1. **built**: a G-id `context-engine lint` reports (§ lint lists every one, G-D6 among them,
-   which checks nothing in the engine);
-2. **deferred**: the newest coverage map's row for it has the class DEFERRED; note the row's
-   reason, which says what un-defers it;
+   which checks nothing in the engine), or one an operation enforces at write time (G-W8,
+   `session close`'s refusal; G-W10, `hk run`'s count), or an operation the engine registers
+   (its name with the dot as an underscore is an MCP tool, `hk_run`);
+2. **deferred**: the newest coverage map's row for it has the class DEFERRED, whatever open
+   board item names it (a mention cannot tell work from an aside); note the row's reason, which
+   says what un-defers it;
 3. **prose-only**: that row has the class PROSE-ONLY; note the row's home, where the rule lives;
 4. **open work**: the board item the row's class names (`EXISTING <id>`, `NEW <id>`) is open, or
    an open board item names it as G-D12 reads a mention;
@@ -818,14 +822,19 @@ first bullet's check that every record parses.
   set, if the spec is missing, or if the `coverage_maps` glob is absolute or has a `..`, matches
   no file, or matches a file with no `YYYY-MM-DD` in its name): outside fenced code in the spec,
   list (1) the bold component name in each numbered row of §2's table, (2) each `### 5.6` and
-  `### 6.n` heading as `§6.n`, and (3) every `G-` id (`G-D3`, not `XG-D3` or `G-D3x`); fewer
-  than 20, 10 or 30 of a class is red (the engine's floors; a repo whose spec they do not fit
-  sets `[guards] off = ["G-D12"]`). Take the newest map by the date and session letters in its
+  `### 6.n` heading as `§6.n`, (3) every `G-` id (`G-D3`, not `XG-D3` or `G-D3x`), and (4)
+  each backticked `noun.verb` name followed by `(` or the closing backtick inside §8.0.2 (from its
+  `###` heading to the next heading of that level or higher), not one whose verb is a file
+  extension (`gate.md`), nor the operations it writes bare (`list`); fewer than 20, 10, 30 or 30
+  of a class is red (the engine's floors; a repo whose spec they do not fit sets `[guards] off =
+  ["G-D12"]`). An operation the engine registers (its name with the dot as an underscore is an
+  MCP tool) owns itself; check only the rest. Take the newest map by the date and session letters in its
   file name, ordered as session keys (`z` before `aa`). Each listed thing must be a whole cell
   in its class's column of a table in that map: under `Component` for a component (the cell
   may add ` (...)`), under `§` in a table with a `Procedure` column, or a `Ritual` column (the
-  old name, kept by frozen maps), for a procedure, under `Guard` for a G-id. Or it appears as a
-  whole word in some board file, open or closed (`§6.1` is not `§6.13`, `G-D1` is not `XG-D1`).
+  old name, kept by frozen maps), for a procedure, under `Guard` for a G-id, under `Operation`
+  for an operation. Or it appears as a whole word in some board file, open or closed (`§6.1` is
+  not `§6.13`, `G-D1` is not `XG-D1`; an operation as `hk.ratchet` or `hk_ratchet`).
   A component's former name, which the engine still accepts, counts as its name in both places:
   `Invariants` for the Residual-risk register, `Law / NFRs` for Non-functional requirements, so
   a map frozen before the rename still owns it. *Why: a spec that gains a procedure or guard

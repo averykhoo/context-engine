@@ -102,6 +102,7 @@ readers = [
     "tests/test_review.py::test_orient_points_at_the_engine_register_in_a_foreign_repo_only",
     "tests/test_kit.py::test_no_living_framework_text_says_ritual",
     "tests/test_plugin.py::test_the_launcher_keeps_lf_line_endings_on_every_checkout",  # git check-attr in the repo (CE-77)
+    "tests/test_coverage_status.py::test_every_enforced_home_resolves_names_no_lint_id_and_a_tested_criterion",  # reads docs/criteria.md (CE-164)
 ]
 
 [gate.scopes.all]   # every file: a green run here is the whole gate on exactly this tree

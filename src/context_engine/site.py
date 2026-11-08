@@ -230,7 +230,7 @@ class Site:
             source, by_cls = GD.framework_status(self.e)
         except Refusal as r:
             return self.page("Coverage", f"<p>Not available here: {esc(r.message)}.</p>", 0)
-        out = [f"<p>FRAMEWORK's components, procedures and guards with their build status, from {esc(source)}, the board and lint (<code>context-engine coverage</code>).</p>"]
+        out = [f"<p>FRAMEWORK's components, procedures, guards and operations with their build status, from {esc(source)}, the board, lint and the engine's operations (<code>context-engine coverage</code>).</p>"]
         for cls, heading, cols in GD.STATUS_TABLES:
             out.append(f"<h2>{esc(heading)}</h2>\n<table><tr>" + "".join(f"<th>{esc(c)}</th>" for c in (*cols, "Status", "Board", "Note")) + "</tr>")
             for s in by_cls.get(cls, []):

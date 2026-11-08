@@ -37,12 +37,13 @@ FROZEN 2026-10-12.
 |---|---|---|---|
 | G-D1 | §8 | DEFERRED | an old map's word, overtaken by the engine |
 | G-D20 | §8 | DEFERRED | trigger "the suite is large" not hit |
+| G-W10 | §8 | DEFERRED | counts nothing yet |
 """
 
 
 def status_repo(tmp_path):
     e = make(tmp_path, **COV)
-    write(tmp_path, "spec/FRAMEWORK.md", spec().replace("## 5. Working", "G-D10 is named first.\n\n## 5. Working"))
+    write(tmp_path, "spec/FRAMEWORK.md", spec().replace("## 5. Working", "G-D10 is named first; G-W10 and G-W8 too.\n\n## 5. Working"))
     write(tmp_path, "maps/coverage-2026-10-12.md", MAP)
     e.new("task", "builds Component B", body="Builds Component B, G-D25 and §6.2.", **W)  # CE-1, open
     done = e.new("task", "built Component C", body="Built Component C and §6.3.", **W)  # CE-2, closed
@@ -88,7 +89,7 @@ def test_coverage_gives_each_spec_item_the_first_status_that_holds(tmp_path):
     assert got["G-D27"] == ("open work", "open: CE-4, CE-5, CE-6, CE-7, CE-8 +1 more", "")
     # every item the spec names has exactly one row: 21 components, 11 procedures, 31 G-ids
     _, rows = G.framework_status(e)
-    assert {c: len(r) for c, r in rows.items()} == {"component": 21, "procedure": 11, "G-id": 31}
+    assert {c: len(r) for c, r in rows.items()} == {"component": 21, "procedure": 11, "G-id": 33, "operation": 31}
     assert [r.item.key for r in rows["G-id"]][:3] == ["G-D1", "G-D2", "G-D3"]  # by number, not as the spec first names them
     assert [r.item.key for r in rows["G-id"]][9] == "G-D10"
 
@@ -108,6 +109,10 @@ def test_coverage_prints_the_totals_the_rules_and_a_table_per_class_and_stores_n
     assert "| § | Procedure | Status | Board | Note |" in text
     assert "| §6.1 | Procedure 6.1 | open work | map: CE-1 (open); open: CE-1 |  |" in text
     assert "| G-D20 | deferred | none | trigger \"the suite is large\" not hit |" in text
+    # the operations' table, last, and its totals (AC-198)
+    assert "## Operations (§8.0.2)\n\n| Operation | Status | Board | Note |" in text
+    assert "; operations 31: built 31." in text
+    assert "| ask.answer | built | none | the engine registers it (`ask_answer`) |" in text
 
 
 @pytest.mark.criterion("AC-171")
@@ -128,3 +133,54 @@ def test_coverage_refuses_while_g_d12_has_no_sources_or_broken_ones(tmp_path):
     assert "procedures extracted, under the floor" in r.value.message
     write(tmp_path, "spec/FRAMEWORK.md", spec())
     assert G.framework_status(e)[0] == "maps/coverage-2026-10-12.md"
+
+
+@pytest.mark.criterion("AC-199")
+def test_coverage_reads_a_g_id_an_operation_enforces_as_built_whatever_the_map_says(tmp_path):
+    got = by_key(status_repo(tmp_path))
+    # G-W10 is no lint guard, and the map says DEFERRED; hk run enforces it, so it is built
+    assert got["G-W10"] == ("built", "none", "working.py::Engine.hk_run enforces it (AC-177)")
+    assert got["G-W8"] == ("built", "none", "working.py::Engine.session_close enforces it (AC-11)")
+
+
+@pytest.mark.criterion("AC-199")
+def test_coverage_an_open_board_item_does_not_outrank_the_maps_deferred_row(tmp_path):
+    e = status_repo(tmp_path)
+    t = e.new("task", "mentions a deferred guard", body="Not for G-D20 (deferred).", **W)
+    assert by_key(e)["G-D20"] == ("deferred", f"open: {t.id}", 'trigger "the suite is large" not hit')
+
+
+@pytest.mark.criterion("AC-199")
+def test_every_enforced_home_resolves_names_no_lint_id_and_a_tested_criterion():
+    import importlib
+
+    from conftest import REPO
+    from context_engine.config import LINT_IDS
+
+    rows = {c.id: c.status for c in G.criteria_rows((REPO / "docs" / "criteria.md").read_text(encoding="utf-8"))[0]}
+    assert G.ENFORCED
+    for gid, (home, crit) in G.ENFORCED.items():
+        file, _, symbol = home.partition("::")
+        obj = importlib.import_module("context_engine." + file.removesuffix(".py"))
+        for part in symbol.split("."):
+            assert hasattr(obj, part), f"{gid}: {home} does not resolve ({part})"
+            obj = getattr(obj, part)
+        assert callable(obj), home
+        assert gid not in LINT_IDS, f"{gid} is a lint id: lint already makes it built"
+        assert rows.get(crit) == "tested", f"{gid}: {crit} is not a tested criterion of docs/criteria.md"
+
+
+@pytest.mark.criterion("AC-198")
+def test_coverage_reads_registered_operations_as_built_and_an_unregistered_one_from_the_board_or_map(tmp_path):
+    e = status_repo(tmp_path)
+    write(tmp_path, "spec/FRAMEWORK.md", spec(extra_ops=("fake.op",)))
+    got = by_key(e)
+    assert got["ask.answer"] == ("built", "none", "the engine registers it (`ask_answer`)")
+    assert got["fake.op"] == ("unowned", "none", "")
+    t = e.new("task", "builds it", body="Builds fake_op.", **W)
+    assert by_key(e)["fake.op"] == ("open work", f"open: {t.id}", "")
+    write(tmp_path, "maps/coverage-2026-10-12.md", MAP + "\n## Operations\n\n| Operation | Class | Reason |\n|---|---|---|\n| fake.op | DEFERRED | waits |\n")
+    assert by_key(e)["fake.op"] == ("deferred", f"open: {t.id}", "waits")
+    _, rows = G.framework_status(e)
+    keys = [r.item.key for r in rows["operation"]]
+    assert keys == sorted(keys) and len(keys) == 32 and keys[-1] != "fake.op"  # by name, not as the spec names them

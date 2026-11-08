@@ -13,6 +13,7 @@ from context_engine import guards as G
 from context_engine import bootstrap as B
 from context_engine.config import COUNT_NOUNS, from_dict
 from context_engine.errors import Refusal
+from context_engine.ops import OPS
 from context_engine.working import Engine
 
 from conftest import _toml
@@ -577,14 +578,26 @@ LETTERS = "ABCDEFGHIJKLMNOPQRSTU"  # 21 components, over the floor of 20
 COV = {"coverage_spec": "spec/FRAMEWORK.md", "coverage_maps": "maps/coverage-*.md"}
 
 
-def spec(components=LETTERS, procedures=11, gids=31, drop_section=False, procedure_head="### {n} Procedure {n}", gid="G-D{i}") -> str:
+def registered(n: int) -> list[str]:
+    """The first `n` operations the engine registers, as §8.0.2 writes them (`ask.answer`)."""
+    return [k.replace("_", ".", 1) for k in sorted(OPS) if "_" in k][:n]
+
+
+def spec(components=LETTERS, procedures=11, gids=31, drop_section=False, procedure_head="### {n} Procedure {n}", gid="G-D{i}", ops=31, extra_ops=()) -> str:
+    """A spec with every class over its floor; §8.0.2 names `ops` registered operations, then
+    `extra_ops` (each written as `x.y()`); `stray.op()` (§7 prose) and `fenced.op()` (fenced, in
+    §8.0.2) are no operations."""
     rows = "\n".join(f"| {i} | Layer | **Component {c}** | what? |" for i, c in enumerate(components, 1))
     heads = "\n\n".join(procedure_head.format(n=n) for n in ["5.6"] + [f"6.{i}" for i in range(1, procedures)])
     guards = "\n".join(f"- **{gid.format(i=i)}:** a guard" for i in range(1, gids + 1))
+    tools = "\n".join(f"| {name.split('.')[0]} | `{name}()` |" for name in [*registered(ops), *extra_ops])
     return (
         f"# Spec\n\n## {'Two' if drop_section else '2.'} Components\n\n| # | Layer | Component | Question |\n|---|---|---|---|\n{rows}\n\n"
         f"## 5. Working\n\n{heads}\n\n## 7. Records\n\n| 1 | Layer | **Not a component** | a numbered bold row outside §2 |\n\n"
-        f"## 8. Guards\n\n{guards}\n\nXG-D99 and G-D98x are near misses, not guard ids.\n\n```\n- **G-Z9:** fenced, not a guard\n```\n"
+        f"`stray.op()` is prose outside §8.0.2, no operation.\n\n"
+        f"## 8. Guards\n\n{guards}\n\nXG-D99 and G-D98x are near misses, not guard ids.\n\n"
+        f"### 8.0.2 Entry points\n\n| Group | Tools |\n|---|---|\n{tools}\n\n```\n`fenced.op()`\n```\n\n### 8.1 Next\n\n"
+        f"```\n- **G-Z9:** fenced, not a guard\n```\n"
     )
 
 
@@ -664,12 +677,35 @@ def test_g_d12_is_red_when_a_class_extracts_under_its_floor_so_a_reworded_spec_c
         (spec(components=LETTERS[:19]), f"19 components extracted, under the floor of 20: {floor}"),
         (spec(procedure_head="### Procedure {n}"), f"0 procedures extracted, under the floor of 10: {floor}"),  # numbers dropped from headings
         (spec(gid="GD{i}"), f"0 G-ids extracted, under the floor of 30: {floor}"),  # the id format changed
+        (spec(ops=29), f"29 operations extracted, under the floor of 30: {floor}"),  # §8.0.2 trimmed or reworded (AC-198)
     ]:
         write(tmp_path, "spec/FRAMEWORK.md", text)
         assert reds(e, "G-D12") == [f"spec/FRAMEWORK.md: {red}"]
     # the floors are the engine's: a repo whose spec they do not fit is told how to switch G-D12 off
     [red] = [f for f in e.lint() if f.guard == "G-D12"]
     assert 'a repo whose spec they do not fit switches G-D12 off (`[guards] off = ["G-D12"]`' in red.remedy
+
+
+@pytest.mark.criterion("AC-198")
+def test_g_d12_reads_8_0_2s_operations_registered_ones_owned_by_the_engine(tmp_path):
+    e = covered(tmp_path)
+    assert reds(e, "G-D12") == []  # 31 registered operations own themselves: no map row, no board item
+    text = spec(extra_ops=("fake.op",))
+    keys = [i.key for i in G.spec_items(text)["operation"]]
+    assert keys == [*registered(31), "fake.op"]
+    # prose outside §8.0.2, fenced code inside it, and a file name are no operations
+    noted = text.replace("| Group | Tools |\n|---|---|\n", "| Group | Tools |\n|---|---|\n| docs | `notes.md` |\n")
+    assert not {"stray.op", "fenced.op", "notes.md"} & {i.key for i in G.spec_items(noted)["operation"]}
+    write(tmp_path, "spec/FRAMEWORK.md", noted)
+    assert reds(e, "G-D12") == [unowned("operation fake.op")]  # unregistered: needs a map row or a board item
+    # a map row in an `Operation` table owns it
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map() + "\n## Operations\n\n| Operation | Class |\n|---|---|\n| fake.op | DEFERRED |\n")
+    assert reds(e, "G-D12") == []
+    write(tmp_path, "maps/coverage-2026-10-12.md", cov_map())
+    assert reds(e, "G-D12") == [unowned("operation fake.op")]
+    # so does a board item naming it by its registered form (as its MCP tool is named)
+    e.new("task", "builds it", body="Builds fake_op.", **W)
+    assert reds(e, "G-D12") == []
 
 
 @pytest.mark.criterion("AC-56")

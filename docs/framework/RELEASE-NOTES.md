@@ -7,7 +7,7 @@ decision (`DEC-n`) or, where no decision was recorded, the engine task (`CE-n`) 
 both are in this repo (`context-engine why <id>`, `context-engine task show <id>`). Newest
 first. A version's notes are added on top; an earlier version's notes are not rewritten. Build
 status is not here: it is on the board, and `context-engine coverage` prints it for each
-component, procedure and guard.
+component, procedure, guard and operation.
 
 ## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
 
@@ -46,6 +46,14 @@ component, procedure and guard.
   refusing: after its title, else first after its frontmatter, else as its first line; it refuses,
   writing nothing, only when that line would fall outside G-D4's window. FRAMEWORK §7.2; DEC-200,
   DEC-201, DEC-202, CE-172.
+- **G-D12 and `coverage` read §8.0.2's operations, and a guard an operation enforces reads
+  built.** Each backticked `noun.verb` name §8.0.2 gives (not a file name) is a fourth class, with
+  a floor of 30; one the engine registers owns itself and reads built, so only an unregistered
+  one (`hk.ratchet`) needs a map row (an `Operation` column) or a board item. G-W8 and G-W10,
+  which `session close` and `hk run` enforce, read built whatever an older map says; an open board
+  item still does not outrank a map's DEFERRED or PROSE-ONLY row. FRAMEWORK §8.3 G-D12; DEC-283 to
+  DEC-287, CE-164. **Upgrade:** a repo with G-D12 on whose spec's §8.0.2 names under 30
+  operations switches G-D12 off, as for the other floors.
 - **Lint G-I4 fails two current decisions with one title.** Each decision that is not `status:
   deprecated` and whose title, case and runs of whitespace aside, equals an earlier one's (in id
   order) fails, naming the earlier ids; its remedy is `decision supersede` when one replaces the
