@@ -3,14 +3,14 @@ type: Task
 id: CE-186
 title: Pin the site's group order and body escaping with tests; drop dead sabotage rows
 brief: CE-185 verifier nits; each new test sabotaged
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-11-06a
 created: 2026-11-06
-moved: 2026-11-06a
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Pin the two site-build claims no test holds, and drop dead sabotage rows (CE-185 verifier nits, 2026-11-06a).
