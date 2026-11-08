@@ -27,3 +27,4 @@ A green gate is enough to ship, as a framework principle (US-20, owner 2026-11-0
 ## Log
 
 - 2026-11-06e (claude-code/claude-opus-5-5): Its criterion is AC-184 (planned, from US-20).
+- 2026-11-07e (claude-code/claude-opus-5-5): Built in 28aa329: FRAMEWORK §1 P19 (pointers in P7, §3.3, §7.4; table P1 to P19), RELEASE-NOTES 0.6 bullet, tests/test_principles.py (AC-184 tested, sabotaged). Decisions DEC-307..DEC-310 (PROVISIONAL). Follow-ups: CE-206 (the manual-criterion lint and refusal), CE-207 (contract line at the next contract bump). Kit contract unchanged. Left open for the verifier; close with residual none (the enforcement gap is on the board as CE-206).
