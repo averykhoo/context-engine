@@ -285,6 +285,8 @@ back through the digest (FRAMEWORK §3.3).
 | AC-64 | Rolling a session back leaves the work of other humans and agents in the same checkout (a shared directory, not a worktree) untouched | US-13 | planned |
 | AC-184 | FRAMEWORK states that a green gate is the whole release decision: a check only a human runs is filed as a board item to automate, never accepted as a residual | US-20 | planned |
 | AC-185 | Close eagerly has no long-lived-session exception, and a close is cheap: `session close` runs the close housekeeping, writes the ledger entry and replaces the banner only when given one, in one commit, refusing before any write; a close that leaves the banner records `banner: kept <key>`, which G-W1 accepts; orient shows the last close and the last push, so the banner holds durable lines only; and `session start --continues <key>` links the next turn of a conversation to the closed session before it, which orient reads as one thread | US-21, DEC-163 | tested |
+| AC-200 | Which model plans which kind of task is decided only on a trial that plans every arm fresh, builds each with the same builder, scores outcomes (verifier defects, fix rounds, tokens with the planner's), and runs an opus-vs-opus noise arm on every task | US-23 | planned |
+| AC-201 | The fan-out runbook's guidance on how to split work across agents and when to compact gives measured, dated cost per completed task from this repo's transcripts, and names what was not measured | US-23 | planned |
 
 ## Criterion write op (CE-42)
 
