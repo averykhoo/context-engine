@@ -1196,3 +1196,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** op lines carry no content hash
 - **control:** individual: the check refuses hand edits to committed state; commit eagerly after an archive
 - **from:** CE-154, session 2026-11-07e
+
+## INV-170: Stale G-n text is left in working.py::Engine._story_checks (remedy says goals=[G-n, ...], and its docstring) and in the ops.py::task_new docstring, which is also the MCP tool's description; the problem message names the right spelling
+
+- **affects:** an agent reading the remedy or the MCP tool description
+- **why not eliminated:** wording only, not blocking, the message itself carries the right spelling
+- **control:** individual: the problem message in working.py::Engine._story_checks
+- **from:** CE-56, session 2026-11-07e
+
+## INV-171: Lint checks the reserved prefixes EXP and HAZ on the [working] task kind only, so another kind could take EXP or HAZ without a lint red
+
+- **affects:** an adopter who gives a non-task kind the prefix EXP or HAZ
+- **why not eliminated:** the plan pinned the task kind only, though the title says reserved prefixes in lint
+- **control:** reduce: lint G-D2 on the task prefix
+- **from:** CE-56, session 2026-11-07e
+
+## INV-172: A register mixing prefixes with distinct numbers (INV-1, RISK-2) is not a lint red; only the next filing refuses
+
+- **affects:** an adopter whose register carries two prefixes
+- **why not eliminated:** lint does not see the mix until a filing hits it
+- **control:** collective: review.py::series refuses the next filing
+- **from:** CE-56, session 2026-11-07e
+
+## INV-173: working.py::Engine._register_issued takes the last prefix from op-log line order, and a union-merged op log is not chronological across branches
+
+- **affects:** a repo merging branches that each filed register entries
+- **why not eliminated:** merge order is outside the engine's control
+- **control:** individual: review.py::series refuses a mixed next filing
+- **from:** CE-56, session 2026-11-07e
+
+## INV-174: After an upgrade, adopted repos get G-D0 drift on their runbooks until they recopy them
+
+- **affects:** adopted repos upgrading the engine
+- **why not eliminated:** the normal upgrade flow, not a contract change
+- **control:** collective: lint G-D0 names the drift and the fix
+- **from:** CE-56, session 2026-11-07e
+
+## INV-175: tools/linux_gate.py was not run for this work; it is only needed before a push
+
+- **affects:** the session that pushes this work
+- **why not eliminated:** CI parity check is a push-time step
+- **control:** collective: CLAUDE.md § Gate requires tools/linux_gate.py before every push
+- **from:** CE-56, session 2026-11-07e
