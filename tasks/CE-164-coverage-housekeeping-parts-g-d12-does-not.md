@@ -4,13 +4,15 @@ id: CE-164
 title: 'coverage: housekeeping parts G-D12 does not extract, and a frozen map outranking the board'
 brief: CE-141 residuals (c5d96b0)
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 coverage: housekeeping parts the spec names but G-D12 does not extract, and a frozen map outranking the board.
@@ -35,3 +37,5 @@ Source: CE-141's close (c5d96b0), residuals.
 - 2026-11-05a (claude-code/claude-opus-5-5): Owner, 2026-11-05a: "you can just choose whichever task you want for the next NOW". Agent's pick (claude-code/claude-opus-5-5): CE-164, ranked NEXT 1 in the last rerank (docs/evidence/rerank-2026-10-30a.md): the coverage op is the milestone's own meter.
 - 2026-11-06a (claude-code/claude-opus-5-5): 602aeac: CE-164: promoted to NOW on the owner's delegation (DEC-158); CE-182 rehearsal clones binned
 - 2026-11-06c (claude-code/claude-opus-5-5): Moved NOW->LATER (DEC-162): the owner's ruling puts CE-187 (decision accept) at NOW and fills NEXT's five slots (CE-156, CE-158, CE-161, CE-47, the louder close). Agent's call, PROVISIONAL: first in line for NEXT when a slot frees.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: coverage reads §8.0.2's operations and G-W8/G-W10 as built; board outranks a frozen map's DEFERRED
+  residual risk: INV-216

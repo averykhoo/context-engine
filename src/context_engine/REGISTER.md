@@ -1518,3 +1518,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** scripts are outside this task's code scope
 - **control:** individual: the fan-out.md one-line rule; coordinator follow-up
 - **from:** CE-126, session 2026-11-07e
+
+## INV-216: The end of the operations section is not pinned by a unit test: with spec_items never resetting ops_section after ### 8.0.2, test_guards.py and test_coverage_status.py stay green (the fixture has no backticked noun.verb after ### 8.1); only this repo's own lint on the real FRAMEWORK (48 names, incl. noun.verb) catches it
+
+- **affects:** engine maintainers editing guards.py::spec_items
+- **why not eliminated:** a unit-level pin needs a fixture with a noun.verb after ### 8.1, not yet written
+- **control:** collective: gate lint of this repo's records against the real FRAMEWORK (G-D12)
+- **from:** CE-164, session 2026-11-07e
