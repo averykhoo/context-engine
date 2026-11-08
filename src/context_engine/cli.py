@@ -1,7 +1,7 @@
 """The command line: one subcommand per operation in ``ops.OPS`` (FRAMEWORK §8.0.2, AC-18).
 
-``context-engine [--root DIR] [--session KEY] [--actor ACTOR] <group> <op> ...``. The session key and the
-actor may also come from ``CE_SESSION`` and ``CE_ACTOR``. A refusal prints its remedy to stderr
+``context-engine [--root DIR] [--session KEY] [--actor ACTOR] [--agent LANE] <group> <op> ...``. The session key and the
+actor may also come from ``CE_SESSION`` and ``CE_ACTOR``, and a subagent's lane (CE-126) from ``CE_AGENT``. A refusal prints its remedy to stderr
 and exits 2; lint exits 1 when anything fails.
 """
 
@@ -52,6 +52,8 @@ def build() -> argparse.ArgumentParser:
     ap.add_argument("--root", default=".", help="the repo root (default: the current directory)")
     ap.add_argument("--session", default=os.environ.get("CE_SESSION"), help="the session key (or CE_SESSION)")
     ap.add_argument("--actor", default=os.environ.get("CE_ACTOR"), help="the OKF actor, e.g. claude-code/<model> (or CE_ACTOR)")
+    ap.add_argument("--agent", default=os.environ.get("CE_AGENT"),
+                    help="a subagent's lane: the task id it works on (or CE_AGENT); its op lines carry it and its commits take only them; unset for the coordinator")
     groups = ap.add_subparsers(dest="group", required=True)
 
     ini = _sub(groups, "init", "write the adoption kit's missing files into the repo (FRAMEWORK §6.9) gitignore .context-engine/ and merge the op log by union; never overwrites")
@@ -473,7 +475,7 @@ def run(argv: list[str] | None = None) -> tuple[int, str]:
     args = _parse(argv)
     o = ops.OPS[CLI_OPS[(args.group, getattr(args, "op", None))]]
     a = _params(args)
-    return o.call(o.target(args.root), ops.Caller(args.session, args.actor), **{p.name: a[p.name] for p in o.params})
+    return o.call(o.target(args.root), ops.Caller(args.session, args.actor, args.agent), **{p.name: a[p.name] for p in o.params})
 
 
 def main(argv: list[str] | None = None) -> int:

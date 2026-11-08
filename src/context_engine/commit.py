@@ -22,6 +22,15 @@ a temporary index; the working file is never rewritten, and once nothing is left
 carries it whole again, so the two converge. Before the first commit every line goes in (there
 is no HEAD to build on); a HEAD that lacks the op log is built on, as an empty one (CE-133). The message and the reply say whose lines went in.
 
+Within a session, lines are split by **lane** too (CE-126, DEC-84). A subagent working one task
+under the coordinator's key writes its lines with ``lane``, its task id (``CE_AGENT``, the CLI's
+``--agent``, the MCP ``agent``), and its commits take only its own lane's lines; a line with no
+lane, every line written before CE-126 included, is the coordinator's, and the coordinator's
+commits take only those. The session's close, pause and pause record take every lane of the
+session (``EVERY_LANE``), never another session's lines. The rules above hold lane for lane: a
+line naming a carried path goes in, an unparseable line's lane is read from its text
+(``lane_of``), and ``sweep`` takes every line. A reply names a lane's lines ``<key> lane <lane>``.
+
 It runs while the engine lock is held, so no engine operation is half-written in the tree when
 it reads. With no line left behind it runs ``git commit --only`` on those paths (with lines left, a
 temporary index, below), after a ``git add`` only for paths git
@@ -115,6 +124,8 @@ IN_PROGRESS = (
     ("BISECT_LOG", "a bisect"),
 )
 SHA_RE = re.compile(r"^\[[^\]]*?\b([0-9a-f]{7,40})\]", re.MULTILINE)  # `[main (root-commit) abc1234] title`
+EVERY_LANE = "*"  # select's lane for a commit that takes every lane of its session (a close, a pause); `store.LANE_RE` never matches it
+LANE_LABEL = " lane "  # in a label (`label`): `<key> lane <lane>`
 
 
 @dataclass
@@ -129,7 +140,7 @@ class Outcome:
     paths: tuple[str, ...] = field(default_factory=tuple)
     left_out: tuple[str, ...] = field(default_factory=tuple)
     carried: tuple[str, ...] = field(default_factory=tuple)
-    left: tuple[tuple[str, int], ...] = field(default_factory=tuple)  # (session, op lines) left uncommitted (CE-125)
+    left: tuple[tuple[str, int], ...] = field(default_factory=tuple)  # (session or `<key> lane <lane>`, op lines) left uncommitted (CE-125, CE-126)
     warn: str = ""  # committed, but something after it failed and needs a hand step
 
     def line(self) -> str:
@@ -151,10 +162,23 @@ class Outcome:
 
 
 def left_behind(left: tuple[tuple[str, int], ...]) -> str:
-    """What a reply says of the lines a commit left out: whose, how many, and how to take them."""
+    """What a reply says of the lines a commit left out: whose (a session, or ``<key> lane
+    <lane>``, ``label``), how many, and how to take them."""
     each = ", ".join(f"{n} op line{'s' if n != 1 else ''} of {k}" for k, n in left)
-    return (f"left uncommitted: {each}, with the files they name; that session commits them, "
-            f"or once it is known dead, `context-engine commit --sweep` takes them")
+    if not _any_lane(left):
+        return (f"left uncommitted: {each}, with the files they name; that session commits them, "
+                f"or once it is known dead, `context-engine commit --sweep` takes them")
+    return (f"left uncommitted: {each}, with the files they name; the agent working each lane commits its own, "
+            f"its session's close takes every lane, and once a session is known dead, `context-engine commit --sweep` takes them")
+
+
+def label(session: object, lane: str | None) -> str:
+    """Whose lines a reply names: the session key, or ``<key> lane <lane>`` for a subagent's (CE-126)."""
+    return str(session) if not lane else f"{session}{LANE_LABEL}{lane}"
+
+
+def _any_lane(left: tuple[tuple[str, int], ...]) -> bool:
+    return any(LANE_LABEL in str(k) for k, _ in left)
 
 
 def op_paths(o: dict) -> list[str]:
@@ -167,12 +191,18 @@ def op_paths(o: dict) -> list[str]:
     return list(dict.fromkeys(out))
 
 
-def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False) -> tuple[list[str], list[str]]:
+def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: bool = False,
+           lane: str | None = None) -> tuple[list[str], list[str]]:
     """Split uncommitted op lines into those a commit by ``session`` takes and those it leaves
     (CE-125): it takes its own lines; another session's line naming a path the commit carries
     (one of its own lines' paths, a ``given`` path or a file under a given directory), since
     that file holds the write; and a line that does not parse, unless its text names another
-    session (``session_of``), whose line it is then (CE-128). With ``sweep``, every line."""
+    session (``session_of``), whose line it is then (CE-128). With ``sweep``, every line.
+
+    Its own lines are those of its ``lane`` too (CE-126): a subagent's commit takes its lane's,
+    the coordinator's (``lane`` None) those with no lane, every legacy line included, and
+    ``EVERY_LANE`` (a close, a pause) every lane of the session. An unparseable line naming a
+    session is read for its lane the same way (``lane_of``)."""
     if sweep:
         return list(lines), []
     parsed = []
@@ -185,8 +215,15 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
 
     keys = [o.get("session") if o is not None else session_of(ln) for ln, o in zip(lines, parsed)]
 
-    def own(o: dict | None, key: object = None) -> bool:
-        return o.get("session") == session if o is not None else key in (None, session)
+    def lane_ok(x: str | None) -> bool:
+        return lane == EVERY_LANE or x == lane
+
+    def own(o: dict | None, key: object = None, ln: str = "") -> bool:
+        if o is not None:
+            return o.get("session") == session and lane_ok(_lane(o))
+        if key is None:
+            return True  # names no session: it goes in (CE-128)
+        return key == session and lane_ok(lane_of(ln))
 
     paths = {p for o in parsed if o is not None and own(o) for p in op_paths(o)} | set(given)
     under = tuple(g.rstrip("/") + "/" for g in given)
@@ -194,11 +231,31 @@ def select(lines: list[str], session: str, given: tuple[str, ...] = (), sweep: b
     carried = lambda ps: any(p in paths or p.startswith(under) for p in ps)
     taken, left = [], []
     for ln, o, ps, k in zip(lines, parsed, at, keys):
-        (taken if own(o, k) or carried(ps) else left).append(ln)
+        (taken if own(o, k, ln) or carried(ps) else left).append(ln)
     return taken, left
 
 
 SESSION_FIELD = re.compile(r'"session"\s*:\s*"([^"\\]+)"')
+LANE_FIELD = re.compile(r'"lane"\s*:\s*"([^"\\]+)"')
+
+
+def _lane(o: dict) -> str | None:
+    """A parsed op line's lane, or None for the coordinator's: no ``lane`` key, an empty or
+    blank one, or one that is not a string (G-W7 reds a malformed one, CE-126)."""
+    v = o.get("lane")
+    return v if isinstance(v, str) and v.strip() else None
+
+
+def lane_of(line: str) -> str | None:
+    """The lane an op log line names: its ``lane`` field, read from the text when the line does
+    not parse as JSON (a write cut short; the engine writes ``lane`` right after ``session``, so
+    a cut line keeps both), or None for the coordinator's (CE-126)."""
+    try:
+        o = json.loads(line)
+    except ValueError:
+        m = LANE_FIELD.search(line)
+        return m.group(1) if m else None
+    return _lane(o) if isinstance(o, dict) else None
 
 
 def session_of(line: str) -> str | None:
@@ -226,9 +283,9 @@ def unparseable(lines: list[str]) -> list[str]:
 
 
 def _whose(lines: list[str]) -> tuple[tuple[str, int], ...]:
-    """(session, count) for each session with a line in ``lines``, by key; a line ``select``
-    left names one, parsed or not."""
-    c: Counter = Counter(str(session_of(ln)) for ln in lines)
+    """(label, count) for each session, or session and lane (``label``), with a line in
+    ``lines``; a line ``select`` left names one, parsed or not."""
+    c: Counter = Counter(label(session_of(ln), lane_of(ln)) for ln in lines)
     return tuple(sorted(c.items()))
 
 
@@ -288,10 +345,15 @@ def new_lines(working: str, head: str) -> list[str]:
     return out
 
 
-def _parts(lines: list[dict], session: str, lead: tuple[str, ...] = ()) -> list[str]:
-    """``<op> <id>`` for the session's own lines (a mechanical index line only when it is alone),
-    the ones this operation wrote (``lead``) first."""
-    own = [o for o in lines if o.get("session") == session] or lines
+def _own(o: dict, session: str, lane: str | None) -> bool:
+    """A parsed op line is the committer's own: its session, and its lane (``select``, CE-126)."""
+    return o.get("session") == session and (lane == EVERY_LANE or _lane(o) == lane)
+
+
+def _parts(lines: list[dict], session: str, lead: tuple[str, ...] = (), lane: str | None = None) -> list[str]:
+    """``<op> <id>`` for the session's own lines of its lane (a mechanical index line only when
+    it is alone), the ones this operation wrote (``lead``) first."""
+    own = [o for o in lines if _own(o, session, lane)] or lines
     named = [o for o in own if o.get("op") != "index"] or own
     keys = list(dict.fromkeys(f"{o.get('op')} {o.get('id')}" for o in named))
     return list(dict.fromkeys([*(k for k in lead if k in keys), *keys]))
@@ -394,24 +456,24 @@ def _has_co_author(para: str, value: str) -> bool:
     return any(_address(ln.split(":", 1)[1]) == want for ln in para.split("\n") if ln.lower().startswith("co-authored-by:"))
 
 
-def _carried_by(lines: list[dict], session: str) -> str:
-    others = _others(lines, session)
+def _carried_by(lines: list[dict], session: str, lane: str | None = None) -> str:
+    others = _others(lines, session, lane)
     if not others:
         return ""
-    n = sum(o.get("session") != session for o in lines)
+    n = sum(not _own(o, session, lane) for o in lines)
     return (f"Also carries {n} op log line{'s' if n != 1 else ''} left uncommitted by "
             f"session{'s' if len(others) != 1 else ''} {', '.join(others)}, with the files they name.")
 
 
 def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[str, ...] = (), body: str = "", trailers: tuple[str, ...] = (),
-            co_author: str | None = None) -> str:
+            co_author: str | None = None, lane: str | None = None) -> str:
     """An engine commit's message. The title is ``engine: <op> <id>, ...``, naming the session's
     own ops, this operation's first; an operation that names its own title (a pause, a task
     close) gets an ``Ops:`` line naming them instead, when there is more than one. Then the
-    operation's ``body``, a paragraph naming any other session whose uncommitted lines go in, then
-    ``trailers``, the ``Session:`` trailer and the ``Co-Authored-By:`` one (``co_author``, when
-    there is one), in one block."""
-    parts = _parts(lines, session, lead)
+    operation's ``body``, a paragraph naming any other session (or lane, ``lane``) whose uncommitted
+    lines go in, then ``trailers``, the ``Session:`` trailer and the ``Co-Authored-By:`` one
+    (``co_author``, when there is one), in one block."""
+    parts = _parts(lines, session, lead, lane)
     paras = []
     if not title:
         title = _fit("engine: ", parts, TITLE_MAX)
@@ -419,8 +481,8 @@ def message(lines: list[dict], session: str, title: str | None, *, lead: tuple[s
         paras.append(_fit("Ops: ", parts, OPS_MAX))
     if body.strip():
         paras.append(body.strip())
-    if _carried_by(lines, session):
-        paras.append(_carried_by(lines, session))
+    if _carried_by(lines, session, lane):
+        paras.append(_carried_by(lines, session, lane))
     paras.append("\n".join([*trailers, f"Session: {session}", *([f"Co-Authored-By: {co_author}"] if co_author else [])]))
     return "\n\n".join([title, *paras]) + "\n"
 
@@ -461,7 +523,7 @@ def session_trailers(text: str) -> list[str]:
     return [ln.split(":", 1)[1].strip() for ln in paras[-1].split("\n") if ln.startswith("Session:")]
 
 
-def session_message(text: str, lines: list[dict], session: str, co_author: str | None = None) -> str:
+def session_message(text: str, lines: list[dict], session: str, co_author: str | None = None, lane: str | None = None) -> str:
     """A session's own commit message as it wrote it, plus what the engine carries: an ``Ops:``
     line naming the uncommitted op log lines it takes in, and the paragraph naming other sessions, both
     before the closing trailer paragraphs; and in the last paragraph, where ``git
@@ -475,9 +537,9 @@ def session_message(text: str, lines: list[dict], session: str, co_author: str |
         tail -= 1
     ours = []
     if lines:
-        ours.append(_fit("Ops: ", _parts(lines, session), OPS_MAX))
-    if _carried_by(lines, session):
-        ours.append(_carried_by(lines, session))
+        ours.append(_fit("Ops: ", _parts(lines, session, lane=lane), OPS_MAX))
+    if _carried_by(lines, session, lane):
+        ours.append(_carried_by(lines, session, lane))
     paras[tail:tail] = ours
     ends_in_trailers = tail + len(ours) < len(paras) and _closing(paras[-1])
     add = [] if session_trailers(text) else [f"Session: {session}"]
@@ -491,15 +553,18 @@ def session_message(text: str, lines: list[dict], session: str, co_author: str |
     return "\n\n".join(paras) + "\n"
 
 
-def _others(lines: list[dict], session: str) -> tuple[str, ...]:
-    return tuple(sorted({str(o.get("session")) for o in lines if o.get("session") != session}))
+def _others(lines: list[dict], session: str, lane: str | None = None) -> tuple[str, ...]:
+    """Whose lines, of the parsed ``lines`` a commit takes, are not the committer's own: another
+    session's, or another lane's of its own session (``label``)."""
+    return tuple(sorted({label(o.get("session"), _lane(o)) for o in lines if not _own(o, session, lane)}))
 
 
 def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
            trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False,
-           co_author: str | None = None) -> Outcome:
-    """Commit ``session``'s uncommitted op lines (``select``; with ``sweep``, every line) with
-    the files they name. Call it holding the lock.
+           co_author: str | None = None, lane: str | None = None) -> Outcome:
+    """Commit ``session``'s uncommitted op lines of ``lane`` (``select``: None is the
+    coordinator's, ``EVERY_LANE`` every lane; with ``sweep``, every line) with the files they
+    name. Call it holding the lock.
 
     An engine commit's message is built from ``title``, ``lead``, ``body`` and ``trailers``
     (``message``). The session's own commit passes its message as ``text`` and its own
@@ -537,7 +602,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     started = time.time()
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
-            how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), co_author=co_author)
+            how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), co_author=co_author, lane=lane)
             return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep)
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
@@ -561,10 +626,10 @@ def _pathspec(tmp: Path, name: str, paths: list[str]) -> str:
     return str(f)
 
 
-def pending(root: Path, oplog: str, session: str | None = None) -> set[str]:
+def pending(root: Path, oplog: str, session: str | None = None, lane: str | None = None) -> set[str]:
     """The paths, from the top of the work tree as `git status` gives them, that the next
     commit carries: the op log and every path its lines HEAD lacks name (with ``session``, only
-    the lines that session's commit takes, ``select``). Empty when
+    the lines that session's commit of ``lane`` takes, ``select``). Empty when
     there is no git, or nothing is uncommitted. A pause reads it to leave those paths out of its
     own list of uncommitted paths, since its commit carries them (INV-45)."""
     log = root / oplog
@@ -581,7 +646,7 @@ def pending(root: Path, oplog: str, session: str | None = None) -> set[str]:
     prefix = top.stdout.strip()
     fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
     if session is not None and head is not None:
-        fresh = select(fresh, session)[0]
+        fresh = select(fresh, session, lane=lane)[0]
     if not fresh:
         return set()
     out = {prefix + oplog}
@@ -595,12 +660,13 @@ def pending(root: Path, oplog: str, session: str | None = None) -> set[str]:
     return out
 
 
-def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False) -> set[str]:
-    """The paths, relative to ``root``, a commit by ``session`` of ``given`` would carry: those,
+def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
+                  lane: str | None = None) -> set[str]:
+    """The paths, relative to ``root``, a commit by ``session`` (of ``lane``) of ``given`` would carry: those,
     and when it takes any op line, the op log and the paths its taken lines name (``select``).
     Read without git's help when there is no git or no HEAD (then every line counts)."""
     out = set(given)
-    fresh = taken_lines(root, oplog, session, given, sweep)
+    fresh = taken_lines(root, oplog, session, given, sweep, lane)
     if fresh:
         out.add(oplog)
     for ln in fresh:
@@ -613,8 +679,9 @@ def carried_paths(root: Path, oplog: str, session: str, given: tuple[str, ...] =
     return out
 
 
-def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False) -> list[str]:
-    """The uncommitted op log lines a commit by ``session`` of ``given`` would take (``select``).
+def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (), sweep: bool = False,
+                lane: str | None = None) -> list[str]:
+    """The uncommitted op log lines a commit by ``session`` (of ``lane``) of ``given`` would take (``select``).
     Read without git's help when there is no git or no HEAD (then every line counts).
 
     ``unparseable(taken_lines(...))`` empty means the op log this commit puts at HEAD parses,
@@ -631,7 +698,7 @@ def taken_lines(root: Path, oplog: str, session: str, given: tuple[str, ...] = (
         except (OSError, subprocess.TimeoutExpired):
             pass
     fresh = new_lines(log.read_bytes().decode("utf-8", errors="replace"), head or "")
-    return select(fresh, session, given, sweep)[0] if head is not None else fresh
+    return select(fresh, session, given, sweep, lane)[0] if head is not None else fresh
 
 
 def _detached(git: _Git, gitdir: Path) -> bool:
@@ -648,6 +715,7 @@ def _detached(git: _Git, gitdir: Path) -> bool:
 
 def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: Path, remedy: str, how: dict,
             text: str | None, given: tuple[str, ...], sweep: bool = False) -> Outcome:
+    lane = how.get("lane")
     log = root / oplog
     fresh: list[str] = []
     left: list[str] = []
@@ -662,13 +730,14 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
                                  f"break G-W7 at HEAD; restore them (`git show HEAD:./{oplog}`), then {remedy}"))
         fresh = new_lines(working, head_text)
         if head is not None:  # before the first commit every line goes in: no HEAD to build a partial op log on (CE-133)
-            fresh, left = select(fresh, session, given, sweep)
+            fresh, left = select(fresh, session, given, sweep, lane)
     whose = _whose(left)
     if not fresh and not given:
         if text is None:
             return Outcome(left=whose)
         if left:
-            return Outcome(note=f"nothing to commit: every uncommitted line in {oplog} is another session's, and no path was given ({left_behind(whose)})", left=whose)
+            whom = "another session's or another lane's" if _any_lane(whose) else "another session's"
+            return Outcome(note=f"nothing to commit: every uncommitted line in {oplog} is {whom}, and no path was given ({left_behind(whose)})", left=whose)
         return Outcome(note=f"nothing to commit: {oplog} has no line HEAD lacks, and no path was given")
     ops: list[dict] = []
     for ln in fresh:
@@ -728,7 +797,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             untracked += [k[len(prefix):] for k, v in codes.items() if v == "??" and k.startswith(under)]
     untracked = list(dict.fromkeys(untracked))
     msg = tmp / "message"
-    msg.write_bytes((session_message(text, ops, session, how["co_author"]) if text is not None else message(ops, session, **how)).encode("utf-8"))
+    msg.write_bytes((session_message(text, ops, session, how["co_author"], lane) if text is not None else message(ops, session, **how)).encode("utf-8"))
     before = _rev(git, "HEAD")
     try:
         if left:  # another session's lines stay out: commit a partial op log from a temporary index
@@ -765,7 +834,7 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     if text is not None:  # the session's own commit reports what git committed, not what it was given
         shown = git.run("show", "--name-only", "-z", "--format=", "HEAD").stdout
         paths = [x.strip("\n") for x in shown.split("\0") if x.strip("\n")]
-    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session), left=whose, warn=warn)
+    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session, lane), left=whose, warn=warn)
 
 
 def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: str, taken: list[str], paths: list[str], msg: Path):

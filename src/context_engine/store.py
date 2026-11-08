@@ -39,6 +39,9 @@ from .lock import FileLock
 
 SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[a-z]+$")
 ACTOR_RE = re.compile(r"^(human:\S+|process:\S+|[A-Za-z0-9._-]+/[A-Za-z0-9._:+-]+)$")  # OKF §7
+# A subagent's lane under the coordinator's session key (CE-126, DEC-84): the task id it works on,
+# from CE_AGENT, the CLI's --agent or the MCP `agent`. `*` never matches: it is `commit.EVERY_LANE`
+LANE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 OKF_STATUS = ("draft", "stable", "deprecated")  # OKF §5.4
 TOOL_OWNED = ("type", "id", "body_sha")
 # The board's session-keyed tool-owned keys: only an operation writes them, and G-W7 checks each
@@ -159,6 +162,20 @@ def _now() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def check_lane(lane: str | None) -> str | None:
+    """The caller's lane as op lines carry it: None for no lane (unset, empty or whitespace: the
+    coordinator), else the stripped value, refused unless it is a lane id (``LANE_RE``), before
+    anything is written (CE-126)."""
+    if lane is None or not str(lane).strip():
+        return None
+    v = str(lane).strip()
+    if not LANE_RE.fullmatch(v):
+        raise Refusal(f"agent lane {lane!r} is not a lane id like CE-126",
+                      "set CE_AGENT (or --agent, or the MCP `agent` parameter) to the task id the subagent works on: a letter or digit, "
+                      "then up to 63 letters, digits, `.`, `_` or `-`; leave it unset for the coordinator")
+    return v
+
+
 class Store:
     def __init__(self, root: Path | str, config: Config | None = None):
         self.root = Path(root).resolve()
@@ -170,6 +187,8 @@ class Store:
         self._wrote_actor: str | None = None  # its actor: the commit's Co-Authored-By line comes from it (CE-197)
         self.commit_title: str | None = None  # the next commit's title, when an operation names it
         self.commit_always = False  # the next commit is made whatever the policy, `off` included (a pause)
+        self.lane: str | None = None  # the caller's lane (CE-126): its op lines carry it, and its commits take only them
+        self.commit_every_lane = False  # the next commit takes every lane of its session (a close, a pause, a pause record)
         self.commit_milestone = False  # the next commit is a milestone's (`milestone()`)
         self.commit_body = ""  # the next commit's message body, when an operation gives one (a task close's)
         self.commit_trailers: list[str] = []  # the next commit's trailers before `Session:` (a task close's `Closes:`)
@@ -688,6 +707,7 @@ class Store:
         actor, self._wrote_actor = self._wrote_actor, None
         title, self.commit_title = self.commit_title, None
         always, self.commit_always = self.commit_always, False
+        every, self.commit_every_lane = self.commit_every_lane, False
         milestone, self.commit_milestone = self.commit_milestone, False
         body, self.commit_body = self.commit_body, ""
         trailers, self.commit_trailers = self.commit_trailers, []
@@ -701,21 +721,23 @@ class Store:
         try:
             co = commit_mod.co_author(actor, strict=False)  # a bad CE_CO_AUTHOR cannot refuse a write already made
             self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body,
-                                                 trailers=tuple(trailers), co_author=co)
+                                                 trailers=tuple(trailers), co_author=co, lane=commit_mod.EVERY_LANE if every else self.lane)
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
             self._missed = self.last_commit
 
-    def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False, co_author: str | None = None) -> commit_mod.Outcome:
+    def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False, co_author: str | None = None,
+                     lane: str | None = None) -> commit_mod.Outcome:
         """The session's own commit (`context-engine commit`): ``paths`` by path, with the op
-        log lines HEAD lacks that this session's commit takes (``commit.select``; every line with
-        ``sweep``) and the files they name, under the lock, whatever the policy; ``co_author`` is
+        log lines HEAD lacks that this session's commit takes (``commit.select``: those of its
+        ``lane``, none being the coordinator's; every line with ``sweep``) and the files they
+        name, under the lock, whatever the policy; ``co_author`` is
         its resolved ``Co-Authored-By:`` value (``commit.co_author``), None for none. It runs no
         gate: the session runs it first."""
         with self._lock():
             try:
-                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, co_author=co_author)
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, co_author=co_author, lane=lane)
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 
@@ -794,10 +816,12 @@ class Store:
         accept` writes one line for all it accepts); it carries them in ``ids`` and ``paths``,
         the first of them in ``id``'s place is ``rec_id`` (a label) and in ``path`` the first
         record's, so a reader of ``path`` alone still finds a file (``commit.op_paths`` reads
-        every one)."""
+        every one). With a lane set (``self.lane``, CE-126) the line carries ``lane`` right after
+        ``session``, so a line cut short still names both; with none it has no ``lane`` key."""
         entry: dict[str, Any] = {
             "at": _now(),
             "session": session,
+            **({"lane": self.lane} if self.lane else {}),
             "actor": actor,
             "op": op,
             "id": rec_id,

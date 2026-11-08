@@ -981,7 +981,10 @@ These records are not ephemeral: they are tracked and committed, and they *expir
      names them (`left uncommitted: <n> op lines of <key>`), except a line naming a file the
      commit carries (that file holds its write) and a line that does not parse; the message
      names whose those were. `context-engine commit --sweep` takes every line, for a session
-     known to be dead.
+     known to be dead. Within a session, a subagent working one task writes its lines with a
+     `lane`, its task id (`CE_AGENT`, `--agent` or the MCP `agent`); a commit takes only its own
+     lane's lines, a line with no lane being the coordinator's, and the session's close, pause and
+     pause record take every lane.
    - **The policy is `[engine] commit`:** `"milestones"` (the default), `"every-write"` (each
      write operation commits), or `"off"` (the session commits by path, through `context-engine
      commit` or by hand, no later than its close or pause). A pause record is committed at once
@@ -2083,8 +2086,9 @@ session. There are no ports, and each concurrent session gets its own process.
   `session.start`, never with the process start; the server remembers the key and actor from
   it.
 - **Subagents share the parent's server process,** so the actor is recorded per call, not per
-  process: a tool may pass its own `session` and `actor`, so a subagent names itself, and
-  housekeeping calls are told apart chiefly by the `hk_` prefix.
+  process: a tool may pass its own `session` and `actor`, so a subagent names itself, and its
+  `agent` (its lane), which is per call and never remembered; housekeeping calls are told
+  apart chiefly by the `hk_` prefix.
 - **The server's working directory is the directory Claude Code started in**, so the engine
   takes the repo root from its cwd.
 

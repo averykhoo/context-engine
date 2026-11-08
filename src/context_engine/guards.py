@@ -47,7 +47,7 @@ from .bootstrap import ENGINE_DIR
 from .commit import op_paths
 from .config import CONFIG_NAME, LIVENESS, RESERVED_PREFIXES, STANDARD_PREFIXES
 from .errors import Refusal
-from .store import ALIASES, OKF_STATUS, SESSION_OWNED, Failure, key_order
+from .store import ALIASES, LANE_RE, OKF_STATUS, SESSION_OWNED, Failure, key_order
 
 if TYPE_CHECKING:
     from .working import Engine
@@ -1384,7 +1384,9 @@ def tool_owned(e: Engine) -> list[Failure]:
     the value that line's `as` records for it: housekeeping stamping `last_asked`, CE-6, or an
     import keeping a legacy board's history, CE-178); a
     value no operation wrote must be older than the op log's first entry (written before the
-    engine ran the board). Every op log line parses.
+    engine ran the board). Every op log line parses, and a line's `lane` (CE-126), where it has
+    one, is a lane id (`store.LANE_RE`): the engine writes none other, and a commit reads any
+    other value as the coordinator's.
 
     Not checked: the values of `state`, `pri` and `deps` (the log records which keys changed,
     not their values; `task set` refuses them at write time), and keys of kinds off the board."""
@@ -1398,6 +1400,14 @@ def tool_owned(e: Engine) -> list[Failure]:
         out.append(Failure("G-W7", log_rel, f"{len(bad)} lines {UNPARSEABLE} (the first: line {bad[0]})",
                            "a line HEAD has: restore it from git; a line HEAD lacks (a write cut short, a hand edit): repair it "
                            "by hand, or redo the operation that wrote it and delete the line; the op log is written only by the engine"))
+    lanes = [n for n, op in ops if isinstance(op, dict) and "lane" in op
+             and not (isinstance(op["lane"], str) and LANE_RE.fullmatch(op["lane"]))]
+    if lanes:
+        k = len(lanes)
+        out.append(Failure("G-W7", log_rel, f"{k} op line{'s' if k != 1 else ''} carr{'y' if k != 1 else 'ies'} a `lane` that is not a lane id "
+                           f"like CE-126 (the first: line {lanes[0]})",
+                           "the engine writes `lane` only from CE_AGENT, checked: a line HEAD has: restore it from git; one HEAD lacks: "
+                           "repair the value by hand, or drop the key (the line is then the coordinator's)"))
     good = [op for _, op in ops if isinstance(op, dict)]
     first = min((str(op.get("session")) for op in good if op.get("session")), key=key_order, default=None)
     newest: dict[tuple[str, str], dict] = {}

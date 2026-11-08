@@ -460,7 +460,11 @@ class Engine:
 
         Not checked: whether the banner kept still holds only true lines (judgement: a durable
         line that went false is the closer's to rewrite); the grants' quotes once the entry is
-        written (the questions hold the hashed words)."""
+        written (the questions hold the hashed words).
+
+        Its one commit takes every lane of the session (CE-126): what a subagent working under
+        this key left uncommitted, a dead one's included, goes in with the close."""
+        self.store.commit_every_lane = True
         self._check(key, actor)
         summary = [s.strip() for s in summary if s.strip()]
         if not rows.strip():
@@ -866,7 +870,9 @@ class Engine:
 
     @_milestone
     def session_pause(self, key: str, *, actor: str, rows: str, deferred: str) -> str:
-        """A three-line ``kind: pause`` entry over the stub (FRAMEWORK §6.4, AC-11)."""
+        """A three-line ``kind: pause`` entry over the stub (FRAMEWORK §6.4, AC-11). Its commit
+        takes every lane of the session (CE-126): a subagent's lines left uncommitted go with it."""
+        self.store.commit_every_lane = True
         self._check(key, actor)
         if not rows.strip() or not deferred.strip():
             raise Refusal("a pause needs both `rows` (the items touched) and `deferred` (the steps skipped)", "name the items touched and the steps deferred (the gate, the commit, ...)")
@@ -2239,7 +2245,9 @@ class Engine:
         """The session's own commit (FRAMEWORK §5.5 rule 4): ``paths`` by path, with this
         session's op log lines HEAD lacks and the files they name, so a record is never committed
         without its op line, nor a line without its record; another session's lines stay out
-        unless they name a file the commit carries, and the reply names them (CE-125); ``sweep``
+        unless they name a file the commit carries, and the reply names them (CE-125), and so do
+        another lane's of this session (CE-126: a subagent's lane, ``store.lane``; none is the
+        coordinator's); ``sweep``
         takes every line, for a session known dead. Whatever the policy. It runs no gate: the
         session runs the gate first, as before any commit. The message ends in one trailer
         paragraph with ``Session:`` and ``Co-Authored-By:`` (CE-197): ``co_author``
@@ -2256,8 +2264,9 @@ class Engine:
             raise Refusal(f"the message's `Session:` trailer names {other[0]}, not this session ({session})", "drop the trailer, and the engine adds this session's")
         rels = [self._commit_path(x) for x in paths]
         GATE.check_commit(self.root, self.store.config.gate, rels)  # a code path needs a green gate run on its scope (CE-78)
-        self._lint_carried(rels, session, sweep)
-        out = self.store.commit_paths(message, rels, session, sweep=sweep, co_author=co)
+        lane = self.store.lane  # a subagent's commit takes its own lane's lines (CE-126; set by `ops.Op.call`)
+        self._lint_carried(rels, session, sweep, lane)
+        out = self.store.commit_paths(message, rels, session, sweep=sweep, co_author=co, lane=lane)
         if not out.sha:
             raise Refusal(f"not committed: {out.note or 'git made no commit'}",  # the note names any lines left behind
                           "fix what it names and run it again; by hand: manual-mode.md § context-engine commit")
@@ -2273,20 +2282,20 @@ class Engine:
         n = len(out.paths)
         return f"committed {out.sha}: {n} path{'s' if n != 1 else ''}" + (f" ({'; '.join(extra)})" if extra else "")
 
-    def _lint_carried(self, rels: list[str], session: str, sweep: bool) -> None:
+    def _lint_carried(self, rels: list[str], session: str, sweep: bool, lane: str | None = None) -> None:
         """Refuse a commit when lint fails on a path it would carry: a given path, a file under a
         given directory, or a path its op lines name (CE-63; adhoc AAR entry 18: a commit went in
         with lint red). A failure on any other path is not this commit's, and lint in the gate
         still reports it. Read without the lock: a write landing meanwhile is checked by the next
         commit, or the gate."""
         oplog = self.store.config.oplog
-        carried = C.carried_paths(self.root, oplog, session, tuple(rels), sweep)
+        carried = C.carried_paths(self.root, oplog, session, tuple(rels), sweep, lane)
         dirs = tuple(r.rstrip("/") + "/" for r in rels)
         bad = [f for f in self.lint() if f.path in carried or f.path.startswith(dirs)]
         if any(_unparseable_oplog(f, oplog) for f in bad):
             # G-W7's parse failure is for the working op log; the commit leaves out another
             # session's broken line, so refuse only for one it would take, and name it (CE-128)
-            taken = C.unparseable(C.taken_lines(self.root, oplog, session, tuple(rels), sweep))
+            taken = C.unparseable(C.taken_lines(self.root, oplog, session, tuple(rels), sweep, lane))
             named = []
             if taken:
                 lines = (self.root / oplog).read_bytes().decode("utf-8", errors="replace").splitlines()
@@ -2335,8 +2344,9 @@ class Engine:
         branch = self._git("rev-parse", "--abbrev-ref", "HEAD").strip()
         dirty = []
         # the pause's own commit carries the op log's uncommitted lines and the files they name,
-        # so they are not left uncommitted (INV-45); the list holds what stays so
-        carried = C.pending(self.root, self.store.config.oplog, session)
+        # so they are not left uncommitted (INV-45); the list holds what stays so. It takes every
+        # lane of the session (CE-126), as a close does
+        carried = C.pending(self.root, self.store.config.oplog, session, lane=C.EVERY_LANE)
         # -z: a path as it is on disk, never quoted, so it matches the carried set (CE-66)
         for path in status_paths(self._git("status", "--porcelain=v1", "-z", "--untracked-files=all")):
             if path not in carried:
@@ -2360,6 +2370,7 @@ class Engine:
             rec = self.store.new(self._role("pause"), fields, body, session=session, actor=actor)
             self.store.commit_title = f"pause {rec.id} ({session}): {fields['title'][:60]}"
             self.store.commit_always = True
+            self.store.commit_every_lane = True
         return f"{rec.id}: pause recorded on {branch} ({len(dirty)} uncommitted paths){self.store.last_commit.line()}"
 
     def pause_resume(self, rid: str, *, session: str, actor: str) -> str:

@@ -24,19 +24,29 @@ from . import guards as GD
 from . import ledger as L
 from .commit import Outcome
 from .errors import Refusal
+from .store import check_lane
 from .working import Engine
 
 
 @dataclass
 class Caller:
-    """Who is calling. ``session_start`` fills ``session`` in, so the MCP server can remember it."""
+    """Who is calling. ``session_start`` fills ``session`` in, so the MCP server can remember it.
+    ``lane`` is a subagent's, under the coordinator's key (CE-126, DEC-84): the task id it works on,
+    from CE_AGENT, the CLI's --agent or the MCP `agent`; None is the coordinator. It rides on the
+    Store (``Op.call`` sets it), not through the Engine's signatures, so ``kw`` leaves it out."""
 
     session: str | None = None
     actor: str | None = None
+    lane: str | None = None
 
     @property
     def kw(self) -> dict[str, str | None]:
         return {"session": self.session, "actor": self.actor}
+
+
+# The coordinator's own operations: a session's start, close, pause and pause record. Called with a
+# lane they refuse, before anything is written (CE-126): a close or pause takes every lane's lines
+COORDINATOR_ONLY = frozenset({"session_start", "session_close", "session_pause", "pause_open"})
 
 
 @dataclass(frozen=True)
@@ -57,7 +67,16 @@ class Op:
         both do. A write runs in one store batch, so whatever commit the policy makes after it
         (FRAMEWORK §5.5 rule 4: at a milestone, after every write, or only a pause's) is made
         once, by path, with its op log lines, and its reply says what the commit did. A dry run
-        writes nothing, so it takes no batch: the batch's lock would create the lock file (CE-98)."""
+        writes nothing, so it takes no batch: the batch's lock would create the lock file (CE-98).
+        The caller's lane (CE-126) is checked first, before any read or write, and set on the
+        Store: every op line it writes carries it, and its commits take only its lane's lines."""
+        c.lane = check_lane(c.lane)
+        if c.lane and self.name in COORDINATOR_ONLY:
+            raise Refusal(f"{self.name} is the coordinator's, but it was called with agent lane {c.lane}",
+                          "a lane is a subagent's; the session's start, close, pause and pause record are the coordinator's: "
+                          "unset CE_AGENT (or drop --agent, or the MCP `agent` parameter)")
+        if self.engine:
+            target.store.lane = c.lane
         if not (self.write and self.engine) or kw.get("dry_run"):
             return self.fn(target, c, **kw)
         store = target.store
@@ -483,7 +502,7 @@ def criterion_set(e: Engine, c: Caller, id: str, status: str = "", text: str = "
 
 @op(write=True)
 def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None, sweep: bool = False, co_author: str = "", model: str = "") -> tuple[int, str]:
-    """Commit `paths` by path (`git commit -o`) with this session's op log lines HEAD lacks and the files they name, so a record never goes without its op line; adds the `Session:` and `Co-Authored-By:` trailers, in one last paragraph. The co-author is `co_author` (`<name> <email>`, or `none`), else the one `model` (a Claude model id) names, else `CE_CO_AUTHOR`, else the actor's model (`claude-code/claude-opus-5-5`: `Claude Opus 5.5 <noreply@anthropic.com>`); an actor with no `/` (`human:<id>`, `process:<id>`) gets none, and a line the message already has for that address stands. Another session's lines stay uncommitted unless they name a file the commit carries, and the reply says whose and how many were left; `sweep` takes every line (for a session known dead). It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
+    """Commit `paths` by path (`git commit -o`) with this session's op log lines HEAD lacks of this caller's lane (CE_AGENT, `--agent` or MCP `agent`: a subagent's task id; none: the coordinator's, and every line with no lane) and the files they name, so a record never goes without its op line; adds the `Session:` and `Co-Authored-By:` trailers, in one last paragraph. The co-author is `co_author` (`<name> <email>`, or `none`), else the one `model` (a Claude model id) names, else `CE_CO_AUTHOR`, else the actor's model (`claude-code/claude-opus-5-5`: `Claude Opus 5.5 <noreply@anthropic.com>`); an actor with no `/` (`human:<id>`, `process:<id>`) gets none, and a line the message already has for that address stands. Another session's or another lane's lines stay uncommitted unless they name a file the commit carries (the session's close and pause take every lane), and the reply says whose and how many were left; `sweep` takes every line (for a session known dead). It runs no gate: run the gate first. With no paths it commits only the op log's uncommitted lines and their files."""
     return 0, e.commit(paths or [], message, sweep=sweep, co_author=co_author, model=model, **c.kw)
 
 

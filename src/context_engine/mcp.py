@@ -14,6 +14,11 @@ a tool error carrying its remedy.
 ``/clear``. ``session_start`` remembers the key it minted and the actor it was given, and every
 later tool uses them unless it is passed ``session`` or ``actor`` itself (a subagent passes its
 own ``actor``). Before any ``session_start``, ``CE_SESSION`` and ``CE_ACTOR`` are the fallback.
+A subagent also passes ``agent``, its lane (CE-126, DEC-84: the task id it works on), on every
+write it makes: it is per call and never remembered, and the server never reads ``CE_AGENT``,
+since one server process serves the coordinator and every subagent, so a remembered lane would
+label the coordinator's later writes. The session's start, close, pause and pause record take
+no ``agent`` (``ops.COORDINATOR_ONLY``).
 
 **The mark** (CE-177, DEC-155). Every tool call that reaches an ``Engine`` first runs
 ``Engine.mark_mcp``, which writes ``mcp-seen`` in the lockfile's directory once, before the op
@@ -73,15 +78,18 @@ def _caller_params(o: ops.Op) -> list[inspect.Parameter]:
     if o.write:
         actor = inspect.Parameter("actor", kw, default=None, annotation=str | None)
         extra.append(actor)
+        if o.name not in ops.COORDINATOR_ONLY:  # a subagent's lane, per call (CE-126)
+            extra.append(inspect.Parameter("agent", kw, default=None, annotation=str | None))
     return extra
 
 
 def make_tool(o: ops.Op, root: Path, state: ops.Caller):
-    """A function with the operation's own parameters plus ``session``/``actor``, for the SDK to
-    build the tool's schema from."""
+    """A function with the operation's own parameters plus ``session``/``actor`` (and a write's
+    ``agent``), for the SDK to build the tool's schema from."""
 
     def tool(**kw: Any) -> str:
-        c = ops.Caller(kw.pop("session", None) or state.session, kw.pop("actor", None) or state.actor)
+        # the lane is this call's alone: never from `state`, never remembered (CE-126)
+        c = ops.Caller(kw.pop("session", None) or state.session, kw.pop("actor", None) or state.actor, kw.pop("agent", None))
         try:
             e = o.target(root)  # an Engine, or for `init` the bare root: there may be no context.toml yet
             if isinstance(e, Engine):
