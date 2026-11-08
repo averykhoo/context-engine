@@ -1280,3 +1280,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** pre-existing before CE-186; the verifier re-ran each new row with a fresh PYTHONPYCACHEPREFIX and each went red for the right reason
 - **control:** collective: the sabotage rule in CLAUDE.md (hand check of each row's red reason)
 - **from:** CE-186, session 2026-11-07e
+
+## INV-182: manual-mode.md kinds table: the question row still says 'as task', which now reads as if the question pri includes HOLD, against the context.toml.template
+
+- **affects:** an adopter reading the by-hand runbook
+- **why not eliminated:** wording left unqualified in the by-hand runbook
+- **control:** collective: kit and repo runbook byte-equality gate keeps copies in step, but nothing checks the wording
+- **from:** CE-188, session 2026-11-07e
+
+## INV-183: FRAMEWORK.md section 5.2 sprint bullet and the section 6.14 intro read 'every open item' without 'not at HOLD' (step 1 and the Ranking line are qualified)
+
+- **affects:** a reader of the spec following the sprint bullet
+- **why not eliminated:** prose left unqualified
+- **control:** collective: FRAMEWORK section 6.14 step 1 and the Ranking line state the HOLD exemption
+- **from:** CE-188, session 2026-11-07e
+
+## INV-184: working.py::_unheld filters by pri regardless of kind, so an adopter who adds HOLD to the question pri enum gets held questions the docs say cannot exist, and nothing refuses it
+
+- **affects:** adopters who customise the question pri enum
+- **why not eliminated:** HOLD is optional per kind and config validation does not tie a tier to a kind
+- **control:** reduce: docs say HOLD belongs to the task kind only; test_hold_is_on_the_task_kind_only_in_the_kit_and_here pins this repo and the kit template
+- **from:** CE-188, session 2026-11-07e
+
+## INV-185: orient's Top item on a held-only board says only 'no NOW item' and gives no hint that only held items remain
+
+- **affects:** a session starting on a board where every open task is held
+- **why not eliminated:** message wording not reworked in this task
+- **control:** collective: task list shows held items last; the owner reads the board
+- **from:** CE-188, session 2026-11-07e
+
+## INV-186: DEC-244, DEC-245, DEC-246 are PROVISIONAL and the owner has not reviewed them or made the rank call on moving this repo's SOMEDAY items to HOLD
+
+- **affects:** the owner
+- **why not eliminated:** owner review and a rank call are the owner's, not an agent's
+- **control:** individual: PROVISIONAL decision status and the close digest flag; decision accept after review
+- **from:** CE-188, session 2026-11-07e
+
+## INV-187: the verifier's sabotage runs (verifier_sab.py, verifier_sab.log) exist only in gitignored .scratch/wave-2026-11-07e/ce-188/
+
+- **affects:** a later auditor wanting the verifier's own runs
+- **why not eliminated:** the runs are evidence kept outside any tracked file
+- **control:** collective: the builder's Sabotage lines in commit 3787b49 record the same breakages in tracked history
+- **from:** CE-188, session 2026-11-07e
