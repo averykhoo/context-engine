@@ -51,7 +51,7 @@ word, and the engine's gate fails when a quote stops matching (kit README § Cla
 | §6.10 Humans working outside the procedures | § Reconciling foreign commits |
 | §6.11 Housekeeping | § Housekeeping |
 | §6.12 Keeping this document current | § Clean close (item 5a) |
-| §6.13 Rollback and close | not designed yet: no steps |
+| §6.13 Rollback and close | § Rollback and close |
 | §6.14 Rerank | § Rerank |
 
 ## Session start (§6.1)
@@ -180,6 +180,54 @@ against an unrecoverable loss are mandatory.
 
 Deferred, not dropped: the gate, the commit of the work itself, re-ranking, the banner and
 runbook filing. The next session does them (§ Resume).
+
+## Rollback and close (§6.13)
+
+The owner wants this session's work undone instead of saved: do this in place of § Clean close's
+save, then close. **Only on the owner's word**, and only after showing them the plan (step 2).
+Never `git stash`, `git reset`, `git clean`, `git revert` or `git checkout <rev> -- <path>`: other
+writers share this checkout (FRAMEWORK §6.13 says how each one breaks them). The op log and the
+ledger are never rolled back, and a record is never put back or deleted by hand: its operation
+undoes it, so the op log and the records still agree (G-W7) and no id is reused (G-D2).
+`<key>` is your session's key, or a closed session's when a follow-up session rolls its work back.
+`<first>` is, per file, the oldest of the session's commits that touched it.
+
+| § | Do | Engine | By hand | Why |
+|---|---|---|---|---|
+| 0 | Keep every owner word recorded this session (stories, owner decisions, answers, the owner's reviews): each was committed at its milestone, and nothing below undoes it. Keep the owner's word to roll back for step 7's summary, or record it as a decision when it rules on the work | as § Intake, step 1 | § Intake | owner words are what a rollback must never lose (FRAMEWORK §6.3 item 0) |
+| 1 | Find what the session changed: its commits (keep only those whose trailer value is the key: a commit that only mentions it in its body is not the session's), its op lines committed or not, and its hand edits committed or not, from your own transcript | — (git and the op log) | `git log -F --grep="Session: <key>" --format='%h %(trailers:key=Session,valueonly,separator=%x2C)' HEAD`; the op log's lines whose `session` is the key; in each of those commits, the paths another session's op lines name are that session's, not yours | the trailer is the one mark a session's commits carry; the engine cannot tell whose an uncommitted hand edit is |
+| 2 | Sort each path into one class (kept, undone by operation, restored, reverted by hunk, left) as FRAMEWORK §6.13 item 2 says, and show the owner the plan, with every untracked file you would delete; go on at their word | — (git, by path) | per file: `git log --format='%h %(trailers:key=Session,valueonly)' <first>^..HEAD -- <path>` (every row the key: restore it; any other: revert by hunk); `git diff --quiet HEAD -- <path>` (exit 0: no uncommitted change); `git diff HEAD -- <op log>` (another session's uncommitted line naming the file: leave it) | a file another writer touched since is theirs as much as yours; the owner sees what is discarded before it is |
+| 3 | Undo each record by the operation that owns it, as the list below says, back to its value before the session (`git show <first>^:<path>`, or HEAD's for a write never committed); a field another session wrote since stays theirs | `context-engine task reopen`; `context-engine task close`; `context-engine task promote`; `context-engine task set`; `context-engine task dep`; `context-engine task section`; `context-engine task comment`; `context-engine decision set`; `context-engine decision relink`; `context-engine record amend`; `context-engine criterion set`; `context-engine baton done`; `context-engine baton add`; `context-engine banner show`; `context-engine banner set` | [§ task reopen](manual-mode.md#context-engine-task-reopen); [§ task close](manual-mode.md#context-engine-task-close); [§ task promote](manual-mode.md#context-engine-task-promote); [§ task set](manual-mode.md#context-engine-task-set); [§ task dep](manual-mode.md#context-engine-task-dep); [§ task section](manual-mode.md#context-engine-task-section); [§ task comment](manual-mode.md#context-engine-task-comment); [§ decision set](manual-mode.md#context-engine-decision-set); [§ decision relink](manual-mode.md#context-engine-decision-relink); [§ record amend](manual-mode.md#context-engine-record-amend); [§ criterion set](manual-mode.md#context-engine-criterion-set); [§ baton done](manual-mode.md#context-engine-baton-done); [§ baton add](manual-mode.md#context-engine-baton-add); [§ banner show](manual-mode.md#context-engine-banner-show); [§ banner set](manual-mode.md#context-engine-banner-set) | a record's file put back or deleted by hand contradicts the op log (G-W7); its operation writes the undo as a new line |
+| 4 | Restore and revert the other files, in the working copy only. Restore: back to `<first>^`, which deletes the file where the session created it. By hunk: reverse each of the session's commits on that file, newest first, each after a check; a check that fails puts the file back to HEAD and leaves it. A hand edit never committed: back to HEAD where the whole difference is yours, else reverse only your hunks | — (git, by path) | `git restore --source=<first>^ --worktree -- <path>` (where `git cat-file -e <first>^:<path>` fails, the session created the file, and this deletes it from the working copy); `git diff --binary <c>^ <c> -- <path> > <patch>`, `git apply -R --check <patch>`, then `git apply -R <patch>`; `git restore --source=HEAD --worktree -- <path>` | `--worktree` leaves the index as other writers staged it; a reversed hunk that does not apply overlaps another writer's work, so it is left, never forced |
+| 5 | Run `<gate>` on the result; where it is red because of a file put back, restore that file to HEAD, mark it left, and run it again | `context-engine gate run` | [§ gate run](manual-mode.md#context-engine-gate-run) | a file put back can break what another session built on it since |
+| 6 | Commit by path, titled with no task id first, the body naming the commits undone; a deleted file is committed by path too | `context-engine commit <paths> -m "Roll back session <key>" -m "Undoes <sha>, <sha>."` | [§ commit](manual-mode.md#context-engine-commit) | by path keeps other writers' work out; a title led by an id would read to housekeeping as work on that task (`hk comment`) |
+| 7 | Close as § Clean close: `rows:` say `rolled back` for each item touched, one summary line `rolled back: <commits>; kept: <ids>; left: <paths or none>`, and each file left goes in `Still owed:` and a baton | as § Clean close | § Clean close | the ledger keeps what was undone and what was not; the next session finds what is left |
+
+Undo by operation (step 3), by the op line the session wrote:
+- `new` of a task or a question: keep it open, with `task comment <id> "rolled back with session <key>"`:
+  the work is undone, not the need. Close it (`task close <id> -m "dropped: rolled back with session <key>"`)
+  only on the owner's word. Its id stays used either way.
+- `close`: `task reopen <id> -m "rolled back with session <key>; undoes <sha>, <sha>"`, naming every
+  undone commit that carries `Closes: <id>`, so `hk close` does not close it again on their trailers.
+- `reopen`: `task close <id> -m "rolled back with session <key>"`.
+- `promote`, `set`, `dep`, `section`: the same operation, back to the value before.
+- `comment`, `touch`: kept, as history; step 3's comment on the item says its changes were undone.
+- `new` of an agent's decision: `decision set <id> --set decision_status=REJECTED --set reopen_if="<what would bring it back>"`,
+  then `record amend <id> "rolled back with session <key>"`; its `set`: back to the value before.
+  An owner's decision is never moved (step 0). A `link` stays (no operation removes an id link), and the plan reports it;
+  a `relink`: `decision relink` back to the code it named before.
+- `amend` of an agent's record: `record amend <id> "the amendment of session <key> above is withdrawn: rolled back"`
+  (an append-only body only grows).
+- `criterion.new`: `criterion set <id> --status retired`; `criterion.set`: back to the value before.
+- `new` of a baton: `baton done <id> "void: session <key> was rolled back"`. `baton.done` of another
+  session's baton whose step this rollback undoes: `baton add` with the same step.
+- `supersede` by an agent: the superseded decision stays superseded; the plan reports it, and only on
+  the owner's word is the old one restated as a new decision that supersedes the replacement.
+- `banner.set`: where the banner is still yours (its heading names your key), `banner show` for its hash, then
+  `banner set --seen <hash> --file <the banner before>`; otherwise keep it.
+- kept: `id.reserve`, `ask.raised`, `ask.later`, `stamp`, `index`, `accept`, `import`, `pause.resume`, `session.*`,
+  housekeeping (`hk.*`, `session.abandon`), `doc.freeze`, `doc.archive`, `register.append`, `ask.answer`, and
+  every op on a story (`confirm`, `retire` among them) or on an owner's decision.
 
 ## Push and CI (§6.8)
 

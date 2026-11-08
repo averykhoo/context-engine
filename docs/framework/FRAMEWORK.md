@@ -1811,16 +1811,77 @@ script and MCP prove insufficient.
   who reads it, when, and what turns a recurring note into a task or a framework change.
 - Until it is designed, a session that has a note puts it in its ledger `summary:`.
 
-### 6.13 Rollback and close (not designed)
+### 6.13 Rollback and close
 
-A session can end by undoing what it changed instead of saving it, without breaking other
-humans or agents in the same checkout (a shared directory, not a worktree). Design notes: the
-shared-tree rules (§5.5) rule out `git stash`, `git reset` and checking out whole files another
-writer may also have touched; candidates are `git revert` of the session's own commits (found by
-`Session:` trailer; one that carried another session's leftover lines, §5.5 rule 4, is reverted by
-path) plus restoring only the paths the session's op log says it wrote, recorded as
-a ledger entry of its own kind. Owner words recorded this session stay (§6.3 item 0). Its by-hand
-fallback is a runbook section (P16).
+A session can end by undoing what it changed instead of saving it: the **rollback close**.
+Other humans and agents work in the same checkout (a shared directory, not a worktree), so it
+never rewrites history and never undoes what it cannot show is its own:
+- **no `git stash`, `git reset`, `git clean` or `git revert`, and no `git checkout <rev> --
+  <path>`** (§5.5). A revert takes back the op log's and the ledger's lines with the rest (other
+  sessions' lines sit between them), and a conflict leaves a revert in progress, which stops
+  every session's engine commits (§5.5 rule 4); a checkout of a path writes the index another
+  writer may have staged. The undo is new commits, by path; nothing pushed is rewritten.
+- **the op log and the ledger are never rolled back.** The undo is written as new op lines and
+  the close's ledger entry, so G-W7 (the op log and the records agree) and G-D2 (an id is never
+  reused: a record's id stays used though its work is undone) still hold.
+- **records are undone by operation, never by restoring their files:** a record's file put back
+  to its old bytes carries tool-owned keys the newest op line contradicts, and a record's file
+  deleted leaves an op line naming no file (G-W7 is red both ways).
+
+**Who decides:** a rollback discards work, which is not cheap to undo, so it runs on the
+owner's word (P8); the session may propose one, and shows the owner the plan (item 2) before its
+first undo.
+
+0. **Owner words stay** (§6.3 item 0): every story, owner decision and question answer recorded
+   this session, already committed at its milestone (§5.5 rule 4), and every review the owner
+   made (`decision accept`). The owner's word to roll back is quoted in the close's summary, or
+   recorded as a decision when it rules on the work.
+1. **Find what the session changed:** its commits in HEAD's history whose `Session:` trailer, as
+   git parses trailers, names its key (a commit that only mentions the key in its body is not
+   its own); its op lines, committed or not; and its hand edits, committed or not, from its own
+   transcript (the engine cannot tell one writer's uncommitted edit from another's). A commit of
+   the session that carried another session's op lines (§5.5 rule 4) carried that session's
+   files too: those paths are the other session's.
+2. **Sort each path into one class, the plan, and show it to the owner:**
+   - **kept:** item 0's records; the op log, the ledger and what the engine regenerates (the
+     decision index); housekeeping done for others (a close on another's trailer, stamps, stale
+     stubs abandoned); docs frozen or archived (§7.3) and register entries, which are never
+     edited (the plan reports them);
+   - **undone by operation:** every record the session wrote, through the operation that owns
+     it (`procedures.md` § Rollback and close lists which), back to its value before the
+     session; a field another session wrote since stays theirs;
+   - **restored:** every other file the session changed, when every commit that touched it
+     since the session's first change to it is the session's own, its working copy has no
+     uncommitted change but the session's, and no other session's uncommitted op line names it:
+     back to its content before that first change, or deleted where the session created it;
+   - **reverted by hunk:** a file another writer changed after the session did: only the
+     session's own diffs, reversed, newest first, each after a check that it applies cleanly;
+   - **left:** a file whose reversed hunks do not apply (they overlap another writer's work),
+     never forced.
+   A file the session created and never committed is deleted only where the plan names it:
+   deleting untracked files is the owner's call, which the plan puts in front of them.
+3. **Undo the records**, each by its operation (item 2), so each undo logs its own op line.
+4. **Restore and revert the files**, in the working copy only: the index stays as other writers
+   left it.
+5. **Run the gate on the result.** A file put back can break what another session built on it
+   since: a red gate puts that file back to HEAD, moves it to **left**, and runs again.
+6. **Commit by path**, through `context-engine commit`, titled `Roll back session <key>` (no
+   task id first, so housekeeping does not read it as work on a task, §6.11), its body naming the
+   commits it undoes; a deleted file is committed by path too.
+7. **Close** as a clean close (§6.3), whose `rows:` say how each item touched ended (`rolled
+   back`), with one summary line `rolled back: <commits>; kept: <ids>; left: <paths or none>`,
+   and every **left** file in `Still owed:` and a baton. Push only with permission (§6.8).
+
+**Scope.** The session's own work, in its own live session. Work of a session already closed is
+rolled back by a follow-up session (`session start --follows <key>`, §6.3) doing items 0 to 6 for
+that key, then its own close. A worktree session does it in its worktree, before the merge.
+
+**Not built:** the engine operation (a `session rollback` that prints item 2's plan and runs
+items 3 to 6, and a `kind: rollback` ledger entry in place of item 7's summary line). Deferred:
+every step is done today with the existing operations and git by path (`procedures.md` §
+Rollback and close is the by-hand fallback, P16), and no rollback had been needed when it was
+designed. Un-defer: the first rollback done by hand, or the owner asks; it waits on the board as
+its own item.
 
 ### 6.14 Rerank (the sprint)
 

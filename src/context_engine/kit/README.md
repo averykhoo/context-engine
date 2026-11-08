@@ -226,8 +226,8 @@ its first line naming the settings file and why that hook cannot run: fix or rem
 The engine repo is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`) holding one
 plugin, `context-engine` (`plugin/` in the engine repo, its design in the engine repo's
 `docs/evidence/plugin-design-2026-10-14.md`). It carries:
-- **skills** for the procedures: `intake`, `clean-close`, `pause`, `resume`, `push-and-ci`,
-  `reconcile-foreign-commits`, `housekeeping`, `bootstrap` and `adopt`. Each triggers when its
+- **skills** for the procedures: `intake`, `clean-close`, `rerank`, `pause`, `rollback-and-close`, `resume`,
+  `push-and-ci`, `reconcile-foreign-commits`, `housekeeping`, `bootstrap` and `adopt`. Each triggers when its
   procedure starts and points at its section of `docs/runbooks/procedures.md` (`adopt` and
   `bootstrap` at this README too), which stays the source and the by-hand fallback: each line a
   skill adds is quoted from those sections word for word, and the engine's gate fails when a
@@ -385,8 +385,8 @@ byte for byte, and `context.toml` is config. Name them as prose in the filter, b
 
 The kit ships the runbooks, and `init` copies them into the repo's `docs/runbooks/`, so a repo can
 run the framework from its own tree with no engine (FRAMEWORK P16). The by-hand fallback:
-- `procedures.md`: the order of every procedure (session start, intake, clean close, pause,
-  resume, push and CI, bootstrap, reconciling foreign commits, housekeeping), each step with its engine command, its
+- `procedures.md`: the order of every procedure (session start, intake, clean close, rerank, pause,
+  rollback and close, resume, push and CI, bootstrap, reconciling foreign commits, housekeeping), each step with its engine command, its
   by-hand step and its why. It is the only place the order is written.
 - `manual-mode.md`: every engine operation by hand, with its why; the reference for what the
   engine should have done when it errs.
