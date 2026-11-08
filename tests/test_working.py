@@ -2892,3 +2892,77 @@ def test_a_stub_with_no_op_line_counts_from_when_it_opened(eng):
     assert eng.stale_stubs(me) == []
     with pytest.raises(Refusal, match="--force with --stale"):
         eng.session_abandon(stale=True, force=True, **kw(me))
+
+
+# -- the MCP mark: orient names the registration until a tool call reaches the engine (CE-177, DEC-155)
+
+MCP_PART = "## MCP server not seen: register it\n"
+
+
+@pytest.mark.criterion("AC-195")
+def test_orient_names_the_mcp_registration_until_a_tool_call_marks_the_clone(eng):
+    """E1, E2, E4: a fresh clone's orient names the `claude mcp add` step; the mark is one line
+    (UTC time, the engine interpreter), in the ignored lock dir, and clears it; it is written once."""
+    import sys
+    from pathlib import Path
+
+    out = eng.orient(None)
+    assert MCP_PART in out, out
+    line = out.split(MCP_PART, 1)[1].split("\n", 1)[0]
+    assert K.mcp_add_command() in line, line
+    eng.mark_mcp()
+    mark = eng.root / ".context" / "mcp-seen"
+    text = mark.read_text(encoding="utf-8")
+    assert text.count("\n") == 1 and text.endswith(f" {Path(sys.executable).as_posix()}\n"), text
+    assert re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ ", text), text
+    assert (eng.root / ".context" / ".gitignore").read_text(encoding="utf-8") == "*\n"
+    assert MCP_PART not in eng.orient(None)
+    later = Engine(eng.root, now=lambda: dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc))
+    later.mark_mcp()
+    assert mark.read_text(encoding="utf-8") == text, "the mark is written once, never refreshed (DEC-259)"
+
+
+@pytest.mark.criterion("AC-195")
+def test_the_mcp_mark_recreates_its_ignored_dir(eng):
+    """E3: with `.context/` gone, the mark brings it back with its `.gitignore`, so git sees nothing there."""
+    import shutil
+
+    eng.store.private_dir()
+    shutil.rmtree(eng.root / ".context")
+    _git(eng.root, "init", "-q", "-b", "main")
+    eng.mark_mcp()
+    assert (eng.root / ".context" / "mcp-seen").is_file()
+    assert (eng.root / ".context" / ".gitignore").read_text(encoding="utf-8") == "*\n"
+    status = _git(eng.root, "status", "--porcelain", "--untracked-files=all")
+    assert not [ln for ln in status.splitlines() if ".context" in ln], status
+
+
+@pytest.mark.criterion("AC-195")
+def test_a_root_lockfile_leaves_no_mark_and_no_notice(tmp_path):
+    """E5: a lockfile at the root has no untracked dir, so nothing is written there and orient says nothing."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["engine"]["lockfile"] = "engine.lock"
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "ledger.md").write_text(LEDGER, encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text(NOTE.format(key="2026-10-07b"), encoding="utf-8")
+    e = Engine(tmp_path, today=lambda: TODAY)
+    before = sorted(p.name for p in tmp_path.iterdir())
+    assert e.mcp_mark() is None
+    e.mark_mcp()
+    assert sorted(p.name for p in tmp_path.iterdir()) == before and not (tmp_path / "mcp-seen").exists()
+    assert MCP_PART not in e.orient(None)
+
+
+@pytest.mark.criterion("AC-195")
+def test_the_mcp_mark_never_fails_a_call(eng, monkeypatch):
+    """E6: a mark that cannot be written is swallowed (DEC-263): the call goes on, and orient still names the step."""
+    import pathlib
+
+    def refuse(self, *a, **k):
+        raise PermissionError("read-only")
+
+    monkeypatch.setattr(pathlib.Path, "write_text", refuse)
+    eng.mark_mcp()
+    monkeypatch.undo()
+    assert not (eng.root / ".context" / "mcp-seen").exists()
+    assert MCP_PART in eng.orient(None)

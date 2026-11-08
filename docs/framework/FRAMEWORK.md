@@ -1616,9 +1616,10 @@ Working instructions may come from any of these three sources; a grant may not.
    environment and is never installed into the repo's own, so the repo never imports it; it lives
    inside the repo's folder, so everything the repo runs is there, and a clone rebuilds it at the
    ref the ledger names. A kit change made in the engine repo reaches the repo only when its pin
-   moves (the upgrade procedure, §8.0). The MCP
-   server (§8.0.2) is optional until the §8.0.3 trial reports (§11.1): the CLI carries every
-   operation, and a repo that wants the server registers it here.
+   moves (the upgrade procedure, §8.0). Setup registers the MCP server (§8.0.2) here, once per
+   machine, and orient names the step until a tool call reaches the engine; the CLI
+   carries every operation, and the server stays out of the minimum set until the §8.0.3 trial
+   reports (§11.1).
 3. `context-engine init` writes the kit into the repo: the layout (§10), `context.toml`, the
    runbooks, the kit block appended to `CLAUDE.md`, the contract it imports, the hook, and
    `.context-engine/` appended to the repo's `.gitignore` when nothing there ignores it, and the
@@ -2071,7 +2072,9 @@ session. There are no ports, and each concurrent session gets its own process.
 - **Missing tools call for a set-up step, not a stop.** Claude Code starts MCP servers only at
   launch, so a session that finds the tools missing registers the server as above, runs every
   operation through the CLI for the rest of the session (same functions, nothing lost), and asks
-  the owner to restart Claude Code. Fallback text: `manual-mode.md` § When the MCP tools are
+  the owner to restart Claude Code. Until a tool call reaches the engine, orient shows an `MCP
+  server not seen: register it` part: the first call writes `mcp-seen` in the lockfile's
+  directory, which is never tracked. Fallback text: `manual-mode.md` § When the MCP tools are
   missing.
 - **A server process is not a framework session.** The process lives as long as the Claude Code
   process, and a `/clear` may leave it running. So a session begins with an explicit

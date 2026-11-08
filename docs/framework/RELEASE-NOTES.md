@@ -76,6 +76,15 @@ component, procedure and guard.
   §6.14, §8.4 G-W5; DEC-162, CE-188. **Upgrade:** optional: add `HOLD` to the task kind's `pri`
   enum in `context.toml`, after SOMEDAY, as `context.toml.template` has it; without it nothing
   changes.
+- **Setup registers the MCP server, and orient says when it has not.** init's `next:` line names
+  `claude mcp add --scope local context-engine -- "<interpreter>" -m context_engine.mcp` (with
+  this machine's interpreter) and the restart as a step, between the kit commit and `session
+  start`; it no longer calls the server optional. The server's first tool call writes `mcp-seen`
+  in the lockfile's directory (`.context/`, never tracked), and until it exists orient shows a
+  `MCP server not seen: register it` part. The contract and §11.1 are unchanged: the CLI carries
+  every operation. FRAMEWORK §6.9, §8.0.2; DEC-155, DEC-258 to DEC-263, CE-177. **Upgrade:**
+  register the server once per machine (kit README § 1); a repo whose lockfile sits at its root
+  gets no notice.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

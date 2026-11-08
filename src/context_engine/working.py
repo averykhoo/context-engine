@@ -20,6 +20,7 @@ import functools
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, NamedTuple
 
@@ -125,6 +126,7 @@ TASK_BODY = "{summary}\n\n## Traps\n\n- none yet\n\n## Read first\n\n- none yet\
 SHOW_LOG_HEAD = 5
 LINK_RELS = ("tasks", "creates", "amends", "retires", "relaxes", "code", "refs")  # what `decision link` writes
 HOUSEKEEPER = "process:housekeep"
+MCP_MARK = "mcp-seen"  # in the lockfile's directory: the MCP server has reached this clone (CE-177, DEC-258)
 BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
 RERANK_HOW = "The full rerank is procedures.md § Rerank: run it now that NEXT is empty, or whenever the owner asks."
 RERANK_REST = "procedures.md § Rerank"
@@ -3226,6 +3228,39 @@ class Engine:
                        + "; `context-engine decision index` prints the listing and `context-engine site build <dir>` publishes it")
         return out
 
+    def mcp_mark(self) -> Path | None:
+        """Where the MCP server marks this clone as seen (CE-177, DEC-258): ``mcp-seen`` in the
+        lockfile's directory, which is never tracked. None when the lockfile sits at the root, so
+        there is nowhere untracked to put it. Creates nothing. Not checked: that the file there was
+        written by the server, not by hand."""
+        d = (self.root / self.store.config.lockfile).parent
+        return None if d == self.root else d / MCP_MARK
+
+    def mark_mcp(self) -> None:
+        """Write the MCP mark once (DEC-259): one line, the UTC time and the engine interpreter's
+        posix path. Machine state, so not op-logged, and a failure to write it is swallowed: it
+        must never fail the tool call that wrote it (DEC-263). Not checked: that the interpreter
+        named is still the one registered."""
+        try:
+            path = self.mcp_mark()
+            if path is None or path.exists():
+                return
+            self.store.private_dir()
+            stamp = self.now().astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            path.write_text(f"{stamp} {Path(sys.executable).as_posix()}\n", encoding="utf-8", newline="\n")
+        except OSError:
+            pass
+
+    def mcp_unseen(self) -> list[str]:
+        """Orient's notice while no MCP tool call has reached this clone (DEC-155, CE-177): the
+        registration step, with its command. Not checked: whether a server is registered but has
+        not been called yet, or registered and failing to start; both read as unseen."""
+        path = self.mcp_mark()
+        if path is None or path.exists():
+            return []
+        return [f"- no context-engine MCP tool has run in this clone: register it once, `{K.mcp_add_command()}`, "
+                "then ask the owner to restart Claude Code; until then the CLI carries every operation, and a session that has the tools clears this with its first call"]
+
 
     def import_log(self, path: str, *, session: str, actor: str, dry_run: bool = False) -> str:
         """Import a single-file decision log (FRAMEWORK §11.4): every entry keeps its number and
@@ -3640,6 +3675,9 @@ class Engine:
         deprecated = self.deprecated_config()
         if deprecated:  # CE-185: config that still loads but is no longer read
             sections.append(Part("Deprecated config: tell the owner", "\n".join(deprecated), "FRAMEWORK §6.5", rank=2))
+        unseen = self.mcp_unseen()
+        if unseen:  # CE-177, DEC-155: setup registers the MCP server; the first tool call clears this
+            sections.append(Part("MCP server not seen: register it", "\n".join(unseen), "kit README § 1", rank=2))
         upstream = self.upstream_lines()
         if upstream:  # CE-114
             sections.append(Part("Upstream", "\n".join(upstream), "`git status -sb`; `git reflog show @{upstream}`", rank=2))

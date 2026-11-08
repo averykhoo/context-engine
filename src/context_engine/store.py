@@ -598,13 +598,23 @@ class Store:
     def log(self, op: str, rec_id: str, path: Path, session: str, actor: str, fields: list[str], mechanical: bool = False) -> None:
         self._log(op, rec_id, path, session, actor, fields, mechanical)
 
-    def _file_lock(self) -> FileLock:
-        path = self.root / self.config.lockfile
-        ignore = path.parent / ".gitignore"
-        if path.parent != self.root and not ignore.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)  # other processes may race us here
+    def private_dir(self) -> Path | None:
+        """The lockfile's directory: this clone's untracked machine state (the lock, and the MCP
+        mark of CE-177), created with a ``.gitignore`` of ``*`` when that is absent. None when the
+        lockfile sits at the root, which has no such directory. Not checked: that nothing forces a
+        file in it into git (``git add -f`` still can)."""
+        path = (self.root / self.config.lockfile).parent
+        if path == self.root:
+            return None
+        ignore = path / ".gitignore"
+        if not ignore.exists():
+            path.mkdir(parents=True, exist_ok=True)  # other processes may race us here
             ignore.write_text("*\n", encoding="utf-8")  # the lock directory is never tracked
-        return FileLock(path, timeout=self.config.lock_timeout)
+        return path
+
+    def _file_lock(self) -> FileLock:
+        self.private_dir()
+        return FileLock(self.root / self.config.lockfile, timeout=self.config.lock_timeout)
 
     @contextmanager
     def _lock(self) -> Iterator[None]:

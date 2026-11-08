@@ -67,9 +67,8 @@ must match the engine's major.minor (`context-engine lint` checks, as G-D0, this
 block's marker version, the block's text and the imported contract). Write the ref into the first ledger entry's summary, so the
 repo records which engine it was bootstrapped with.
 
-The MCP server is optional (FRAMEWORK §11.1: not in the minimum set until the §8.0.3 trial
-reports); the CLI carries every operation. To use it, register it once per machine, from the
-repo root:
+Register the MCP server as part of setup, once per machine, from the repo root
+(init's `next:` line prints this command with this machine's interpreter):
 
 ```
 claude mcp add --scope local context-engine -- <engine-python> -m context_engine.mcp
@@ -79,6 +78,10 @@ This lives in `~/.claude.json`, not in the repo, because the interpreter path is
 Restart Claude Code once; from then on it starts the server in every session. Until the restart,
 use the CLI: `<engine-python> -m context_engine <group> <verb>`, with `CE_ACTOR` and
 `CE_SESSION` set.
+The CLI carries every operation, and FRAMEWORK §11.1 keeps the server out of the framework's
+minimum set until the §8.0.3 trial reports. Until a tool call reaches the engine, orient shows an
+`MCP server not seen: register it` part; the first call writes `.context/mcp-seen` (in the
+lockfile's directory, never tracked) and the part goes. Deleting that file brings it back.
 
 Claude Code gives the server 30 seconds to connect, and under load (a gate running on the same
 machine) it has taken 33 to 36 seconds to start (measured 2026-10-14, Claude Code 2.1.280, on
@@ -133,8 +136,9 @@ Then:
 3. `context-engine lint` is green. Commit the kit's files by path: the engine commits its
    writes at milestones (FRAMEWORK §5.5 rule 4), but only once `context.toml` is tracked. The
    template's `commit = "milestones"` needs this engine or later on every machine: an older one
-   refuses it (write `true` instead until they are upgraded). Then
-   `context-engine session start` opens the first session.
+   refuses it (write `true` instead until they are upgraded). Register the MCP server (§ 1)
+   and ask the owner to restart Claude Code. Then `context-engine session start` opens the
+   first session.
 4. The first clean close (FRAMEWORK §6.3): `session close ... --banner-file <banner.md> --seen
    none` (`banner show` says `no banner yet`, hash `none`), which also writes the `## Banner
    (<key>)` heading, with the repo's durable lines only (FRAMEWORK §5.1): a close without a

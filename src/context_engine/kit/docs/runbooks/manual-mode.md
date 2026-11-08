@@ -44,7 +44,10 @@ without it:
 1. Run every operation as `<interpreter> -m context_engine ...` for the rest of the session.
 2. Register the server once for this machine: `claude mcp add --scope local context-engine --
    <interpreter> -m context_engine.mcp`. Check it with `claude mcp get context-engine`.
-3. Tell the owner to restart Claude Code; the tools appear at the next start.
+3. Tell the owner to restart Claude Code; the tools appear at the next start. The first tool
+   call that reaches the engine writes `<lockfile dir>/mcp-seen` (by default
+   `.context/mcp-seen`, never tracked), and orient's `MCP server not seen` part goes; deleting
+   the file brings it back.
 
 **Why:** Claude Code starts MCP servers only when a session launches, so nothing done mid-session
 brings the tools in. The local registration carries the interpreter's absolute path outside the
@@ -487,6 +490,11 @@ list`, a `grep` of the ledger for `kind: open`, `task list`, `task show <id>`, `
      decision index: delete the key from `context.toml`, and `git rm` the index file when it
      exists; `decision index` prints the listing and `site build <dir>` publishes it; the rest is
      FRAMEWORK §6.5;
+   - an `MCP server not seen: register it` part (its bytes come with parts 6 and 7's): one line
+     while `<lockfile dir>/mcp-seen` (by default `.context/mcp-seen`) is absent, naming the
+     `claude mcp add` command and the restart, and saying the CLI carries every operation until
+     then; none when the lockfile sits at the repo root; the rest is kit README § 1. By hand: `ls
+     .context/mcp-seen`;
    - the `Upstream` part (described below);
 5. owner questions to raise now, headed `Raise in chat now, one line each`: open at NOW or NEXT,
    or overdue (see session close step 3); say `none` when there are none;
@@ -2435,8 +2443,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    settings question and a task prefix not yet chosen), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
-   Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, then
-   `session start`; registering the MCP server is optional. Never overwrite an existing file, and
+   Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, register
+   the MCP server with `claude mcp add --scope local context-engine -- "<interpreter>" -m
+   context_engine.mcp` and ask the owner to restart Claude Code (kit README § 1), then
+   `session start`. Never overwrite an existing file, and
    never install anything into the repo's environment (the engine's own is `.context-engine/env/`,
    made before init, kit README § 1).
 

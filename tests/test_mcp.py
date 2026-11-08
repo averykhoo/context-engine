@@ -332,3 +332,33 @@ def test_the_server_instructions_reach_the_client_and_ask_for_ultracode_without_
     assert 'ask the owner to opt in by typing "ultracode"' in said
     assert "do not already approve one" in said
     assert not any(w in said.lower() for w in ("standing approval", "is approved", "you may use"))
+
+
+# -- the MCP mark (CE-177, DEC-155) ----------------------------------------------------------
+
+
+@pytest.mark.criterion("AC-195")
+def test_a_tool_call_marks_the_clone_before_the_op_runs(root, tmp_path_factory):
+    """E7, E8: the first tool call to reach an Engine writes the mark before its op runs, so orient
+    over MCP never names the registration and a refused call marks the clone too; init, which
+    targets a bare path, writes none."""
+    from mcp.server.mcpserver.exceptions import ToolError
+
+    from context_engine.mcp import make_tool
+
+    mark = root / ".context" / "mcp-seen"
+    assert not mark.exists()
+    out = make_tool(ops.OPS["orient"], root, ops.Caller(None, ACTOR))()
+    assert "MCP server not seen" not in out, out
+    assert mark.is_file()
+
+    fresh = tmp_path_factory.mktemp("fresh")
+    for name in ("context.toml", "ledger.md", "HANDOFF.md"):
+        (fresh / name).write_bytes((root / name).read_bytes())
+    with pytest.raises(ToolError):
+        make_tool(ops.OPS["task_show"], fresh, ops.Caller(None, ACTOR))(id="CE-999")
+    assert (fresh / ".context" / "mcp-seen").is_file(), "a refused call still reached the engine"
+
+    bare = tmp_path_factory.mktemp("bare")
+    make_tool(ops.OPS["init"], bare, ops.Caller(None, ACTOR))(prefix={"task": "PRJ"}, dry_run=True)
+    assert not (bare / ".context" / "mcp-seen").exists() and not (bare / "mcp-seen").exists()

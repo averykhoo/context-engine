@@ -57,6 +57,7 @@ live by default under "inform and proceed" (FRAMEWORK §3.3). Ids are never reus
 | AC-18 | Every MCP tool calls the same function as its CLI subcommand; there is one implementation per operation | US-4 | tested |
 | AC-19 | Every write tool returns one line; every read tool returns a capped slice with a pointer to the rest | US-1 | tested |
 | AC-20 | `hk.close` refuses unless the named commit really carries `Closes: <id>` or the session's ledger entry names the item (G-W9): the commit is in HEAD's history and git reads the trailer (a `Closes:` line outside the last paragraph is refused), the item was not already closed in that commit's tree and its log does not cite the commit (a reopen outweighs the trailer), and the item's log has no close from the ledger entry's session and no reopen from a later one (a reopen outweighs the rows); the close is mechanical and cites its evidence; `--scan` closes every open task a trailer names, never a question, and lists each it could not close | US-3 | tested |
+| AC-195 | Until an MCP tool call has reached the engine in a clone, orient names the claude mcp add step and init's next line names it as a step; the call writes a mark once in the lockfile's untracked directory, before its op runs, and a failure to write it never fails the call; a root lockfile gets no mark and no notice (CE-177) | US-9, DEC-155 | tested |
 
 ## Manual mode (CE-8)
 

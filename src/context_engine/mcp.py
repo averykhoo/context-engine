@@ -15,6 +15,11 @@ a tool error carrying its remedy.
 later tool uses them unless it is passed ``session`` or ``actor`` itself (a subagent passes its
 own ``actor``). Before any ``session_start``, ``CE_SESSION`` and ``CE_ACTOR`` are the fallback.
 
+**The mark** (CE-177, DEC-155). Every tool call that reaches an ``Engine`` first runs
+``Engine.mark_mcp``, which writes ``mcp-seen`` in the lockfile's directory once, before the op
+runs, so a refused call marks the clone too; orient names the registration step until it exists.
+``init`` targets a bare path, so it writes no mark.
+
 Deliberately not here: the ``hk_`` operation FRAMEWORK §8.0.2 names that is not built
 (``hk.ratchet``: no ratcheting floor exists until G-V2's; CE-168), and any judgement: a tool
 carries out what the caller decided.
@@ -33,6 +38,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from . import ops
 from .errors import Refusal
+from .working import Engine
 
 NAME = "context-engine"  # DEC-15
 INSTRUCTIONS = (
@@ -78,6 +84,8 @@ def make_tool(o: ops.Op, root: Path, state: ops.Caller):
         c = ops.Caller(kw.pop("session", None) or state.session, kw.pop("actor", None) or state.actor)
         try:
             e = o.target(root)  # an Engine, or for `init` the bare root: there may be no context.toml yet
+            if isinstance(e, Engine):
+                e.mark_mcp()  # CE-177: before the op, so a refused call marks the clone too; never raises
             _, text = o.call(e, c, **kw)  # as the CLI does: the same function, and for a write the same commit
         except Refusal as r:
             raise ToolError(str(r)) from r  # the SDK passes a ToolError's text, remedy and all, to the agent

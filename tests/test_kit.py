@@ -162,17 +162,20 @@ def test_a_gate_heading_that_is_not_the_repos_gate_leaves_the_stub_in(tmp_path, 
 
 
 @pytest.mark.criterion("AC-31")
-def test_inits_next_line_names_the_bootstrap_steps_in_order_and_the_mcp_server_as_optional(tmp_path):
-    """CE-70: the steps of kit README § 2a, in its order; the MCP server is optional, never a step."""
+def test_inits_next_line_names_the_bootstrap_steps_in_order_with_the_mcp_registration(tmp_path):
+    """CE-70, CE-177: the steps of kit README § 2a, in its order; registering the MCP server is one
+    of them (DEC-155), with this machine's command, after the kit commit and before `session start`."""
     out = B.init(tmp_path, TASK)
     nxt = out.split("; next: ")[1]
-    steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "run lint", "commit the kit's files by path", "then `session start`"]
+    steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "run lint", "commit the kit's files by path", "register the MCP server with", "then `session start`"]
     assert [nxt.index(s) for s in steps] == sorted(nxt.index(s) for s in steps), nxt
-    assert nxt.endswith("(registering the MCP server is optional: kit README § 1)") and "register the MCP server," not in nxt, nxt
+    assert f"`{B.mcp_add_command()}`" in nxt and "optional" not in nxt, nxt
+    assert B.mcp_add_command().startswith("claude mcp add --scope local context-engine -- ") and B.mcp_add_command().endswith(" -m context_engine.mcp")
     assert B.GATE_PLACEHOLDER in (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8"), "the step names the stub's real placeholder"
     readme = (B.KIT / "README.md").read_text(encoding="utf-8")
     one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
-    assert B.GATE_PLACEHOLDER in readme and "The MCP server is optional" in one, "the line's pointers name what is there"
+    assert B.GATE_PLACEHOLDER in readme and "claude mcp add --scope local context-engine --" in one, "the line's pointers name what is there"
+    assert "The MCP server is optional" not in one, "kit README § 1 makes registration a setup step (DEC-155)"
     assert "; next: " not in B.init(tmp_path, TASK), "a re-run that creates nothing has no next steps"
     (tmp_path / "docs" / "charter.md").unlink()
     again = B.init(tmp_path, TASK)
@@ -184,7 +187,7 @@ def test_the_kit_readme_names_the_mcp_connect_timeout_and_its_remedy():
     """CE-85: a server that starts past Claude Code's 30 s connect limit shows no tools; the README says why and what to set."""
     readme = (B.KIT / "README.md").read_text(encoding="utf-8")
     one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
-    reg = one[one.index("The MCP server is optional") :]
+    reg = one[one.index("Register the MCP server as part of setup") :]
     assert "MCP_TIMEOUT" in reg and "30 seconds" in reg and "33 to 36 seconds" in reg, "the registration section must name the limit, the measured start and the remedy"
     # CE-156: a measured time carries its date and the Claude Code version it was measured on
     # (docs/evidence/plugin-design-2026-10-14.md), so it is not read as current forever

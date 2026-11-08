@@ -23,7 +23,8 @@ only with the owner's yes (``--merge-settings``, DEC-32), and nothing else in it
 Deliberately not here: installing anything (the engine runs from its own pinned environment in
 ``.context-engine/env/``, made before init can run, and is never installed into the target repo's
 own environment), registering the MCP server (a ``claude mcp add`` the
-session runs, FRAMEWORK §8.0.2), and committing. ``init`` needs no ``context.toml``, because it
+session runs, FRAMEWORK §8.0.2: it writes outside the repo; ``next_steps`` names it, DEC-155), and
+committing. ``init`` needs no ``context.toml``, because it
 is what writes the first one.
 """
 
@@ -712,18 +713,27 @@ def _write(root: Path, rel: str, text: str, seen: dict[str, str], done: list[str
     done.append(rel)
 
 
+def mcp_add_command() -> str:
+    """The ``claude mcp add`` that registers this engine's MCP server for the repo Claude Code is
+    started in (kit README § 1, DEC-155): the interpreter is the one running now, the engine's own,
+    quoted as ``hook_settings`` quotes it. Not checked: that ``claude`` is on PATH, or that the
+    command was run."""
+    return f'claude mcp add --scope local context-engine -- "{Path(sys.executable).as_posix()}" -m context_engine.mcp'
+
+
 def next_steps(claude: str) -> str:
     """The bootstrap steps after init, in the kit README's order (§ 2a). The gate step replaces the
     stub's placeholder while ``claude`` (CLAUDE.md as init left it) holds it, and otherwise asks for
-    a check of the gate the repo had; the MCP server is optional, so it is named as such, not as a
-    step (CE-70)."""
+    a check of the gate the repo had; registering the MCP server is a step (DEC-155, CE-177), with
+    its exact command, after the kit commit and before ``session start``."""
     if GATE_PLACEHOLDER in claude:
         gate = f"replace `{GATE_PLACEHOLDER}` in {CONTRACT_TARGET} § Gate with the repo's test command, "
     else:
         gate = f"check {CONTRACT_TARGET} § Gate runs the repo's tests and ends with `&& context-engine lint`, "
     return (
-        f"fill docs/charter.md with the owner, {gate}run lint, commit the kit's files by path, then `session start`"
-        " (registering the MCP server is optional: kit README § 1)"
+        f"fill docs/charter.md with the owner, {gate}run lint, commit the kit's files by path, "
+        f"register the MCP server with `{mcp_add_command()}` and ask the owner to restart Claude Code (kit README § 1), "
+        "then `session start`"
     )
 
 
