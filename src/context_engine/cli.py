@@ -105,7 +105,7 @@ def build() -> argparse.ArgumentParser:
     hm = _sub(hk, "comment", "a commit becomes a dated mechanical comment on the open task its title leads with")
     hm.add_argument("id", nargs="?", default="", help="the task's id (none with --scan)")
     hm.add_argument("--commit", default="", help="a commit in HEAD's history whose title leads with the id")
-    hm.add_argument("--text", default="", help="the comment, when it is not `<short sha>: <subject>` (a judgement: tier 1)")
+    hm.add_argument("--text", default="", help="the comment, when it is not `<short sha>: <subject>` (a judgement: tier 1); it is logged as `<short sha>: <text>` unless it already cites the hash")
     hm.add_argument("--scan", action="store_true", help="every commit with a `Session:` line in this session's range; lists what it skipped")
     hm.add_argument("--since", default="", metavar="REV", help="with --scan: read REV..HEAD instead of this session's range")
 

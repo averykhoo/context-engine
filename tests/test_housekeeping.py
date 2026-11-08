@@ -401,7 +401,7 @@ def test_hk_comment_writes_one_dated_mechanical_comment_and_refuses_what_is_not_
     other = _agent_commit(eng.root, f"{b.id}: its own step", me, "b.txt")
     with pytest.raises(Refusal, match=rf"title does not lead with {a.id}"):
         eng.hk_comment(a.id, other, **kw(me))
-    assert eng.hk_comment(a.id, other, text="this step also unblocked it", **kw(me)).startswith(f"{a.id}: comment this step")  # tier 1's text
+    assert eng.hk_comment(a.id, other, text="this step also unblocked it", **kw(me)) == f"{a.id}: comment {other[:7]}: this step also unblocked it"  # tier 1's text, after its sha (DEC-304)
     _git(eng.root, "checkout", "-q", "-b", "side")
     side = _agent_commit(eng.root, f"{a.id}: on a side branch", me, "side.txt")
     _git(eng.root, "checkout", "-q", "main")
@@ -472,6 +472,42 @@ def test_hk_comment_scan_without_a_ledger_entry_needs_since_and_the_cli_signs_as
     assert main(["--root", str(eng.root), "--session", me, "hk", "comment", "--scan", "--since", f"{sha}~1"]) == 0
     assert capsys.readouterr().out.startswith(f"{a.id}: comment {sha[:7]}: {a.id}: a step")
     assert [o["actor"] for o in _comments(eng, a.id)] == ["process:housekeep"]
+
+
+@pytest.mark.criterion("AC-202")
+def test_hk_comment_scan_lists_a_title_naming_a_task_other_than_by_leading_as_tier_1(eng):
+    """Tier 1's work, shown through the `hk_` tools alone (CE-12, DEC-303, DEC-304): the scan lists a
+    title that names an open task other than by leading with its id, writes nothing for it, and a
+    tier-1 text logged after its sha is then seen by the cited-hash check."""
+    me, a, b = _board(eng)
+    c1 = _agent_commit(eng.root, f"{a.id}: step, unblocks {b.id}", me, "1.txt")
+    c2 = _agent_commit(eng.root, f"tidy the docs for {b.id}", me, "2.txt")
+    c3 = _commit(eng.root, f"tidy {a.id} by hand\n", "3.txt")  # foreign, and not leading: not listed
+    c4 = _agent_commit(eng.root, f"finish {b.id}", me, "4.txt", closes=b.id)  # left for hk close
+    c5 = _agent_commit(eng.root, "see UTF-8 and DEC-1 notes", me, "5.txt")  # id-shaped, no open task
+    eng.session_close(me, actor=ACTOR, rows="none", summary=["worked"], receipts=receipts())
+    nxt = started(eng)
+    out = eng.hk_comment(scan=True, **kw(nxt)).splitlines()
+    tier1 = f"(`hk comment {b.id} --commit {{s}} --text \"<what it did for {b.id}>\"`, or nothing): "
+    assert f"{a.id}: comment {c1[:7]}: {a.id}: step, unblocks {b.id}" in out, out
+    assert f"{c1[:7]} {b.id}: tier 1: the title names {b.id} but does not lead with it " + tier1.format(s=c1[:7]) + f"{a.id}: step, unblocks {b.id}" in out, out
+    assert f"{c2[:7]} {b.id}: tier 1: the title names {b.id} but does not lead with it " + tier1.format(s=c2[:7]) + f"tidy the docs for {b.id}" in out, out
+    assert not any(ln.startswith(f"{c1[:7]} {a.id}: tier 1") for ln in out), out
+    assert not any(c3[:7] in ln for ln in out), out
+    assert not any(ln.startswith(f"{c4[:7]} {b.id}: tier 1") for ln in out), out
+    assert not any(c5[:7] in ln for ln in out), out
+    assert _comments(eng, b.id) == []  # tier 1 is listed, never written by the scan
+    run = eng.hk_run("start", check=True, **kw(nxt)).splitlines()
+    assert any(ln.startswith(f"  - not done: {c1[:7]} {b.id}: tier 1:") for ln in run), run
+    assert eng.hk_comment(b.id, c2, text="tidied b's docs", **kw(nxt)) == f"{b.id}: comment {c2[:7]}: tidied b's docs"
+    log = (eng.root / "ops.jsonl").read_bytes()
+    again = eng.hk_comment(scan=True, **kw(nxt)).splitlines()
+    assert (eng.root / "ops.jsonl").read_bytes() == log, again
+    assert not any(ln.startswith(f"{c2[:7]} {b.id}: tier 1") for ln in again), again  # its log cites c2 now
+    assert any(ln.startswith(f"{c1[:7]} {b.id}: tier 1") for ln in again), again
+    eng.hk_comment(b.id, c1, text=f"{c1[:7]} unblocked it", **kw(nxt))
+    body = eng.store.get(b.id).doc.body
+    assert f"{c1[:7]} unblocked it" in body and f"{c1[:7]}: {c1[:7]}" not in body, body
 
 
 # -- hk run: tier-0 housekeeping in one call, and orient's owed line (AC-175, AC-176) ----------

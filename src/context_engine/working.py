@@ -1754,8 +1754,12 @@ class Engine:
         (``_hk_comment_range``) that carries a `Session:` line comments each open task its title
         leads with (``leading_ids``) as ``<short sha>: <subject>``, unless that task's log already
         cites it, its `Closes:` trailers name it (left for `hk close`), or the comment's prose is
-        refused. A commit with no `Session:` line is foreign: listed, and left to § Reconciling
-        foreign commits (tier 1)."""
+        refused. A commit with no `Session:` line whose title leads with an open task's id is
+        foreign: listed, and left to § Reconciling foreign commits (tier 1). A commit with a
+        `Session:` line whose title names an open task other than among its leading ids gets a
+        `tier 1:` skip line for that task (a judgement: `hk comment <id> --commit <sha> --text`),
+        unless its `Closes:` names the task or the task's log already cites the hash; commit
+        bodies are not read for ids (DEC-303)."""
         base, end = self._hk_comment_range(session, since)
         out = L._git(self.root, "log", "--reverse", "--format=%H%x1f%s%x1f%(trailers:key=Closes,valueonly,separator=%x2C)%x1f%B%x1e", f"{base}..{end}" if base else end)
         if out is None:
@@ -1768,15 +1772,17 @@ class Engine:
             if len(parts) < 4 or not parts[0]:
                 continue
             full, subject, closes_raw, msg = parts[0], parts[1].strip(), parts[2], parts[3]
-            ids = [i for i in self.leading_ids(subject) if i in heads]
-            if not ids:
+            lead = [i for i in self.leading_ids(subject) if i in heads]
+            named = [i for i in dict.fromkeys(ID_RE.findall(subject)) if i in heads and i not in lead]
+            if not lead and not named:
                 continue
             if not re.search(r"^Session:", msg, re.MULTILINE):
-                skipped.append(f"{full[:7]}: foreign: reconcile (no `Session:` line; procedures § Reconciling foreign commits)")
+                if lead:
+                    skipped.append(f"{full[:7]}: foreign: reconcile (no `Session:` line; procedures § Reconciling foreign commits)")
                 continue
             closes = [x.strip() for x in closes_raw.replace("\n", ",").split(",") if x.strip()]
             text = f"{full[:7]}: {subject}"
-            for rid in dict.fromkeys(ids):
+            for rid in dict.fromkeys(lead):
                 rec = heads[rid]
                 if rec.doc.get("state") != "open" or (self.w.question and rec.kind.name == self.w.question):
                     continue  # not a task housekeeping comments on: nothing to say
@@ -1785,6 +1791,14 @@ class Engine:
                     skipped.append(f"{full[:7]} {rid}: skipped ({why})")
                 else:
                     todo.append((rid, full[:7], text))
+            for rid in named:  # tier 1's (FRAMEWORK §6.11): listed for a judgement, never written here
+                rec = heads[rid]
+                if rec.doc.get("state") != "open" or (self.w.question and rec.kind.name == self.w.question):
+                    continue
+                if rid in closes or any(full.startswith(m) for m in L.SHA_RE.findall(self.store.read(rec.path).body)):
+                    continue  # left for hk close, or already in the log
+                skipped.append(f"{full[:7]} {rid}: tier 1: the title names {rid} but does not lead with it "
+                               f"(`hk comment {rid} --commit {full[:7]} --text \"<what it did for {rid}>\"`, or nothing): {_short(subject, 80)}")
         return todo, skipped
 
     def hk_comment(self, rid: str = "", commit: str = "", *, text: str = "", scan: bool = False, since: str = "", session: str, actor: str) -> str:
@@ -1792,14 +1806,17 @@ class Engine:
         mechanical comment on the task its title leads with (DEC-22), so the item's log shows its
         history without reading git. One item: ``rid`` and ``commit``, which must be in HEAD's
         history; with no ``text`` the comment is ``<short sha>: <subject>`` and the title must lead
-        with ``rid``; a given ``text`` is tier 1's (a model wrote it) and passes the same prose
-        checks. Refused, each with its remedy: an owner question, a record that is not on the
+        with ``rid``; a given ``text`` is tier 1's (a model wrote it), is logged as ``<short sha>:
+        <text>`` unless it already cites a prefix of the hash (DEC-304), so the cited-hash check
+        below sees it, and passes the same prose checks. Refused, each with its remedy: an owner question, a record that is not on the
         board, a closed item, a commit whose `Closes:` trailers name the item (`hk close` closes on
         it, and a log citing it would block that), and a hash the item's log already cites. ``scan`` comments every such commit in
-        this session's range (``hk_comment_plan``) and lists what it skipped.
+        this session's range (``hk_comment_plan``) and lists what it skipped, a title that names an
+        item other than by leading with its id among them, as a `tier 1:` line for a judgement.
 
         Not checked: a commit outside the range (a session that never scans leaves its range
-        uncommented); a title that names an item other than by leading with its id (tier 1's)."""
+        uncommented); whether a tier-1 text says what the commit did for the item (a model's
+        judgement); an id named only in a commit's body."""
         self._check(session, actor)
         if scan:
             if rid or commit or text:
@@ -1818,14 +1835,17 @@ class Engine:
                 raise Refusal(f"{full[:7]}'s title does not lead with {rid} ({subject[:60]!r})",
                               f"a derived comment needs a title that leads with the id (`{rid}: ...`); with a judgement of your own, pass `--text`, or `task comment {rid}`")
             text = f"{full[:7]}: {subject}"
-        why = self._comment_problem(rec, full, closes, text.strip(), session=session, actor=actor)
+        text = text.strip()
+        if not any(full.startswith(m) for m in L.SHA_RE.findall(text)):  # DEC-304: the cited-hash check then sees it
+            text = f"{full[:7]}: {text}"
+        why = self._comment_problem(rec, full, closes, text, session=session, actor=actor)
         if why:
             remedy = (f"close it on the commit: `hk close {rid} --commit {full[:7]}`" if "left for hk close" in why
                       else "nothing to do: it is already in the log" if "already cites" in why
                       else "fix the text and run it again" if why.startswith("refused prose")
                       else "comment only on an open task")
             raise Refusal(f"not commenting on {rid}: {why}", remedy)
-        return self._hk_comment_write(rid, full[:7], text.strip(), session=session, actor=actor)
+        return self._hk_comment_write(rid, full[:7], text, session=session, actor=actor)
 
     def _hk_comment_scan(self, *, session: str, actor: str, dry: bool = False, since: str = "") -> tuple[list[tuple[str, str]], list[str]]:
         """`hk comment --scan` as housekeeping's plan and its run; with ``dry``, the plan alone."""

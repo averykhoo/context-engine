@@ -351,7 +351,7 @@ def hk_close(e: Engine, c: Caller, id: str = "", commit: str = "", ledger: str =
 
 @op(write=True)
 def hk_comment(e: Engine, c: Caller, id: str = "", commit: str = "", text: str = "", scan: bool = False, since: str = "") -> tuple[int, str]:
-    """Housekeeping: a commit becomes a dated, mechanical comment on the open task its title leads with (`CE-n: ...`): `id` and `commit` (in HEAD's history; the comment is `<short sha>: <subject>`, or `text` when given), or `scan`: every commit with a `Session:` line in this session's range (or `since`..HEAD), listing what it skipped. A commit whose `Closes:` names the item is left for `hk_close`; a hash the item's log cites is not commented twice."""
+    """Housekeeping: a commit becomes a dated, mechanical comment on the open task its title leads with (`CE-n: ...`): `id` and `commit` (in HEAD's history; the comment is `<short sha>: <subject>`, or, with `text` (tier 1's judgement), `<short sha>: <text>` unless the text already cites the hash), or `scan`: every commit with a `Session:` line in this session's range (or `since`..HEAD), listing what it skipped; a title that names an open task other than by leading with its id is listed as a `tier 1:` line, for a judgement and nothing written. A commit whose `Closes:` names the item is left for `hk_close`; a hash the item's log cites is not commented twice."""
     return 0, e.hk_comment(id, commit, text=text, scan=scan, since=since, session=c.session, actor=c.actor or "process:housekeep")
 
 

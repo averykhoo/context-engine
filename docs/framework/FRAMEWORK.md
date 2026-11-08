@@ -2387,7 +2387,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   unreasonably large for most, and a smaller one would most likely be overridden. A repo may
   still configure a cap, `[housekeeping] max_writes`, with provenance (G-D9); a run whose plan
   is over it stops before any write and asks, and the owner may tell it to write anyway
-  (`--anyway`). Not checked: a tier-1 agent's token count, which no tier-1 agent reports yet.
+  (`--anyway`). Not checked: a tier-1 agent's token count, which its harness reports for the run
+  (Claude Code: the agent's result) and the session puts in its close summary; the engine does
+  not see it.
 - **G-W11:** no `kind: open` ledger stub older than the configured window without a matching
   `close`, `pause` or `abandoned` entry. The window is provisionally 3 later sessions, counted
   from the stub's last activity (an owner judgement, not yet measured; a measurement gives it

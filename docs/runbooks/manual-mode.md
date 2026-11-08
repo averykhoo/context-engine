@@ -1566,11 +1566,16 @@ open task its title leads with. By hand:
    ids before the first colon) naming an open task (never a question): skip it if its message has no
    `Session:` line (it is foreign: reconcile it, and say so), if its `Closes:` trailers name the item
    (leave it for § context-engine hk close), or if the item's `## Log` already cites the hash (a
-   hash in the log that the commit's full hash starts with).
+   hash in the log that the commit's full hash starts with). A commit with a `Session:` line whose
+   title names an open task anywhere else (`tidy the docs for PRJ-4`, or `PRJ-3: ... PRJ-4` for
+   PRJ-4) is a `tier 1` line for that task, unless its `Closes:` names it or the log already cites
+   the hash: write nothing for it, list it, and leave it to a judgement (yours, or the repo's
+   tier-1 housekeeping agent's, FRAMEWORK §6.11). Commit bodies are not read for ids.
 3. Otherwise add `- <your key> (<actor>): <short sha>: <subject>` to the item's `## Log` (§
    context-engine task comment) and log `comment` with `"mechanical": true`. One item by hand is
    the same with that commit, which must be in HEAD's history (`git merge-base --is-ancestor <sha>
-   HEAD`); with words of your own (`--text`) the title need not lead with the id.
+   HEAD`); with words of your own (`--text`) the title need not lead with the id, and the line is
+   `<short sha>: <words>`, unless the words already cite a hash the commit's full hash starts with.
 4. List what you commented and what you skipped, with why.
 
 **Why:** the item's log should show its history without reading git, and a title that leads with
