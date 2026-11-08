@@ -45,6 +45,7 @@ against each scope's content id, so the code gate runs only when the code change
 | Review by hand what the guard cannot see: a test that only checks whether an excluded path exists (`stat`, `exists`), and a read at collection time (module level, a `parametrize` argument) | neither raises the event the guard watches during a test |
 | Run the guard where the tests run: its module must be importable in the repo's test environment without installing the engine there (put the engine's `src` on `PYTHONPATH`), and `[gate] command` names that environment's interpreter (`{python}` only where the engine's own environment is the test environment, as in the engine's repo) | the engine is never installed into a target's environment, and `{python}` is the engine's interpreter |
 | A run whose files changed while it ran records only the ids that did not move; when every id moved (`INCONSISTENT`) it counts for nothing: run it again | it tested no set of those files anyone can name |
+| Keep the checkout's line endings as committed: `core.autocrlf` `input` or `false`, not `true` (the kit README § 2a has the one-time fix for a clone already CRLF) | the id hashes bytes, so CRLF where the engine wrote LF stales a green run with no change, and an LF worktree never matches a CRLF main checkout |
 | Push on a whole-gate run, plus CI's platform job | the id does not cover gitignored files or the environment |
 
 ## Test baselines

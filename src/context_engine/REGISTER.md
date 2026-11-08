@@ -666,9 +666,9 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 
 ## INV-94: zanzibar's main checkout runs under core.autocrlf=true, so a later checkout rewrites CRLF and stales its content-addressed gate rows (a false red, never a false green)
 
-- **affects:** zanzibar sessions
-- **why not eliminated:** the engine's adoption does not set the adopter's EOL config yet
-- **control:** individual: CE-184; rerunning zanzibar's gate restores coverage
+- **affects:** every adopting repo checked out with core.autocrlf=true; zanzibar's main checkout today
+- **why not eliminated:** a clone's git config is per clone and the owner's, and an eol attribute changes the owner's whole tree (DEC-94), so init only warns (DEC-270)
+- **control:** individual: bootstrap.py::eol_warnings, kit README § 1/§ 2a, gate.md's line-endings row; rerunning the gate restores coverage
 - **from:** CE-167, session 2026-11-04a
 
 ## INV-95: an adopter's stored index.md goes stale until someone acts on orient's notice

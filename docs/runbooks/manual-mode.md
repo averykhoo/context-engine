@@ -2469,7 +2469,10 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    line (FRAMEWORK §5.5 rule 4)` and `<op log> merge=union` the same way; a path with a space or a
    wildcard needs quoting there, so write that line with care, or warn and leave it.
 6. Report in one line what you created, what you skipped, and a warning for each thing the
-   owner must act on (the settings file's ignore line; a prefix already in use; on a dry run, the
+   owner must act on (the settings file's ignore line; a prefix already in use; a checkout that
+   converts line endings, where `git config --get core.autocrlf` prints `true` and
+   `git check-attr text eol -- context.toml` shows neither `eol: lf` nor `text: unset`, whose
+   fix is the kit README § 2a; on a dry run, the
    settings question and a task prefix not yet chosen), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own

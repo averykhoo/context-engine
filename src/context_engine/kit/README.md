@@ -57,7 +57,9 @@ the engine repo's working tree, which is no pin.
 or a commit can carry the whole environment. `init` (§ 2a) appends the line when nothing there
 ignores it yet; by hand, add it yourself. The `.gitignore` is tracked, so every clone ignores the
 environment too. **On a clone**, `.context-engine/env/` is absent: rebuild it with the two lines
-above, at the ref the first ledger entry names (or the latest upgrade's ledger line, § 4). A repo
+above, at the ref the first ledger entry names (or the latest upgrade's ledger line, § 4). A
+clone made under `core.autocrlf=true` (Git for Windows' default) stales the gate's ids: make it
+with `git clone -c core.autocrlf=input <url>`, or fix it as § 2a says. A repo
 may copy those two lines, with its ref and its machine's paths, into its own `CLAUDE.md`, outside
 the kit markers.
 
@@ -106,8 +108,7 @@ is 2 to 5 capitals, never a reserved one (`EXP`, `HAZ`) or another kind's standa
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
 it skipped. It never overwrites a file, and a file it creates is LF whatever the engine's
-checkout. A checkout of the repo with CRLF line endings (Git for Windows' `core.autocrlf=true`)
-is fine: lint and init compare the kit's text line endings aside. It appends `.context-engine/`
+checkout. It appends `.context-engine/`
 to the repo's `.gitignore` unless that already ignores it (§ 1), and `<op log> merge=union` (the op log
 `context.toml` names) to its `.gitattributes` unless that already gives the op log `merge=union`,
 keeping each file's line endings. It appends
@@ -122,6 +123,21 @@ can be re-run after the config is edited, with no `--prefix`. `--prefix` sets a 
 (`--prefix task=PRJ`): pick prefixes no id already in the repo uses. On a repo with no
 `context.toml`, init warns (it never refuses) for each prefix that already appears as an id
 (`STORY-7`, `STORY7`) in the files git tracks, naming how often and where first.
+
+**Line endings.** A checkout with CRLF line endings (Git for Windows' `core.autocrlf=true`) is
+fine for lint and init, which compare the kit's text line endings aside, but not for the gate:
+its content ids (`docs/runbooks/gate.md` § The scoped gate) hash bytes, so a checkout, a merge
+or a second worktree that writes CRLF where the engine wrote LF stales a green run with no
+change (a false red, never a false green). init warns where the repo's git config has
+`core.autocrlf=true` and `.gitattributes` does not pin `context.toml` `eol=lf`. The fix is per
+clone: `git config core.autocrlf input`, then once, with `git status --porcelain` empty and no
+other session working in the tree, rewrite the files as committed:
+`git rm -r --cached -q . && git reset -q --hard`.
+The config alone leaves the files CRLF, since git sees them as unchanged. A clone made with
+`git clone -c core.autocrlf=input <url>` needs neither step. The owner may instead pin the
+whole tree with `* text=auto eol=lf` in `.gitattributes`, committed after
+`git add --renormalize .`, but init never writes that line: it renormalises the owner's whole
+tree, so it is the owner's call.
 
 Then:
 1. Fill `docs/charter.md` with the owner (goals get `GOAL-n` ids).

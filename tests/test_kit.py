@@ -1452,3 +1452,121 @@ def test_lint_walks_skip_the_engine_env(tmp_path):
     assert files.find("only_in_env.py") is None
     assert G.code_ref_problem(files, "only_in_env.py", "bar") == "`only_in_env.py` does not exist (case-exact)"
     assert [rel for rel, _ in G.docs(tmp_path, (".",))] == [], "no doc is read from the env"
+
+
+# -- CE-184: init warns where the checkout converts line endings ------------------------------
+
+
+def _git(root: Path, *args: str):
+    import subprocess
+
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=root, capture_output=True, check=True)
+
+
+@pytest.mark.parametrize(("autocrlf", "gitattributes", "warns"), [
+    (None, None, False), ("false", None, False), ("input", None, False),
+    ("true", None, True), ("True", None, True), ("yes", None, True),
+    ("true", "* text=auto eol=lf\n", False), ("true", "* -text\n", False), ("true", "*.toml eol=lf\n", False),
+    ("true", "*.py text eol=lf\n", True), ("true", "* text=auto\n", True),
+])
+def test_init_warns_where_the_checkout_converts_line_endings(tmp_path, autocrlf, gitattributes, warns):
+    """A checkout under core.autocrlf=true writes CRLF where the engine wrote LF, and the gate's
+    content ids hash bytes, so every checkout stales a green run (CE-184, DEC-272). init warns on
+    every run, a re-run included, and writes no git config and no eol attribute (DEC-270)."""
+    _git(tmp_path, "init", "-q")
+    if autocrlf is not None:
+        _git(tmp_path, "config", "core.autocrlf", autocrlf)
+    if gitattributes is not None:
+        (tmp_path / B.REPO_ATTRIBUTES).write_bytes(gitattributes.encode())
+    out = B.init(tmp_path, TASK, dry_run=True)
+    assert out.count(B.EOL_WARNING) == int(warns), out
+    if warns:
+        assert "; warning: " + B.EOL_WARNING in out
+    config = (tmp_path / ".git" / "config").read_bytes()
+    first = B.init(tmp_path, TASK)
+    assert first.count(B.EOL_WARNING) == int(warns), first
+    again = B.init(tmp_path, TASK)
+    assert again.startswith("init: created 0 (none)") and again.count(B.EOL_WARNING) == int(warns), again
+    assert (tmp_path / ".git" / "config").read_bytes() == config, "init writes no git config"
+    assert "eol" not in (tmp_path / B.REPO_ATTRIBUTES).read_text("utf-8").replace(gitattributes or "", ""), "nor an eol attribute"
+
+
+def test_eol_warnings_reads_no_global_config_outside_a_repo_and_survives_no_git(tmp_path, monkeypatch):
+    """Outside a repo git still reads the global config, where Git for Windows' installer may put
+    autocrlf=true: a plain directory is not a checkout, so no git config is read there at all. A
+    missing git gives no warning, never an error: it is advice (CE-184)."""
+    import subprocess
+    from types import SimpleNamespace
+
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    glob = tmp_path / "global"
+    glob.write_bytes(b"[core]\n\tautocrlf = true\n")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(glob))
+    real = subprocess.run
+    asked = []
+
+    def spy(args, *a, **kw):
+        if "core.autocrlf" in args:
+            asked.append(args)
+        return real(args, *a, **kw)
+
+    monkeypatch.setattr(B, "subprocess", SimpleNamespace(run=spy, SubprocessError=subprocess.SubprocessError))  # the engine's name, not the stdlib's
+    assert B.eol_warnings(plain) == [] and asked == [], asked
+    assert B.EOL_WARNING not in B.init(plain, TASK)
+    monkeypatch.setattr(B, "subprocess", subprocess)
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    _git(repo, "config", "core.autocrlf", "true")
+    assert B.eol_warnings(repo) == [B.EOL_WARNING], "the control: this repo warns while git runs"
+
+    def no_git(*a, **kw):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(B, "subprocess", SimpleNamespace(run=no_git, SubprocessError=subprocess.SubprocessError))
+    assert B.eol_warnings(repo) == []
+
+
+def test_the_kit_readmes_line_ending_fix_makes_a_crlf_clone_match_the_gates_ids(tmp_path):
+    """The kit README § 2a's per-clone fix, run as written: a clone under core.autocrlf=true holds
+    CRLF bytes and a different gate id from the LF original; `core.autocrlf input` alone leaves
+    the bytes CRLF; the README's rewrite brings them back to LF and the ids equal; a clone made
+    with `-c core.autocrlf=input` needs no fix (CE-184, DEC-271)."""
+    import shlex
+    import subprocess
+
+    readme = (B.KIT / "README.md").read_text("utf-8")
+    recipe = "git rm -r --cached -q . && git reset -q --hard"
+    for cmd in (recipe, "git clone -c core.autocrlf=input", "git config core.autocrlf input"):
+        assert cmd in readme, cmd
+    origin = tmp_path / "origin"
+    (origin / "src").mkdir(parents=True)
+    (origin / "a.txt").write_bytes(b"one\ntwo\n")
+    (origin / "src" / "b.py").write_bytes(b"x = 1\n")
+    _git(origin, "init", "-q")
+    _git(origin, "-c", "core.autocrlf=false", "add", "-A")
+    _git(origin, "-c", "core.autocrlf=false", "commit", "-q", "-m", "base")
+    S = GATE.Scope("all")
+    lf = GATE.scope_id(origin, S)
+
+    _git(tmp_path, "-c", "core.autocrlf=true", "clone", "-q", "origin", "crlf")
+    crlf = tmp_path / "crlf"
+    _git(crlf, "config", "core.autocrlf", "true")
+    assert (crlf / "a.txt").read_bytes() == b"one\r\ntwo\r\n"
+    assert B.eol_warnings(crlf) == [B.EOL_WARNING]
+    assert GATE.scope_id(crlf, S) != lf, "the false red: same content, other bytes"
+
+    _git(crlf, "config", "core.autocrlf", "input")
+    assert (crlf / "a.txt").read_bytes() == b"one\r\ntwo\r\n", "the config alone rewrites nothing"
+    assert B.eol_warnings(crlf) == []
+    for part in recipe.split(" && "):
+        subprocess.run(shlex.split(part), cwd=crlf, capture_output=True, check=True)
+    assert (crlf / "a.txt").read_bytes() == b"one\ntwo\n" and (crlf / "src" / "b.py").read_bytes() == b"x = 1\n"
+    assert _git(crlf, "status", "--porcelain").stdout == b""
+    assert GATE.scope_id(crlf, S) == lf
+
+    _git(tmp_path, "clone", "-q", "-c", "core.autocrlf=input", "origin", "fresh")
+    assert (tmp_path / "fresh" / "a.txt").read_bytes() == b"one\ntwo\n"
+    assert GATE.scope_id(tmp_path / "fresh", S) == lf

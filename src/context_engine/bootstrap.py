@@ -7,7 +7,8 @@ creates: an existing file is never touched, except that ``CLAUDE.md`` gets the k
 appended when no kit block (of any version) is in it yet, the repo's ``.gitignore`` gets the
 engine env's line appended when it does not ignore that yet (DEC-41), and the repo's
 ``.gitattributes`` gets the op log's ``merge=union`` line appended when it does not give the op
-log that yet (CE-53). An existing ``context.toml`` is kept,
+log that yet (CE-53). It warns, and changes nothing, where the checkout converts line endings
+(``eol_warnings``). An existing ``context.toml`` is kept,
 so init can be re-run after it is edited to fill in what is still missing.
 
 The kit block (CE-38, US-17) is a few lines between the kit markers: the ``framework:`` pin and
@@ -100,6 +101,12 @@ PREFIX_RE = re.compile(r"^[A-Z]{2,5}$")  # a prefix init takes: 2 to 5 capitals 
 CENSUS_MAX_BYTES = 1 << 20  # the census skips a tracked file larger than this (a data file, not prose citing ids)
 CENSUS_PROBE = 8192  # ...and one with a NUL in its first this many bytes (binary)
 TASK_REMEDY = "ask the owner for 2 to 5 capitals naming this board (e.g. CE), then run init with --prefix task=<PREFIX>"
+EOL_WARNING = (
+    "this checkout has core.autocrlf=true, so git writes text files CRLF where the engine writes LF and the gate's "
+    "content ids move with no change (a false red): run `git config core.autocrlf input` in this clone, then rewrite "
+    "its files once (kit README § 2a)"
+)
+AUTOCRLF_TRUE = {"true", "yes", "on", "1"}  # git's true spellings; `input` and `false` convert nothing on checkout
 
 
 def kit_block(text: str) -> tuple[str, str | None] | None:
@@ -394,6 +401,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
             writes[f"{d}/.gitignore"] = "*\n"
     _plan_engine_ignore(root, writes, skipped, seen, labels, warnings)
     _plan_union(root, cfg.oplog, writes, skipped, seen, labels, warnings)
+    warnings += eol_warnings(root)  # every run, a re-run included: that is how an adopted repo sees it
     return writes, [labels.get(k, k) for k in writes], skipped, seen, warnings
 
 
@@ -435,6 +443,39 @@ def census(root: Path, kinds: dict[str, str]) -> list[str]:
         f"pick one those ids do not use (`--prefix {kind}=<PREFIX>`), or keep it if they are this kind's ids"
         for kind, n in count.items() if n
     ]
+
+
+def eol_warnings(root: Path) -> list[str]:
+    """``[EOL_WARNING]`` where git checks this repo's text files out CRLF: its config has
+    ``core.autocrlf`` true and ``.gitattributes`` pins ``context.toml`` neither ``eol=lf`` nor
+    ``-text`` (CE-184). The gate's content ids hash bytes (gate.py), so such a checkout stales a
+    green run with no change. init writes no git config and no eol attribute (DEC-94, DEC-270):
+    the per-clone fix is the owner's, kit README § 2a. It never refuses.
+
+    Not checked (DEC-272): ``core.eol=crlf`` with a ``text`` attribute, and other files than
+    ``context.toml``. No warning where ``root`` holds no ``.git`` (so a plain directory never
+    reads the global config) or git fails or is missing."""
+    root = Path(root)
+    if not (root / ".git").exists():
+        return []
+    try:
+        r = subprocess.run(["git", "-C", str(root), "config", "--get", "core.autocrlf"], capture_output=True, timeout=30)
+        # not --type=bool: it errors on `input`
+        if r.returncode != 0 or r.stdout.decode("utf-8", "replace").strip().lower() not in AUTOCRLF_TRUE:
+            return []
+        r = subprocess.run(["git", "-C", str(root), "check-attr", "text", "eol", "--", C.CONFIG_NAME], capture_output=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if r.returncode != 0:
+        return []
+    attrs = {}
+    for line in r.stdout.decode("utf-8", "replace").splitlines():
+        parts = line.rsplit(": ", 2)
+        if len(parts) == 3:
+            attrs[parts[1]] = parts[2].strip()
+    if attrs.get("eol") == "lf" or attrs.get("text") == "unset":
+        return []
+    return [EOL_WARNING]
 
 
 def _plan_engine_ignore(root: Path, writes: dict[str, str], skipped: list[str], seen: dict[str, str], labels: dict[str, str], warnings: list[str]) -> None:

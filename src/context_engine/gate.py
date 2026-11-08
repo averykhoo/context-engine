@@ -25,7 +25,9 @@ records none, so it matches nothing.
 
 **What it does not see:** gitignored files and the environment (the interpreter, installed
 packages). A green row means "the command passed against these sources", not full provenance;
-so the push still runs the full gate (FRAMEWORK §6.8).
+so the push still runs the full gate (FRAMEWORK §6.8). It hashes bytes, so a checkout that
+rewrites line endings (``core.autocrlf=true``) moves the id with no content change: a false red,
+never a false green (kit README § 2a; init warns, ``bootstrap.eol_warnings``; DEC-273).
 
 **The run ledger must be gitignored**, or each row would sit inside the id it records and every
 row would be born stale. ``gate run`` writes a ``.gitignore`` of ``*`` into a ledger directory

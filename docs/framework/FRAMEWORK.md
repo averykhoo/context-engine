@@ -1627,7 +1627,9 @@ Working instructions may come from any of these three sources; a grant may not.
    only creates files and never overwrites one; by
    hand, copy the kit's files as its README says. The task prefix is the owner's: on a repo with
    no `context.toml`, `init` refuses without one, and its dry run warns instead; it also warns
-   where a kind's prefix already appears as an id in the files git tracks. The agent then
+   where a kind's prefix already appears as an id in the files git tracks, and where the
+   checkout converts line endings (`core.autocrlf=true`), since a checkout that rewrites a
+   file's bytes stales the gate's content ids (§8.5 G-V1). The agent then
    fills the charter and the config, with a provenance note on every cap, and checks the id
    prefixes against ids the repo already uses, then commits the kit's files by path before the first session starts:
    the engine commits (§5.5 rule 4) only where `context.toml` is tracked.
