@@ -4,13 +4,15 @@ id: CE-190
 title: 'A lighter shape for one-off owner permissions: ask answer --grant, no decision minted'
 brief: 'DEC-162: owner words on the ask record and the ledger summary; shape ruled at build time'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-1]
 source: session 2026-11-06c
 created: 2026-11-06
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 A lighter shape for one-off owner permissions: `ask answer --grant` (DEC-162).
@@ -26,3 +28,6 @@ Source: DEC-162, adopting docs/evidence/owner-review-advice-2026-11-06b.md § 2.
 - docs/evidence/owner-review-advice-2026-11-06b.md § 2
 
 ## Log
+
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: ask answer --grant records a one-off owner permission on the question and mints no decision (DEC-247..250)
+  residual risk: INV-188, INV-189, INV-190, INV-191

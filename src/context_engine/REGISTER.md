@@ -1322,3 +1322,31 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the runs are evidence kept outside any tracked file
 - **control:** collective: the builder's Sabotage lines in commit 3787b49 record the same breakages in tracked history
 - **from:** CE-188, session 2026-11-07e
+
+## INV-188: Engine.section matches the name exactly: task section ASK-n 'Grant ' (or ' Grant' or 'grant') writes a second look-alike heading; the hashed words and G-W4 are unaffected, but the record carries a confusing duplicate
+
+- **affects:** anyone reading the ASK record
+- **why not eliminated:** not worth a guard for a hand-typed near-duplicate heading
+- **control:** reduce: G-W4 and the hashed words are unaffected
+- **from:** CE-190, session 2026-11-07e
+
+## INV-189: If the stub closes between _grant_check and _stub_granted, the question is already closed with no granted: line; the remedy says to quote by hand
+
+- **affects:** the session granting
+- **why not eliminated:** a narrow race between two engine steps
+- **control:** individual: the refusal remedy tells the operator to quote the grant by hand
+- **from:** CE-190, session 2026-11-07e
+
+## INV-190: Owner words cannot be stored with a '## ' line; such an answer must go as a decision (documented)
+
+- **affects:** the coordinator recording owner words
+- **why not eliminated:** a '## ' line would be read as a section heading in the append-only record
+- **control:** individual: documented in manual-mode and procedures; the answer goes as a decision
+- **from:** CE-190, session 2026-11-07e
+
+## INV-191: DEC-247..250 are PROVISIONAL and await owner review; the MCP server is stale until Claude Code restarts
+
+- **affects:** the owner
+- **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them; the MCP server is loaded once per Claude Code start
+- **control:** individual: decision accept after owner review; CLI used until restart
+- **from:** CE-190, session 2026-11-07e
