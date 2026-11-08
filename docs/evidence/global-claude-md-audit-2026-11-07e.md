@@ -4,7 +4,7 @@ ACTIVE-PLAN while CE-40 is open; freeze it when CE-40 closes.
 
 Session 2026-11-07e, claude-code/claude-opus-5-5, 2026-11-08. Audited: the owner's global
 `~/.claude/CLAUDE.md`, sha256 `7294a14c73f63a940a0087d34eea2c335cae2b8d9b78d5904cb72510d78b0fb9`, 411 lines, read 2026-11-08. Checked against HEAD
-`a67df78`: `docs/framework/FRAMEWORK.md`, `docs/framework/contract.md` and `docs/runbooks/*.md`.
+`a67df78`, re-checked at `c4af7c3` (none of these files changed between them): `docs/framework/FRAMEWORK.md`, `docs/framework/contract.md` and `docs/runbooks/*.md`.
 Owner words: the item's brief (2026-10-13a), and DEC-162, which accepts the gap (repos without
 the framework lose what moves out). This doc proposes; the owner pastes § 4 by hand. Nothing here
 edits the global file. Agent calls: DEC-317 to DEC-321 (PROVISIONAL).
@@ -12,14 +12,16 @@ edits the global file. Agent calls: DEC-317 to DEC-321 (PROVISIONAL).
 ## 1. Verdict per rule
 
 One row per rule of the global file, grouped by its sections. A rule with two covering lines gets two rows with the
-same id. Verdicts:
+same id. R71 was added in a review round after R1 to R70 were cited elsewhere, so it sits in its own section
+(Delegation) out of numeric order; no id was renumbered. Verdicts:
 
 - **COVERED**: the framework holds it; the quote is the covering line.
 - **DIVERGES**: the framework holds the topic but says something else; the quote is the framework's line (§ 2).
 - **GAP**: framework-shaped, but no framework text holds it; the quote cell lists terms with 0 hits in
   `docs/framework/FRAMEWORK.md`, `docs/framework/contract.md` and `docs/runbooks/*.md` at HEAD (§ 3).
 - **MACHINE**: a fact about this laptop, its tools or the owner's other repos; stays global.
-- **HARNESS**: a fact about Claude Code itself; stays global.
+- **HARNESS**: a fact about Claude Code itself; stays global. The quote is the global file's own line, and § 4
+  must carry it (the § 5 checker's E11).
 - **DROP**: provenance (a dated incident or measurement) that justifies a rule but is not one.
 
 A quote is a verbatim substring of `git show HEAD:<file>` once every run of whitespace is collapsed to one space;
@@ -66,7 +68,7 @@ R10's only framework echo is the install trial's clean-up; the general "own what
 | R11 | (same) | COVERED | docs/framework/FRAMEWORK.md § 1. Principles, P12 | Another session's commit can absorb uncommitted files, or land minutes before yours. |
 | R12 | HANDOFF.md and the decision log are the collision points; write up last; ask before restructuring | COVERED | docs/framework/FRAMEWORK.md § 1. Principles, P12 | working-state files must be safe with several writers |
 | R13 | commit by path; never `git add -A`; never `git stash` | COVERED | docs/framework/contract.md § Rules | never `git add -A`, never `git stash`: sessions may share the working tree. |
-| R14 | subagent transcripts under `subagents/workflows/<runId>/` record every Write and Edit | HARNESS | - | - |
+| R14 | subagent transcripts under `subagents/workflows/<runId>/` record every Write and Edit | HARNESS | ~/.claude/CLAUDE.md § Concurrent sessions | workflow subagent transcripts under the session's `subagents/workflows/<runId>/` record every `Write`/`Edit` call. |
 | R15 | the dated incidents (2026-07-28, 2026-10-07 and its commit) | DROP | - | - |
 
 ### .scratch/
@@ -160,6 +162,7 @@ exception to R7); its generic half is the quoted release.md line.
 | R60 | subagent model: opus by default, sonnet bulk, haiku watcher, fable only when asked | DIVERGES | docs/framework/FRAMEWORK.md § 6.6 Delegation and build rounds | The default for delegated work is the cheapest model that can do it |
 | R60 | (same) | DIVERGES | docs/framework/FRAMEWORK.md § 6.6 Delegation and build rounds | The repo's contract names the models. |
 | R60 | (same; the fable half agrees) | DIVERGES | docs/framework/contract.md § Rules | Do not use `fable` subagents unless the owner asks for them or they are really necessary. |
+| R71 | Workflow `agent()` calls inherit the main-loop model unless `model` is set (in the R60 bullet) | HARNESS | ~/.claude/CLAUDE.md § Delegation | Workflow `agent()` calls inherit the main-loop model unless `model` is set. |
 | R61 | ultracode has standing approval when more helpful; the test is shape, not permission | COVERED | docs/framework/contract.md § Rules | needs no per-request opt-in when it keeps the session's own context and tokens down |
 | R61 | (same) | COVERED | docs/framework/contract.md § Rules | one check goes to one agent, not a fan-out, and coupled work is not split up to go "faster". |
 | R62 | every delegated unit persists before it returns, one file per agent, incrementally | COVERED | docs/runbooks/fan-out.md § Delegating reading and auditing | each finding is appended as it lands, not buffered to the end |
@@ -184,7 +187,7 @@ exception to R7); its generic half is the quoted release.md line.
 | R70 | sabotage a new check and watch it go red; prefer a mechanical refusal over a doc warning | COVERED | docs/framework/FRAMEWORK.md § 1. Principles, P7 | Sabotage what a guard protects and watch it go red before believing it. |
 | R70 | (same) | COVERED | docs/framework/FRAMEWORK.md § 0.2 Stance | Mechanical refusal beats a written warning. |
 
-**Tally** (rule ids, counted by the § 5 checker on 2026-11-08): 70 rules: 41 COVERED, 4 DIVERGES, 4 GAP, 17 MACHINE, 1 HARNESS, 3 DROP.
+**Tally** (rule ids, counted by the § 5 checker on 2026-11-08): 71 rules: 41 COVERED, 4 DIVERGES, 4 GAP, 17 MACHINE, 2 HARNESS, 3 DROP.
 
 ## 2. Where the global file and the framework disagree
 
@@ -229,7 +232,7 @@ Assurance traps go, because the framework holds what they say (§ 1), they are p
 machine facts and gaps moved to the sections below. Two shells, Python environments, Docker and CI pipelines are
 copied verbatim from the live file. New: the framework pointer, the CI run-reading and install-trial recipes
 (moved out of Git), Other repos, Harness facts, Not yet in the framework, and an optional baseline for repos
-without the framework. Old file: 411 lines; proposed: 269 lines (measured 2026-11-08 by the § 5 checker).
+without the framework. Old file: 411 lines; proposed: 270 lines (measured 2026-11-08 by the § 5 checker).
 
 One verbatim line keeps a pointer to a removed section: Docker's "often in the same repo (§ Concurrent
 sessions)". It is left verbatim so the E6 check holds; when pasting, the owner may change it to "(§ Repos without
@@ -460,6 +463,7 @@ GitHub and whose GitLab remote is named `csitsg`).
   `claude` for persisted work. A write-capable agent has also been refused mid-run, so check
   the persisted file's size when the agent returns, and if it is missing or short, persist on
   receipt. `Explore` is still right for a sweep you will act on in the same turn.
+- **Workflow model:** Workflow `agent()` calls inherit the main-loop model unless `model` is set.
 
 ## Not yet in the framework
 
@@ -518,7 +522,11 @@ quote cell (E4: a `|` in a quote breaks its row); every GAP term is absent from 
 audited hash is the live file's (E5); every non-blank line of the global header, Two shells, Python
 environments, Docker and CI pipelines sections is a line of the § 4 block (E6); exactly two lines open with four
 backticks (E7); the § 4 block holds no dropped provenance (E8) and nothing token-shaped (E9); lines 1 to 10 name
-this item and no other board id (E10); and the stated line counts and tally are what it measures.
+this item and no other board id (E10); every HARNESS row's quote is a whitespace-collapsed substring of the live
+global file and of the § 4 block (E11, added in review round 1, when the R71 fact was found missing from § 4); the
+row ids are R1 to Rn, each once; and the stated line counts and tally are what it measures. E6 covers only the
+sections kept whole, so a fact in a removed section survives only through a row whose verdict is checked
+against § 4: E11 does that for HARNESS rows.
 
 ```python
 """CE-40 checker: the audit doc's quotes, gaps and section 4 against HEAD and the live global file."""
@@ -564,7 +572,7 @@ def main(doc_path, global_path):
     runbooks = subprocess.run(["git", "ls-tree", "--name-only", "HEAD", "docs/runbooks/"],
                               capture_output=True, text=True, check=True).stdout.split()
     living = {p: collapse(show(p)) for p in LIVING + [r for r in runbooks if r.endswith(".md")]}
-    cache, first, quotes, absences = {}, {}, 0, 0
+    cache, first, quotes, absences, harness = {}, {}, 0, 0, {}
     sec1 = doc[doc.index("## 1. Verdict per rule"):doc.index("## 2. Where the global file and the framework disagree")]
     for line in sec1:
         if not re.match(r"^\| R\d+ \|", line):
@@ -581,6 +589,8 @@ def main(doc_path, global_path):
         if verdict in ("COVERED", "DIVERGES") and (not path or quote in ("", "-")):
             bad.append(f"E4 empty file or quote cell on {rid}")
             continue
+        if verdict == "HARNESS":
+            harness[rid] = collapse(quote)
         if quote.startswith("absent:"):
             for term in [t.strip() for t in quote[len("absent:"):].split(",")]:
                 absences += 1
@@ -593,8 +603,8 @@ def main(doc_path, global_path):
             if collapse(quote) not in text:
                 bad.append(f"MISS {rid} {path.group(1)}")
     want = [f"R{i}" for i in range(1, len(first) + 1)]
-    if list(first) != want:
-        bad.append(f"row ids are not R1..R{len(first)} in order")
+    if sorted(first, key=lambda r: int(r[1:])) != want:
+        bad.append(f"row ids are not R1..R{len(first)}, each once")
     counts = Counter(first.values())
     tally = ", ".join(f"{counts[v]} {v}" for v in ("COVERED", "DIVERGES", "GAP", "MACHINE", "HARNESS", "DROP"))
     tally = f"{len(first)} rules: {tally}"
@@ -631,6 +641,14 @@ def main(doc_path, global_path):
                     missing += 1
                     bad.append(f"E6 missing from section 4: {l.strip()[:70]}")
 
+    # E11: every HARNESS fact is the global file's own line, and section 4 carries it
+    whole_global, whole_block = collapse("\n".join(glob)), collapse(body)
+    for rid, quote in harness.items():
+        if quote in ("", "-") or quote not in whole_global:
+            bad.append(f"E11 {rid}: HARNESS quote is not a line of the global file")
+        elif quote not in whole_block:
+            bad.append(f"E11 {rid}: HARNESS fact missing from section 4")
+
     # E8, E9
     for s in DROPPED:
         if s in body:
@@ -658,24 +676,36 @@ if __name__ == "__main__":
     sys.exit(main(sys.argv[1], sys.argv[2]))
 ```
 
-Its output on 2026-11-08, at HEAD `a67df78`:
+
+Its output on 2026-11-08, at HEAD `c4af7c3` (review round 1; the first run, at `a67df78`, counted 70 rules and
+1 HARNESS, and § 4 had 269 lines):
 
 ```text
-checked 72 quotes and 9 absent terms; 70 rules: 41 COVERED, 4 DIVERGES, 4 GAP, 17 MACHINE, 1 HARNESS, 3 DROP
-section 4: 0 kept lines missing; old 411 lines, proposed 269 lines
+checked 72 quotes and 9 absent terms; 71 rules: 41 COVERED, 4 DIVERGES, 4 GAP, 17 MACHINE, 2 HARNESS, 3 DROP
+section 4: 0 kept lines missing; old 411 lines, proposed 270 lines
 0 problems
 ```
 
-Sabotage, each run with a fresh `PYTHONPYCACHEPREFIX` and restored exactly afterwards (2026-11-08):
+Sabotage, each run with a fresh `PYTHONPYCACHEPREFIX`. In round 1 the checker runs were made on a sabotaged copy of this doc,
+so the doc itself was never changed; the E1 run edited the doc in place and restored it exactly. First round
+2026-11-08 (E2, E6, E1), re-run with the round-1 checker on 2026-11-08 (all of them, plus E11 and the id check):
 
 - **E2, a drifted quote.** Broke: R60's first quote, "can do it" changed to "can do them". The checker printed
   `MISS R60 docs/framework/FRAMEWORK.md`, `1 problems`, exit 1. Restored: `0 problems`, exit 0.
 - **E6, a lost machine line.** Broke: the line ``is (`~/.pixi/bin/pixi`).`` deleted from the § 4 block. The
   checker printed ``E6 missing from section 4: is (`~/.pixi/bin/pixi`).`` and `stated line counts differ;
-  measured old 411, proposed 268`, then `section 4: 1 kept lines missing`, `2 problems`, exit 1. Restored:
+  measured old 411, proposed 269`, then `section 4: 1 kept lines missing`, `2 problems`, exit 1. Restored:
   `0 problems`, exit 0.
+- **E11, a lost harness fact.** Broke: the § 4 bullet "**Workflow model:** ..." deleted. The checker printed
+  `E11 R71: HARNESS fact missing from section 4` and `stated line counts differ; measured old 411, proposed 269`,
+  `2 problems`, exit 1. Broke instead: R71's quote, "inherit" changed to "inherits". It printed `E11 R71: HARNESS
+  quote is not a line of the global file`, `1 problems`, exit 1. Broke instead: R14's file and quote cells put
+  back to `-`, as they were before round 1. It printed `E11 R14: HARNESS quote is not a line of the global file`,
+  `1 problems`, exit 1: the defect round 1 fixed is the one this check refuses.
+- **The id check.** Broke: R71 renamed R72. The checker printed `row ids are not R1..R71, each once`,
+  `1 problems`, exit 1.
 - **E1, the liveness line.** Broke: line 3's `ACTIVE-PLAN` written as `ACTIVE PLAN`. `context-engine lint` printed
   `G-D4 docs/evidence/global-claude-md-audit-2026-11-07e.md: declares no liveness in its first 10 lines`, exit 1
   (guards.py::liveness). Restored: `lint: clean`, exit 0.
 
-The doc's sha256 was the same before the three runs and after the restores.
+The doc's sha256 was the same before the E1 run and after its restore, in both rounds.
