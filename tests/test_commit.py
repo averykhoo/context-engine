@@ -1036,6 +1036,41 @@ def test_a_commit_leaves_another_sessions_lines_out_and_names_them(repo, tmp_pat
     assert git(repo, "status", "--porcelain").strip() == ""
 
 
+def _line(session: str, op: str, rid: str, path: str, **more) -> str:
+    return json.dumps({"at": "2026-10-08T10:00:00+08:00", "session": session, "actor": ACTOR, "op": op,
+                       "id": rid, "path": path, "fields": [], "mechanical": False, **more})
+
+
+@pytest.mark.criterion("AC-78")
+def test_select_never_takes_another_sessions_id_reserve_line(repo):
+    """CE-165: an `id.reserve` line names no file (`path: ""`), so another session's is never
+    carried by a commit, whatever paths it takes; only its own session's commit, or a sweep, takes it."""
+    a, b = "2026-10-08a", "2026-10-08b"
+    mine_res, their_res = _line(a, "id.reserve", "CE-7", ""), _line(b, "id.reserve", "CE-8", "")
+    mine_new, their_set = _line(a, "new", "CE-1", "tasks/CE-1-x.md"), _line(b, "set", "CE-1", "tasks/CE-1-x.md")
+    lines = [mine_res, their_res, mine_new, their_set]
+    assert C.select(lines, a) == ([mine_res, mine_new, their_set], [their_res])
+    assert C.select(lines, a, given=("tasks",)) == ([mine_res, mine_new, their_set], [their_res])
+    assert C.select([their_res], a, given=("tasks/CE-1-x.md",)) == ([], [their_res])
+    blank = _line(b, "id.reserve", "CE-8", "", paths=[""])  # an empty `paths` entry names no file either
+    assert C.select([mine_res, blank], a) == ([mine_res], [blank])
+    assert C.select(lines, a, sweep=True) == (lines, [])  # only a sweep takes another session's
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_commit_never_carries_another_sessions_id_reserve(repo):
+    """CE-165: both sessions reserve; A's commit carries its own `id.reserve` line and none of B's."""
+    a, b, key, theirs = _two(repo)
+    run(repo, "id_reserve", a, kind="task")
+    b.reserve("task", session=key, actor=ACTOR)
+    (repo / "a.py").write_text("a = 1\n", encoding="utf-8")
+    _, line = run(repo, "commit", a, paths=["a.py"], message="CE-9: a")
+    at_head = [json.loads(ln) for ln in git(repo, "show", "HEAD:ops.jsonl").splitlines() if ln.strip()]
+    assert [o["session"] for o in at_head if o["op"] == "id.reserve"] == [a.session], at_head
+    assert key not in {o["session"] for o in at_head}
+    assert f"left uncommitted: 3 op lines of {key}" in line, line  # its session.start, its new and its id.reserve
+
+
 @pytest.mark.criterion("AC-78")
 def test_a_line_of_another_session_on_a_file_the_commit_carries_goes_in_with_it(repo, tmp_path):
     """The file holds that write, so its line must go too, or G-W7 fails on a clean checkout."""

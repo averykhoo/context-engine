@@ -115,6 +115,27 @@ def test_another_sessions_reserved_id_is_refused_naming_the_holder(eng):
 
 
 @pytest.mark.criterion("AC-131")
+def test_ask_new_takes_a_reserved_id_and_refuses_another_sessions(eng, capsys):
+    """CE-165: `ask new --id` writes a reserved id, as `task new --id` and `record new --id` do."""
+    from conftest import ASK_BODY
+
+    mine = eng.session_start(actor=ACTOR)
+    assert eng.reserve("question", 2, **kw(mine)).startswith("reserved ASK-1, ASK-2 ")
+    other = eng.session_start(actor=ACTOR)
+    with pytest.raises(Refusal) as r:
+        eng.ask_new("Red or blue?", body=ASK_BODY, rid="ASK-1", **kw(other))
+    assert r.value.message == f"ASK-1 is reserved by session {mine}" and "id reserve" in r.value.remedy
+    assert not list(eng.root.glob("tasks/ASK-1*"))
+    assert eng.ask_new("Red or blue?", body=ASK_BODY, rid="ASK-1", **kw(mine)).id == "ASK-1"
+    body = eng.root / "ask-body.md"
+    body.write_text(ASK_BODY, encoding="utf-8")
+    base = ["--root", str(eng.root), "--session", mine, "--actor", ACTOR]
+    assert main([*base, "ask", "new", "Green?", "--id", "ASK-2", "--body-file", str(body)]) == 0
+    assert capsys.readouterr().out.startswith("ASK-2"), "the CLI files the question under the reserved id"
+    assert sorted(p.name.split("-")[1] for p in eng.root.glob("tasks/ASK-*")) == ["1", "2"]
+
+
+@pytest.mark.criterion("AC-131")
 def test_the_cli_reserves_and_record_new_takes_the_id(eng, capsys):
     key = eng.session_start(actor=ACTOR)
     base = ["--root", str(eng.root), "--session", key, "--actor", ACTOR]

@@ -927,6 +927,9 @@ def test_g_d4_an_expired_stale_after_on_a_live_record_criterion_or_register_entr
     task_file(tmp_path, "CE-5", 'stale_after: "2026-10-01T00:00:00"\n')  # no offset: not an instant
     task_file(tmp_path, "CE-6", f'stale_after: "{PAST}"\n')  # quoted, still an instant
     task_file(tmp_path, "CE-7", "")
+    head = "---\ntype: Task\nid: {}\ntitle: t\npri: LATER\nstate: {}\n{}created: 2026-10-08\nstale_after: " + PAST + "\n---\n\nbody\n"
+    write(tmp_path, "tasks/CE-8-x.md", head.format("CE-8", "open", "status: deprecated\n"))  # deprecated alone: history
+    write(tmp_path, "tasks/CE-9-x.md", head.format("CE-9", "closed", ""))  # closed alone: not live
     write(tmp_path, "docs/criteria.md", (
         "# Criteria\n\n| id | criterion | from | status | `stale_after` |\n|---|---|---|---|---|\n"
         f"| AC-1 | a | US-1 | manual | {PAST} |\n| AC-2 | b | US-1 | retired | {PAST} |\n"

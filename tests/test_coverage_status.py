@@ -55,6 +55,11 @@ def status_repo(tmp_path):
     return e
 
 
+def files(root) -> dict[str, bytes]:
+    """Every file under ``root`` with its bytes: an append to an existing file shows (CE-165)."""
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
 def by_key(e) -> dict[str, tuple[str, str, str]]:
     _, rows = G.framework_status(e)
     return {r.item.key: (r.status, r.board, r.note) for cls in rows for r in rows[cls]}
@@ -97,11 +102,11 @@ def test_coverage_gives_each_spec_item_the_first_status_that_holds(tmp_path):
 @pytest.mark.criterion("AC-170")
 def test_coverage_prints_the_totals_the_rules_and_a_table_per_class_and_stores_nothing(tmp_path):
     e = status_repo(tmp_path)
-    before = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file())
+    before = files(tmp_path)
+    assert "maps/coverage-2026-10-12.md" in before and "context.toml" in before  # it compares something
     code, text = run(["--root", str(tmp_path), "--actor", W["actor"], "--session", W["session"], "coverage"])
-    after = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file())
     assert code == 0
-    assert before == after  # read on demand: no file is written, so none can go stale
+    assert files(tmp_path) == before  # read on demand: no file is written or appended to, so none can go stale
     assert ops.OPS["coverage"].write is False
     assert "the newest coverage map (maps/coverage-2026-10-12.md)" in text
     assert "Totals: components 21: deferred 1, prose-only 1, open work 1, done 2, map only 1, unowned 15;" in text
@@ -133,6 +138,55 @@ def test_coverage_refuses_while_g_d12_has_no_sources_or_broken_ones(tmp_path):
     assert "procedures extracted, under the floor" in r.value.message
     write(tmp_path, "spec/FRAMEWORK.md", spec())
     assert G.framework_status(e)[0] == "maps/coverage-2026-10-12.md"
+
+
+DATED = {"maps/coverage-2026-10-12.md": MAP}
+NOT_RELATIVE = "make it repo-relative with no `..`"
+
+
+@pytest.mark.criterion("AC-171")
+@pytest.mark.parametrize("guards, maps, message, remedy", [
+    ({"coverage_spec": "spec/FRAMEWORK.md"}, DATED,
+     "context.toml: [guards] sets coverage_spec but not coverage_maps", "set coverage_maps too"),
+    ({"coverage_maps": "maps/coverage-*.md"}, DATED,
+     "context.toml: [guards] sets coverage_maps but not coverage_spec", "set coverage_spec too"),
+    (COV, {"maps/coverage-final.md": MAP},
+     "maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the engine cannot tell which map is newest",
+     "rename it with its date"),
+    (COV, {**DATED, "maps/coverage-final.md": MAP},  # a dated map beside it does not hide it
+     "maps/coverage-final.md: matches [guards] coverage_maps but has no date (YYYY-MM-DD) in its name, so the engine cannot tell which map is newest",
+     "rename it with its date"),
+    (COV, {}, "context.toml: [guards] coverage_maps matches no file (maps/coverage-*.md)", "fix the glob"),
+    ({**COV, "coverage_maps": "/maps/coverage-*.md"}, DATED,
+     "context.toml: [guards] coverage_maps (/maps/coverage-*.md) is not a glob relative to the repo root", NOT_RELATIVE),
+    ({**COV, "coverage_maps": "C:/maps/coverage-*.md"}, DATED,
+     "context.toml: [guards] coverage_maps (C:/maps/coverage-*.md) is not a glob relative to the repo root", NOT_RELATIVE),
+    ({**COV, "coverage_maps": "../maps/coverage-*.md"}, DATED,
+     "context.toml: [guards] coverage_maps (../maps/coverage-*.md) is not a glob relative to the repo root", NOT_RELATIVE),
+], ids=["spec-only", "maps-only", "undated", "undated-beside-dated", "no-match", "rooted", "drive", "dotdot"])
+def test_coverage_refuses_on_each_g_d12_map_failure_with_its_reason_and_remedy(tmp_path, guards, maps, message, remedy):
+    """CE-165: each of G-D12's own config and map failures is the refusal's reason, with its remedy;
+    the spec is good in every case, so the map or the config is what fails."""
+    e = make(tmp_path, **guards)
+    write(tmp_path, "spec/FRAMEWORK.md", spec())
+    for rel, text in maps.items():
+        write(tmp_path, rel, text)
+    with pytest.raises(Refusal) as r:
+        G.framework_status(e)
+    assert r.value.message == f"G-D12 cannot read its sources: {message}"
+    assert r.value.remedy.startswith(remedy), r.value.remedy
+
+
+@pytest.mark.criterion("AC-171")
+def test_the_coverage_command_says_why_g_d12_cannot_read_its_sources(tmp_path, capsys):
+    from context_engine.cli import main
+    make(tmp_path, **COV)
+    write(tmp_path, "spec/FRAMEWORK.md", spec())
+    write(tmp_path, "maps/coverage-final.md", MAP)
+    assert main(["--root", str(tmp_path), "--actor", W["actor"], "--session", W["session"], "coverage"]) == 2
+    err = capsys.readouterr().err
+    assert "G-D12 cannot read its sources: maps/coverage-final.md: matches [guards] coverage_maps but has no date" in err
+    assert "rename it with its date" in err
 
 
 @pytest.mark.criterion("AC-199")

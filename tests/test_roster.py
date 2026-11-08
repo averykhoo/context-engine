@@ -54,7 +54,9 @@ def test_the_roster_keeps_fable_to_the_arbiter_explore_to_a_scout_that_need_not_
     assert explore == ["scout, auditor"] and "cannot persist" in rows["scout, auditor"]["Runs as"], explore
     hk = rows["housekeeping agent"]
     assert "its only tools are the engine's `hk_` operations" in hk["Runs as"], hk
-    assert re.fullmatch(r"only through `hk_` operations(, [^|]*)?", hk["Writes"]), hk
+    # DEC-290: the cell is exactly this, with or without its mechanical-log clause; any other
+    # clause (one that widens it: "..., and by hand where they fall short") is red
+    assert re.fullmatch(r"only through `hk_` operations(?:, each logged as mechanical)?", hk["Writes"]), hk
     # The watcher writes nothing, and a push is among what it may NOT do: a cell that only mentions
     # a push ("nothing but the fix it pushes when a run is red") must fail.
     watcher = rows["watcher"]["Writes"]

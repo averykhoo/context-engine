@@ -193,6 +193,12 @@ def test_the_kit_readme_names_the_mcp_connect_timeout_and_its_remedy():
     # (docs/evidence/plugin-design-2026-10-14.md), so it is not read as current forever
     measured = reg[reg.index("33 to 36 seconds") :].split("\n\n")[0]
     assert "2026-10-14" in measured and "Claude Code 2.1.280" in measured, "the measured start must say when, and on which Claude Code version"
+    # CE-165: the remedy itself, its unit, and an example above the 30 s limit in that unit
+    flat = " ".join(reg.split())
+    assert "The remedy is `MCP_TIMEOUT` (milliseconds) in the environment Claude Code is started from" in flat, "the remedy names the variable and its unit"
+    example = re.search(r"`MCP_TIMEOUT=(\d+)`", flat)
+    assert example and int(example[1]) > 30_000, "the example is in milliseconds, above the 30 s connect limit"
+    assert "restart Claude Code after setting it" in flat, "the setting takes effect only on a restart"
 
 
 def test_the_kit_readme_names_the_engine_writes_a_docs_only_ci_filter_misses():
@@ -415,6 +421,30 @@ def test_a_hard_linked_claude_md_stays_linked(tmp_path):
     os.link(tmp_path / "CLAUDE.md", tmp_path / "AGENTS.md")
     B.init(tmp_path, TASK)
     assert B.BEGIN in (tmp_path / "AGENTS.md").read_text(encoding="utf-8"), "CLAUDE.md is written in place, never replaced"
+
+
+def _appended_in_place(tmp_path, rel: str, old: bytes, added: str) -> None:
+    """Init appends to ``rel`` in place (bootstrap.py::APPENDED), so a hard link to it stays one
+    file: the temp-file-and-replace path every other write takes would split the link (CE-165)."""
+    import os
+
+    (tmp_path / rel).write_bytes(old)
+    os.link(tmp_path / rel, tmp_path / "twin")
+    B.init(tmp_path, TASK)
+    new = (tmp_path / rel).read_bytes()
+    assert new.startswith(old) and added in new.decode("utf-8"), new  # init did append: not a pass by writing nothing
+    assert (tmp_path / "twin").read_bytes() == new, f"{rel} is appended to in place, never replaced"
+    assert os.path.samefile(tmp_path / rel, tmp_path / "twin")
+
+
+@pytest.mark.criterion("AC-116")
+def test_an_appended_gitattributes_stays_hard_linked(tmp_path):
+    _appended_in_place(tmp_path, B.REPO_ATTRIBUTES, b"*.png binary\n", " merge=union\n")
+
+
+@pytest.mark.criterion("AC-31")
+def test_an_appended_gitignore_stays_hard_linked(tmp_path):
+    _appended_in_place(tmp_path, B.REPO_IGNORE, b"build/\n", f"\n{B.ENGINE_DIR}/\n")
 
 
 @pytest.mark.criterion("AC-57")
@@ -898,6 +928,33 @@ def test_line_endings_change_nothing_init_writes_or_lint_checks_in_an_adopting_r
     out = B.init(lf, TASK)
     assert out.startswith("init: created 0 (none); skipped"), out
     assert {p: p.read_bytes() for p in lf.rglob("*") if p.is_file()} == before
+
+
+@pytest.mark.criterion("AC-115")
+def test_an_engine_from_a_crlf_checkout_lints_an_lf_repo_and_a_crlf_repo_clean(tmp_path, monkeypatch):
+    """CE-165, the lint half the test above leaves out: there the CRLF kit is undone before each
+    lint. Here lint itself runs with the kit CRLF (an engine installed from a CRLF checkout), on an
+    LF repo and then on a CRLF one: G-D0's kit-block and contract compares read the kit's text,
+    line endings aside."""
+    import shutil
+
+    from context_engine.cli import run
+
+    repo, crlf_kit = tmp_path / "a" / "repo", tmp_path / "kit"  # one folder name: CLAUDE.md's heading names it
+    repo.mkdir(parents=True)
+    B.init(repo, TASK)
+    _fill_gate(repo)  # text mode: CRLF on Windows, so force LF below
+    for p in repo.rglob("*"):
+        if p.is_file():
+            p.write_bytes(p.read_bytes().replace(b"\r\n", b"\n"))
+    assert not [p for p in repo.rglob("*") if p.is_file() and b"\r\n" in p.read_bytes()], "the repo is LF"
+    shutil.copytree(B.KIT, crlf_kit, ignore=shutil.ignore_patterns("__pycache__"))
+    made = _crlf(crlf_kit)
+    assert "contract.md" in made and "bootloader.md" in made, made  # the kit is CRLF
+    monkeypatch.setattr(B, "KIT", crlf_kit)
+    assert run(["--root", str(repo), "lint"])[1].strip() == "lint: clean"  # CRLF engine, LF repo
+    assert "CLAUDE.md" in _crlf(repo)
+    assert run(["--root", str(repo), "lint"])[1].strip() == "lint: clean"  # CRLF engine, CRLF repo
 
 
 @pytest.mark.criterion("AC-37")

@@ -514,6 +514,7 @@ def test_archive_names_each_pointer_g_d3_now_reports_and_rewrites_none(tmp_path)
         "docs/archive/old.md: line 20", "docs/index.md: line 5", "docs/index.md: line 6"]
 
 
+@pytest.mark.criterion("AC-149")
 def test_archive_says_nothing_of_pointers_when_g_d3_is_off(tmp_path):
     root = tmp_path / "repo"
     target(root, {**DOCS, "guards": {**DOCS["guards"], "links": ["docs/index.md"], "off": ["G-D9", "G-D3"]}})

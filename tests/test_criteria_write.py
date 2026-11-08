@@ -126,6 +126,41 @@ def test_a_criterion_write_is_one_line_over_the_mcp_path_and_rides_along(repo):
     assert code == 0 and line == "AC-4: criterion rewritten (docs/criteria.md line 17)", line
 
 
+@pytest.mark.criterion("AC-160")
+@pytest.mark.parametrize("op", [
+    lambda e: e.criterion_new("d holds", "US-1", under="Core", **W),
+    lambda e: e.criterion_set("AC-2", text="bee", **W),  # set's read-modify-write is the same shape
+], ids=["new", "set"])
+def test_a_criterion_write_reads_writes_and_logs_holding_the_repo_lock(repo, monkeypatch, op):
+    """CE-165 (DEC-291): the table is read, rewritten and logged under the repo lock, so no other
+    session's write lands between the read and the write. The probe asks the OS for the lock, as
+    another process would (tests/test_commit.py::test_an_operation_holds_the_lock_from_its_first_write_to_its_commit),
+    rather than reading the Store's private flag."""
+    from context_engine.lock import FileLock
+    from context_engine.store import Store
+
+    seen: list[tuple[str, str]] = []
+
+    def held() -> str:
+        try:
+            with FileLock(repo / ".context/engine.lock", timeout=0.2):
+                return "free"
+        except Refusal:
+            return "held"
+
+    def probe(name, real):
+        def f(*a, **k):
+            seen.append((name, held()))
+            return real(*a, **k)
+        return f
+
+    monkeypatch.setattr(Engine, "_utf8", staticmethod(probe("read", Engine._utf8)))
+    monkeypatch.setattr(Store, "write_text", probe("write", Store.write_text))
+    monkeypatch.setattr(Store, "log", probe("log", Store.log))
+    op(Engine(repo))
+    assert seen == [("read", "held"), ("write", "held"), ("log", "held")], seen
+
+
 @pytest.mark.criterion("AC-188")
 def test_a_given_id_outside_the_rows_series_is_refused_and_an_empty_file_takes_any_prefix(repo):
     """CE-160: `--id REQ-1` in a file of AC rows wrote a second prefix, and every later
