@@ -966,7 +966,7 @@ class Engine:
 
         ``residuals`` is the close's answer to "did this work leave a residual risk?" (CE-120, DEC-108,
         FRAMEWORK §7.4): ``["none"]``, or one ``<risk> | rung: | why: | control: | affects:`` line (DEC-109)
-        per risk, each filed in the register as the next INV-n (created on first use) with the
+        per risk, each filed in the register as its next id (created on first use) with the
         design review's. Logged either way, so the record tells a "none" from a question skipped;
         where a register is configured, a close that states nothing (and has no review) says so.
 
@@ -1014,7 +1014,7 @@ class Engine:
                 before.extend(self._filed_before(rec, [*(review.residuals if review else []), *stated]))
                 filed.extend(self._file_residuals(rec, session, actor, stated or None))
 
-        def log(text: str) -> str:  # after check(), so it can name the INV ids filed
+        def log(text: str) -> str:  # after check(), so it can name the register ids filed
             ids = [", ".join(filed)] if filed else []
             if before:
                 ids.append(f"already in the register: {', '.join(before)}")
@@ -1101,7 +1101,7 @@ class Engine:
         return out
 
     def _filed_before(self, rec: Record, risks: list[R.Risk]) -> list[str]:
-        """The INV ids of ``risks`` already in the register from ``rec`` (a re-close), so the
+        """The register ids of ``risks`` already in the register from ``rec`` (a re-close), so the
         close's Log names them rather than writing an empty answer."""
         path = (self.root / self.w.register) if self.w.register else None
         if path is None or not path.exists() or not risks:
@@ -1206,20 +1206,23 @@ class Engine:
             raise Refusal(f"{rec.id} has {len(rv.residuals)} residual risks and no register is configured", "set `register = \"<repo-relative path>\"` in [working] of context.toml (FRAMEWORK §10: docs/invariants.md)")
         path = self.root / self.w.register
         text = path.read_bytes().decode("utf-8") if path.exists() else None
-        new, added = R.append(text, rv, rec.id, session, floor=self._inv_issued())
+        floor, logged = self._register_issued()
+        new, added = R.append(text, rv, rec.id, session, floor=floor, logged=logged)
         if added:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.store.write_text(path, new)
             self.store.log("register.append", rec.id, path, session, actor, added)
         return added
 
-    def _inv_issued(self) -> int:
-        """The highest INV-n any `register.append` op has handed out, so an entry deleted from
-        the register does not give its id to another risk (§7.4: never reused)."""
+    def _register_issued(self) -> tuple[int, str]:
+        """The highest number any `register.append` op has handed out, whatever its prefix, so an
+        entry deleted from the register does not give its number to another risk (§7.4: never
+        reused); and the prefix of the last id handed out, which a register made again takes
+        (DEC-233). (0, "") when none was."""
         log = self.root / self.store.config.oplog
         if not log.exists():
-            return 0
-        top = 0
+            return 0, ""
+        top, last = 0, ""
         for ln in log.read_bytes().decode("utf-8").splitlines():
             if '"register.append"' not in ln:
                 continue
@@ -1228,8 +1231,11 @@ class Engine:
             except ValueError:
                 continue
             if entry.get("op") == "register.append":
-                top = max([top, *(int(f[4:]) for f in entry.get("fields") or [] if re.fullmatch(r"INV-\d+", str(f)))])
-        return top
+                for f in entry.get("fields") or []:
+                    if re.fullmatch(r"[A-Z]+-\d+", str(f)):
+                        last, _, num = str(f).rpartition("-")
+                        top = max(top, int(num))
+        return top, last
 
     def register_show(self, engine: bool = False) -> str:
         """The register's entries: this repo's, or with ``engine`` the one shipped in the package.
@@ -1277,9 +1283,9 @@ class Engine:
                 missing = [r.text for r in (rv.residuals if rv else []) if R.key(h.id, r.text) not in have]
                 if missing:
                     where = self.w.register or "no register configured"
-                    out.append(Failure("G-W13", rel, f"{h.id} is closed but {len(missing)} of its residuals are not in the register ({where}): {missing[0][:60]!r}", "copy each into the register as the next INV-n (manual-mode.md § context-engine task close)"))
+                    out.append(Failure("G-W13", rel, f"{h.id} is closed but {len(missing)} of its residuals are not in the register ({where}): {missing[0][:60]!r}", "copy each into the register as its next id (manual-mode.md § context-engine task close)"))
         for p in R.entry_problems(es):
-            out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own INV id"))
+            out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own id, one number each"))
         return out
 
     def _answered_remedy(self, rid: str, answered: Any) -> str:

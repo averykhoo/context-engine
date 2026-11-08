@@ -170,8 +170,8 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
   prefix `init` takes is 2 to 5 capitals. The prefixes of record kinds are per-repo config
   (`[kinds.*].prefix`); the form is not, and a repo that kept its own prefixes at adoption keeps
   them (§11.4). Goals are not a record kind: the charter's rows say which goal prefix a repo
-  uses, `GOAL` in a new one. Register entries are not a record kind either, and their prefix
-  (`INV`) is fixed by the engine. Guard and drift names (`G-D3`, `DR1`)
+  uses, `GOAL` in a new one. Register entries are not a record kind either: the register's
+  entries say which prefix it uses, `RISK` in a new one. Guard and drift names (`G-D3`, `DR1`)
   belong to this document, not to a repo. A record stamped before a repo took up the form keeps
   its old ids verbatim (owner words are never rewritten), and the guards read `GOAL-3`, `G-3`
   and the legacy `G3` as one goal, by number; a new write spells it as the charter does.
@@ -779,7 +779,7 @@ a single revertible cutover commit.
     until the section passes; `review` is not removed while the section lists a residual. Lower
     tiers are not checked. G-W12 re-checks the stored files.
   - **What close does:** `task close` appends each `residual` line to the register (§7.4) as the
-    next `INV-n`, once per task and risk however often the task is reopened and closed. A close
+    register's next id, once per task and risk however often the task is reopened and closed. A close
     refuses an unready review, and residuals with no register configured. G-W13 re-checks the
     stored files.
 - **`## Kill bar`**, when a task's fate rests on a run: the bar written down before the run (the
@@ -1887,14 +1887,17 @@ cite for each item.
   from a task's design review when it closes (§5.2), from the close of any task, which states
   whether its work left a residual risk (`task.close` with `residual`: `none`, or one line per
   risk; `none` is refused when the task's design review lists a residual; the answer, with every
-  INV id the close files, is logged on the task, so a skipped question shows), and from any session that
+  register id the close files, is logged on the task, so a skipped question shows), and from any session that
   notices a risk and confirms it (an unverified hazard, once confirmed, below).
 - **Where it lives:** one markdown file named by `[working] register` (a target repo:
   `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).
-  Each entry is `## INV-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
+  Each entry is `## RISK-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
   eliminated:**`, `- **control:** <rung>: <guard or rule>` and `- **from:** <task>, session
-  <key>`. `INV-n` ids are never reused: the next is one above the highest in the file and in
-  any `register.append` op, so an entry deleted by hand does not give its id to another risk.
+  <key>`. A new register's ids are `RISK-n`; a register kept from before keeps its entries'
+  prefix (`INV-n`, say), and one deleted and made again takes the prefix the op log last handed
+  out. Numbers are never reused: the next is one above the highest in the file and in any
+  `register.append` op, whatever the prefix, so an entry deleted by hand does not give its number
+  to another risk. Entries in two prefixes refuse the next filing until they are one.
   The file is created by the first close that files a residual; until then `context-engine
   register show` reports it empty. `context-engine register show` prints it; G-W13 checks
   that every closed reviewed task's residuals are in it and that every entry is whole.
@@ -2360,7 +2363,7 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   checks (§5.2). `task promote`, `task set` and `task section` refuse it first, so this catches a
   hand edit.
 - **G-W13:** every residual of a closed item carrying `review` is in the register with that task
-  in `from:`; every register entry has its four lines; no two entries share an `INV-n` (§7.4).
+  in `from:`; every register entry has its four lines; no two entries share an id or a number (§7.4).
 
 ### 8.5 Verification-state guards
 - **G-V1 (run ledger):** every gate run is recorded, in a gitignored run ledger, against the

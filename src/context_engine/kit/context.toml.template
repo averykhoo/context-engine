@@ -259,7 +259,7 @@ component = "Residual-risk register"
 path = "docs/invariants.md"
 mode = "entries appended by `context-engine task close` or by hand; an entry is edited only when the code changes"
 optional = true
-note = "INV-n (FRAMEWORK §7.4); the same path as [working] register; created by the first `task close` that files a residual risk"
+note = "RISK-n (FRAMEWORK §7.4), and a register kept from before keeps its entries' prefix; the same path as [working] register; created by the first `task close` that files a residual risk"
 
 [[routes]]
 component = "Runbooks"

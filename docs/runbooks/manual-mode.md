@@ -108,7 +108,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
 | decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status"]` |
 | decision import | `import`, one line per record | the record | every frontmatter key |
-| task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new INV ids |
+| task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new register ids |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
 | doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table (`--lines`: the doc, then the archive file, then the table) | `["moved"]` (`--lines`: `["pruned"]`), `["archived"]`, `["redirect"]` |
@@ -563,12 +563,12 @@ listings:
 4. `board.html`: the open items of every `[working] board` kind by tier in `pri`'s enum order,
    by prefix and number, with their `brief`; then every closed item, with its `closed` key.
 5. `coverage.html`: § context-engine coverage's tables, or why it is not available here.
-6. `register.html`: each `## INV-n` entry of `[working] register` with its fields, anchored
-   `#INV-n`.
+6. `register.html`: each `## <prefix>-n` entry of `[working] register` (`RISK-n`, or the
+   prefix a register kept from before uses) with its fields, anchored `#<prefix>-n`.
 7. One page per decision, story and board item at `<kind>/<id>.html`: its path, its frontmatter
    keys and values, and its body as escaped, wrapped markdown text (not rendered).
 
-On every page, an id the site holds (a record above, or `INV-n` in the register) is a link to it,
+On every page, an id the site holds (a record above, or an entry id in the register) is a link to it,
 and every `http(s)://` URL is a link; other ids stay text.
 
 **Why:** a reader without the CLI (the owner on a phone, anyone on GitHub) gets the listings that
@@ -632,7 +632,7 @@ first bullet's check that every record parses.
   `task promote`. *Why: the promotion refused it, so a failing review there was edited by hand.*
 - **G-W13**: every `- residual:` line of a closed item carrying `review:` has a register entry
   with the same risk text and that task in `from:`; every register entry has `affects`, `why not
-  eliminated`, `control` and `from` lines; no two entries share an INV id. *Why: the register is
+  eliminated`, `control` and `from` lines; no two entries share an id or a number. *Why: the register is
   what is handed over, so a residual missing from it is a risk nobody downstream is told about.*
 - **G-R1**: every `[[routes]]` path in `context.toml` exists, unless the route says
   `optional = true`. *Why: a routing table that points at a moved file sends every reader to
@@ -1013,8 +1013,11 @@ Do not move or rename the file.
 check fails, fix the review, do not close. Then copy each `- residual:` line into the register
 (`[working] register`; the kit's default is `docs/invariants.md`). Skip a residual already there
 with the same risk text and the same task id in its `from:` line. Create the file with the
-heading `# Residual-risk register` if it is missing. Each entry takes the next `INV-n` (one above the
-highest in the file and in any `register.append` line of the op log, so an id is never reused),
+heading `# Residual-risk register` if it is missing. Each entry takes the register's next id:
+the prefix its entries use (all one prefix: with two, stop and rename them to one by hand, each
+keeping its number), or with no entries the prefix of the last id a `register.append` line of the
+op log names, or with neither `RISK`; and the number one above the highest in the file and in any
+`register.append` line, whatever the prefix, so a number is never reused,
 after one blank line:
 
 ```
@@ -1027,7 +1030,7 @@ after one blank line:
 ```
 
 Log one op line per close that added entries: `op: register.append`, `id` the task, `path` the
-register, `fields` the new INV ids. With residuals and no register configured, stop: configure
+register, `fields` the new register ids. With residuals and no register configured, stop: configure
 one first.
 
 **Ask, before every close, whether the work left a residual risk** (a risk that was not
@@ -1040,7 +1043,7 @@ refuse `none` given with a risk, and refuse `none` for an item whose design revi
 `- residual:` line (its risks are filed at this close, so the answer is not "none": close without
 `--residual`, or state only the risks the review does not list). File each risk as above, with the
 review's, its own `affects` in its entry, creating the register on first use. Append the answer
-to the close's `## Log` line as a second line, indented two spaces: `residual risk: <the INV ids
+to the close's `## Log` line as a second line, indented two spaces: `residual risk: <the register ids
 filed>`, the review's included, then `; already in the register: <ids>` for each of this task's
 risks (the review's and those stated) that an earlier close filed, the part before it left out
 when nothing new was filed; or `residual risk: none`. A close that states nothing and has no
@@ -1474,8 +1477,8 @@ second run write nothing.
 ### context-engine register show
 
 Read the register file named by `[working] register` (the kit's default is `docs/invariants.md`).
-Print `register <path>: <N> residual risks`, then for each `## INV-n: <risk>` entry, a blank
-line, `INV-n: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
+Print `register <path>: <N> residual risks`, then for each `## <id>: <risk>` entry (`RISK-n`,
+or a kept register's own prefix), a blank line, `<id>: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
 indented two spaces. A register file that does not exist yet is empty: print `register <path>: 0
 residual risks` and say the first `task close` that files a residual creates it (a missing
 `[working] register` is still an error). With `--engine`, read instead the `REGISTER.md` inside the installed

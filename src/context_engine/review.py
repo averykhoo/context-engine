@@ -13,8 +13,9 @@ A board item above the threshold carries ``review: [<trigger>, ...]`` (the trigg
     E: <enable simple maintenance>
 
 ``task promote <id> NOW`` refuses while :func:`problems` finds anything, and ``task close``
-appends every ``residual:`` line to the register: one markdown file of ``## INV-n: <risk>``
-entries, appended idempotently (keyed on the task id and the risk text).
+appends every ``residual:`` line to the register: one markdown file of ``## <prefix>-n: <risk>``
+entries, appended idempotently (keyed on the task id and the risk text). The prefix is the one the
+register's entries use (``series``), ``RISK`` for a new register (FRAMEWORK P3, DEC-233).
 
 The engine's own register ships inside the package (:data:`PACKAGED`), so a repo the engine is
 pointed at can read it (``register show --engine``). That is how the engine hands its residual
@@ -32,6 +33,8 @@ from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
 
+from .errors import Refusal
+
 SECTION = "Design review"
 CLASSES = ("eliminated", "reduced", "residual")
 RUNGS = ("eliminate", "reduce", "collective", "individual")  # P17's ladder, strongest first
@@ -47,16 +50,24 @@ F: <what will need doing to it later, by whom, how often, and what makes it stal
 A: <how it is read and fixed without the engine>
 M: <which forms keep it from drifting>
 E: <what it reuses: one name, one format, one runbook section>"""
-HEADER = """# Residual-risk register
+PREFIX = "RISK"  # a new register's id prefix: the standard one (config.py::STANDARD_PREFIXES, pinned equal by a test)
+
+
+def header(prefix: str = PREFIX) -> str:
+    """A new register's opening lines, naming its id series."""
+    return f"""# Residual-risk register
 
 LIVING. Residual risks (FRAMEWORK P17, §7.4): each is a risk that was not reasonably practicable to
 eliminate, with whom it affects, why it stays, the control that holds it and where it came from.
 `task close` appends the residuals of a task's `## Design review`; edit an entry only when the
-code changes. Ids are `INV-n`, never reused.
+code changes. Ids are `{prefix}-n`, never reused.
 """
 
+
+HEADER = header(PREFIX)
+
 _RISK = re.compile(r"^- ([A-Za-z]+):\s*(.*)$")
-_ENTRY = re.compile(r"^## (INV-(\d+)):[ \t]*(.*)$", re.MULTILINE)
+_ENTRY = re.compile(r"^## ([A-Z]+-(\d+)):[ \t]*(.*)$", re.MULTILINE)  # any prefix: a register kept from before keeps its own
 _FIELD = re.compile(r"^- \*\*(.+?):\*\*[ \t]*(.*)$", re.MULTILINE)
 
 
@@ -195,13 +206,25 @@ def key(source: str, risk: str) -> tuple[str, str]:
 
 
 def next_id(es: list[Entry], floor: int = 0) -> int:
-    """One above the highest INV-n in the register and ``floor`` (the highest ever issued)."""
+    """One above the highest number in the register, whatever its prefix, and ``floor`` (the
+    highest ever issued)."""
     return max([floor, *(e.n for e in es)]) + 1
 
 
-def render(n: int, risk: Risk, affects: str, source: str, session: str) -> str:
+def series(es: list[Entry], logged: str = "") -> str:
+    """The prefix the register's next id takes (DEC-233): the one its entries use; with none, the
+    prefix of the last id the op log handed out (``logged``: a register deleted and made again);
+    with neither, ``PREFIX``. Entries in two prefixes refuse: the next id is not clear."""
+    have = sorted({e.id.rsplit("-", 1)[0] for e in es})
+    if len(have) > 1:
+        raise Refusal(f"the register's entries use {len(have)} id prefixes ({', '.join(have)}), so the next id is not clear",
+                      "rename the entries to one prefix by hand, each keeping its number (FRAMEWORK P3), then close again")
+    return have[0] if have else (logged or PREFIX)
+
+
+def render(n: int, risk: Risk, affects: str, source: str, session: str, prefix: str = PREFIX) -> str:
     return (
-        f"## INV-{n}: {risk.text}\n\n"
+        f"## {prefix}-{n}: {risk.text}\n\n"
         f"- **affects:** {risk.fields.get('affects') or affects}\n"
         f"- **why not eliminated:** {risk.fields['why']}\n"
         f"- **control:** {risk.fields['rung']}: {risk.fields['control']}\n"
@@ -209,21 +232,24 @@ def render(n: int, risk: Risk, affects: str, source: str, session: str) -> str:
     )
 
 
-def append(text: str | None, rv: Review, source: str, session: str, floor: int = 0) -> tuple[str, list[str]]:
+def append(text: str | None, rv: Review, source: str, session: str, floor: int = 0, logged: str = "") -> tuple[str, list[str]]:
     """The register text with every residual of ``rv`` not already in it, and the new ids.
     Idempotent: a residual already filed from ``source`` with the same risk text is skipped.
-    New ids start above ``floor``, the highest id ever issued, so none is reused."""
-    text = HEADER if text is None or not text.strip() else text.replace("\r\n", "\n")
-    es = entries(text)
+    New ids start above ``floor``, the highest number ever issued, so none is reused; their prefix
+    is ``series``' (``logged``: the prefix of the last id the op log handed out)."""
+    fresh = text is None or not text.strip()
+    es = [] if fresh else entries(text)
+    prefix = series(es, logged)
+    text = header(prefix) if fresh else text.replace("\r\n", "\n")
     have = {key(e.source, e.risk) for e in es}
     n = next_id(es, floor)
     added = []
     for r in rv.residuals:
         if key(source, r.text) in have:
             continue
-        text = text.rstrip("\n") + "\n\n" + render(n, r, rv.affects or "", source, session)
+        text = text.rstrip("\n") + "\n\n" + render(n, r, rv.affects or "", source, session, prefix)
         have.add(key(source, r.text))
-        added.append(f"INV-{n}")
+        added.append(f"{prefix}-{n}")
         n += 1
     return text, added
 
@@ -231,10 +257,14 @@ def append(text: str | None, rv: Review, source: str, session: str, floor: int =
 def entry_problems(es: list[Entry]) -> list[str]:
     out = []
     seen: set[str] = set()
+    numbers: dict[int, str] = {}  # a number is one risk's, whatever the prefix (DEC-233)
     for e in es:
         if e.id in seen:
             out.append(f"{e.id} is used by two entries")
+        elif e.n in numbers:
+            out.append(f"{e.id} reuses the number of {numbers[e.n]}")
         seen.add(e.id)
+        numbers.setdefault(e.n, e.id)
         if not e.risk:
             out.append(f"{e.id} names no risk")
         for f in ENTRY_FIELDS:
