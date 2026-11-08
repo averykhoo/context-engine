@@ -1635,3 +1635,25 @@ def test_the_kit_readmes_line_ending_fix_makes_a_crlf_clone_match_the_gates_ids(
     _git(tmp_path, "clone", "-q", "-c", "core.autocrlf=input", "origin", "fresh")
     assert (tmp_path / "fresh" / "a.txt").read_bytes() == b"one\ntwo\n"
     assert GATE.scope_id(tmp_path / "fresh", S) == lf
+
+
+# -- the hazard label (CE-29, FRAMEWORK §7.4) --------------------------------------------------
+
+
+def test_the_hazard_label_is_named_where_the_close_rule_is_written():
+    """`task close` refuses a row labelled `working.py::HAZARD_LABEL` that states no resolution; the
+    word must be the one FRAMEWORK §7.4, the kit's clean close and manual-mode's § task close
+    tell a session to label a hazard with, or a row filed by the runbook escapes the refusal."""
+    from context_engine.working import HAZARD_LABEL
+
+    said = f"labelled `{HAZARD_LABEL}`"
+    fw = FRAMEWORK.read_text(encoding="utf-8")
+    sec = fw[fw.index("### 7.4 "):fw.index("### 7.5 ")]
+    assert said in sec, "FRAMEWORK §7.4 does not name the hazard label"
+    runbooks = B.KIT / "docs" / "runbooks"
+    proc = (runbooks / "procedures.md").read_text(encoding="utf-8")
+    close = proc[proc.index("## Clean close"):]
+    assert said in close[:close.index("\n## ", 1)], "procedures.md § Clean close does not name the hazard label"
+    mm = (runbooks / "manual-mode.md").read_text(encoding="utf-8")
+    task_close = mm[mm.index("### context-engine task close"):]
+    assert f"**If the item is {said}**" in task_close[:task_close.index("\n### ", 1)], "manual-mode.md § task close has no hazard paragraph"

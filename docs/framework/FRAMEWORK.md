@@ -394,7 +394,7 @@ from them, not from the broken process.
 | 10 | Working state | **Orientation note** | What is true now; what must the next session not miss? | its banner holds durable lines only, replaced at a clean close only when one of them changes (`orient` generates the rest from the records, §5.1); one session key, stamped by the engine, written only if unchanged since read (§5.5) | agent |
 | 11 | Working state + Record | **Tasks and the board** (tasks **and** owner questions) | What is next, in what order, what is waiting on the owner, and what happened on each item? | each task is a **durable record** (body, comments, op log, links to decisions; it stays when closed, **in place**, with `state: closed`). Only the ranking fields and the board *view* are volatile | agent ranks; owner assignment overrides |
 | 12 | Working state | **Batons and pause records** | What did a session skip, or leave mid-flight? | **record**, session-stamped, one file each; closed by `baton done` with evidence (a pause by `pause resume`), or expired after two sessions by housekeeping | agent |
-| 13 | Working state | **Unverified hazards** | What is suspected to be dangerous right now, and must not be fixed without checking first? | replaced | agent |
+| 13 | Working state | **Unverified hazards** | What is suspected to be dangerous right now, and must not be fixed without checking first? | a board row labelled `hazard`, resolved by its close (§7.4) | agent |
 | 14 | Record | **Decisions** (with negative results) | Why is it this way, and what was rejected? | **record**, one file per decision, append-only (§6.5) | stamped with actor |
 | 15 | Record | **Session ledger** | What happened in each session, with receipts? | append-only, one entry per session, written by `session.*` operations (one file under the engine lock, not a record kind, §8.0.1) | agent |
 | 16 | Record | **Evidence and plan docs** | What did we measure; what is the plan for item X? | ACTIVE-PLAN → FROZEN | agent |
@@ -1264,7 +1264,8 @@ numbered for citation (the order is below):
    close under this rule rewrites one no close has written (§5.1).
 4. Board operations: close (once the task's work is committed: the close's commit carries its
    `Closes:` and `Sabotage:` lines, §5.5 rule 4; each close states the residual risk its work
-   left, or `none`, §7.4, and an item carrying a `## Kill bar` closes with its verdict, §5.2), a
+   left, or `none`, §7.4, an item carrying a `## Kill bar` closes with its verdict, §5.2; a row
+   labelled `hazard` closes with its resolution, §7.4), a
    light reorder (the standup; the full
    re-rank is §6.14), mint (with the session key; a task names its `goals`, §5.2). Before a
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
@@ -1272,7 +1273,8 @@ numbered for citation (the order is below):
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
 5. Promotion (§6.7):
    - **5a. Rules and lessons:** promote durable rules into the contract; file method lessons
-     into runbooks; change this document in place (§6.12).
+     into runbooks; change this document in place (§6.12); place each trap where its lifetime
+     matches (§7.4).
    - **5b. The rest of §6.7's table:** an evidence doc for scratch worth keeping, a decision for
      a conclusion reached, `doc.archive` for a doc over its cap.
 6. Anything skipped becomes a baton.
@@ -1959,9 +1961,20 @@ cite for each item.
   every repo it is pointed at (§11), to whoever next takes the structure over (P17). There,
   `context-engine register show --engine` reads the installed copy, and `orient` adds one line
   pointing at it whenever the repo's own register is another file.
-- **Unverified hazards:** volatile suspicions ("do NOT fix blind"). They live in the orientation note
-  or on the board. When resolved, each becomes a register entry, becomes a fix plus a ledger
-  line, or is dismissed with a ledger line.
+- **Unverified hazards:** volatile suspicions ("do NOT fix blind"). A trap lives where its
+  lifetime matches. Known, and true only while one task is open: that task's `## Traps`.
+  Suspected but unconfirmed: a board row labelled `hazard` (`labels: [hazard]`), which gives it
+  an id, a tier and, where it rests on something external, a `stale_after` (§9.3); a task that
+  must not touch it blind points at the row from its own `## Traps`. Confirmed, and outliving
+  any task: a register entry (above). The orientation note is not a home: its banner keeps only
+  durable lines, and a close may rewrite it (§5.1). A trap written in the contract is a register
+  entry or a runbook trap, with a pointer to it.
+- **A hazard row's close resolves it:** into a register entry (`task.close` with `residual` a
+  risk line), a fix or a dismissal (`residual` `none`, the close's message naming the fix's
+  commit or why it is dismissed). `task.close` refuses a close of a row labelled `hazard`, in
+  any case, that states neither; a design review's residuals, filed at the close, count as its
+  answer. Housekeeping never resolves one: `hk.close` is refused the same way, and its scan
+  lists the row as not closed.
 
 ### 7.5 Runbooks
 
@@ -2474,7 +2487,7 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 | Tier | What | Persistence | Format |
 |---|---|---|---|
 | **T0 ephemeral** | context window, `.scratch/`, sync reports, generated maps (coverage → code) | none | anything |
-| **T1 working state** | orientation note, the board *view* and ranking fields, baton and pause records (one file each), unverified hazards | tracked, replaced or session-stamped; git is the history | our own schemas; baton and pause records are OKF files (`type: Baton`, `type: Pause`) so the engine has one reader |
+| **T1 working state** | orientation note, the board *view* and ranking fields (an unverified hazard's among them: it is a board row, §7.4), baton and pause records (one file each) | tracked, replaced or session-stamped; git is the history | our own schemas; baton and pause records are OKF files (`type: Baton`, `type: Pause`) so the engine has one reader |
 | **T2 durable knowledge** | charter, stories (incl. PRDs), criteria, NFRs, decisions, evidence, residual-risk register, deviations, runbooks, archive, **task records** (open and closed: body, comments and updates, op log, links to decisions) | tracked, append-only / LIVING / FROZEN | **OKF-conformant**, with our stricter profile. Task frontmatter stays **tool-owned**: the tool emits `type: Task` and *maps* its own fields onto OKF keys, rather than an OKF overlay duplicating them |
 | **T2′ ledger** | session ledger | tracked, append-only | our own format, with OKF-style date headings |
 | **T3 cross-project** | global contract, memory | `~/.claude` | memory files already have OKF's shape: one fact per file, frontmatter with a type, an index file. A redesign is planned (§9.4) |

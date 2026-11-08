@@ -128,6 +128,24 @@ def test_hk_close_scan_closes_what_a_trailer_names_and_skips_a_reopened_close_an
     assert eng.hk_close(scan=True, **kw(me)) == f"{c.id}: not closed ({c.id} was already closed in {_git(eng.root, 'log', '-1', '--format=%h', f'--grep=^{c.id}: close').strip()[:7]} (its close commit), and has been reopened since)"
 
 
+@pytest.mark.criterion("AC-204")
+def test_hk_close_never_resolves_a_hazard_row(eng):
+    """CE-29, FRAMEWORK §7.4: a `Closes:` trailer is evidence the work was done, not that a
+    hazard was resolved, so housekeeping's close of a row labelled `hazard` is refused like any
+    close that states no resolution, and the scan lists the row as not closed."""
+    me, a, b = _board(eng)
+    eng.set(a.id, {"labels": "[hazard]"}, **kw(me))
+    eng.commit([], "label it", **kw(me))
+    sha = _commit(eng.root, f"fix it by hand\n\nCloses: {a.id}\nCloses: {b.id}\n")
+    out = eng.hk_close(scan=True, **kw(me))
+    assert f"{b.id}: closed (done in" in out, out  # the unlabelled row closes as before
+    assert f"{a.id}: not closed ({a.id} is labelled `hazard`" in out, out
+    assert eng.store.get(a.id).doc.get("state") == "open"
+    with pytest.raises(Refusal, match="labelled `hazard`"):
+        eng.hk_close(a.id, sha, **kw(me))
+    assert eng.store.get(a.id).doc.get("state") == "open"
+
+
 @pytest.mark.criterion("AC-20")
 def test_hk_close_through_the_cli_defaults_its_actor_to_housekeeping(eng, capsys, monkeypatch):
     monkeypatch.delenv("CE_ACTOR", raising=False)  # the --actor default reads it; a session's gate run sets it

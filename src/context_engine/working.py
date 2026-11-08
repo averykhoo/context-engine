@@ -45,6 +45,15 @@ KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a r
 VERDICTS = ("KILL", "PASS", "VOID")  # the bar fired; it did not; the run cannot judge it
 VERDICT_RE = re.compile(rf"(?:{'|'.join(VERDICTS)}):\s*\S.*")
 RESIDUAL_FORM = "<risk> | rung: <reduce|collective|individual> | why: <why not eliminated> | control: <the guard or rule> | affects: <who>"  # a residual stated at `task close` (CE-120)
+HAZARD_LABEL = "hazard"  # the board label of a suspected, unconfirmed hazard, whose close must resolve it (FRAMEWORK §7.4, CE-29)
+
+
+def is_hazard(doc: Any) -> bool:
+    """Whether a board item is labelled `hazard` (FRAMEWORK §7.4), in any case: a false negative
+    closes a hazard blind, a false positive costs one `--residual none` (CE-29)."""
+    return any(str(x).strip().lower() == HAZARD_LABEL for x in D.as_list(doc.get("labels")))
+
+
 # G-D0 (DEC-23): the engine is major.minor.patch, the framework major.minor; `0.5.*` == `0.5`
 VERSION_RE = re.compile(r"(?P<major>\d+)\.(?P<minor>\d+)\b")
 FRAMEWORK_LINE_RE = re.compile(r"^framework:[ \t]*(\S*)", re.MULTILINE)  # the value; words after it are a comment
@@ -1140,6 +1149,11 @@ class Engine:
         only with one. It goes in the item's Log, the reply and the close's commit message, so
         the bar and its verdict are linked where an audit reads them.
 
+        An item labelled `hazard` (``is_hazard``, FRAMEWORK §7.4, CE-29) closes only with its
+        resolution stated: a risk line (confirmed, so filed in the register), ``none`` (fixed or
+        dismissed, the message saying which), or a design review that lists a residual. A
+        mechanical close gets no exemption: housekeeping never resolves a hazard.
+
         ``mechanical`` is housekeeping's close (``hk_close``, CE-6), which has checked its
         evidence first; G-W9 re-checks every mechanical close in the stored files."""
         self._check(session, actor)
@@ -1174,6 +1188,12 @@ class Engine:
                 raise Refusal(
                     f"closing {rid} with `--residual none`, but its design review lists {n} residual risk{'s' if n != 1 else ''}",
                     f"close without `--residual none` (the close files the review's residuals); add `--residual \"{RESIDUAL_FORM}\"` only for a risk the review does not list",
+                )
+            if is_hazard(rec.doc) and not none and not stated and not (review is not None and review.residuals):
+                # a hazard row's close resolves it (FRAMEWORK §7.4, CE-29); housekeeping's too
+                raise Refusal(
+                    f"{rid} is labelled `{HAZARD_LABEL}`, and its close states no resolution of the hazard (FRAMEWORK §7.4)",
+                    f"confirmed: file it with `--residual \"{RESIDUAL_FORM}\"`; fixed or dismissed: `--residual none`, the message naming the fix's commit or why it is dismissed",
                 )
             if rec.doc.get("review") or stated:
                 before.extend(self._filed_before(rec, [*(review.residuals if review else []), *stated]))
@@ -1625,7 +1645,7 @@ class Engine:
         plan alone: the evidence is checked, nothing is written.
 
         Not checked, with ``dry``: a close that the evidence allows but `close` itself would refuse
-        (a plan not frozen, a kill bar's verdict owed), which the run then lists as not closed."""
+        (a plan not frozen, a kill bar's verdict owed, a hazard row's unstated resolution), which the run then lists as not closed."""
         out = L._git(self.root, "log", "-F", "--grep=Closes:", "--format=%H%x1f%(trailers:key=Closes,valueonly,separator=%x2C)%x1e", "HEAD")
         if out is None:
             raise Refusal("git cannot read this repo's history", "run it in a git checkout with at least one commit")

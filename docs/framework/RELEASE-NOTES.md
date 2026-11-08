@@ -110,6 +110,17 @@ component, procedure, guard and operation.
   as a board item to automate it, never accepted as a residual risk; P7, §3.3 and §7.4 point at
   it. Nothing enforces it yet: CE-206 files the lint, and CE-207 the contract's line at the next
   contract bump. FRAMEWORK §1 P19; US-20, DEC-307 to DEC-310, CE-194. No upgrade step.
+- **An unverified hazard is a board row labelled `hazard`, and its close resolves it.** A trap
+  lives where its lifetime matches: a task's `## Traps` while one task holds it, a board row
+  labelled `hazard` (`task set <id> --set labels=[hazard]`) while it is suspected, a register
+  entry once confirmed; the orientation note is no longer a home. `task close` (and so `hk close`)
+  refuses to close a row labelled `hazard`, in any case, unless the close states a resolution:
+  `--residual <risk line>` (confirmed, filed in the register), `--residual none` (fixed or
+  dismissed, the message saying which) or a design review that lists a residual; `hk close --scan`
+  lists such a row as not closed. The kit's routes gain an `Unverified hazards` entry. FRAMEWORK
+  §7.4, §2, §6.3; DEC-50, DEC-311 to DEC-315, CE-29. **Upgrade:** nothing required; a hazard kept
+  in a banner or HANDOFF moves to such a row; copying the `Unverified hazards` route from
+  `context.toml.template` is optional.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

@@ -320,6 +320,42 @@ def test_a_close_that_states_no_residual_asks_for_one_where_a_register_is_config
         off.close(off.new("task", "Risky", **kw(key2)).id, "done", residuals=[STATED], **kw(key2))
 
 
+@pytest.mark.criterion("AC-204")
+def test_a_hazard_row_closes_only_on_a_stated_resolution(eng):
+    """CE-29, FRAMEWORK §7.4: a suspected hazard is a board row labelled `hazard`, and its close
+    resolves it into a register entry, a fix or a dismissal. A close that states no resolution
+    is refused and the row stays open; `--residual none`, a risk line or a design review's
+    residuals answer it. The label matches in any case, and only the whole word."""
+    e, key = eng
+    reg = e.root / "docs/invariants.md"
+
+    def row(labels):
+        rid = e.new("task", "Suspected race", **kw(key)).id
+        e.set(rid, {"labels": labels}, **kw(key))
+        return rid
+
+    rid = row("[hazard]")
+    with pytest.raises(Refusal) as r:  # (a) no resolution stated
+        e.close(rid, "done", **kw(key))
+    assert f"{rid} is labelled `hazard`" in r.value.message and "--residual none" in r.value.remedy, r.value
+    assert e.store.get(rid).doc.get("state") == "open" and not reg.exists()
+    assert e.close(rid, "fixed in abc1234", residuals=["none"], **kw(key)) == f"{rid}: closed (fixed in abc1234)"  # (b)
+    assert "closed: fixed in abc1234\n  residual risk: none" in e.store.get(rid).doc.body
+    confirmed = row("[infra, Hazard]")  # (c) confirmed: filed in the register
+    assert e.close(confirmed, "confirmed", residuals=[STATED], **kw(key)).endswith("residuals filed as RISK-1")
+    upper = row("[Hazard]")  # (d) any case
+    with pytest.raises(Refusal, match="labelled `hazard`"):
+        e.close(upper, "done", **kw(key))
+    assert e.store.get(upper).doc.get("state") == "open"
+    for labels in ("[hazards]", "[infra]"):  # (e) not the label: today's close, unchanged
+        plain = row(labels)
+        assert e.close(plain, "done", **kw(key)).startswith(f"{plain}: closed (done); residual risk not stated")
+    reviewed = _reviewed(e, key)  # (f) a design review's residuals answer it
+    e.set(reviewed, {"labels": "[hazard]"}, **kw(key))
+    assert e.close(reviewed, "done", **kw(key)).endswith("residuals filed as RISK-2, RISK-3")
+    assert _guards(e, "G-W13") == []
+
+
 # -- (c) G-W12 and G-W13 at rest --------------------------------------------------------------
 
 

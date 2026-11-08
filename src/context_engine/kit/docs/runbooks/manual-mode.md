@@ -1128,6 +1128,12 @@ risk of this task's to name writes no such line, so the record tells a question 
 carries no `review:`, the engine's reply says the risk was not stated. A risk missed at close goes
 into the register by hand, as above.
 
+**If the item is labelled `hazard`** (its `labels` hold `hazard`, in any case: a suspected,
+unconfirmed hazard, FRAMEWORK §7.4), refuse the close unless it states a resolution: a risk line
+(the hazard is confirmed: file it as above), `none` (it was fixed or dismissed: the message names
+the fix's commit or why it is dismissed), or a design review that lists a `- residual:` line. A
+housekeeping close (§ hk close) is refused the same way: housekeeping never resolves a hazard.
+
 **If the item carries a `## Kill bar`** (a bar written before a run, saying which measure and
 which threshold fires it), the close must give a verdict against it, `--verdict "<outcome>:
 <evidence>"`, its outcome one of `KILL` (the bar fired), `PASS` (it did not) or `VOID` (the run
