@@ -3,14 +3,14 @@ type: Task
 id: CE-196
 title: 'Register retire: an op for INV entries, and register show shows retired:'
 brief: no op retires an INV entry; register show hides retired:, so a retired entry reads live
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-3]
 source: session 2026-11-06f
 created: 2026-11-06
-moved: 2026-11-06f
-updated: 2026-11-06f
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Register retire: an op that retires a residual-risk register entry, and `register show` that shows `retired:`
