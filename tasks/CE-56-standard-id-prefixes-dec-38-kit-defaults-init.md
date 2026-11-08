@@ -3,13 +3,13 @@ type: Task
 id: CE-56
 title: 'Standard id prefixes (DEC-38): kit defaults, init asks the task prefix, reserved prefixes in lint'
 brief: 'Ids are never renumbered: a rename keeps the number and the old id stays an alias (DEC-37); stamped text keeps old ids'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-13c
 created: 2026-10-13
-moved: 2026-10-13c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 goals: [G-6]
 ---
 
