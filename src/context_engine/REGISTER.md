@@ -1462,3 +1462,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the guard was refactored without the script anchor being updated; already stale before CE-178
 - **control:** individual: none; the sabotage rule is hand-run until the anchor is fixed
 - **from:** CE-178, session 2026-11-07e
+
+## INV-208: bootstrap.py::eol_warnings checks only root/.git, so a root that is a subdirectory of a repo (a monorepo) gets no line-ending warning; commit.py::_in_git_tree already walks the parents
+
+- **affects:** adopters whose context root is a subdirectory of a git repo
+- **why not eliminated:** the plan pinned it and the warning is advisory
+- **control:** individual: procedures.md bootstrap step and kit README name the per-clone core.autocrlf fix
+- **from:** CE-184, session 2026-11-07e
+
+## INV-209: DEC-272 known gaps: core.eol=crlf with a text attribute is not caught, and a .gitattributes pinning only context.toml silences the warning while other files still check out CRLF
+
+- **affects:** adopters with unusual eol config or partial .gitattributes
+- **why not eliminated:** recorded as known gaps in DEC-272, advisory warning only
+- **control:** individual: DEC-272 and the procedures.md bootstrap step
+- **from:** CE-184, session 2026-11-07e
+
+## INV-210: tools/linux_gate.py has not been run for the CE-184 commits; T2 relies on git -c core.autocrlf=true clone converting files on Linux too (git documented behaviour)
+
+- **affects:** the next pusher
+- **why not eliminated:** no push was asked for
+- **control:** collective: CLAUDE.md Gate section requires tools/linux_gate.py green before every push
+- **from:** CE-184, session 2026-11-07e
