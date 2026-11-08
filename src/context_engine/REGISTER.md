@@ -1560,3 +1560,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** out of CE-165's scope; the builder flagged it
 - **control:** individual: none yet; a lock-presence test like criterion_new's would pin it
 - **from:** CE-165, session 2026-11-07e
+
+## INV-222: commit.py::_commit timeout-after-commit branch (_reset with partial else paths) is untested when grafts are present
+
+- **affects:** a session whose banner commit times out
+- **why not eliminated:** the branch is reached only by a timeout after the commit lands, hard to provoke in a test
+- **control:** individual: review only; the CE-125 partial-path test covers the non-graft case
+- **from:** CE-175, session 2026-11-07e
+
+## INV-223: _reset of HANDOFF.md after a graft commit drops another session's staged HANDOFF content from the real index (the working file is kept)
+
+- **affects:** a concurrent session that had staged HANDOFF.md
+- **why not eliminated:** matches the CE-125 partial path, which does the same for other paths; staging by another session is rare
+- **control:** individual: commit by path and never stage in a shared tree (CLAUDE.md rule)
+- **from:** CE-175, session 2026-11-07e
+
+## INV-224: the graft blob mode is hardcoded to 100644, as the op log's is
+
+- **affects:** a repo whose HANDOFF.md has another mode
+- **why not eliminated:** HANDOFF.md is never executable or a symlink in practice
+- **control:** individual: none beyond review
+- **from:** CE-175, session 2026-11-07e
+
+## INV-225: working.py::Engine._lint_carried still lints the whole working note, so a broken hand edit can refuse a banner-only commit
+
+- **affects:** a session setting a banner while another session's hand edit to HANDOFF.md is broken
+- **why not eliminated:** out of CE-175 scope; the builder flagged it
+- **control:** individual: the refusal names the lint failure; fix the hand edit or revert it
+- **from:** CE-175, session 2026-11-07e
+
+## INV-226: the by-hand runbook step for the graft when no op lines are left assumes the reader switches from git commit --only to the temporary-index flow, implied but not spelled out
+
+- **affects:** a writer committing a banner by hand
+- **why not eliminated:** the step was written for the case with op lines left
+- **control:** individual: the manual-mode row Commit the write and commit.py::_commit_partial as the reference
+- **from:** CE-175, session 2026-11-07e
