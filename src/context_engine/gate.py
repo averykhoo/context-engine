@@ -54,7 +54,8 @@ scope is **covered** when every part's newest row on its id passed with that par
 covers its own scope, and **stale** when it is not fresh or does not cover ``require``
 (``stale_parts``). ``gate run --stale`` re-runs only the stale parts, so a close's record writes
 re-run only the parts that read records; ``--require <scope>+parts`` is the scope covered and
-every part fresh (the close's last check, and the push's).
+every part fresh (the close's last check, and the push's). A part's command runs with ``CE_GATE_PART`` set
+to its name, so ``scope_guard`` checks its tests against that part's scope, not ``require``'s.
 """
 
 from __future__ import annotations
@@ -77,6 +78,7 @@ ALGO = "g1"
 PASSED, FAILED, INCONSISTENT = "PASSED", "FAILED", "INCONSISTENT"
 LEDGER = ".context/gate/runs.jsonl"
 PYTHON = "{python}"  # in `command`: the interpreter the engine runs on
+PART_ENV = "CE_GATE_PART"  # set to the part's name for a part's command, so scope_guard keys on that part's scope
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 GIT_TIMEOUT = 120
 
@@ -512,9 +514,12 @@ def _run_one(root: Path, gate: Gate, ledger: Path, argv: list[str], command: tup
     before = {k: v for k, v in scope_ids(root, gate).items() if keep(k)}
     started = time.time()
     log = ledger.parent / f"{dt.datetime.fromtimestamp(started).strftime('%Y%m%dT%H%M%S')}-{os.getpid()}{'-' + tag if tag else ''}.log"
+    env = {k: v for k, v in os.environ.items() if k != PART_ENV}  # never an inherited part's name
+    if gate.parts:
+        env[PART_ENV] = part
     with open(log, "wb") as out:
         try:
-            code = subprocess.run(argv, cwd=root, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT).returncode
+            code = subprocess.run(argv, cwd=root, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, env=env).returncode
         except OSError as exc:
             out.write(f"could not start {argv!r}: {exc}\n".encode())
             code = 127

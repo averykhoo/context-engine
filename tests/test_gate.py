@@ -618,3 +618,45 @@ def test_the_cli_runs_parts_and_requires_them(repo, capsys, monkeypatch):
     assert main(["gate", "run", "--readers"]) == 2 and "take no `--readers`" in capsys.readouterr().err
     assert main(["gate", "run", "--part", "unit", "--stale"]) == 2 and "`--part` with `--stale`" in capsys.readouterr().err
     assert main(["gate", "status", "--require", "code+readers"]) == 2 and "no gate scope named 'code+readers'" in capsys.readouterr().err
+
+
+PART_LEAN = '''
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+
+
+def test_reads_a_record():
+    assert (ROOT / "HANDOFF.md").read_text()
+
+
+def test_starts_a_process_in_the_repo():
+    subprocess.run(["git", "status", "--short"], cwd=ROOT, capture_output=True)
+'''
+
+
+def test_the_scope_guard_keys_on_the_running_part_s_scope_not_require_s(repo):
+    """A part is fresh on its own scope's id, so the guard checks its tests against that scope:
+    a part keyed on every file may read the records (parts take no `readers`, so require's scope
+    would leave it no remedy), and a part keyed on the code may not, whatever `require` is. Run
+    outside `gate run` (no CE_GATE_PART), the guard keys on require and says so."""
+    pytest_ = ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "-rfE"]
+    parts = {"unit": {"command": pytest_ + ["test_unit.py"], "scope": "code"}, "lean": {"command": pytest_ + ["test_lean.py"], "scope": "all"}}
+    g = gate_of(repo, parts=parts)  # require = code
+    with open(repo / ".gitignore", "a", encoding="utf-8") as f:
+        f.write("\n__pycache__/\n")  # the parts' own bytecode, or each run moves the ids it runs on
+    (repo / "conftest.py").write_text("from context_engine.scope_guard import pytest_runtest_makereport, pytest_runtest_protocol  # noqa: F401\n", encoding="utf-8")
+    (repo / "test_lean.py").write_text(PART_LEAN, encoding="utf-8")
+    (repo / "test_unit.py").write_text("def test_code():\n    assert open('src/a.py').read()\n", encoding="utf-8")
+    code, out = G.run(repo, g)
+    assert code == 0 and out.splitlines()[-1] == "gate: 2 parts run: 2 PASSED", out
+    (repo / "test_unit.py").write_text(PART_LEAN, encoding="utf-8")  # the code's part now reads a record
+    code, out = G.run(repo, g, parts=["unit"])
+    log = (repo / G.read_rows(repo / g.ledger)[-1]["log"]).read_text(encoding="utf-8", errors="replace")
+    assert code == 1 and "in gate part 'unit'" in log and "opened HANDOFF.md" in log and "started a process in ./" in log, log
+    assert "move the test to a part keyed on a scope that holds the path" in log and "`readers`, which" not in log, log
+    env = {k: v for k, v in os.environ.items() if k not in (G.PART_ENV, "CE_SCOPE_GUARD")}
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-rfE", "test_lean.py"],
+                       cwd=repo, capture_output=True, text=True, env=env, timeout=300)
+    assert p.returncode == 1 and "run outside `context-engine gate run`" in p.stdout and "gate run --part <name>" in p.stdout, p.stdout

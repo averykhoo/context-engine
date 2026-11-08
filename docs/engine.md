@@ -120,4 +120,7 @@ part's row holds every scope's id, so a part keyed on every file still counts to
 scope. `gate.py::covered` reads a scope as covered when every part's newest PASSED or FAILED row
 on its id (`gate.py::part_covering`) passed with that part's command now; `gate.py::stale_parts`
 is what `gate run --stale` runs: each part not covering its own scope, or the `require` scope,
-here. `gate.py::check_commit` asks only for coverage, as it does of the readers.
+here. `gate.py::check_commit` asks only for coverage, as it does of the readers. A part's command
+runs with `CE_GATE_PART` set to its name (`gate.py::PART_ENV`), so `scope_guard.py::_install` keys
+the guard on that part's scope, not `require`'s: a part is fresh on its own scope's id, so its
+tests may read only what that scope holds.

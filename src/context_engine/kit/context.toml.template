@@ -185,7 +185,8 @@ readers = []
 # then `command` above stays empty and no scope names `readers`. A scope is covered when every part
 # passed on its files; `gate run --stale` re-runs only the stale parts, and `gate status --require
 # <scope>+parts` says when every part is fresh. A part keyed on a scope holding HANDOFF.md or the
-# records re-runs after every close: keep long parts on a scope that leaves those out, guarded.
+# records re-runs after every close: keep long parts on a scope that leaves those out, guarded
+# (`gate run` sets CE_GATE_PART to the running part, and scope_guard checks it on that part's scope).
 # [gate.parts.unit]
 # command = [".venv/bin/python", "-m", "pytest", "-q", "tests/unit"]
 # scope = "all"

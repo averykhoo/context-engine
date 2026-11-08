@@ -2409,8 +2409,9 @@ of those that did, when any did), `log`, `head`, `session`, `actor`. The ledger 
 gitignored and untracked (a fresh directory gets a `.gitignore` of `*`).
 
 With `[gate.parts]` (`gate run [--part NAME]... [--stale]`): do the above once per part, in
-declared order, with the part's `command` and every id; `part` is the part's name and `args`
-empty. Go on past a part that fails, and append each line as its part ends. `--part` runs the
+declared order, with the part's `command` (run with `CE_GATE_PART` set to the part's name, so
+the scope guard checks it against the part's scope) and every id; `part` is the part's name and
+`args` empty. Go on past a part that fails, and append each line as its part ends. `--part` runs the
 parts named; `--stale` runs only the stale ones (as § gate status), and none when none is stale.
 
 **Why:** a recorded result is what lets the next commit skip a re-run, and a run whose files

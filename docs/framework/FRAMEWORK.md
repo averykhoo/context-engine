@@ -2420,8 +2420,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   **reader**. The readers are a part of their own, keyed on every file: after a hand edit outside
   the scope they alone re-run. A concurrent write voids only the ids it touched. A gate too long
   for one command is split into **parts** (`[gate.parts]`), each its own command keyed on the
-  scope it reads, in place of the readers; each part's run records every scope's id. A scope is
-  covered when every part passed on its files; a part is stale when it has not passed on its own
+  scope it reads, in place of the readers, and the guard checks each part's tests against that
+  part's own scope; each part's run records every scope's id. A scope is covered when every part
+  passed on its files; a part is stale when it has not passed on its own
   scope's files or on the required scope's. Re-running only the stale parts (`gate run --stale`)
   means a close's record writes re-run only the parts that read records; `gate status` reports
   the stale parts (not `orient()`, which runs at every session start and would hash the tree each

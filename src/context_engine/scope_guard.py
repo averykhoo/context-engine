@@ -24,7 +24,12 @@ from ``conftest.py``::
 
 The scope is ``[gate] require`` in the repo's ``context.toml``, the root is the directory
 holding it, found upward from the working directory; ``CE_SCOPE_GUARD=off`` turns it off for a
-run (the sabotage that proves it). Deliberately not seen: reads by a process the test starts
+run (the sabotage that proves it). **With ``[gate.parts]``** (CE-181), ``gate run`` sets
+``CE_GATE_PART`` to the running part's name, and the scope is that part's ``scope``: a part is
+fresh on its own scope's id, so its tests must read only what that scope holds, whatever
+``require`` is; parts take no ``readers``, so the remedy is a part keyed on a scope that holds the
+path. Run outside ``gate run`` (no ``CE_GATE_PART``), the guard keys on ``require`` as before, and
+says so. Deliberately not seen: reads by a process the test starts
 outside the repo, and C extensions that open files without Python's audit events. Not seen
 either, so reviewed by hand: a check that an excluded path exists (``os.stat``,
 ``Path.exists``, ``is_file``: no audit event), and a read at collection time (module level, a
@@ -51,9 +56,11 @@ from .config import CONFIG_NAME, load
 
 
 class Guard:
-    def __init__(self, root: Path, scope: G.Scope):
+    def __init__(self, root: Path, scope: G.Scope, part: str = "", parted: bool = False):
         self.root = root.resolve()
         self.scope = scope
+        self.part = part  # the gate part running (CE_GATE_PART), whose scope this is; "" outside a part
+        self.parted = parted  # [gate.parts] declared: the remedy is a part, never `readers`
         listed = G.files(self.root)
         self.excluded = {f for f in listed if not scope.matches(f)}
         self.dirs: dict[str, set[str]] = {}  # directory -> its direct children that are excluded files
@@ -88,8 +95,8 @@ class Guard:
         return rel
 
     def hook(self, event: str, args: tuple) -> None:
-        if self.test is None or self.reader(self.test):
-            return
+        if self.test is None or not self.excluded or self.reader(self.test):
+            return  # a scope that excludes nothing has nothing to read outside it, by any process
         if event == "open":
             if args and not isinstance(args[0], int):
                 rel = self._rel(args[0])
@@ -122,6 +129,15 @@ class Guard:
         notes = self.seen.pop(nodeid, [])
         if not notes:
             return ""
+        if self.parted:
+            where = (f"this test, in gate part {self.part!r}, reads what that part's scope {self.scope.name!r} excludes, so a green "
+                     f"run of the part" if self.part else
+                     f"this test, run outside `context-engine gate run` (no {G.PART_ENV}, so keyed on [gate] require), reads what "
+                     f"gate scope {self.scope.name!r} excludes, so a green run on the scope")
+            return (f"scope guard (FRAMEWORK §8.5 G-V1): {where} would not notice a change to it: {'; '.join(notes)}. Keep the "
+                    f"path in the scope (drop its glob from [gate.scopes.{self.scope.name}] exclude), stop the test reading it, "
+                    f"or move the test to a part keyed on a scope that holds the path (parts take no `readers`)"
+                    + ("." if self.part else "; run a part's tests as `context-engine gate run --part <name>`."))
         return (f"scope guard (FRAMEWORK §8.5 G-V1): this test reads what gate scope {self.scope.name!r} excludes, so a "
                 f"green run on the scope would not notice a change to it: {'; '.join(notes)}. Keep the path in the scope "
                 f"(drop its glob from [gate.scopes.{self.scope.name}] exclude), stop the test reading it, or name the "
@@ -156,9 +172,11 @@ def _install() -> Guard | None:
     if root is None:
         return None
     gate = load(root).gate
-    if not gate.require:
+    part = next((p for p in gate.parts if p.name == os.environ.get(G.PART_ENV)), None)  # set by `gate run` for a part
+    if part is None and not gate.require:
         return None
-    GUARD = Guard(root, gate.scopes[gate.require])
+    scope = gate.scopes[part.scope if part else gate.require]
+    GUARD = Guard(root, scope, part.name if part else "", parted=bool(gate.parts))
     sys.addaudithook(lambda event, args: GUARD.hook(event, args) if GUARD is not None else None)
     return GUARD
 
