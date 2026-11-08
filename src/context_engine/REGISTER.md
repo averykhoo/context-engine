@@ -1665,3 +1665,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them
 - **control:** individual: context-engine decision accept after owner review
 - **from:** CE-12, session 2026-11-07e
+
+## INV-237: The §3.3 rule (an open board item for every manual criterion) is not enforced until CE-206 is built; the repo has 0 manual criteria today
+
+- **affects:** agents writing manual criteria before CE-206
+- **why not eliminated:** enforcement is a lint and refusal that is its own task
+- **control:** individual: CE-206 (manual-criterion lint and refusal)
+- **from:** CE-194, session 2026-11-07e
+
+## INV-238: CE-194's title still says 'beside P7' while P19 went at the end of §1
+
+- **affects:** a reader trusting the title's placement
+- **why not eliminated:** record titles are not edited after the fact
+- **control:** individual: DEC-307 records why P19 went at the end of §1
+- **from:** CE-194, session 2026-11-07e
+
+## INV-239: Only the code gate scope was green at verification; all and code+readers have no recorded run on the current content id
+
+- **affects:** the next pusher
+- **why not eliminated:** record commits followed the gate run
+- **control:** collective: every push runs the whole gate plus tools/linux_gate.py
+- **from:** CE-194, session 2026-11-07e
