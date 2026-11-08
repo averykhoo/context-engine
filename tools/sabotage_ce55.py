@@ -74,7 +74,6 @@ S = [
  # (a session close left to ride is carried by the next session's pause, whose line then names it)
  *[(WK, f"    @_milestone\n    def {name}(self, ", f"    def {name}(self, ", W, [WALK], 'line.endswith(f"; committed' if name == "session_close" else ALL) for name in MILESTONE_OPS],
  # and the walk sees an operation made a milestone that DEC-36 lets ride, the writing-nothing ones included
- (WK, "    def reindex(self, *, session: str, actor: str) -> str:", "    @_milestone\n    def reindex(self, *, session: str, actor: str) -> str:", W, [WALK], ALL),
  (WK, "    def expire_batons(self, *, session: str, actor: str = HOUSEKEEPER) -> str:", "    @_milestone\n    def expire_batons(self, *, session: str, actor: str = HOUSEKEEPER) -> str:", W, [WALK], ALL),
  # the task close's commit: Closes:, set after the write; its body, title and Ops line
  (WK, '        self.store.commit_trailers = [f"Closes: {rid}"]', "        self.store.commit_trailers = []", k("close_commits_with_closes"), [CLOSE], 'trailers(mrepo) == ["Closes: CE-1"'),

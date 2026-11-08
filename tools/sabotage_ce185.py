@@ -1,4 +1,4 @@
-"""CE-185 sabotage table (DEC-11): break what each AC-41, AC-181, AC-182 and AC-183 test guards;
+"""CE-185 sabotage table (DEC-11), and CE-186's three rows (2026-11-07e): break what each AC-41, AC-181, AC-182 and AC-183 test guards;
 every run must go red, and the line it prints says why.
 
 Run from the repo root: `<interpreter> tools/sabotage_ce185.py`. It restores every file it
@@ -35,6 +35,10 @@ S = [
     ("AC-182", PAGES, '          python-version: "3.12"', '          python-version: "3.13"', TC + " -k pages_workflow"),
     ("AC-182", PAGES, '        run: python -m context_engine site build "$RUNNER_TEMP/site"', '        run: python -m context_engine site build _site', TC + " -k pages_workflow"),
     ("AC-182", PAGES, "  id-token: write\n", "", TC + " -k pages_workflow"),
+    # CE-186 (2026-11-07e): the decisions' enum order, and record text escaped before and after each link
+    ("AC-181", SITE, "        for status, tagged in D.groups(rows, statuses):", "        for status, tagged in D.groups(rows, ()):", TS + " -k holds_every_record"),
+    ("AC-181", SITE, "            out.append(esc(text[at : m.start()]))", "            out.append(text[at : m.start()])", TS + " -k escaped_not_markup"),
+    ("AC-181", SITE, "        out.append(esc(text[at:]))", "        out.append(text[at:])", TS + " -k escaped_not_markup"),
 ]
 REASON = re.compile(r"^E\s+(.*)$", re.MULTILINE)
 ok = True

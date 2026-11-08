@@ -50,8 +50,9 @@ def _repo(root: Path, config: dict = CONFIG) -> Engine:
 
 
 def _records(e: Engine) -> Engine:
-    """Decisions (one superseded, tagged and not), stories, open and closed tasks, a question,
-    and bodies that name ids, a URL and an id the site does not hold."""
+    """Decisions (one superseded, one rejected, tagged and not), stories, open and closed tasks, a
+    question, and bodies that name ids, a URL, an id the site does not hold, and markup and `&`
+    that must stay text."""
     e.new("task", "Build the parser", pri="NOW", brief="no new dependency", **W)
     e.new("task", "Pin the parser", pri="NEXT", body="Follows CE-1 and DEC-2; see https://example.org/spec.\n\n## Log\n", **W)
     e.new("task", "Done already", **W)
@@ -61,6 +62,7 @@ def _records(e: Engine) -> Engine:
         fields = {"actor": "owner", "decision_status": status, **({"tags": tags} if tags else {})}
         e.record_new("decision", title, f"The owner said {title.lower()}, for CE-1; not AC-9.\n", fields, **W)
     e.supersede("DEC-2", "DEC-3", **W)
+    e.record_new("decision", "No way", "The owner said no: <script>alert(1)</script> & DEC-1 stays; a <b> & c.\n", {"actor": "owner", "decision_status": "REJECTED"}, **W)
     e.record_new("story", "Parse it", "The owner: parse it, as DEC-1 says.\n", {"actor": "owner", "story_status": "live"}, **W)
     return e
 
@@ -94,7 +96,7 @@ def test_the_site_holds_every_record_and_every_link_resolves(tmp_path):
             own = f"{kind}/{r.id}.html"
             assert own in pages and f"<h1>{r.id}: " in pages[own], own
             assert f'href="{own}"' in pages[page], f"{page} does not link {r.id}"
-    assert sorted(ids) == ["ASK-1", "CE-1", "CE-2", "CE-3", "DEC-1", "DEC-2", "DEC-3", "US-1"]
+    assert sorted(ids) == ["ASK-1", "CE-1", "CE-2", "CE-3", "DEC-1", "DEC-2", "DEC-3", "DEC-4", "US-1"]
 
     for rel, text in pages.items():  # every link resolves within the site, an anchor to an id on its page
         for href in HREF.findall(text):
@@ -107,7 +109,7 @@ def test_the_site_holds_every_record_and_every_link_resolves(tmp_path):
                 assert f'id="{anchor}"' in path.read_text(encoding="utf-8"), f"{rel}: {href} names no anchor there"
 
     d = pages["decisions.html"]
-    assert d.index("<h2>BUILT</h2>") < d.index("<h3>parsing</h3>") < d.index("<h3>untagged</h3>") < d.index("<h2>SUPERSEDED</h2>")
+    assert d.index("<h2>BUILT</h2>") < d.index("<h3>parsing</h3>") < d.index("<h3>untagged</h3>") < d.index("<h2>SUPERSEDED</h2>") < d.index("<h2>REJECTED</h2>"), "decisions are not grouped in the kind's enum order"
     assert 'superseded by <a href="decision/DEC-3.html">DEC-3</a>' in d
     b = pages["board.html"]
     assert b.index("<h2>NOW</h2>") < b.index("<h2>NEXT</h2>") < b.index("<h2>Closed</h2>") < b.index('href="task/CE-3.html"')
@@ -117,6 +119,19 @@ def test_the_site_holds_every_record_and_every_link_resolves(tmp_path):
     assert "; not AC-9." in pages["decision/DEC-1.html"]  # no page for criteria: plain text
     assert 'id="INV-1"' in pages["register.html"] and 'href="task/CE-2.html"' in pages["register.html"]
     assert "Not available here" in pages["coverage.html"]  # no [guards] coverage_spec: says why, builds the rest
+
+
+@pytest.mark.criterion("AC-181")
+def test_record_text_on_the_site_is_escaped_not_markup(tmp_path):
+    """DEC-159: a body is shown as escaped text. The site is public, so text left unescaped between
+    or after the links site.py::Site.link makes is markup injected into the page."""
+    e = _records(_repo(tmp_path / "repo"))
+    out = tmp_path / "site"
+    _build(e, out)
+    page = (out / "decision" / "DEC-4.html").read_text(encoding="utf-8")
+    assert "<script>" not in page and "<b>" not in page, "a body's markup reached the page"
+    # before the first link and after the last: both stretches escaped, the id still a link
+    assert 'no: &lt;script&gt;alert(1)&lt;/script&gt; &amp; <a href="../decision/DEC-1.html">DEC-1</a> stays; a &lt;b&gt; &amp; c.' in page
 
 
 @pytest.mark.criterion("AC-181")
