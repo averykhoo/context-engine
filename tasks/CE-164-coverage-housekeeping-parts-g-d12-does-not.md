@@ -3,14 +3,14 @@ type: Task
 id: CE-164
 title: 'coverage: housekeeping parts G-D12 does not extract, and a frozen map outranking the board'
 brief: CE-141 residuals (c5d96b0)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 coverage: housekeeping parts the spec names but G-D12 does not extract, and a frozen map outranking the board.
