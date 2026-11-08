@@ -42,7 +42,7 @@ def test_the_walk_reaches_every_operation_and_option():
     seen = dict(_walk(build(), "context-engine"))
     assert {"context-engine session close", "context-engine task new", "context-engine banner set"} <= set(seen)
     close = {s for a in seen["context-engine session close"]._actions for s in a.option_strings}
-    assert {"--rows", "--summary", "--guards", "--read", "--asked", "--owed"} <= close
+    assert {"--rows", "--summary", "--guards", "--read", "--asked", "--pushed", "--owed"} <= close
 
 
 def test_every_help_renders():

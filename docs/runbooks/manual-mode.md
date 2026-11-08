@@ -232,8 +232,8 @@ The engine makes them one commit; by hand, commit them together at the end.
    banner set, in its step 4, does for the banner).
 2. You need: `rows` (the items you touched, not empty); a summary of 1 to 7 lines (the owner
    digest); a `guards` receipt (gate and lint results, verbatim); a `read` receipt (what you read
-   to start work). `asked` and `Still owed` are optional; an empty `Still owed` is written as
-   `nothing`. Unless `[working] gate_receipt` is `''`, the `guards` text must match it (by
+   to start work). `asked`, `pushed` and `Still owed` are optional; an empty `Still owed` is
+   written as `nothing`. Unless `[working] gate_receipt` is `''`, the `guards` text must match it (by
    default the kit's pattern), joined onto one line: the gate's pass count (`1112 passed`), or
    that it was not run and why.
 3. Check the asked ids: the ids in your `asked` text **plus** those in the stub's `- **asked:**`
@@ -243,6 +243,10 @@ The engine makes them one commit; by hand, commit them together at the end.
    `asked` text if you gave one, otherwise the stub's line.
    Then check the stub's `- **tasks:**` line (written by `session tasks`): your `rows` must
    name every id on it, closed or not, with how it ended.
+   Then `pushed`, if given (a push orient flagged as made while no session was open): before its
+   first colon, one or more hashes, comma- or space-separated, each 7 to 40 hex characters that
+   `git rev-parse --verify <hash>^{commit}` resolves; after it, a note (what was pushed, and
+   whether the gate ran first). Stop otherwise. Write it with its whitespace collapsed.
    Then the banner. **Only if one of its durable lines changed** (FRAMEWORK §5.1: never for
    what orient generates), you have a new banner and the hash `banner show` gave you: do §
    context-engine banner set's steps 1 and 4 now, and stop if either refuses; the receipt is
@@ -270,13 +274,15 @@ The engine makes them one commit; by hand, commit them together at the end.
      - asked: none open
      - housekeeping: hk run close: 0 writes, 0 op log lines
      - banner: kept 2026-10-08d
+     - pushed: 5c61449: main to origin, gate green first
    - **summary** (the owner digest):
      - one line per point, 1 to 7 of them
    - **Still owed:**
      - nothing
    - **start head:** <the stub's start head, unchanged>
    ```
-   Leave out the `asked:` line if it is empty, the `housekeeping:` line if step 4 was skipped
+   Leave out the `asked:` line if it is empty, the `pushed:` line unless a push is recorded, the
+   `housekeeping:` line if step 4 was skipped
    on request, and the `start head` line if the stub has none.
    A follow-up session's stub carries `- **follows:** <key>` (a continuation's, `- **continues:**
    <key>`): keep it as the entry's first bullet, above `rows` (a pause keeps it the same way).
@@ -500,7 +506,10 @@ is <a> commits ahead of <upstream> and <b> behind (as of the last fetch)` (`git 
 --left-right --count HEAD...@{upstream}`), then the newest `update by push` entry of `git reflog
 show --date=iso-strict <the upstream's full ref>`: `- the last push to <upstream>: <short sha>, at
 <time>` when an open session's window (its `session.start` op line to its close, pause or
-abandon) holds that time, or the line saying it came while no session was open.
+abandon) holds that time, or the line saying it came while no session was open, with its
+`--pushed` remedy. Once a `kind: close` entry's `pushed:` receipt names a prefix of that commit's
+hash before its colon, it reads `- the last push to <upstream>: <short sha>, at <time> (while no
+session was open; recorded in <key>'s close)`, naming the newest such close.
 
 **Why:** one bounded read at session start replaces opening a dozen files. The
 order is the order of urgency: a contract that did not load, then work carried over from earlier sessions and live sessions,

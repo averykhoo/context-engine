@@ -428,6 +428,8 @@ class Engine:
         if bad := self._gate_receipt_problem(" ".join(receipts["guards"].split())):
             raise Refusal(bad, f"put the gate's own result line in it (its pass count, e.g. `1112 passed`), or say the gate was not run and why; or, for a gate that prints no pass count, fit [working] gate_receipt in {CONFIG_NAME} to its result line ('' turns the check off; CE-123, CE-192)")
         receipts = dict(receipts)
+        if (receipts.get("pushed") or "").strip():  # CE-176, DEC-238: before any write
+            receipts["pushed"] = self._pushed_receipt(receipts["pushed"])
 
         def check(led: L.Ledger, stub: L.Entry) -> None:
             stated = receipts.get("asked") or ""
@@ -494,6 +496,35 @@ class Engine:
         if left := self._now_refill():  # the board as the close leaves it, after housekeeping (CE-191, DEC-162)
             out += f"; WARNING: {left}; say so in the owner digest"
         return out + (f"\n{done}" if done else "")
+
+    def _pushed_receipt(self, value: str) -> str:
+        """The `pushed` receipt, whitespace collapsed, or a refusal: `<hash>[, <hash>...]: <note>`,
+        each hash 7 to 40 hex characters naming a commit here, and a note after the colon (CE-176,
+        DEC-238). Hashes are read only before the first colon, so a word of hex letters in the
+        note is never one.
+
+        Not checked: that the note is true."""
+        head, sep, note = value.partition(":")
+        if not sep or not note.strip():
+            raise Refusal("the `pushed` receipt has no note after its hashes", '`--pushed "<sha>: what was pushed, and whether the gate ran first"`')
+        shas = [t for t in re.split(r"[,\s]+", head.strip()) if t]
+        for t in shas or [head.strip()]:
+            if not re.fullmatch(r"[0-9a-fA-F]{7,40}", t):
+                raise Refusal(f"the `pushed` receipt's `{t}` is not a commit hash", "name the pushed commit, as orient's Upstream line gives it (a range like a..b is not read: name its tip)")
+            if not (L._git(self.root, "rev-parse", "--verify", "--quiet", f"{t}^{{commit}}") or "").strip():
+                raise Refusal(f"the `pushed` receipt names `{t}`, which is no commit here", "check the hash with `git reflog show @{upstream}`")
+        return " ".join(value.split())
+
+    def _push_recorded_by(self, full: str) -> str | None:
+        """The key of the newest close whose `pushed:` receipt names a prefix of ``full`` before its
+        colon (CE-176, DEC-237), or None."""
+        for e in self.read_ledger().entries:
+            if e.kind != "close":
+                continue
+            head = (e.receipt("pushed") or "").partition(":")[0]
+            if any(full.lower().startswith(t.lower()) for t in re.split(r"[,\s]+", head.strip()) if t):
+                return e.key
+        return None
 
     @staticmethod
     def _unsaid_tasks(tasks: str | None, rows: str) -> list[str]:
@@ -3651,9 +3682,12 @@ class Engine:
         while no session was open (CE-114; adhoc AAR entry 26: a push made outside any session was
         recorded nowhere, and the ledger said nothing was pushed). The push time is the local
         reflog's `update by push` entry for the upstream ref. Empty with no upstream or no git.
+        A flagged push stops being flagged once a close's `pushed:` receipt names a prefix of its
+        hash (``_push_recorded_by``; CE-176, DEC-237): the line then names that close.
 
         Not checked: a push from another clone (this reflog never sees it; the counts show it
-        after a fetch); a push inside a session that the session's close did not record."""
+        after a fetch); a push inside a session that the session's close did not record; that a
+        `pushed:` receipt's note is true."""
         up = (L._git(self.root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") or "").strip()
         if not up:
             return []
@@ -3663,10 +3697,9 @@ class Engine:
             ahead, behind = counts
             out.append(f"- HEAD is {ahead} commit{'s' if ahead != '1' else ''} ahead of {up} and {behind} behind (as of the last fetch)")
         ref = (L._git(self.root, "rev-parse", "--symbolic-full-name", "@{upstream}") or "").strip()
-        log = L._git(self.root, "reflog", "show", "--date=iso-strict", "--format=%gd%x09%h%x09%gs", ref) if ref else None
+        log = L._git(self.root, "reflog", "show", "--date=iso-strict", "--format=%gd%x09%h%x09%H%x09%gs", ref) if ref else None
         for row in (log or "").splitlines():
-            sel, _, rest = row.partition("\t")
-            sha, _, subject = rest.partition("\t")
+            sel, sha, full, subject = (row.split("\t", 3) + ["", "", ""])[:4]
             if not subject.startswith("update by push"):
                 continue
             m = re.search(r"@\{(.+)\}$", sel)
@@ -3677,10 +3710,13 @@ class Engine:
             if at is None:
                 break
             at = at if at.tzinfo else at.astimezone()
-            if not any(s <= at and (e is None or at <= e) for s, e in self._session_windows()):
-                out.append(f"- the last push to {up}, at {m.group(1)} ({sha}), came while no session was open: tell the owner, and record it in this session's close (what was pushed, and whether the gate ran first)")
-            else:  # CE-195, DEC-163: the push state is read here, not hand-written into the banner
-                out.append(f"- the last push to {up}: {sha}, at {m.group(1)}")
+            if any(s <= at and (e is None or at <= e) for s, e in self._session_windows()):
+                out.append(f"- the last push to {up}: {sha}, at {m.group(1)}")  # CE-195, DEC-163: the push state is read here, not hand-written into the banner
+            elif by := self._push_recorded_by(full):  # CE-176, DEC-239
+                out.append(f"- the last push to {up}: {sha}, at {m.group(1)} (while no session was open; recorded in {by}'s close)")
+            else:
+                out.append(f"- the last push to {up}, at {m.group(1)} ({sha}), came while no session was open: tell the owner, and record it in this session's close: "
+                           f'`session close ... --pushed "{sha}: <what was pushed, and whether the gate ran first>"`')
             break  # the newest push only
         return out
 

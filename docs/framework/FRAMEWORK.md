@@ -1220,6 +1220,8 @@ numbered for citation (the order is below):
      - `housekeeping:` what item 6a's `hk run close` did, which `session.close` runs itself
        first (its count of writes and op log lines);
      - `banner:` `set`, or `kept <key>` when the close left the banner as it was (G-W1);
+     - `pushed:` a push orient flagged as made while no session was open (§6.1): the pushed
+       commit's hash, then what was pushed and whether the gate ran first; orient stops flagging it;
    - `Still owed:`.
 3. **Replace the banner only when a durable line changed** (§5.1), in the way that is safe when
    several sessions write at once (§5.5): `session.close` takes it with the hash it replaces

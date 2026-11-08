@@ -24,7 +24,7 @@ ACTOR = "claude-code/test"
 CALLS = {
     "init": (["--prefix", "task=PRJ", "--prefix", "decision=DEC", "--dry-run", "--merge-settings"], {"prefix": {"task": "PRJ", "decision": "DEC"}, "dry_run": True, "merge_settings": True}),
     "session_start": (["--follows", "2026-10-07b"], {"follows": "2026-10-07b"}),
-    "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--owed", "o", "--banner", "b", "--seen", "h", "--no-housekeeping"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "owed": ["o"], "banner": "b", "seen": "h", "housekeeping": False}),
+    "session_close": (["--rows", "r", "--summary", "s1", "--summary", "s2", "--guards", "g", "--read", "x", "--asked", "ASK-1", "--pushed", "abc1234: p", "--owed", "o", "--banner", "b", "--seen", "h", "--no-housekeeping"], {"rows": "r", "summary": ["s1", "s2"], "guards": "g", "read": "x", "asked": "ASK-1", "pushed": "abc1234: p", "owed": ["o"], "banner": "b", "seen": "h", "housekeeping": False}),
     "session_pause": (["--rows", "r", "--deferred", "d"], {"rows": "r", "deferred": "d"}),
     "session_abandon": (["2026-10-01a", "--force"], {"key": "2026-10-01a", "force": True}),
     "session_tasks": (["CE-1", "CE-2,CE-3"], {"ids": ["CE-1", "CE-2", "CE-3"]}),
@@ -235,6 +235,15 @@ def test_session_close_with_an_empty_now_and_an_open_item_warns_on_its_one_line(
     r = call(srv, "session_close", {"rows": "CE-1", "summary": ["built it"], "guards": "gate 3 passed", "read": "board"})
     assert not r.is_error, text(r)
     assert "\n" not in text(r) and "; WARNING: G-W5 is red until NOW is refilled: " in text(r), text(r)
+
+
+@pytest.mark.criterion("AC-192")
+def test_session_close_passes_its_pushed_receipt_to_the_engine(root):
+    """CE-176: the tool carries `pushed` through to the engine's check; with no git here, its hash is no commit."""
+    srv = server(root)
+    call(srv, "session_start", {"actor": ACTOR})
+    r = call(srv, "session_close", {"rows": "none", "summary": ["x"], "guards": "gate 3 passed", "read": "board", "pushed": "abcdef1: p"})
+    assert r.is_error and "names `abcdef1`, which is no commit here" in text(r), text(r)
 
 
 @pytest.mark.criterion("AC-19")

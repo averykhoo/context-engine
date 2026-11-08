@@ -193,8 +193,9 @@ def render_open(key: str, at: str, actor: str, head: str | None = None, follows:
 
 
 # `housekeeping`: what the close's own `hk run close` did; `banner`: `set`, or `kept <key>` when
-# the close left the banner as it was (CE-195, DEC-163), which G-W1 reads
-RECEIPTS = ("guards", "read", "asked", "housekeeping", "banner")
+# the close left the banner as it was (CE-195, DEC-163), which G-W1 reads; `pushed`: a push made
+# while no session was open, `<hash>[, <hash>...]: <note>`, which clears orient's flag on it (CE-176)
+RECEIPTS = ("guards", "read", "asked", "housekeeping", "banner", "pushed")
 BANNER_SET = "set"
 BANNER_KEPT = "kept"
 

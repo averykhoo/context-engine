@@ -2469,6 +2469,76 @@ def test_orient_compares_head_with_upstream_and_flags_a_push_made_outside_a_sess
     assert "came while no session was open" in _section(eng.orient(None), "Upstream")
 
 
+def _push_line(eng):
+    return next(x for x in _section(eng.orient(None), "Upstream").splitlines() if x.startswith("- the last push"))
+
+
+@pytest.mark.criterion("AC-192")
+def test_a_close_recording_a_push_made_outside_a_session_clears_orients_flag(eng, tmp_path_factory):
+    """CE-176: orient told the agent to record a push made while no session was open in its close,
+    but nothing a close wrote was read back. A `pushed:` receipt naming the commit clears it; one
+    naming another commit does not, and a later unrecorded push is flagged again."""
+    root = eng.root
+    _repo(root)
+    base = _git(root, "rev-parse", "--short", "HEAD").strip()
+    (root / "tip.txt").write_text("tip\n", encoding="utf-8")
+    _git(root, "add", "tip.txt")
+    _git(root, "commit", "-q", "-m", "tip")
+    sha, full = (_git(root, "rev-parse", *a, "HEAD").strip() for a in (["--short"], []))
+    remote = tmp_path_factory.mktemp("remote") / "origin.git"
+    _git(remote.parent, "init", "-q", "--bare", "-b", "main", str(remote))
+    _git(root, "remote", "add", "origin", str(remote))
+    _git(root, "push", "-q", "-u", "origin", "main")  # no session open
+    line = _push_line(eng)
+    assert "came while no session was open: tell the owner" in line and f'--pushed "{sha}: ' in line, line
+    time.sleep(1.1)  # the reflog keeps whole seconds and a window includes its start: open after the push's second
+    other = started(eng)
+    assert "came while no session was open" in _push_line(eng)  # open, but nothing recorded yet
+    eng.session_close(other, actor=ACTOR, rows="none", summary=["named the base"], receipts=receipts(pushed=f"{base}: the base, not the tip"))
+    assert "came while no session was open" in _push_line(eng)  # another real commit clears nothing
+    key = started(eng)
+    eng.session_close(key, actor=ACTOR, rows="none", summary=["recorded a push"], receipts=receipts(pushed=f"{full}:  main to origin,\n gate not run"))
+    assert eng.read_ledger().get(key).receipt("pushed") == f"{full}: main to origin, gate not run"
+    line = _push_line(eng)
+    assert line.startswith(f"- the last push to origin/main: {sha}, at ") and line.endswith(f"(while no session was open; recorded in {key}'s close)"), line
+    assert "came while" not in line
+    short = started(eng)
+    eng.session_close(short, actor=ACTOR, rows="none", summary=["recorded it short"], receipts=receipts(pushed=f"{sha}: main to origin, again"))
+    assert _push_line(eng).endswith(f"(while no session was open; recorded in {short}'s close)")  # the newest close that names it
+    time.sleep(1.1)  # the reflog keeps whole seconds and a window includes its close
+    (root / "later.txt").write_text("later\n", encoding="utf-8")
+    _git(root, "add", "later.txt")
+    _git(root, "commit", "-q", "-m", "later")
+    _git(root, "push", "-q")
+    assert "came while no session was open" in _push_line(eng)  # the receipts name the old tip, not this one
+
+
+@pytest.mark.criterion("AC-192")
+def test_session_close_refuses_a_malformed_pushed_receipt_before_any_write(eng):
+    """CE-176, DEC-238: `<hash>[, <hash>...]: <note>`, each hash naming a commit here."""
+    root = eng.root
+    key = started(eng)
+    led = root / "ledger.md"
+
+    def refused(value, match):
+        before = led.read_bytes()
+        with pytest.raises(Refusal) as e:
+            eng.session_close(key, actor=ACTOR, rows="none", summary=["x"], receipts=receipts(pushed=value))
+        assert match in e.value.message, (value, e.value.message)
+        assert led.read_bytes() == before and eng.read_ledger().get(key).kind == "open"
+
+    refused("abcdef1: x", "no commit here")  # no git at all
+    _repo(root)
+    sha = _git(root, "rev-parse", "--short", "HEAD").strip()
+    refused("5c61449", "no note")
+    refused(f"{sha}:   ", "no note")
+    refused("444efcc..5c61449: range", "is not a commit hash")
+    refused("abc: too short", "is not a commit hash")
+    refused("defaced: words", "no commit here")
+    eng.session_close(key, actor=ACTOR, rows="none", summary=["x"], receipts=receipts(pushed=f"{sha}, {sha}: twice, fine"))
+    assert eng.read_ledger().get(key).receipt("pushed") == f"{sha}, {sha}: twice, fine"
+
+
 @pytest.mark.criterion("AC-94")
 def test_orient_lists_the_foreign_commits_this_session_and_abandoned_ones_reconcile(eng):
     """CE-101: `ledger.foreign_commits` was built (CE-65) but only the by-hand recipe used it."""

@@ -122,10 +122,10 @@ def session_start(e: Engine, c: Caller, follows: str = "", continues: str = "") 
 
 
 @op(write=True)
-def session_close(e: Engine, c: Caller, rows: str, summary: list[str], guards: str, read: str, asked: str = "", owed: list[str] | None = None,
+def session_close(e: Engine, c: Caller, rows: str, summary: list[str], guards: str, read: str, asked: str = "", pushed: str = "", owed: list[str] | None = None,
                   banner: str = "", seen: str = "", housekeeping: bool = True) -> tuple[int, str]:
-    """Clean close in one call: close housekeeping (`hk run close`, unless `housekeeping` is false), then this session's ledger entry over its stub, then the banner only when `banner` is given (with `seen`, the hash banner_show printed); one commit. `summary` is the owner digest, at most 7 lines. Without `banner` the banner is kept, and the entry says so: its lines are durable, and orient generates the rest; refused until some close has written the banner (`banner: set`), so a repo's first close under CE-195 passes one. When the close leaves NOW below its cap while items stay open (G-W5 red), its reply's first line ends in a WARNING with G-W5's message and the `task promote <id> NOW` remedy, for the digest; the close is never refused for it."""
-    receipts = {"guards": guards, "read": read, "asked": asked}
+    """Clean close in one call: close housekeeping (`hk run close`, unless `housekeeping` is false), then this session's ledger entry over its stub, then the banner only when `banner` is given (with `seen`, the hash banner_show printed); one commit. `summary` is the owner digest, at most 7 lines. Without `banner` the banner is kept, and the entry says so: its lines are durable, and orient generates the rest; refused until some close has written the banner (`banner: set`), so a repo's first close under CE-195 passes one. When the close leaves NOW below its cap while items stay open (G-W5 red), its reply's first line ends in a WARNING with G-W5's message and the `task promote <id> NOW` remedy, for the digest; the close is never refused for it. `pushed` records a push orient flagged as made while no session was open (`<sha>: what was pushed, and whether the gate ran first`), which clears that flag."""
+    receipts = {"guards": guards, "read": read, "asked": asked, "pushed": pushed}
     return 0, e.session_close(c.session, actor=c.actor, rows=rows, summary=summary, receipts=receipts, owed=owed or [], banner=banner or "", seen=seen or "", housekeeping=housekeeping)
 
 

@@ -71,6 +71,7 @@ def build() -> argparse.ArgumentParser:
     c.add_argument("--guards", required=True, help="receipt: the gate and lint results, verbatim (it must match [working] gate_receipt: by default the gate's pass count, e.g. `1112 passed`, or `not run`; '' turns that off)")
     c.add_argument("--read", required=True, help="receipt: what was read to start work")
     c.add_argument("--asked", default="", help="receipt: the owner questions raised in chat; must name each one at NOW or NEXT (default: those `ask raised` recorded)")
+    c.add_argument("--pushed", default="", help="receipt: a push orient flagged as made while no session was open, `<sha>: what was pushed, and whether the gate ran first`; clears that flag")
     c.add_argument("--owed", action="append", default=[], help="one thing still owed (an answer, a check, a push); repeat for each (default: nothing)")
     cb = c.add_mutually_exclusive_group()
     cb.add_argument("--banner", dest="banner", default="", metavar="TEXT", help="replace the banner after the entry (only when one of its durable lines changed); needs --seen")
