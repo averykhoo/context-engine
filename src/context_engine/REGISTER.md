@@ -1252,3 +1252,24 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** eligibility selects the tasks, and no same-task opus control exists
 - **control:** individual: DEC-173 size floor and the eligibility filter
 - **from:** CE-198, session 2026-11-07e
+
+## INV-178: ledger.py::Entry.receipt matches the first '  - pushed:' line anywhere in an entry, so a summary or Still-owed bullet starting 'pushed: <sha>' would clear the flag without validation (no such line in the ledger today)
+
+- **affects:** orient push flag readers
+- **why not eliminated:** every receipt shares this parse; none is in the ledger today
+- **control:** collective: ledger.py::Entry.receipt first-match rule
+- **from:** CE-176, session 2026-11-07e
+
+## INV-179: a whitespace-only --pushed skips working.py::Engine._pushed_receipt but ledger.py::render_close still writes an empty pushed: line (asked behaves the same)
+
+- **affects:** session close callers
+- **why not eliminated:** low impact, empty receipt is visible in the ledger
+- **control:** reduce: working.py::Engine._pushed_receipt
+- **from:** CE-176, session 2026-11-07e
+
+## INV-180: a pushed receipt written by hand in manual mode is checked by no lint guard (G-W6 unchanged by the plan)
+
+- **affects:** manual-mode sessions
+- **why not eliminated:** manual-mode fallback is rare and the entry is reviewed by hand
+- **control:** individual: docs/runbooks/manual-mode.md pushed receipt step
+- **from:** CE-176, session 2026-11-07e
