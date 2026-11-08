@@ -859,7 +859,13 @@ into the flat directory once the schema carries `state` (§11.4).
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
   recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
-  `ask answer`.
+  `ask answer`. **A one-off permission** (the owner says yes to one thing, a push or a release,
+  making no choice that later work must keep) is the one answer that mints no decision:
+  `ask answer --grant` writes the words verbatim into the question's own `## Grant`
+  section, `Owner, granting ASK-n: *"<words>"*`, and its `answered:` holds that section's hash in
+  place of a decision id, which G-W4 checks at rest; the session's ledger stub gets a `granted:`
+  line, and `session close` refuses a summary that does not quote each grant's words, so they
+  reach the owner digest too.
 - **An answered question never reopens:** `task reopen` refuses a question carrying `answered:`
   and never clears it; the answer changes through its decision (amend or supersede), and a
   follow-up is a new question citing both. A question closed without an answer may reopen.
@@ -879,7 +885,10 @@ into the flat directory once the schema carries `state` (§11.4).
   answers it as `ask.answer` does, so the answer lands on the same rails (a stamped decision with
   `actor: owner` and `answers:`), never as a decision built by hand. What `ask.answer` would refuse
   is refused before anything is written; the question, closed before the commit, takes no place
-  in its tier.
+  in its tier. **A grant** is `ask.answer(id, words, grant)`, or `ask.new(title, answered=words,
+  grant)` for one given in chat: it takes no title and no ruling (a ruling is a call, so a
+  decision), and refuses words holding a `## ` heading line, which would end the section; a
+  granted question never reopens either, and a follow-up is a new question citing it.
 - **The agent never answers its own question.** If the agent can decide, it was not an owner
   question.
 - **A reversible recommendation is the agent's decision, not a question.** Where the

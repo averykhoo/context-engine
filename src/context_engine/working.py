@@ -73,7 +73,7 @@ BOARD_OWNED = {
     "pri": "promote",
     "deps": "dep",
     "last_asked": "ask raised or ask later",
-    "answered": "ask answer; an answer changes only through its decision (`record amend`, `decision supersede`)",
+    "answered": "ask answer; an answer changes only through its decision (`record amend`, `decision supersede`), and a one-off grant (`ask answer --grant`) never changes",
 }
 # A decision's keys that `decision set` refuses (CE-32), each with the remedy. The engine-owned
 # `type`, `id` and `body_sha` are refused by Store.set itself.
@@ -146,6 +146,24 @@ CITES_REMEDY = ("the text is stamped and never edited, so lint G-D3 would fail i
                 "next number. Nothing was written")
 
 
+# A one-off permission (CE-190, DEC-162, DEC-247): `ask answer --grant` writes the owner's words, as
+# GRANT_RE reads them, into the question's own `## Grant` section, and `answered: {on, session, grant}`
+# holds that section's okf.body_sha; it mints no decision. G-W4 checks the hash at rest.
+GRANT = "Grant"
+GRANT_RE = re.compile(r'Owner, granting (?P<id>\S+): \*"(?P<words>.*)"\*', re.DOTALL)
+A_GRANT = "a one-off grant"  # what `_answered_by` names for a grant, where an answer names its decision
+
+
+def _grant_text(rid: str, words: str) -> str:
+    """The `## Grant` section's text for ``rid``: the owner's words, verbatim, in one quote."""
+    return f'Owner, granting {rid}: *"{words}"*'
+
+
+def _is_grant(answered: Any) -> bool:
+    """An `answered:` mapping written by `ask answer --grant`: a `grant` hash and no `decision`."""
+    return isinstance(answered, dict) and bool(answered.get("grant")) and not answered.get("decision")
+
+
 def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
     """What to do instead of reopening or re-answering an answered question (CE-31): the answer
     is a decision. ``dec`` is the decision that stands now; ``was`` the owner's answer it replaced."""
@@ -154,8 +172,18 @@ def answered_remedy(rid: str, dec: str, was: str | None = None) -> str:
             f"with `decision supersede {dec} <new DEC>`; for a follow-up, `ask new \"<question>\" --body-file <ask.md>` citing {rid} and {dec}")
 
 
+def grant_remedy(rid: str) -> str:
+    """``answered_remedy`` for a question answered by a one-off grant (CE-190): there is no
+    decision to amend or supersede, and the words under `## Grant` are never edited."""
+    return (f"the owner's answer was {A_GRANT}, its words under `## {GRANT}`, and it minted no decision, so there is nothing to amend or supersede: "
+            f"for a follow-up, `ask new \"<question>\" --body-file <ask.md>` citing {rid}")
+
+
 def _answered_by(answered: Any) -> str:
-    """The decision id in a question's `answered:` mapping, or a placeholder."""
+    """The decision id in a question's `answered:` mapping, ``A_GRANT`` for a one-off grant
+    (CE-190), or a placeholder."""
+    if _is_grant(answered):
+        return A_GRANT
     return str(answered.get("decision") or "<DEC>") if isinstance(answered, dict) else "<DEC>"
 
 
@@ -423,8 +451,14 @@ class Engine:
         digest. It is a warning, never a refusal (DEC-162: a close once everything asked for is
         done is legitimate), and nothing of it is written to the entry.
 
+        A one-off grant made this session (CE-190, DEC-248: the stub's `granted:` line) is carried
+        as a `granted:` receipt, and the close is refused unless the summary, joined and
+        whitespace-collapsed, holds each grant's words (whitespace-collapsed) as its `## Grant`
+        section quotes them; the remedy names the line to add. The engine writes no summary line.
+
         Not checked: whether the banner kept still holds only true lines (judgement: a durable
-        line that went false is the closer's to rewrite)."""
+        line that went false is the closer's to rewrite); the grants' quotes once the entry is
+        written (the questions hold the hashed words)."""
         self._check(key, actor)
         summary = [s.strip() for s in summary if s.strip()]
         if not rows.strip():
@@ -458,6 +492,20 @@ class Engine:
             if unsaid := self._unsaid_tasks(stub.field(L.TASKS), rows):
                 raise Refusal(f"the rows do not say how {_one(unsaid)} ended, which the owner asked for (the stub's `{L.TASKS}:` line, CE-112)",
                               f"name each in --rows with how it ended, e.g. `{unsaid[0]} (closed)` or `{unsaid[0]} (open: <why>)`")
+            if granted := [x for x in re.split(r"[,\s]+", stub.field("granted") or "") if x]:  # CE-190, DEC-248
+                receipts["granted"] = ", ".join(granted)
+                said = " ".join(" ".join(summary).split())
+                lines = []
+                for rid in granted:
+                    words = self._grant_words(rid)
+                    if words is None:
+                        raise Refusal(f"{rid} is in the stub's `granted:` line, but its `## {GRANT}` section is missing or not in the form `ask answer --grant` writes (G-W4)",
+                                      "restore it from git; owner words are never edited")
+                    if " ".join(words.split()) not in said:
+                        lines.append(f'`{rid} granted: "{" ".join(words.split())}"`')
+                if lines:
+                    raise Refusal(f"the summary does not quote the owner's words of {'a one-off grant' if len(lines) == 1 else f'{len(lines)} one-off grants'} made this session (DEC-162: the words go in the ledger summary)",
+                                  f"add {'the line' if len(lines) == 1 else 'the lines'} {'; '.join(lines)} to the summary (`--summary`), or put the quoted words in a line of your own; the engine writes no summary line itself")
 
         check(self.read_ledger(), self._open_entry(self.read_ledger(), key))  # before any write: housekeeping's, the entry's or the banner's
         banner = banner.strip()
@@ -1336,7 +1384,10 @@ class Engine:
 
     def _answered_remedy(self, rid: str, answered: Any) -> str:
         """`answered_remedy` for the decision that stands now: follow `superseded_by` from the
-        owner's answer, so a remedy never says to supersede a decision already superseded."""
+        owner's answer, so a remedy never says to supersede a decision already superseded. A
+        one-off grant (CE-190) has no decision: ``grant_remedy``."""
+        if _is_grant(answered):
+            return grant_remedy(rid)
         was = dec = _answered_by(answered)
         seen = {dec}
         while True:
@@ -1752,6 +1803,9 @@ class Engine:
         self._check(session, actor)
         if name == "Log":
             raise Refusal("## Log is appended to, never replaced", "use `comment`")
+        if name == GRANT and self.w.question and self.store.config.kind_for_id(rid).name == self.w.question:  # CE-190
+            raise Refusal(f"`## {GRANT}` on a question holds the owner's words of a one-off permission, which only `ask answer --grant` writes, and they are never edited",
+                          f"a note goes in `task comment {rid}`; a new grant is a new question (`ask new ... --answered-file <words.md> --grant`)")
 
         def check(rec: Record) -> None:
             if name == KILL_BAR and rec.doc.get("state") == "closed":  # CE-108: the bar was judged at close
@@ -1828,7 +1882,7 @@ class Engine:
         return self.new(self._role("question"), title, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid)
 
     @_milestone
-    def ask_answered(self, question: str, words: str, *, title: str, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None, rid: str = "", ruling: str = "", ruled_by: str = "") -> str:
+    def ask_answered(self, question: str, words: str, *, title: str, session: str, actor: str, pri: str = "NEXT", brief: str = "", body: str = "", blocks: list[str] | None = None, rid: str = "", ruling: str = "", ruled_by: str = "", grant: bool = False) -> str:
         """CE-111: file a question the owner already answered in chat (one put through a chat
         question tool, with no ask record behind it) and record the answer, in one milestone:
         the question as ``ask_new`` files it, then ``ask_answer`` on its id, so the decision is the
@@ -1836,22 +1890,62 @@ class Engine:
         ``ruled_by`` for a delegated ruling). What ``ask_answer`` would refuse is refused before
         the question is written, so a refusal leaves nothing behind. The question is never open,
         so it takes no place in its tier (``capped=False``). The flags are DEC-99, the skipped cap
-        DEC-100, and its exemption from the three-part body check DEC-101.
+        DEC-100, and its exemption from the three-part body check DEC-101. With ``grant`` (CE-190),
+        the answer is a one-off permission, as `ask answer --grant` records it: no decision, so no
+        title, and ``_grant_check``'s refusals are met before the question is written.
 
         Not checked: that the words answer this question (only the caller saw the chat)."""
         self._check(session, actor)
         if not words.strip():
             raise Refusal("an answered question with no owner words", "pass the owner's answer verbatim with `--answered` (or `--answered-file`); a question still waiting on the owner takes none")
-        if not title.strip():
-            raise Refusal("an answered question with no decision title", "name the decision the answer makes with `--decision-title`, as `ask answer --title` does")
-        self._answer_decision("<the new question>", words, title, ruling, ruled_by, session, actor)  # refuse before anything is written
+        if grant:
+            self._grant_check(words, title, ruling, ruled_by, session)  # refuse before anything is written
+        elif not title.strip():
+            raise Refusal("an answered question with no decision title", "name the decision the answer makes with `--decision-title`, as `ask answer --title` does; for a one-off permission, which makes no decision, pass `--grant` instead")
+        else:
+            self._answer_decision("<the new question>", words, title, ruling, ruled_by, session, actor)  # refuse before anything is written
         extra: dict[str, Any] = {"last_asked": None}
         if blocks:
             extra["blocks"] = list(blocks)
-        text = body if body.strip() else f"**Question:** {question}\n\nAsked in chat and answered there, so it was never open on the board; recorded with `ask new --answered`.\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
+        how = "ask new --answered --grant" if grant else "ask new --answered"
+        text = body if body.strip() else f"**Question:** {question}\n\nAsked in chat and answered there, so it was never open on the board; recorded with `{how}`.\n\n**Blocks:** {_one(blocks or [])}\n\n## Log\n"
         rec = self.new(self._role("question"), question, session=session, actor=actor, pri=pri, brief=brief, body=text, extra=extra, rid=rid, capped=False)
-        out = self.ask_answer(rec.id, words, title=title, ruling=ruling, ruled_by=ruled_by, session=session, actor=actor)
+        out = self.ask_answer(rec.id, words, title=title, ruling=ruling, ruled_by=ruled_by, grant=grant, session=session, actor=actor)
+        if grant:
+            return out.replace(f"{rec.id}: granted by the owner (", f"{rec.id}: filed as granted in chat (", 1)
         return out.replace(f"{rec.id}: answered", f"{rec.id}: filed as answered in chat, recorded", 1)
+
+    def _grant_check(self, words: str, title: str, ruling: str, ruled_by: str, session: str) -> str:
+        """The refusals of a one-off grant (CE-190, DEC-249), met before anything is written, or
+        the words as the `## Grant` section quotes them (CRLF read as LF, outer whitespace
+        stripped). ``ask_answered`` calls it too, before it writes its question."""
+        if title.strip():
+            raise Refusal("a grant with a decision title: a grant mints no decision",
+                          "drop `--title` (`--decision-title` with `ask new --answered`); for an answer that makes a choice, drop `--grant` instead")
+        if ruling.strip() or ruled_by.strip():
+            raise Refusal("a grant with a ruling: a ruling made on the owner's delegation is a call, and a call is recorded as a decision",
+                          "drop `--grant`, and record it with `--title`, `--ruling` and `--ruled-by`")
+        text = words.replace("\r\n", "\n").strip()
+        if not text:
+            raise Refusal("a grant with no owner words", "pass the owner's words of permission verbatim (as the argument, or with `--file`)")
+        if re.search(r"^## ", text, re.MULTILINE):
+            raise Refusal("the owner's words hold a `## ` heading line, which would end the `## Grant` section and leave the words after it outside its hash",
+                          "a grant's words hold no heading line; an answer that needs one is a decision: drop `--grant` and pass `--title`")
+        if not self.w.ledger:
+            raise Refusal("a grant, but [working] ledger names no ledger, and a grant's words are quoted in its session's close summary",
+                          f"set [working] ledger in {CONFIG_NAME}, or record the answer as a decision with `--title`")
+        stub = self.read_ledger().get(session)
+        if stub is None or stub.kind != "open":
+            raise Refusal(f"session {session} has no open ledger stub, where a grant writes its `granted:` line for the close to check",
+                          "run `session start` first and pass its key")
+        return text
+
+    def _grant_words(self, rid: str) -> str | None:
+        """The owner's words in ``rid``'s `## Grant` section, as ``GRANT_RE`` reads them, or None
+        when the section is missing or not in the form `ask answer --grant` writes (CE-190)."""
+        sec = okf.get_section(self.store.get(rid).doc.body, GRANT)
+        m = GRANT_RE.fullmatch(sec) if sec is not None else None
+        return m.group("words") if m and m.group("id") == rid else None
 
     def _answer_decision(self, rid: str, words: str, title: str, ruling: str, ruled_by: str, session: str, actor: str) -> tuple[dict[str, Any], str]:
         """The decision ``ask_answer`` writes for ``rid``, as (fields, body), or the refusal of
@@ -1920,16 +2014,33 @@ class Engine:
         return f"{rid}: deferred by the owner, last_asked {session}, still open"
 
     @_milestone
-    def ask_answer(self, rid: str, words: str, *, title: str, ruling: str = "", ruled_by: str = "", session: str, actor: str) -> str:
+    def ask_answer(self, rid: str, words: str, *, title: str = "", ruling: str = "", ruled_by: str = "", grant: bool = False, session: str, actor: str) -> str:
         """Record the owner's words verbatim as a decision (`actor: owner`), close the question,
         and report what it unblocked. When the owner delegated the ruling (CE-113), ``words`` are
         the owner's delegating words, ``ruling`` the ruling and ``ruled_by`` who made it: the
         decision is `actor: owner asked` with `ruled_by`, the owner's words quoted above a `##
-        Ruling` section holding the ruling, so the ruling never reads as the owner's own."""
+        Ruling` section holding the ruling, so the ruling never reads as the owner's own. Without
+        ``grant``, an empty ``title`` is refused (DEC-250).
+
+        With ``grant`` (CE-190, DEC-162, DEC-247 to DEC-249), the words are a one-off permission
+        and mint no decision: they go verbatim into the question's `## Grant` section
+        (``_grant_text``), its `answered:` holds that section's ``okf.body_sha`` under `grant`
+        (no `decision`), and the session's stub gets a `granted:` line, which `session close`
+        carries as a receipt and checks its summary against (the words must be quoted there).
+
+        Not checked: a grant followed by a session pause or abandon (a pause entry carries no
+        receipts or summary; the question still holds the hashed words), and whether the words
+        really are a one-off permission."""
         self._check(session, actor)
         self._is_question(rid)
         ruled_by = ruled_by.strip()
-        fields, body = self._answer_decision(rid, words, title, ruling, ruled_by, session, actor)
+        if grant:
+            text = self._grant_check(words, title, ruling, ruled_by, session)
+        elif not title.strip():
+            raise Refusal(f"an answer to {rid} with no decision title",
+                          "name the decision the answer makes with `--title`; for a one-off permission, which makes no decision, pass `--grant` instead")
+        else:
+            fields, body = self._answer_decision(rid, words, title, ruling, ruled_by, session, actor)
         q = self.store.get(rid)
         if q.doc.get("state") != "open":
             raise Refusal(f"{rid} is already closed", "record a new decision instead")
@@ -1939,20 +2050,53 @@ class Engine:
             raise Refusal(f"{rid} was already answered by the owner ({_answered_by(q.doc.get('answered'))}), so it takes no second answer (FRAMEWORK §5.3)",
                           f"restore `state: closed` and `status: deprecated` from git; {self._answered_remedy(rid, q.doc.get('answered'))}")
         self._plans_frozen(rid)  # CE-95: the answer closes the question, so a plan naming it freezes first
-        dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
-        answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
         was: list[str] = []
 
         def check(rec: Record) -> None:
             was.append(str(rec.doc.get("pri")))
 
+        closing = {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session}
+        if grant:
+            section = _grant_text(rid, text)
+            answered = {"on": self.today(), "session": session, "grant": okf.body_sha(section)}
+            log = self._log_line(session, actor, "granted by the owner, a one-off permission: no decision")
+            self._board_set(rid, {**closing, "answered": answered}, session=session, actor=actor, check=check,
+                            body=lambda b: log(okf.set_section(b, GRANT, section)), op="ask.answer")
+            self._stub_granted(rid, session=session, actor=actor)
+            return (f"{rid}: granted by the owner (a one-off permission, its words under ## {GRANT}; no decision), closed; "
+                    f"{self._unblocked(rid, q, was)}; quote the words in this session's close summary")
+        dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
+        answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
         how = f"answered on the owner's delegation, ruled by {ruled_by}" if ruled_by else "answered by the owner"
-        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "answered": answered}, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"{how}: {dec.id}"), op="ask.answer")
+        self._board_set(rid, {**closing, "answered": answered}, session=session, actor=actor, check=check, body=self._log_line(session, actor, f"{how}: {dec.id}"), op="ask.answer")
+        whose = f" (ruled by {ruled_by} on the owner's delegation; actor: {G.DELEGATED_ACTOR})" if ruled_by else ""
+        return f"{rid}: answered as {dec.id}{whose}, closed; {self._unblocked(rid, q, was)}"
+
+    def _unblocked(self, rid: str, q: Record, was: list[str]) -> str:
+        """`unblocked <ids>` for a question just closed, and ``_now_left``'s warning: open items
+        whose deps include it and are now all closed, plus everything in its `blocks`."""
         closed = {r.id for r in self.board_heads() if r.doc.get("state") == "closed"}
         freed = [r.id for r in self._open_board() if rid in (r.doc.get("deps") or []) and all(str(d) in closed for d in r.doc.get("deps"))]
         freed += [str(b) for b in (q.doc.get("blocks") or []) if str(b) not in freed]
-        whose = f" (ruled by {ruled_by} on the owner's delegation; actor: {G.DELEGATED_ACTOR})" if ruled_by else ""
-        return f"{rid}: answered as {dec.id}{whose}, closed; unblocked {_one(freed)}{self._now_left(was)}"
+        return f"unblocked {_one(freed)}{self._now_left(was)}"
+
+    def _stub_granted(self, rid: str, *, session: str, actor: str) -> None:
+        """Add ``rid`` to the `granted:` line of the session's stub (CE-190), as `ask raised`
+        writes `asked:`: `session close` carries it as a receipt and refuses a summary that does
+        not quote the words."""
+        path = self._path("ledger")
+        with self.store.lock():
+            led = self.read_ledger()
+            stub = led.get(session)
+            if stub is None or stub.kind != "open":
+                raise Refusal(f"session {session} closed while {rid} was being granted, so its stub has no `granted:` line",
+                              f"{rid} is closed with the words under `## {GRANT}`: quote them in the session's close summary by hand")
+            already = [x for x in re.split(r"[,\s]+", stub.field("granted") or "") if x]
+            named = already + ([rid] if rid not in already else [])
+            text = re.sub(r"^- \*\*granted:\*\*.*(?:\n  .*)*\n?", "", stub.text, flags=re.MULTILINE)
+            stub.text = text.rstrip("\n") + "\n" + L.bullet("granted", ", ".join(named))
+            self.store.write_text(path, led.render())
+            self.store.log("ask.answer", session, path, session, actor, ["granted"])
 
     # -- batons and pauses (FRAMEWORK §5.4) ---------------------------------------------
 
@@ -3948,7 +4092,8 @@ class Engine:
         key against the newest close, unless that close says it kept this banner (G-W1, CE-195); the run of pauses since the last close (G-W2); carried
         batons and pause records by age (G-W3); stale `kind: open` stubs (G-W11,
         ``_stale_stub_failures``); each board item's ``state`` against its OKF
-        ``status``, an open question carrying ``answered:``, and each decision's ``decision_status``
+        ``status``, an open question carrying ``answered:``, a one-off grant's `## Grant` words
+        against the hash its ``answered:`` holds (CE-190), and each decision's ``decision_status``
         against its ``status`` (G-W4, ``_decision_status_failures``); the tier caps (G-W5); and
         the newest close's ``guards:``, ``read:`` and ``rows:`` lines, and its ``guards:`` line
         against ``[working] gate_receipt`` (G-W6).
@@ -4012,6 +4157,13 @@ class Engine:
                     # CE-31: nothing is open and answered at once (a by-hand reopen of an answered question)
                     dec = _answered_by(r.doc.get("answered"))
                     out.append(Failure("G-W4", rel, f"{r.id} is open but carries `answered:` ({dec})", f"restore `state: closed` and `status: deprecated` from git: {self._answered_remedy(r.id, r.doc.get('answered'))}"))
+                if r.kind.name == self.w.question and isinstance(ans := r.doc.get("answered"), dict) and ans.get("grant"):
+                    # CE-190: a one-off grant's owner words are hashed into `answered: {grant}`, so they never drift
+                    sec = okf.get_section(self.store.read(r.path).body, GRANT)
+                    if sec is None or okf.body_sha(sec) != str(ans.get("grant")):
+                        why = f"has no `## {GRANT}` section" if sec is None else f"has a `## {GRANT}` section that is not the words its hash was taken of"
+                        out.append(Failure("G-W4", rel, f"{r.id}'s `answered:` holds a one-off grant, but it {why}",
+                                           f"restore it from git; owner words are never edited; a note goes in `task comment {r.id}`"))
                 if state == "open" and r.kind.name == self.w.question and (bad := G.ask_problems(self.store.read(r.path).body)):
                     # CE-44: an open question states context, options and a recommendation; `ask new` refuses one that does not
                     more = f" (and {len(bad) - 1} more: {'; '.join(bad[1:])})" if len(bad) > 1 else ""

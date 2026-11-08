@@ -1445,6 +1445,168 @@ def test_an_open_question_carrying_answered_fails_lint(eng):
     assert "carries `answered:`" in found[0].message and "decision supersede" in found[0].remedy
 
 
+# -- one-off grants (CE-190, DEC-162, DEC-247 to DEC-250) ---------------------------------
+
+
+def _decisions(eng):
+    return sorted(p.name for p in (eng.root / "decisions").glob("*.md")) if (eng.root / "decisions").exists() else []
+
+
+def test_a_grant_records_the_owners_words_on_the_question_and_mints_no_decision(eng):
+    """CE-190: `ask answer --grant` closes the question with the words verbatim under its own `##
+    Grant`, hashed into `answered:`, writes a `granted:` line in the stub, and mints no decision."""
+    key = started(eng)
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    t = task(eng, key, title="Waits on the push", deps=[q.id])
+    out = eng.ask_answer(q.id, "yes, push it once the gate is green", grant=True, **kw(key))
+    assert out.startswith(f"{q.id}: granted by the owner (a one-off permission") and f"unblocked {t.id}" in out, out
+    assert out.endswith("quote the words in this session's close summary"), out
+    assert list(eng.store.records("decision")) == [] and _decisions(eng) == []
+    rec = eng.store.get(q.id)
+    section = f'Owner, granting {q.id}: *"yes, push it once the gate is green"*'
+    assert okf.get_section(rec.doc.body, "Grant") == section
+    assert rec.doc.body.index("## Grant") < rec.doc.body.index("## Log")
+    answered = rec.doc.get("answered")
+    assert "decision" not in answered and answered["session"] == key and answered["on"] == TODAY
+    assert answered["grant"].startswith("sha256:") and answered["grant"] == okf.body_sha(section)
+    assert rec.doc.get("state") == "closed" and rec.doc.get("status") == "deprecated" and rec.doc.get("closed") == key
+    assert "granted by the owner, a one-off permission: no decision" in rec.doc.body
+    assert eng.read_ledger().get(key).field("granted") == q.id
+    assert not [f for f in eng.lint() if f.guard in ("G-W4", "G-W7", "schema")], eng.lint()
+
+
+@pytest.mark.parametrize("args, says", [
+    ({"words": "yes", "title": "Push", "grant": True}, "a grant mints no decision"),
+    ({"words": "yes", "ruling": "r", "ruled_by": "claude-code/x", "grant": True}, "a grant with a ruling"),
+    ({"words": "yes", "ruled_by": "claude-code/x", "grant": True}, "a grant with a ruling"),
+    ({"words": "  ", "grant": True}, "a grant with no owner words"),
+    ({"words": "yes\n## Amendments\nno", "grant": True}, "`## ` heading line"),
+    ({"words": "ok\n## Ruling\nx", "grant": True}, "`## ` heading line"),
+    ({"words": "blue", "title": ""}, "with no decision title"),
+    ({"words": "blue", "title": "  "}, "with no decision title"),
+])
+def test_a_grant_or_an_untitled_answer_is_refused_before_anything_is_written(eng, args, says):
+    """CE-190 (DEC-249, DEC-250): each refusal leaves the question, the decisions and the ledger
+    as they were."""
+    key = started(eng)
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    before = (q.path.read_bytes(), _decisions(eng), (eng.root / "ledger.md").read_bytes(), (eng.root / "ops.jsonl").read_bytes())
+    words = args.pop("words")
+    with pytest.raises(Refusal, match=re.escape(says)) as exc:
+        eng.ask_answer(q.id, words, **args, **kw(key))
+    if not args.get("grant"):
+        assert "--title" in exc.value.remedy and "--grant" in exc.value.remedy
+    assert (q.path.read_bytes(), _decisions(eng), (eng.root / "ledger.md").read_bytes(), (eng.root / "ops.jsonl").read_bytes()) == before
+
+
+def test_a_grant_is_refused_without_an_open_stub_or_a_ledger_and_on_an_answered_question(eng, tmp_path):
+    """CE-190 (DEC-249): the `granted:` line needs an open stub; the existing refusals still hold."""
+    key = started(eng)
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    with pytest.raises(Refusal, match="has no open ledger stub"):
+        eng.ask_answer(q.id, "yes", grant=True, **kw("2026-10-08z"))
+    eng.ask_answer(q.id, "yes", grant=True, **kw(key))
+    with pytest.raises(Refusal, match="already closed"):
+        eng.ask_answer(q.id, "yes again", grant=True, **kw(key))
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    with pytest.raises(Refusal, match=rf"{q.id} was already answered by the owner \(a one-off grant\)"):
+        eng.ask_answer(q.id, "yes again", grant=True, **kw(key))
+    cfg = copy.deepcopy(CONFIG)
+    del cfg["working"]["ledger"]
+    bare = _engine(tmp_path / "bare", cfg)
+    q2 = bare.ask_new("May I push?", body=ASK_BODY, **kw("2026-10-08a"))
+    with pytest.raises(Refusal, match=r"\[working\] ledger names no ledger"):
+        bare.ask_answer(q2.id, "yes", grant=True, **kw("2026-10-08a"))
+    assert bare.store.get(q2.id).doc.get("state") == "open"
+
+
+def test_the_close_carries_the_grants_and_refuses_a_summary_that_does_not_quote_them(eng):
+    """CE-190 (DEC-248): two grants in one session give `granted: ASK-1, ASK-2`; the close needs
+    each one's words in its summary, whitespace collapsed, and the engine writes no line itself."""
+    key = started(eng)
+    q1 = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    q2 = eng.ask_new("May I tag?", body=ASK_BODY, **kw(key))
+    eng.ask_answer(q1.id, "yes,\npush it", grant=True, **kw(key))
+    eng.ask_answer(q2.id, "tag it", grant=True, **kw(key))
+    assert eng.read_ledger().get(key).field("granted") == f"{q1.id}, {q2.id}"
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="does not quote the owner's words of 2 one-off grants") as exc:
+        eng.session_close(key, actor=ACTOR, rows="x", summary=["did it"], receipts=receipts())
+    assert f'`{q1.id} granted: "yes, push it"`' in exc.value.remedy and f'`{q2.id} granted: "tag it"`' in exc.value.remedy
+    with pytest.raises(Refusal, match="does not quote the owner's words of a one-off grant ") as exc:
+        eng.session_close(key, actor=ACTOR, rows="x", summary=["did it", f'{q1.id} granted: "yes, push it"'], receipts=receipts())
+    assert q2.id in exc.value.remedy and q1.id not in exc.value.remedy
+    assert (eng.root / "ledger.md").read_bytes() == before
+    eng.session_close(key, actor=ACTOR, rows="x", summary=[f'{q1.id} granted: "yes,  push   it"', f'{q2.id} granted: "tag it"'], receipts=receipts())
+    entry = eng.read_ledger().get(key)
+    assert entry.receipt("granted") == f"{q1.id}, {q2.id}"
+    assert L.items(entry, "summary") == [f'{q1.id} granted: "yes,  push   it"', f'{q2.id} granted: "tag it"']  # as the closer wrote it
+
+
+def test_a_hand_edit_of_a_grants_words_fails_lint_and_task_section_cannot_write_them(eng):
+    """CE-190 (DEC-247): G-W4 checks the `## Grant` words against the hash in `answered:`."""
+    key = started(eng)
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    eng.ask_answer(q.id, "yes, push it", grant=True, **kw(key))
+    rel = q.path.relative_to(eng.root).as_posix()
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    with pytest.raises(Refusal, match="only `ask answer --grant` writes"):
+        eng.section(q.id, "Grant", "x", **kw(key))
+    text = q.path.read_text(encoding="utf-8")
+    q.path.write_text(text.replace("yes, push it", "yes, push and tag it"), encoding="utf-8")  # a hand edit
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert [f.path for f in found] == [rel] and "not the words its hash was taken of" in found[0].message, found
+    assert "owner words are never edited" in found[0].remedy
+    q.path.write_text(re.sub(r"## Grant\n\n.*?\n\n", "", text, flags=re.DOTALL), encoding="utf-8")  # the section deleted
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert [f.path for f in found] == [rel] and "has no `## Grant` section" in found[0].message, found
+    q.path.write_text(text, encoding="utf-8")
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+def test_a_granted_question_never_reopens_and_its_remedies_name_no_decision(eng):
+    """CE-190: the reopen refusal and G-W4's open-and-answered failure say "a one-off grant", and
+    their remedy names `ask new`, never a `<DEC>` to amend or supersede."""
+    key = started(eng)
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    eng.ask_answer(q.id, "yes, push it", grant=True, **kw(key))
+    with pytest.raises(Refusal, match=f"{q.id} was answered by the owner") as exc:
+        eng.reopen(q.id, "the owner changed their mind", **kw(key))
+    assert "a one-off grant" in exc.value.remedy and "ask new" in exc.value.remedy and "## Grant" in exc.value.remedy
+    assert "<DEC>" not in exc.value.remedy and "record amend" not in exc.value.remedy
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert len(found) == 1 and "carries `answered:` (a one-off grant)" in found[0].message, found
+    assert "<DEC>" not in found[0].remedy and "decision supersede" not in found[0].remedy
+
+
+def test_the_cli_grants_through_ask_answer_and_ask_new_answered(eng, capsys, tmp_path):
+    """CE-190: `ask answer --grant` needs no --title; `ask new --answered-file --grant` files the
+    question closed with no decision; a grant with a decision title is refused."""
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    words = tmp_path / "w.md"
+    words.write_text("yes, push it\n", encoding="utf-8")
+    q = eng.ask_new("May I push?", body=ASK_BODY, **kw(key))
+    assert main([*base, "ask", "answer", q.id, "--file", str(words), "--grant"]) == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.startswith(f"{q.id}: granted by the owner")
+    assert main([*base, "ask", "new", "May I tag?", "--answered-file", str(words), "--grant"]) == 0, capsys.readouterr().err
+    out = capsys.readouterr().out
+    q2 = eng.store.get(max((r.id for r in eng.store.heads("question")), key=lambda i: int(i.split("-")[1])))
+    assert q2.id != q.id and out.startswith(f"{q2.id}: filed as granted in chat (a one-off permission"), out
+    assert q2.doc.get("state") == "closed" and "grant" in q2.doc.get("answered") and "--grant" in q2.doc.body
+    assert _decisions(eng) == []
+    assert main([*base, "ask", "new", "May I release?", "--answered-file", str(words), "--grant", "--decision-title", "T"]) == 2
+    assert "a grant mints no decision" in capsys.readouterr().err
+    (tmp_path / "ask.md").write_text(ASK_BODY, encoding="utf-8")
+    heads = len(list(eng.store.heads("question")))
+    assert main([*base, "ask", "new", "May I release?", "--body-file", str(tmp_path / "ask.md"), "--grant"]) == 2  # a grant with no words is no open question
+    assert "no owner words" in capsys.readouterr().err and len(list(eng.store.heads("question"))) == heads
+    assert main([*base, "ask", "answer", eng.ask_new("Red?", body=ASK_BODY, **kw(key)).id, "--file", str(words)]) == 2
+    assert "no decision title" in capsys.readouterr().err
+    assert eng.read_ledger().get(key).field("granted") == f"{q.id}, {q2.id}"
+
+
 # -- batons and pauses (AC-14, AC-15) ------------------------------------------------------
 
 

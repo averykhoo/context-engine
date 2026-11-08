@@ -91,7 +91,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | any new record (task, question, decision, baton, pause) | `new` | the record | every frontmatter key, `type`, `id` and `body_sha` included |
 | task set, promote, dep, comment, touch, close, reopen, section | `set`, `promote`, `dep`, `comment`, `touch`, `close`, `reopen`, `section` | the item | the changed keys, then `updated`, then `body` if the body changed |
 | ask raised | `ask.raised` | one line per question, then one with id = session key, path = the ledger | `["last_asked", "updated"]`; the ledger line `["asked"]` |
-| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `DEC-n`; `ask new --answered` writes the question's `new` line first) | the question | the changed keys, `updated`, `body` |
+| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `DEC-n`; `ask new --answered` writes the question's `new` line first; with `--grant`, no `DEC-n`, and a second `ask.answer` line with id = session key, path = the ledger) | the question | the changed keys, `updated`, `body`; the `--grant` ledger line `["granted"]` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | hk close | `close`, mechanical (the task close's line) | the item | as task close |
@@ -241,6 +241,10 @@ The engine makes them one commit; by hand, commit them together at the end.
    NEXT, and every overdue one. A question is overdue if `last_asked` is empty, or at least 5
    closes/pauses have happened since it, or it is at least 7 days old. The receipt written is your
    `asked` text if you gave one, otherwise the stub's line.
+   Then the stub's `- **granted:**` line (written by `ask answer --grant`), if any: it becomes
+   the `granted:` receipt, and your summary, its lines joined with runs of whitespace read as one
+   space, must contain each named question's `## Grant` words read the same way; stop otherwise,
+   and add a line like `ASK-n granted: "<words>"` yourself.
    Then check the stub's `- **tasks:**` line (written by `session tasks`): your `rows` must
    name every id on it, closed or not, with how it ended.
    Then `pushed`, if given (a push orient flagged as made while no session was open): before its
@@ -272,6 +276,7 @@ The engine makes them one commit; by hand, commit them together at the end.
      - guards: `<gate>` green, N passed; context-engine lint: ...
      - read: ...
      - asked: none open
+     - granted: ASK-9
      - housekeeping: hk run close: 0 writes, 0 op log lines
      - banner: kept 2026-10-08d
      - pushed: 5c61449: main to origin, gate green first
@@ -281,7 +286,7 @@ The engine makes them one commit; by hand, commit them together at the end.
      - nothing
    - **start head:** <the stub's start head, unchanged>
    ```
-   Leave out the `asked:` line if it is empty, the `pushed:` line unless a push is recorded, the
+   Leave out the `asked:` line if it is empty, the `granted:` line unless the stub has one, the `pushed:` line unless a push is recorded, the
    `housekeeping:` line if step 4 was skipped
    on request, and the `start head` line if the stub has none.
    A follow-up session's stub carries `- **follows:** <key>` (a continuation's, `- **continues:**
@@ -1155,7 +1160,8 @@ if it is missing (at the end if there is no Log), so the Log stays last. Never `
 `comment`. On an open NOW item carrying `review:`, check the
 result's `## Design review` as in `task promote`, and do not write it while a check fails. On a
 closed item, never `## Kill bar`: its close judged it (comment the correction, or reopen the
-item and run again).
+item and run again). On a question, never `## Grant`: it holds owner words that only § ask
+answer's one-off permission writes (comment instead).
 
 **Why:** the `## Traps` and `## Read first` sections are replaced as they get better. The Log is history, so it is only
 ever appended to.
@@ -1245,7 +1251,9 @@ Asked in chat and answered there, so it was never open on the board; recorded wi
 ## Log
 ```
 
-and answer it at once, as § context-engine ask answer does, steps 2 to 4, in the same commit. Its
+and answer it at once, as § context-engine ask answer does, steps 2 to 4, in the same commit (with
+`--grant` and no `--decision-title`, its one-off permission steps instead, with this body's last
+sentence naming `ask new --answered --grant`). Its
 tier cap is not checked: it is closed before the commit, so it never holds a place there. Its
 body need not state the three parts: it was asked and answered in chat, and the decision holds
 the answer.
@@ -1311,10 +1319,38 @@ or demoted to LATER.
    plus everything in its `blocks`.
 5. If the question was at NOW, check NOW as in § task close and tell the owner.
 
+Without `--grant`, stop before step 2 if the title is empty: the decision needs one.
+
+**A one-off permission** (`--grant`, no `--title`): the owner said yes to one thing (a push, a
+release) and made no choice that later work must keep, so no decision is written. Step 1 as
+above, then, in place of steps 2 and 3:
+
+1. Stop, before writing anything, if a title, a ruling or `ruled_by` is given (a ruling is a call:
+   drop `--grant`), if the words are empty, if a line of them starts `## ` (it would end the
+   section), or if `[working] ledger` is unset or your session has no `kind: open` stub.
+2. On the question, add a `## Grant` section above `## Log` holding exactly
+   `Owner, granting ASK-n: *"<words>"*` (the words with CRLF read as LF and outer whitespace
+   stripped). Its hash is `sha256:` and the hex sha256 of that text plus one `\n`, in UTF-8. Set
+   `state: closed`, `status: deprecated`, `closed: <key>`, `last_asked: <key>`,
+   `answered: {on: <today>, session: <key>, grant: <the hash>}` (no `decision` key) and `updated`.
+   Append `- <key> (<actor>): granted by the owner, a one-off permission: no decision`.
+   Op log: `ask.answer`.
+3. In your stub, delete any `- **granted:**` line and add one at the end, as § ask raised does for
+   `asked:`: `- **granted:** <every id granted so far this session>`. Op log: `ask.answer`, id
+   your key, the ledger's path, fields `["granted"]`.
+4. Steps 4 and 5 above. At your close, quote each grant's words in the summary
+   (`ASK-n granted: "<words>"`, § session close step 3).
+
+Never edit the `## Grant` words afterwards, nor write the section with `task section`: lint
+(G-W4) fails a question whose section is missing or whose text no longer hashes to its `grant`.
+
 **Why:** an answer is a decision in the owner's own words. It is stamped so the words cannot
 drift, and closing the question points to the decision rather than burying the answer in a log
 line (FRAMEWORK §6.2). A ruling made on the owner's delegation is not the owner's words: inside the
-owner's quote, or under `actor: owner`, it would be frozen as owner intent (FRAMEWORK §6.5).
+owner's quote, or under `actor: owner`, it would be frozen as owner intent (FRAMEWORK §6.5). A
+one-off permission makes no choice for later work to keep, so a decision would only pad the
+log; its words still stay where they cannot drift, hashed on the question, and reach
+the owner digest through the summary quote.
 
 ## Batons and pauses
 

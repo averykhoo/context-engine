@@ -265,10 +265,10 @@ def id_reserve(e: Engine, c: Caller, kind: str, count: int = 1) -> tuple[int, st
 
 
 @op(write=True)
-def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "", answered: str = "", decision_title: str = "", ruling: str = "", ruled_by: str = "") -> tuple[int, str]:
-    """File an owner question (ASK-n); raise it in chat this session. `body` states the context, two or more options (one list item or `###` heading each, or one bold-led line each where it has neither) and a recommendation with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>`; a body lacking one is refused (FRAMEWORK §5.3). `id` is one this session reserved (`id_reserve`), or keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8]). `answered`: the owner already answered it in chat (a question with no ask record behind it): their words, verbatim; the question is filed closed and the words recorded as a decision titled `decision_title`, as ask_answer does (with `ruling` and `ruled_by` for a delegated ruling), in one milestone."""
-    if answered or decision_title or ruling or ruled_by:
-        return 0, e.ask_answered(title, answered, title=decision_title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, ruling=ruling, ruled_by=ruled_by, **c.kw)
+def ask_new(e: Engine, c: Caller, title: str, pri: str = "NEXT", brief: str = "", blocks: list[str] | None = None, body: str = "", id: str = "", answered: str = "", decision_title: str = "", ruling: str = "", ruled_by: str = "", grant: bool = False) -> tuple[int, str]:
+    """File an owner question (ASK-n); raise it in chat this session. `body` states the context, two or more options (one list item or `###` heading each, or one bold-led line each where it has neither) and a recommendation with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>`; a body lacking one is refused (FRAMEWORK §5.3). `id` is one this session reserved (`id_reserve`), or keeps an imported number (Q8 as ASK-8; then `task_set` aliases=[Q8]). `answered`: the owner already answered it in chat (a question with no ask record behind it): their words, verbatim; the question is filed closed and the words recorded as a decision titled `decision_title`, as ask_answer does (with `ruling` and `ruled_by` for a delegated ruling), in one milestone. With `grant` (and `answered`, no `decision_title`), the words were a one-off permission: recorded as ask_answer's `grant` records them, minting no decision."""
+    if answered or decision_title or ruling or ruled_by or grant:
+        return 0, e.ask_answered(title, answered, title=decision_title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, ruling=ruling, ruled_by=ruled_by, grant=grant, **c.kw)
     rec = e.ask_new(title, pri=pri, brief=brief, body=body, blocks=blocks or [], rid=id, **c.kw)
     return 0, f"{rec.id}: question created at {pri}; raise it in chat this session"
 
@@ -286,9 +286,9 @@ def ask_later(e: Engine, c: Caller, id: str) -> tuple[int, str]:
 
 
 @op(write=True)
-def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str, ruling: str = "", ruled_by: str = "") -> tuple[int, str]:
-    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. If the owner delegated the ruling, `words` are their delegating words, `ruling` the ruling and `ruled_by` who made it (both or neither): the decision is `actor: owner asked` with `ruled_by`, and the ruling sits under `## Ruling`, apart from the owner's words. Answering a question at NOW while others stay open: the reply warns that G-W5 is red until the owner picks one to promote."""
-    return 0, e.ask_answer(id, words, title=title, ruling=ruling, ruled_by=ruled_by, **c.kw)
+def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str = "", ruling: str = "", ruled_by: str = "", grant: bool = False) -> tuple[int, str]:
+    """Record the owner's answer, verbatim, as a decision titled `title`, and close the question. If the owner delegated the ruling, `words` are their delegating words, `ruling` the ruling and `ruled_by` who made it (both or neither): the decision is `actor: owner asked` with `ruled_by`, and the ruling sits under `## Ruling`, apart from the owner's words. Answering a question at NOW while others stay open: the reply warns that G-W5 is red until the owner picks one to promote. `title` is required unless `grant`. With `grant`, the words are a one-off permission (the owner said yes to one thing, making no choice to keep): no decision is minted and no `title`, `ruling` or `ruled_by` is taken; the words go verbatim under the question's `## Grant`, hashed into its `answered:`, the session stub gets a `granted:` line, and `session_close` refuses a summary that does not quote the words."""
+    return 0, e.ask_answer(id, words, title=title, ruling=ruling, ruled_by=ruled_by, grant=grant, **c.kw)
 
 
 # -- batons and pauses (FRAMEWORK §5.4) --------------------------------------------------
