@@ -1154,3 +1154,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** intended effect, but not verifiable from here
 - **control:** individual: CE-166
 - **from:** CE-192, session 2026-11-07e
+
+## INV-164: no test edits the archive file (dest) mid-run: removing dest from Engine.doc_archive's seen snapshot kept tests/test_docs.py green
+
+- **affects:** engine maintainers
+- **why not eliminated:** the plan's T5 did not ask for this case, so the snapshot of dest is unpinned
+- **control:** individual: review of Engine.doc_archive; the other mid-run cases are tested
+- **from:** CE-154, session 2026-11-07e
+
+## INV-165: the FROZEN safety net in Engine.doc_archive refuses even when G-D4 is off or does not read the archive dir; a pathological liveness_lines of 1 would refuse every frontmatter doc
+
+- **affects:** repos with unusual guard config
+- **why not eliminated:** the net is unconditional by design
+- **control:** individual: the refusal names its remedy; default liveness_lines is not pathological
+- **from:** CE-154, session 2026-11-07e
+
+## INV-166: a whole move whose relative link was already red, but whose message changes when resolved from the archive dir, is still named as new by doc archive
+
+- **affects:** owners archiving docs with already-red links
+- **why not eliminated:** the planner accepted this; pointer reds compare messages without line numbers only
+- **control:** individual: the refusal text and the by-hand runbook step
+- **from:** CE-154, session 2026-11-07e
+
+## INV-167: a prune can drop an ACTIVE-PLAN doc's named board item out of G-D4's window (G-D4 red); doc archive --lines does not check it
+
+- **affects:** owners pruning active-plan docs
+- **why not eliminated:** not checked by the build
+- **control:** individual: gate/lint G-D4 reports it after the prune
+- **from:** CE-154, session 2026-11-07e
+
+## INV-168: a small TOCTOU window remains between doc archive's re-check (DEC-228) and its first write
+
+- **affects:** concurrent sessions in one tree
+- **why not eliminated:** no file lock is taken
+- **control:** individual: DEC-228 re-check narrows it; lint after the archive catches damage
+- **from:** CE-154, session 2026-11-07e
+
+## INV-169: a hand edit on top of an engine-written, still uncommitted redirect table or archive file passes DEC-227's check
+
+- **affects:** concurrent sessions in one tree
+- **why not eliminated:** op lines carry no content hash
+- **control:** individual: the check refuses hand edits to committed state; commit eagerly after an archive
+- **from:** CE-154, session 2026-11-07e

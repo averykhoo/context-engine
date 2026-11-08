@@ -4,13 +4,15 @@ id: CE-154
 title: 'doc archive --lines: pointer reds, liveness and the uncommitted check'
 brief: CE-96 verifier findings 2 and 3 and the rest (654ea03)
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 doc archive --lines: pointer reds, liveness and the uncommitted check.
@@ -38,3 +40,5 @@ Source: CE-96's close (654ea03), residuals (verifier findings 2 and 3, and the r
 - 2026-11-07e (claude-code/claude-opus-5-5): Residual: a prune can drop an ACTIVE-PLAN doc's named board item out of G-D4's window (G-D4 red); doc archive --lines does not check it.
 - 2026-11-07e (claude-code/claude-opus-5-5): Residual: a small TOCTOU window remains between doc archive's re-check (DEC-228) and its first write.
 - 2026-11-07e (claude-code/claude-opus-5-5): Residual: a hand edit on top of an engine-written, still uncommitted redirect table or archive file passes DEC-227's check, since op lines carry no content hash.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: doc archive --lines: pointer reds as a multiset, prune never changes the doc's own declaration, long frontmatter gets liveness FROZEN, table and archive file refuse hand edits, mid-run change refuses (9aba4d5, d08161d)
+  residual risk: INV-164, INV-165, INV-166, INV-167, INV-168, INV-169
