@@ -1595,3 +1595,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the step was written for the case with op lines left
 - **control:** individual: the manual-mode row Commit the write and commit.py::_commit_partial as the reference
 - **from:** CE-175, session 2026-11-07e
+
+## INV-227: An undeclared CE_GATE_PART makes the scope guard fall back to require and its verdict wrongly says 'no CE_GATE_PART'
+
+- **affects:** an adopter reading the guard message
+- **why not eliminated:** wording only, the fallback verdict is still correct
+- **control:** individual: the guard still refuses on the fallback scope
+- **from:** CE-181, session 2026-11-07e
+
+## INV-228: A test inside a part that runs pytest directly in a nested temp repo inherits CE_GATE_PART
+
+- **affects:** engine test authors
+- **why not eliminated:** matters only if the nested repo declares a part with the same name
+- **control:** individual: none beyond the naming convention
+- **from:** CE-181, session 2026-11-07e
+
+## INV-229: Pytest parts need __pycache__ gitignored or a run comes back INCONSISTENT; undocumented for adopters (true of single-command pytest gates too)
+
+- **affects:** adopters with pytest gates
+- **why not eliminated:** documentation gap, not engine behaviour
+- **control:** individual: gate INCONSISTENT verdict names the drift
+- **from:** CE-181, session 2026-11-07e
+
+## INV-230: Kit gate.md row 'Exclude only what no test reads but the readers' reads oddly under parts, which take no readers; the added parenthetical does not fully fix it
+
+- **affects:** adopters reading the kit runbook
+- **why not eliminated:** wording only
+- **control:** individual: the kit gate.md parenthetical
+- **from:** CE-181, session 2026-11-07e
+
+## INV-231: Whole-gate result relies on the recorded run (1988 passed, 783.9s) and gate status --require code rc 0 on g1/code:fd26c56ee3da9623 at HEAD, not a fresh full re-run
+
+- **affects:** the owner at push time
+- **why not eliminated:** verifier did not re-run the full 13-minute gate
+- **control:** individual: gate status --require code and the pre-push full gate
+- **from:** CE-181, session 2026-11-07e

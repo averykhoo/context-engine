@@ -3,13 +3,15 @@ type: Task
 id: CE-181
 title: '[gate] cannot hold a long multi-command gate, and banner set stales a gate whose scope holds HANDOFF.md'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-6]
 source: session 2026-11-03b
 created: 2026-11-04
 moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 [gate] cannot hold a long multi-command gate, and banner set stales a gate whose scope holds HANDOFF.md.
@@ -25,3 +27,5 @@ updated: 2026-11-07e
 ## Log
 
 - 2026-11-03b (claude-code/claude-opus-5-5): Found in CE-167: zanzibar's gate is ten commands, about 2.75 h, which [gate] cannot hold; and banner set rewrites HANDOFF.md, which zanzibar's code scope includes, so a close after a green gate stales it (worked around: close first, gate after). Idea: let the close receipt name a later gate run keyed by content id. Evidence: docs/evidence/ce167-zanzibar-cutover-2026-11-03.md § Engine findings
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: gate parts (each keyed on its own scope), gate run --stale, scope guard fix under parts; verifier PASS
+  residual risk: INV-227, INV-228, INV-229, INV-230, INV-231
