@@ -307,10 +307,12 @@ def build() -> argparse.ArgumentParser:
     who.add_argument("--model", default="", help="a Claude model id the Co-Authored-By line names (claude-opus-5-5: Claude Opus 5.5 <noreply@anthropic.com>)")
 
     ga = _sub(groups, "gate", "the scoped gate: run the repo's gate command and record its result per scope (FRAMEWORK §8.5 G-V1)").add_subparsers(dest="op", required=True)
-    gr = _sub(ga, "run", "run [gate] `command` and append its result to the run ledger")
+    gr = _sub(ga, "run", "run [gate] `command`, or its parts, and append the result to the run ledger")
     gr.add_argument("--readers", action="store_true", help="run only the scopes' readers: the tests that read files outside a scope")
-    gs = _sub(ga, "status", "each scope's id here and whether a green run covers it")
-    gs.add_argument("--require", default="", metavar="SCOPE", help="exit 1 unless this scope is covered; <scope>+readers: its readers too")
+    gr.add_argument("--part", dest="parts", action="append", metavar="NAME", help="with [gate.parts]: run this part only; repeat for each")
+    gr.add_argument("--stale", action="store_true", help="with [gate.parts]: run only the stale parts (not fresh on their scope, or not covering `require`)")
+    gs = _sub(ga, "status", "each scope's id here and whether a green run covers it; with parts, each part fresh or stale")
+    gs.add_argument("--require", default="", metavar="SCOPE", help="exit 1 unless this scope is covered; <scope>+readers: its readers too; <scope>+parts: every part fresh too")
 
     cr = _sub(groups, "criterion", "criteria rows of [working] criteria, written one row at a time (FRAMEWORK §3.3, §6.2 step 3)").add_subparsers(dest="op", required=True)
     crn = _sub(cr, "new", "draft a criterion: append one row to a criteria table, every other byte of the file unchanged")

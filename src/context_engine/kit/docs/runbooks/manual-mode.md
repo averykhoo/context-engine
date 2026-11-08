@@ -2408,24 +2408,37 @@ readers appended), `scopes` (id name -> id, only the ids that did not move), `mo
 of those that did, when any did), `log`, `head`, `session`, `actor`. The ledger must be
 gitignored and untracked (a fresh directory gets a `.gitignore` of `*`).
 
+With `[gate.parts]` (`gate run [--part NAME]... [--stale]`): do the above once per part, in
+declared order, with the part's `command` and every id; `part` is the part's name and `args`
+empty. Go on past a part that fails, and append each line as its part ends. `--part` runs the
+parts named; `--stale` runs only the stale ones (as § gate status), and none when none is stale.
+
 **Why:** a recorded result is what lets the next commit skip a re-run, and a run whose files
 moved under it tested nothing nameable for those ids; the ids that did not move were tested
 whole, so another session's write during a long run costs only the ids it touched. An unignored ledger would sit inside the ids it records,
 so every row would be born stale. `--readers`: a change outside a scope cannot change what its
-other tests read, so only the tests that read it need to run again. A gate run is out of the
-MCP's scope (FRAMEWORK §8.0.2).
+other tests read, so only the tests that read it need to run again. A part records every id, so
+a part keyed on every file still counts toward the code scope; and a long gate wants every
+part's verdict from one pass. A gate run is out of the MCP's scope (FRAMEWORK §8.0.2).
 
 ### context-engine gate status
 
-`context-engine gate status [--require <scope>[+readers]]` (over MCP `gate_status`). By hand:
-compute each id; it is covered when the newest ledger line whose `scopes` holds that id has
+`context-engine gate status [--require <scope>[+readers|+parts]]` (over MCP `gate_status`). By
+hand: compute each id; it is covered when the newest ledger line whose `scopes` holds that id has
 `status` `PASSED` and the `command` configured now. With `--require <scope>`, exit 1 unless that
 scope's id is covered: what `context-engine commit` checks for a path in it. With `--require
 <scope>+readers`, its `+readers` id too: what a hand edit to a file the scope leaves out needs.
 
+With `[gate.parts]`, read only each part's own lines (`part` its name; `PASSED` or `FAILED`):
+a scope is covered when, for every part, the newest such line holding the scope's id passed
+with the part's `command` now. A part is fresh when it covers its own `scope`, and stale when it
+is not fresh or does not cover the `require` scope. `--require <scope>+parts`: the scope
+covered and every part fresh, what the close and the push need.
+
 **Why:** "did the gate pass on these files?" is answered from the ledger, not from memory. The
 newest line decides, so a green run then a red one on the same files is red; and a run of
-another command proves nothing about this one.
+another command proves nothing about this one. The commit checks coverage, never freshness: a
+part keyed on every file goes stale on every op-log line, any session's.
 
 ## Bootstrap
 

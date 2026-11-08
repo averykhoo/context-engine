@@ -44,6 +44,17 @@ the scope alone (``check_commit`` says why).
 
 **A run whose files move while it runs** records only the ids that did not move, and names the
 rest in ``moved``; it is ``INCONSISTENT``, and counts for nothing, only when every id moved.
+
+**A gate too long for one command is split into parts** (``[gate.parts.<name>]``, CE-181): each
+its own command, keyed on the scope it reads, run in declared order, with no top-level
+``command`` and no ``readers`` beside them. Each part's run appends its own row, ``part`` its
+name, with every scope's id, so a part keyed on every file still counts toward the code scope. A
+scope is **covered** when every part's newest row on its id passed with that part's command now
+(``covered``: what ``check_commit`` and ``--require <scope>`` test); a part is **fresh** when it
+covers its own scope, and **stale** when it is not fresh or does not cover ``require``
+(``stale_parts``). ``gate run --stale`` re-runs only the stale parts, so a close's record writes
+re-run only the parts that read records; ``--require <scope>+parts`` is the scope covered and
+every part fresh (the close's last check, and the push's).
 """
 
 from __future__ import annotations
@@ -87,23 +98,43 @@ class Scope:
         return f"context-engine-gate/{ALGO}/{self.name}/{spec}".encode() + b"\0"
 
 
+def _argv(command: tuple[str, ...]) -> list[str]:
+    return [sys.executable if a == PYTHON else a for a in command]
+
+
+@dataclass(frozen=True)
+class Part:
+    """``[gate.parts.<name>]``: one command of a gate split into parts, keyed on ``scope``, the
+    scope whose files it reads (CE-181)."""
+
+    name: str
+    command: tuple[str, ...]
+    scope: str
+
+    def argv(self) -> list[str]:
+        return _argv(self.command)
+
+
 @dataclass(frozen=True)
 class Gate:
-    """``[gate]``: the repo's gate command, its run ledger, its scopes, and the scope a session's
-    own commit of a path in it needs green (``require``; empty: no check)."""
+    """``[gate]``: the repo's gate command (or its parts), its run ledger, its scopes, and the
+    scope a session's own commit of a path in it needs green (``require``; empty: no check)."""
 
     command: tuple[str, ...] = ()
     ledger: str = LEDGER
     require: str = ""
     scopes: dict[str, Scope] = field(default_factory=dict)
     skip: tuple[str, ...] = ()  # the engine's own working files (its lock file), never in a scope: set from [engine]
+    parts: tuple[Part, ...] = ()  # [gate.parts], in declared order; exclusive with `command` and with scope readers
 
     def argv(self) -> list[str]:
-        return [sys.executable if a == PYTHON else a for a in self.command]
+        return _argv(self.command)
 
 
-GATE_KEYS = ("command", "ledger", "require", "scopes")
+GATE_KEYS = ("command", "ledger", "parts", "require", "scopes")
 SCOPE_KEYS = ("include", "exclude", "readers")
+PART_KEYS = ("command", "scope")
+RESERVED_PARTS = ("all", "readers")  # the `part` a single-command run writes in its row: never a part's name
 
 
 def from_dict(raw: dict) -> Gate:
@@ -143,9 +174,41 @@ def from_dict(raw: dict) -> Gate:
     require = raw.get("require", "")
     if require and require not in scopes:
         raise Refusal(f"[gate] `require` names scope {require!r}, which is not declared", f"declare [gate.scopes.{require}], or name one of: {', '.join(sorted(scopes)) or 'none declared'}")
-    if require and not cmd:
+    parts = _parts(raw.get("parts", {}), scopes)
+    if parts and cmd:
+        raise Refusal("[gate] sets both `command` and `parts`", "give either `command` or `parts`, not both: one command for the whole gate, or one per part")
+    if require and not cmd and not parts:
         raise Refusal("[gate] sets `require` but no `command`", "set the gate command, or unset `require`")
-    return Gate(tuple(cmd), ledger, require, scopes)
+    return Gate(tuple(cmd), ledger, require, scopes, parts=parts)
+
+
+def _parts(table: object, scopes: dict[str, Scope]) -> tuple[Part, ...]:
+    """Parse ``[gate.parts]``: each part a command and the declared scope it is keyed on."""
+    if not isinstance(table, dict):
+        raise Refusal("[gate] `parts` is not a table", "declare each part as [gate.parts.<name>], with `command` and `scope`")
+    out = []
+    for name, p in table.items():
+        if not NAME_RE.match(name):
+            raise Refusal(f"[gate.parts] names a part {name!r}", "name parts in lower case: letters, digits and `-`, starting with a letter")
+        if name in RESERVED_PARTS:
+            raise Refusal(f"[gate.parts] names a part {name!r}, which is reserved", f"rename it: {' and '.join(RESERVED_PARTS)} label a single-command run's row")
+        if not isinstance(p, dict):
+            raise Refusal(f"[gate.parts.{name}] is not a table", "give it `command` and `scope`")
+        extra = sorted(set(p) - set(PART_KEYS))
+        if extra:
+            raise Refusal(f"[gate.parts.{name}] has unknown key {extra[0]!r}", f"use only {', '.join(PART_KEYS)}")
+        cmd = p.get("command")
+        if not isinstance(cmd, list) or not cmd or not all(isinstance(x, str) and x for x in cmd):
+            raise Refusal(f"[gate.parts.{name}] `command` is {cmd!r}", 'give the part\'s command as a non-empty list of words, e.g. ["{python}", "-m", "pytest", "-q", "tests/unit"]')
+        scope = p.get("scope", "")
+        if not isinstance(scope, str) or not scope:
+            raise Refusal(f"[gate.parts.{name}] names no `scope`", "name the scope whose files the part reads, e.g. scope = \"code\" (a part keyed on too narrow a scope fails open)")
+        if scope not in scopes:
+            raise Refusal(f"[gate.parts.{name}] names scope {scope!r}, which is not declared", f"declare [gate.scopes.{scope}], or name one of: {', '.join(sorted(scopes)) or 'none declared'}")
+        out.append(Part(name, tuple(cmd), scope))
+    if out and any(s.readers for s in scopes.values()):
+        raise Refusal("[gate] declares `parts` and a scope with `readers`", "parts and readers are exclusive: drop the readers, and key a part on a scope that holds what they read")
+    return tuple(out)
 
 
 def _check_rel(what: str, path: str) -> None:
@@ -301,6 +364,47 @@ def covering(rows: list[dict], gate: Gate, key: str, here: str) -> dict | None:
     return None
 
 
+def _part_rows(rows: list[dict], part: Part, key: str, here: str) -> list[dict]:
+    return [r for r in rows if r.get("part") == part.name and r.get("scopes", {}).get(key) == here and r.get("status") in (PASSED, FAILED)]
+
+
+def part_covering(rows: list[dict], part: Part, key: str, here: str) -> dict | None:
+    """``covering`` for one part: the newest row of this part on ``key`` at id ``here``, if it
+    passed with the part's command now; else None. Another part's row never counts, whatever its
+    command."""
+    seen = _part_rows(rows, part, key, here)
+    if seen and seen[-1]["status"] == PASSED and list(seen[-1].get("command", [])) == list(part.command):
+        return seen[-1]
+    return None
+
+
+def covered(rows: list[dict], gate: Gate, key: str, here: str) -> tuple[bool, list[str]]:
+    """Whether the whole gate passed on scope ``key`` at id ``here``, and the names of the parts
+    that did not: with parts, every part must cover it; without, ``covering`` decides."""
+    if not gate.parts:
+        return covering(rows, gate, key, here) is not None, []
+    missing = [p.name for p in gate.parts if part_covering(rows, p, key, here) is None]
+    return not missing, missing
+
+
+def stale_parts(rows: list[dict], gate: Gate, ids: dict[str, str]) -> list[Part]:
+    """The parts ``gate run --stale`` runs, in declared order: each not fresh (no green run of it
+    on its own scope's id here) or not covering the ``require`` scope's id here."""
+    out = []
+    for p in gate.parts:
+        fresh = part_covering(rows, p, p.scope, ids[p.scope]) is not None
+        if not fresh or (gate.require and part_covering(rows, p, gate.require, ids[gate.require]) is None):
+            out.append(p)
+    return out
+
+
+def _part_why(rows: list[dict], part: Part, key: str, here: str) -> str:
+    seen = _part_rows(rows, part, key, here)
+    if not seen:
+        return "no run on it"
+    return f"its newest run on it {seen[-1]['status']}" if seen[-1]["status"] != PASSED else "its newest run on it ran another command"
+
+
 def _ignored(root: Path, rel: str) -> bool:
     try:
         _git(root, "check-ignore", "-q", "--no-index", rel)
@@ -334,23 +438,80 @@ def _head(root: Path) -> str:
         return ""
 
 
-def run(root: Path, gate: Gate, *, readers: bool = False, session: str | None = None, actor: str | None = None) -> tuple[int, str]:
+def run(root: Path, gate: Gate, *, readers: bool = False, parts: list[str] | None = None, stale: bool = False,
+        session: str | None = None, actor: str | None = None) -> tuple[int, str]:
     """Run the gate command at ``root`` and append its row; the reply is one line. ``readers``
     runs only the scopes' readers (their names appended to the command) and records only their
     ids: what a change outside a covered scope needs. An id that moved while the command ran is
     left out of the row (named in ``moved``): the run tested no set of those files anyone can
-    name; the ids that did not move are recorded."""
-    if not gate.command:
+    name; the ids that did not move are recorded.
+
+    With ``[gate.parts]``, it runs every part in declared order, or the named ``parts``, or with
+    ``stale`` only the stale ones (``stale_parts``), and goes on past a failing part; each part
+    appends its own row as it ends. The reply is a line per part, then a summary."""
+    if readers and (parts or stale):
+        raise Refusal("`--readers` with `--part` or `--stale`", "give one: readers belong to a single-command gate, parts to a gate split into parts")
+    if parts and stale:
+        raise Refusal("`--part` with `--stale`", "give one: `--part NAME` runs the parts named, `--stale` the parts whose files moved")
+    if not gate.command and not gate.parts:
         raise Refusal("[gate] has no `command`", 'set it in context.toml, e.g. command = ["{python}", "-m", "pytest", "-q"]; or run the gate by hand')
+    if gate.parts:
+        if readers:
+            raise Refusal("[gate] declares parts, which take no `--readers`", "run `context-engine gate run --stale`: it re-runs the parts whose files moved")
+        return _run_parts(root, gate, parts, stale, session, actor)
+    if parts or stale:
+        raise Refusal(f"`--{'part' if parts else 'stale'}` but [gate] declares no parts", "run the whole gate: `context-engine gate run` (or `context-engine gate run --readers` for the readers)")
     names = list(dict.fromkeys(r for s in gate.scopes.values() for r in s.readers))
     if readers and not names:
         raise Refusal("no gate scope names `readers`", "run the whole gate: `context-engine gate run`")
     ledger = _ledger_path(root, gate)
     keep = (lambda k: k.endswith("+readers")) if readers else (lambda k: True)
+    row, moved, kept, log = _run_one(root, gate, ledger, gate.argv() + (names if readers else []), gate.command,
+                                     "readers" if readers else "all", keep, names if readers else [], session, actor, "")
+    status, seconds = row["status"], row["seconds"]
+    what = "gate readers" if readers else "gate"
+    if status == INCONSISTENT:
+        return 1, f"{what} {status}: the files of {', '.join(moved)} changed while it ran ({seconds}s), so the run counts for nothing; run it again; log {row['log']}"
+    unrecorded = f"; not recorded on {', '.join(moved)}: their files changed while it ran" if moved else ""
+    return (0 if status == PASSED else 1), f"{what} {status} in {seconds}s ({_last_line(log)}) on {', '.join(kept.values())}{unrecorded}; log {row['log']}"
+
+
+def _run_parts(root: Path, gate: Gate, parts: list[str] | None, stale: bool, session: str | None, actor: str | None) -> tuple[int, str]:
+    names = [p.name for p in gate.parts]
+    unknown = [n for n in parts or [] if n not in names]
+    if unknown:
+        raise Refusal(f"no gate part named {unknown[0]!r}", f"name one of: {', '.join(names)}")
+    ledger = _ledger_path(root, gate)
+    if parts:
+        chosen = [p for p in gate.parts if p.name in parts]
+    elif stale:
+        chosen = stale_parts(read_rows(ledger), gate, scope_ids(root, gate))
+        if not chosen:
+            return 0, "gate: every part is fresh" + (f" and covers {gate.require}" if gate.require else "") + ": nothing to run"
+    else:
+        chosen = list(gate.parts)
+    lines, results = [], {PASSED: [], FAILED: [], INCONSISTENT: []}
+    for p in chosen:
+        row, moved, kept, log = _run_one(root, gate, ledger, p.argv(), p.command, p.name, lambda k: True, [], session, actor, p.name)
+        status, seconds = row["status"], row["seconds"]
+        results[status].append(p.name)
+        if status == INCONSISTENT:
+            lines.append(f"gate part {p.name} {status}: the files of {', '.join(moved)} changed while it ran ({seconds}s), so the run counts for nothing; log {row['log']}")
+            continue
+        unrecorded = f"; not recorded on {', '.join(moved)}: their files changed while it ran" if moved else ""
+        lines.append(f"gate part {p.name} {status} in {seconds}s ({_last_line(log)}) on {', '.join(kept.values())}{unrecorded}; log {row['log']}")
+    summary = f"gate: {len(chosen)} part{'s' if len(chosen) != 1 else ''} run: {len(results[PASSED])} {PASSED}"
+    summary += "".join(f"; {s}: {', '.join(results[s])}" for s in (FAILED, INCONSISTENT) if results[s])
+    return (0 if len(results[PASSED]) == len(chosen) else 1), "\n".join([*lines, summary])
+
+
+def _run_one(root: Path, gate: Gate, ledger: Path, argv: list[str], command: tuple[str, ...], part: str, keep, args: list[str],
+             session: str | None, actor: str | None, tag: str) -> tuple[dict, list[str], dict[str, str], Path]:
+    """Run one command, append its row and return it, with the ids that moved, those kept, and
+    its log. ``tag`` goes in the log's name, so parts run in the same second keep their logs."""
     before = {k: v for k, v in scope_ids(root, gate).items() if keep(k)}
-    argv = gate.argv() + (names if readers else [])
     started = time.time()
-    log = ledger.parent / f"{dt.datetime.fromtimestamp(started).strftime('%Y%m%dT%H%M%S')}-{os.getpid()}.log"
+    log = ledger.parent / f"{dt.datetime.fromtimestamp(started).strftime('%Y%m%dT%H%M%S')}-{os.getpid()}{'-' + tag if tag else ''}.log"
     with open(log, "wb") as out:
         try:
             code = subprocess.run(argv, cwd=root, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT).returncode
@@ -369,19 +530,15 @@ def run(root: Path, gate: Gate, *, readers: bool = False, session: str | None = 
     kept = {k: v for k, v in before.items() if k not in moved}
     status = INCONSISTENT if not kept else PASSED if code == 0 else FAILED
     row = {
-        "started": _stamp(started), "seconds": seconds, "status": status, "exit": code, "part": "readers" if readers else "all",
-        "command": list(gate.command), "args": names if readers else [], "scopes": kept,
+        "started": _stamp(started), "seconds": seconds, "status": status, "exit": code, "part": part,
+        "command": list(command), "args": list(args), "scopes": kept,
         "log": log.relative_to(root).as_posix(), "head": _head(root), "session": session or "", "actor": actor or "",
     }
     if moved:
         row["moved"] = moved
     with open(ledger, "a", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(row) + "\n")
-    what = "gate readers" if readers else "gate"
-    if status == INCONSISTENT:
-        return 1, f"{what} {status}: the files of {', '.join(moved)} changed while it ran ({seconds}s), so the run counts for nothing; run it again; log {row['log']}"
-    unrecorded = f"; not recorded on {', '.join(moved)}: their files changed while it ran" if moved else ""
-    return (0 if status == PASSED else 1), f"{what} {status} in {seconds}s ({_last_line(log)}) on {', '.join(kept.values())}{unrecorded}; log {row['log']}"
+    return row, moved, kept, log
 
 
 def _last_line(log: Path) -> str:
@@ -406,6 +563,8 @@ def status(root: Path, gate: Gate, require: str = "") -> tuple[int, str]:
     needs)."""
     if not gate.scopes:
         raise Refusal("[gate] declares no scopes", "declare one, e.g. [gate.scopes.all] (include defaults to every file)")
+    if gate.parts:
+        return _status_parts(root, gate, require)
     name, plus, _ = require.partition("+")
     keys = sorted(gate.scopes) + sorted(f"{n}+readers" for n, s in gate.scopes.items() if s.readers)
     if require and require not in keys:
@@ -425,6 +584,48 @@ def status(root: Path, gate: Gate, require: str = "") -> tuple[int, str]:
     else:
         out.append(f"require {require}: red: run `context-engine gate run` ({' '.join(gate.command)})")
     return (0 if code and part else 1), "\n".join(out)
+
+
+def _status_parts(root: Path, gate: Gate, require: str) -> tuple[int, str]:
+    """``status`` for a gate split into parts: a line per scope (covered when every part passed on
+    its id), a line per part (fresh, or STALE: what ``gate run --stale`` runs), and with
+    ``require`` (a scope, or ``<scope>+parts``: the scope covered and every part fresh) a last
+    line naming what to run."""
+    keys = sorted(gate.scopes) + sorted(f"{n}+parts" for n in gate.scopes)
+    if require and require not in keys:
+        raise Refusal(f"no gate scope named {require!r}", f"name one of: {', '.join(keys)}")
+    rows = read_rows(root / gate.ledger)
+    ids = scope_ids(root, gate)
+    out, missing = [], {}
+    for key, here in ids.items():
+        ok, missing[key] = covered(rows, gate, key, here)
+        if ok:
+            out.append(f"{key}: covered on {here} (every part passed on it)")
+        else:
+            whys = "; ".join(f"part {p.name}: {_part_why(rows, p, key, here)}" for p in gate.parts if p.name in missing[key])
+            out.append(f"{key}: NOT covered on {here} ({whys})")
+    stale = [p.name for p in stale_parts(rows, gate, ids)]
+    unfresh = []
+    for p in gate.parts:
+        here = ids[p.scope]
+        row = part_covering(rows, p, p.scope, here)
+        if row is None:
+            unfresh.append(p.name)
+            out.append(f"part {p.name} (scope {p.scope}): STALE on {here} ({_part_why(rows, p, p.scope, here)})")
+        elif p.name in stale:
+            out.append(f"part {p.name} (scope {p.scope}): STALE: it passed on {here}, not on {gate.require}'s files ({ids[gate.require]})")
+        else:
+            out.append(f"part {p.name} (scope {p.scope}): fresh on {here} by the run of {row['started']} ({row['seconds']}s, {row.get('log', '')})")
+    if not require:
+        return 0, "\n".join(out)
+    name, plus, _ = require.partition("+")
+    need = list(dict.fromkeys(n for n in [p.name for p in gate.parts] if n in missing[name] or (plus and n in unfresh)))
+    if not need:
+        out.append(f"require {require}: green")
+        return 0, "\n".join(out)
+    what = "--stale" if set(need) <= set(stale) else " ".join(f"--part {n}" for n in need)
+    out.append(f"require {require}: red: run `context-engine gate run {what}` (parts {', '.join(need)})")
+    return 1, "\n".join(out)
 
 
 def _under(root: Path, path: str, listed: list[str]) -> list[str]:
@@ -458,6 +659,11 @@ def check_commit(root: Path, gate: Gate, paths: list[str]) -> None:
         return
     rows = read_rows(root / gate.ledger)
     here = scope_id(root, scope, listed)
-    if not covering(rows, gate, scope.name, here):
-        raise Refusal(f"{hit} is in gate scope {scope.name!r}, which no green gate run covers ({here})",
-                      "run `context-engine gate run` (the whole gate, recorded), then commit; `context-engine gate status` says what is covered")
+    ok, missing = covered(rows, gate, scope.name, here)
+    if ok:
+        return
+    if gate.parts:  # every part must have passed on these files; freshness is not checked, as the readers are not
+        raise Refusal(f"{hit} is in gate scope {scope.name!r}, which no green gate run covers ({here}); parts not passed on it: {', '.join(missing)}",
+                      "run `context-engine gate run --stale` (the stale parts, recorded), then commit; `context-engine gate status` says what is covered")
+    raise Refusal(f"{hit} is in gate scope {scope.name!r}, which no green gate run covers ({here})",
+                  "run `context-engine gate run` (the whole gate, recorded), then commit; `context-engine gate status` says what is covered")

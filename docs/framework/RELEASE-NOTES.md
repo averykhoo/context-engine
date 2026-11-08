@@ -95,6 +95,16 @@ component, procedure, guard and operation.
   every operation. FRAMEWORK §6.9, §8.0.2; DEC-155, DEC-258 to DEC-263, CE-177. **Upgrade:**
   register the server once per machine (kit README § 1); a repo whose lockfile sits at its root
   gets no notice.
+- **A gate too long for one command is split into parts.** `[gate.parts.<name>]` gives each part
+  a `command` and the `scope` it reads; then `[gate] command` stays empty and no scope names
+  `readers`. Each part's run records its own row with every scope's id. A scope is covered when
+  every part passed on its files (what `commit` checks); `gate run --stale` re-runs only the
+  parts not fresh on their scope or on `require`'s, and `gate run --part NAME` the named ones;
+  `gate status --require <scope>+parts` is the scope covered and every part fresh, which the
+  close (after `gate run --stale`) and the push require. A close's record writes so re-run only
+  the parts keyed on a scope holding them. `gate status`, not orient, reports stale parts.
+  FRAMEWORK §8.5 G-V1, §6.3 item 7; DEC-296 to DEC-300, CE-181. **Upgrade:** none; a
+  single-command `[gate]` works as before.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

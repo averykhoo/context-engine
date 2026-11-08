@@ -1270,7 +1270,9 @@ numbered for citation (the order is below):
    second test run is needed only when `gate status` says the scope's id moved, and a repo
    without `[gate] require` runs the gate again. The scope's readers read those records, so where
    the scope names readers the close requires `<scope>+readers` and re-runs just the readers
-   (`gate run --readers`) when the close's writes left them uncovered. Push only with
+   (`gate run --readers`) when the close's writes left them uncovered. Where the gate is split
+   into parts, the close re-runs just the stale parts (`gate run --stale`), the ones keyed on a
+   scope its writes moved, and requires `<scope>+parts`. Push only with
    permission, then watch CI (§6.8).
 8. **Owner digest in chat** (§5.6, at most 7 lines). A pause gives the same digest, shorter.
 
@@ -2416,10 +2418,16 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   excluded file can no longer make a green run stale), so it is verified by a guard, never a
   survey alone: a test that reads an excluded path fails unless the scope names it as a
   **reader**. The readers are a part of their own, keyed on every file: after a hand edit outside
-  the scope they alone re-run. A concurrent write voids only the ids it touched. A long suite may
-  be split into parts, each keyed on its own inputs, with `orient()` reporting the untested parts.
-  A green run means "passed against these sources", not the environment, so every push runs the
-  whole gate. How the ids are computed and when a run counts: `docs/engine.md`.
+  the scope they alone re-run. A concurrent write voids only the ids it touched. A gate too long
+  for one command is split into **parts** (`[gate.parts]`), each its own command keyed on the
+  scope it reads, in place of the readers; each part's run records every scope's id. A scope is
+  covered when every part passed on its files; a part is stale when it has not passed on its own
+  scope's files or on the required scope's. Re-running only the stale parts (`gate run --stale`)
+  means a close's record writes re-run only the parts that read records; `gate status` reports
+  the stale parts (not `orient()`, which runs at every session start and would hash the tree each
+  time), and the commit refusal checks coverage, never freshness. A green run means "passed
+  against these sources", not the environment, so every push runs the whole gate (with parts,
+  every part fresh). How the ids are computed and when a run counts: `docs/engine.md`.
 - **G-V2 (floors):** raw totals with zero headroom, raised by an automatic ratchet; floors on
   what a guard's extractor finds keep declared headroom (P7); one dated baseline per suite. The
   raw-total floors come when a suite is large (§11.2).

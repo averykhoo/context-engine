@@ -113,3 +113,11 @@ every id moved, so a concurrent write voids only the ids it touched. The commit 
 scope, not its readers: their id moves on every engine write, any session's, and a commit of a
 code path does not commit what they re-check. The ledger is gitignored, or it would sit inside
 the id it records.
+
+A row's `part` says which run it is: `all` (the whole single command), `readers`, or, with
+`[gate.parts]`, the part's name (`all` and `readers` are reserved, so the two never meet). A
+part's row holds every scope's id, so a part keyed on every file still counts toward the code
+scope. `gate.py::covered` reads a scope as covered when every part's newest PASSED or FAILED row
+on its id (`gate.py::part_covering`) passed with that part's command now; `gate.py::stale_parts`
+is what `gate run --stale` runs: each part not covering its own scope, or the `require` scope,
+here. `gate.py::check_commit` asks only for coverage, as it does of the readers.

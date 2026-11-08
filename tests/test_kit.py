@@ -726,8 +726,16 @@ def test_the_config_template_names_every_key_the_engine_reads_and_parses():
     cfg = C.from_dict(raw)
     assert _keys(C.Config, ("kinds", "working", "routes", "guards", "gate", "housekeeping")) <= set(raw["engine"])
     assert _keys(C.Housekeeping) <= set(raw["housekeeping"]) and cfg.housekeeping.max_writes == 0, "the kit's cap is off (G-W10)"
-    assert _keys(GATE.Gate, ("skip",)) <= set(raw["gate"]) and _keys(GATE.Scope, ("name",)) <= set(raw["gate"]["scopes"]["all"])
+    assert _keys(GATE.Gate, ("skip", "parts")) <= set(raw["gate"]) and _keys(GATE.Scope, ("name",)) <= set(raw["gate"]["scopes"]["all"])
     assert cfg.gate.scopes and not cfg.gate.command and not cfg.gate.require, "the kit's gate is off until a repo sets its command"
+    # [gate.parts] is a commented example (a live table would turn the gate on): uncommented, it
+    # parses beside the template's empty `command`, and names every key a part takes (CE-181)
+    text = (B.KIT / B.TEMPLATE).read_text(encoding="utf-8")
+    example = re.findall(r"^# (\[gate\.parts\.[a-z-]+\]\n(?:# [a-z]+ = .*\n)+)", text, flags=re.MULTILINE)
+    assert len(example) == 1, "the template's commented [gate.parts.<name>] example is missing"
+    part = tomllib.loads(example[0].replace("# ", ""))["gate"]["parts"]
+    assert len(part) == 1 and set(next(iter(part.values()))) == set(GATE.PART_KEYS)
+    assert GATE.from_dict({**raw["gate"], "parts": part}).parts
     assert _keys(C.Working, C.DEPRECATED_WORKING) <= set(raw["working"])
     assert not set(C.DEPRECATED_WORKING) & set(raw["working"]), "the kit sets a deprecated key (CE-185)"
     assert cfg.working.gate_receipt == C.Working().gate_receipt == C.GATE_RECEIPT, "the template's gate_receipt is the engine's default (CE-192)"

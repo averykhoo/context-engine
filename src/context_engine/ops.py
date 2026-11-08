@@ -510,14 +510,14 @@ def commit(e: Engine, c: Caller, message: str, paths: list[str] | None = None, s
 
 
 @op(write=False, mcp=False)
-def gate_run(e: Engine, c: Caller, readers: bool = False) -> tuple[int, str]:
-    """Run the repo's gate command ([gate] `command`) and record its result in the run ledger against the id of every gate scope, taken before and after the run (an id whose files moved while it ran is left out of the row; the run counts for nothing only when every id moved). `readers` runs only the scopes' readers, the tests that read files outside a scope. Exits as the gate did. CLI only: a gate run is out of the MCP's scope."""
-    return G.run(e.root, e.store.config.gate, readers=readers, session=c.session, actor=c.actor)
+def gate_run(e: Engine, c: Caller, readers: bool = False, parts: list[str] | None = None, stale: bool = False) -> tuple[int, str]:
+    """Run the repo's gate command ([gate] `command`) and record its result in the run ledger against the id of every gate scope, taken before and after the run (an id whose files moved while it ran is left out of the row; the run counts for nothing only when every id moved). `readers` runs only the scopes' readers, the tests that read files outside a scope. With [gate.parts] it runs every part in declared order, going on past a failure, one row per part as it ends: `parts` names the ones to run, `stale` runs only the parts not fresh on their scope or not covering `require` (none: nothing runs). Exits as the gate did (with parts, 0 only when every part run passed). CLI only: a gate run is out of the MCP's scope."""
+    return G.run(e.root, e.store.config.gate, readers=readers, parts=parts, stale=stale, session=c.session, actor=c.actor)
 
 
 @op(write=False, rest="`context-engine gate status` in a shell")
 def gate_status(e: Engine, c: Caller, require: str = "") -> tuple[int, str]:
-    """Each gate scope's id in the work tree and whether a green run covers it; `require` names a scope that must be covered (`code`: what `commit` checks), or a scope with its readers (`code+readers`: after a hand edit to a file the scope leaves out), or the exit code is 1."""
+    """Each gate scope's id in the work tree and whether a green run covers it (with [gate.parts]: every part passed on it), and each part fresh or stale; `require` names a scope that must be covered (`code`: what `commit` checks), or a scope with its readers (`code+readers`: after a hand edit to a file the scope leaves out), or with parts a scope and every part fresh (`code+parts`: the close's last check, and the push's), or the exit code is 1."""
     return G.status(e.root, e.store.config.gate, require=require)
 
 

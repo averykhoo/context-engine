@@ -147,7 +147,9 @@ def _same(params: dict) -> dict:
 
 # A second call for an operation whose options exclude each other, which one call cannot carry both of
 MORE_CALLS = [("session_start", ["--continues", "2026-10-07b"], {"continues": "2026-10-07b"}),
-              ("commit", ["-m", "CE-1: t", "--model", "claude-opus-5-5"], {"message": "CE-1: t", "model": "claude-opus-5-5"})]
+              ("commit", ["-m", "CE-1: t", "--model", "claude-opus-5-5"], {"message": "CE-1: t", "model": "claude-opus-5-5"}),
+              ("gate_run", ["--part", "a", "--part", "b"], {"parts": ["a", "b"]}),
+              ("gate_run", ["--stale"], {"stale": True})]
 
 
 @pytest.mark.criterion("AC-18")

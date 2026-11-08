@@ -33,8 +33,8 @@ EXCLUDE = ["tasks/**", "ledger.md", "ops.jsonl", "HANDOFF.md", "notes/**"]  # th
 SCOPES = {"code": {"exclude": EXCLUDE}, "all": {}}
 
 
-def _config(command=OK, require="code", scopes=SCOPES) -> dict:
-    gate = {"command": command, "scopes": scopes}
+def _config(command=OK, require="code", scopes=SCOPES, parts=None) -> dict:
+    gate = {"command": command, "scopes": scopes} if parts is None else {"parts": parts, "scopes": scopes}
     if require:
         gate["require"] = require
     return {**CONFIG, "gate": gate}
@@ -163,11 +163,29 @@ def test_globs_span_directories_only_with_two_stars(glob, path, hit):
         ({"command": ["x"], "require": "code"}, r"`require` names scope 'code', which is not declared"),
         ({"scopes": {"code": {}}, "require": "code"}, r"sets `require` but no `command`"),
         ({"ledger": "C:/runs.jsonl"}, r"not a path relative"),
+        # [gate.parts] (CE-181)
+        ({"command": ["x"], "parts": {"a": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {}}}, r"either `command` or `parts`"),
+        ({"parts": {"a": {"command": [], "scope": "s"}}, "scopes": {"s": {}}}, r"\[gate\.parts\.a\] `command` is \[\]"),
+        ({"parts": {"a": {"command": ["x"]}}, "scopes": {"s": {}}}, r"\[gate\.parts\.a\] names no `scope`"),
+        ({"parts": {"a": {"command": ["x"], "scope": "nope"}}, "scopes": {"s": {}}}, r"scope 'nope', which is not declared"),
+        ({"parts": {"a": {"command": ["x"], "scope": "s", "timeout": 5}}, "scopes": {"s": {}}}, r"unknown key 'timeout'"),
+        ({"parts": {"readers": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {}}}, r"'readers', which is reserved"),
+        ({"parts": {"all": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {}}}, r"'all', which is reserved"),
+        ({"parts": {"A": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {}}}, r"names a part 'A'"),
+        ({"parts": "x"}, r"`parts` is not a table"),
+        ({"parts": {"a": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {"readers": ["t::r"]}}}, r"`parts` and a scope with `readers`"),
     ],
 )
 def test_the_gate_table_refuses_what_it_does_not_know(gate, match):
     with pytest.raises(Refusal, match=match):
         G.from_dict(gate)
+
+
+def test_a_gate_of_parts_parses_in_declared_order_with_require_and_no_command():
+    g = G.from_dict({"parts": {"b": {"command": ["x"], "scope": "s"}, "a": {"command": ["{python}", "y"], "scope": "s"}}, "scopes": {"s": {}}, "require": "s"})
+    assert [p.name for p in g.parts] == ["b", "a"] and g.parts[0].command == ("x",) and g.parts[0].scope == "s" and g.command == ()
+    assert g.parts[1].argv() == [sys.executable, "y"]
+    assert G.from_dict({"command": [], "parts": {"a": {"command": ["x"], "scope": "s"}}, "scopes": {"s": {}}}).parts, "an empty `command`, as the kit's template ships it, is no command"
 
 
 # -- the run ledger --------------------------------------------------------------------------
@@ -444,3 +462,159 @@ def test_a_close_s_own_writes_leave_step_2_s_run_covering_the_code_and_a_code_ch
     (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")  # a code change after step 2
     code, text = G.status(repo, g, require="code")
     assert code == 1 and "code: NOT covered" in text, text
+
+
+# -- a gate split into parts ([gate.parts], CE-181) ------------------------------------------
+
+PARTS = {"unit": {"command": OK, "scope": "code"}, "docs": {"command": OK, "scope": "all"}}  # one command each: only the name tells their rows apart
+
+
+def _parts(root) -> list[str]:
+    return [r["part"] for r in G.read_rows(root / ".context/gate/runs.jsonl")]
+
+
+def test_a_scope_is_covered_only_when_every_part_passed_on_its_files(repo):
+    g = gate_of(repo, parts=PARTS)
+    assert G.status(repo, g, require="code")[0] == 1
+    code, out = G.run(repo, g, parts=["unit"])
+    assert code == 0 and out.startswith("gate part unit PASSED in ") and out.endswith("gate: 1 part run: 1 PASSED"), out
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "code: NOT covered" in text and "(part docs: no run on it)" in text and "part unit:" not in text, text
+    assert G.run(repo, g, parts=["docs"])[0] == 0
+    for key in ("code", "all", "code+parts", "all+parts"):
+        code, text = G.status(repo, g, require=key)
+        assert code == 0 and f"require {key}: green" in text, text
+    rows = G.read_rows(repo / g.ledger)
+    assert [r["part"] for r in rows] == ["unit", "docs"] and all(set(r["scopes"]) == {"all", "code"} for r in rows), rows
+
+
+def test_a_close_stales_only_the_parts_that_read_its_writes_and_stale_re_runs_just_them(repo):
+    """CE-181 (b): the close's writes (the ledger entry, the banner, HANDOFF.md) are outside the
+    code scope, so a part keyed on it stays fresh; a part keyed on every file goes stale, and
+    `gate run --stale` re-runs that part alone. Nothing in the close or the banner changes."""
+    g = gate_of(repo, parts=PARTS)
+    e, key = _engine(repo)
+    assert G.run(repo, g, session=key, actor=ACTOR)[0] == 0  # step 2's gate: every part
+    assert G.status(repo, g, require="code+parts")[0] == 0
+    e.session_close(key, actor=ACTOR, rows="CE-1 (closed)", summary=["built it"], receipts={"guards": "gate 3 passed", "read": "board only"})
+    e.banner_set("- my banner", e.banner().sha, session=key, actor=ACTOR)  # step 3: HANDOFF.md
+    code, text = G.status(repo, g, require="code")
+    assert code == 0 and "code: covered" in text, text  # the code is covered: docs's row recorded the code id too
+    assert "part unit (scope code): fresh on " in text and "part docs (scope all): STALE on " in text, text
+    code, text = G.status(repo, g, require="code+parts")
+    assert code == 1 and text.splitlines()[-1] == "require code+parts: red: run `context-engine gate run --stale` (parts docs)", text
+    n = len(G.read_rows(repo / g.ledger))
+    code, out = G.run(repo, g, stale=True, session=key, actor=ACTOR)
+    assert code == 0 and out.startswith("gate part docs PASSED") and "gate part unit" not in out, out
+    assert _parts(repo)[n:] == ["docs"]
+    assert G.status(repo, g, require="code+parts")[0] == 0
+    code, out = G.run(repo, g, stale=True)
+    assert code == 0 and out == "gate: every part is fresh and covers code: nothing to run", out
+    assert len(_parts(repo)) == n + 1, "a --stale run with nothing stale wrote a row"
+
+
+def test_a_code_change_stales_every_part(repo):
+    g = gate_of(repo, parts=PARTS)
+    assert G.run(repo, g)[0] == 0
+    (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "(part unit: no run on it; part docs: no run on it)" in text, text
+    assert G.run(repo, g, stale=True)[0] == 0
+    assert _parts(repo) == ["unit", "docs", "unit", "docs"]
+    assert G.status(repo, g, require="code+parts")[0] == 0
+
+
+def test_a_part_whose_scope_misses_the_require_scope_is_stale_until_it_covers_that_too(repo):
+    """A part keyed on a scope narrower than `require` (docs/** only) stays fresh on its own files
+    when the code changes, but no longer covers the code: --stale must run it, or the require
+    scope could never go green again by `--stale` alone."""
+    (repo / "docs").mkdir()
+    (repo / "docs" / "d.md").write_text("d\n", encoding="utf-8")
+    scopes = {"code": {"exclude": EXCLUDE}, "all": {}, "prose": {"include": ["docs/**"]}}
+    g = gate_of(repo, scopes=scopes, parts={"unit": {"command": OK, "scope": "code"}, "prose": {"command": OK, "scope": "prose"}})
+    assert G.run(repo, g)[0] == 0
+    (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "part prose (scope prose): STALE: it passed on g1/prose:" in text, text
+    assert [p.name for p in G.stale_parts(G.read_rows(repo / g.ledger), g, G.scope_ids(repo, g))] == ["unit", "prose"]
+    assert G.run(repo, g, stale=True)[0] == 0
+    assert G.status(repo, g, require="code+parts")[0] == 0
+
+
+def test_a_part_row_counts_only_for_that_part_and_its_command_now(repo):
+    g = gate_of(repo, parts=PARTS)
+    assert G.run(repo, g, parts=["unit"])[0] == 0
+    ok, missing = G.covered(G.read_rows(repo / g.ledger), g, "code", code_id(repo))
+    assert not ok and missing == ["docs"], "unit's row, of the same command, counted for docs"
+    unit, docs = g.parts
+    other = dataclasses.replace(g, parts=(dataclasses.replace(unit, command=("{python}", "-c", "pass")), docs))
+    code, text = G.status(repo, other, require="code")
+    assert code == 1 and "part unit: its newest run on it ran another command" in text, text
+    assert G.run(repo, g, parts=["docs"])[0] == 0 and G.status(repo, g, require="code")[0] == 0
+    red = dataclasses.replace(g, parts=(dataclasses.replace(unit, command=tuple(RED)), docs))
+    assert G.run(repo, red, parts=["unit"])[0] == 1
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "part unit: its newest run on it FAILED" in text, "the newest row of unit on these files is red, whatever its command"
+
+
+def test_a_failing_part_does_not_stop_the_others_and_each_row_is_kept(repo):
+    g = gate_of(repo, parts={"a": {"command": RED, "scope": "code"}, "b": {"command": OK, "scope": "code"}})
+    code, out = G.run(repo, g)
+    assert code == 1 and out.splitlines()[0].startswith("gate part a FAILED") and out.splitlines()[-1] == "gate: 2 parts run: 1 PASSED; FAILED: a", out
+    assert [(r["part"], r["status"]) for r in G.read_rows(repo / g.ledger)] == [("a", "FAILED"), ("b", "PASSED")]
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "(part a: its newest run on it FAILED)" in text and "part b (scope code): fresh" in text, text
+
+
+def test_a_part_whose_files_move_while_it_runs_is_inconsistent_alone(repo):
+    touch = ["{python}", "-c", "open('src/a.py', 'a').write(chr(35))"]  # no backslash: conftest's _toml does not escape one
+    g = gate_of(repo, parts={"touch": {"command": touch, "scope": "code"}, "ok": {"command": OK, "scope": "code"}})
+    code, out = G.run(repo, g)
+    assert code == 1 and out.splitlines()[0].startswith("gate part touch INCONSISTENT") and out.endswith("; INCONSISTENT: touch"), out
+    first, second = G.read_rows(repo / g.ledger)
+    assert first["scopes"] == {} and first["moved"] == ["all", "code"] and first["part"] == "touch"
+    assert second["status"] == "PASSED" and second["scopes"]["code"] == code_id(repo), "the next part ran on the new files"
+    code, text = G.status(repo, g, require="code")
+    assert code == 1 and "(part touch: no run on it)" in text, text
+
+
+def test_commit_refuses_a_code_path_until_every_part_passed_on_it_and_never_checks_freshness(repo):
+    """The commit check is the require scope's coverage, as with one command: an op-log write
+    after the run stales the part keyed on every file, and the commit still goes through; a code
+    change is refused until every part passed on it."""
+    g = gate_of(repo, parts=PARTS)
+    (repo / "src" / "a.py").write_text("a = 2\n", encoding="utf-8")
+    assert G.run(repo, g)[0] == 0
+    e, key = _engine(repo)  # an engine write: an op-log line moves `all`, so docs goes stale
+    code, text = G.status(repo, g, require="code+parts")
+    assert code == 1 and "code: covered" in text and "part docs (scope all): STALE" in text, text
+    assert e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR).startswith("committed ")
+    (repo / "src" / "a.py").write_text("a = 3\n", encoding="utf-8")
+    assert G.run(repo, g, parts=["unit"])[0] == 0
+    with pytest.raises(Refusal, match=r"src/a.py is in gate scope 'code', which no green gate run covers \(g1/code:\w+\); parts not passed on it: docs") as r:
+        e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR)
+    assert "context-engine gate run --stale" in r.value.remedy
+    assert G.run(repo, g, stale=True)[0] == 0
+    assert e.commit(["src/a.py"], "CE-1: code", session=key, actor=ACTOR).startswith("committed ")
+
+
+def test_the_cli_runs_parts_and_requires_them(repo, capsys, monkeypatch):
+    monkeypatch.chdir(repo)
+    assert main(["gate", "run", "--stale"]) == 2 and "declares no parts" in capsys.readouterr().err  # one command: no parts
+    assert main(["gate", "run", "--part", "x"]) == 2 and "declares no parts" in capsys.readouterr().err
+    assert main(["gate", "status", "--require", "code+parts"]) == 2
+    assert "no gate scope named 'code+parts'" in capsys.readouterr().err
+    gate_of(repo, parts=PARTS)
+    assert main(["gate", "run", "--part", "unit"]) == 0
+    assert capsys.readouterr().out.startswith("gate part unit PASSED")
+    assert main(["gate", "run", "--part", "nope"]) == 2
+    assert "no gate part named 'nope'" in capsys.readouterr().err
+    assert main(["gate", "run", "--stale"]) == 0
+    assert capsys.readouterr().out.startswith("gate part docs PASSED")
+    assert main(["gate", "status", "--require", "code+parts"]) == 0
+    assert "require code+parts: green" in capsys.readouterr().out
+    assert main(["gate", "run", "--part", "unit", "--part", "docs"]) == 0
+    assert capsys.readouterr().out.splitlines()[-1] == "gate: 2 parts run: 2 PASSED"
+    assert main(["gate", "run", "--readers"]) == 2 and "take no `--readers`" in capsys.readouterr().err
+    assert main(["gate", "run", "--part", "unit", "--stale"]) == 2 and "`--part` with `--stale`" in capsys.readouterr().err
+    assert main(["gate", "status", "--require", "code+readers"]) == 2 and "no gate scope named 'code+readers'" in capsys.readouterr().err

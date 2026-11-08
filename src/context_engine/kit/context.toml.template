@@ -180,6 +180,16 @@ include = ["**"]
 exclude = []
 readers = []
 
+# A gate too long for one command is split into parts: each [gate.parts.<name>] has its own
+# `command` and the `scope` whose files it reads, runs in declared order and records its own row;
+# then `command` above stays empty and no scope names `readers`. A scope is covered when every part
+# passed on its files; `gate run --stale` re-runs only the stale parts, and `gate status --require
+# <scope>+parts` says when every part is fresh. A part keyed on a scope holding HANDOFF.md or the
+# records re-runs after every close: keep long parts on a scope that leaves those out, guarded.
+# [gate.parts.unit]
+# command = [".venv/bin/python", "-m", "pytest", "-q", "tests/unit"]
+# scope = "all"
+
 # -- routes (FRAMEWORK §2): where each component lives; print with `context-engine routes` -----
 # Keys of a [[routes]] entry: component, path (must exist: lint G-R1), mode (how it changes,
 # free text), pattern (how files under `path` are named), note, optional (may be absent), and the G-D1
