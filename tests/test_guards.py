@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import shutil
 import tomllib
+from pathlib import Path
 
 import pytest
 
@@ -108,6 +109,39 @@ def test_g_d1_remedy_names_where_cut_text_goes_and_to_delete_it_only_once_it_lan
 
 
 # -- G-D2 ----------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("prefix,says", [
+    ("RISK", "[kinds.task] prefix RISK is the standard prefix of risk ids, so task ids would read as risk ids (FRAMEWORK P3)"),
+    ("DEC", "[kinds.task] prefix DEC is the standard prefix of decision ids, so task ids would read as decision ids (FRAMEWORK P3)"),
+    ("HAZ", "[kinds.task] prefix HAZ is reserved for unverified hazards, a kind not built yet (FRAMEWORK P3)"),
+    ("EXP", "[kinds.task] prefix EXP is reserved for experiments and measured runs, a kind not built yet (FRAMEWORK P3)"),
+    ("CE", None),
+    ("T", None),  # the old kit's one-letter prefix: its length is not lint's to check (DEC-230)
+])
+def test_g_d2_reds_a_task_prefix_that_is_a_standard_or_reserved_one(tmp_path, prefix, says):
+    """CE-56 (DEC-231): a task prefix never reads as another kind's ids. Only the `[working] task`
+    kind is checked: another kind with a standard prefix is not lint's to judge."""
+    got = _task_prefix_reds(tmp_path, prefix)
+    assert [f"{f.path}: {f.message}" for f in got] == ([f"context.toml: {says}"] if says else []), got
+    if says:
+        assert "keeping its number, with its old id in `aliases` (FRAMEWORK §11.4)" in got[0].remedy
+
+
+def test_g_d2_passes_this_repos_own_task_prefix(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    cfg = from_dict(tomllib.loads((root / "context.toml").read_text(encoding="utf-8")))
+    assert _task_prefix_reds(tmp_path, cfg.kinds[cfg.working.task].prefix) == []
+
+
+def _task_prefix_reds(tmp_path, prefix):
+    cfg = config()
+    cfg["kinds"]["task"]["prefix"] = prefix
+    cfg["kinds"]["note"] = {"type": "Note", "prefix": "ASK" if prefix != "ASK" else "NOTE", "dir": "notes", "mode": "replaced"}
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n- true now\n", encoding="utf-8")
+    (tmp_path / "docs").mkdir(exist_ok=True)
+    return [f for f in Engine(tmp_path).lint() if f.guard == "G-D2"]
 
 
 @pytest.mark.criterion("AC-45")

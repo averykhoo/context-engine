@@ -161,8 +161,15 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
 - Code is cited as `file::symbol`.
 - **One standard id form** for every id a repo mints (goals, stories, criteria, decisions, tasks,
   questions, register entries): `[A-Z]+-[1-9][0-9]*`, a prefix of capitals, a dash, and a number
-  with no leading zero (`G-3`, `S-12`). The prefixes of record kinds are per-repo config
-  (`[kinds.*].prefix`); the form is not. Goals and register entries are not record kinds, so
+  with no leading zero (`GOAL-3`, `STORY-12`). **The standard prefixes**, one per kind and the
+  kit's defaults: `DEC` (decisions), `STORY` (stories), `AC` (criteria), `ASK` (questions),
+  `RISK` (register entries), `GOAL` (goals), `BATON` (batons) and `PAUSE` (pause records). `EXP`
+  (experiments and measured runs) and `HAZ` (unverified hazards) are reserved for kinds not built
+  yet. Tasks take a per-repo prefix naming the board, 2 to 5 capitals that are none of those:
+  `init` asks for it, and lint (G-D2) reds a task prefix that is a standard or reserved one. A
+  prefix `init` takes is 2 to 5 capitals. The prefixes of record kinds are per-repo config
+  (`[kinds.*].prefix`); the form is not, and a repo that kept its own prefixes at adoption keeps
+  them (§11.4). Goals and register entries are not record kinds, so
   their prefixes (`G`, `INV`) are fixed by the engine. Guard and drift names (`G-D3`, `DR1`)
   belong to this document, not to a repo. A record stamped before a repo took up the form keeps
   its old ids verbatim (owner words are never rewritten), and the guards read a legacy goal id
@@ -438,7 +445,7 @@ template is ever imposed on the owner, and the agent never rewrites the owner's 
 **goal** goes into the charter; a stated **feature** becomes a story.
 
 **Where stories live.** Either is fine, and a repo may use both:
-- one story per file (`S-n`; id prefixes are per-repo config, `[kinds.*].prefix` in
+- one story per file (`STORY-n`; id prefixes are per-repo config, `[kinds.*].prefix` in
   `context.toml`, with the defaults in §10); or
 - numbered sections of a per-feature **PRD** (`docs/issues/<slug>/PRD.md § N`), each carrying
   the owner's words with a date, e.g. `(OWNER: "make Ctrl click include the cursors row")`.
@@ -1601,9 +1608,10 @@ Working instructions may come from any of these three sources; a grant may not.
    `.context-engine/` appended to the repo's `.gitignore` when nothing there ignores it, and the
    op log's `merge=union` line to its `.gitattributes` when nothing there gives it that. It
    only creates files and never overwrites one; by
-   hand, copy the kit's files as its README says. The agent then fills the charter and the
-   config, with a provenance note on every cap, and checks the id prefixes against ids the
-   repo already uses, then commits the kit's files by path before the first session starts:
+   hand, copy the kit's files as its README says. The task prefix is the owner's: on a repo with
+   no `context.toml`, `init` refuses without one, and its dry run warns instead. The agent then
+   fills the charter and the config, with a provenance note on every cap, and checks the id
+   prefixes against ids the repo already uses, then commits the kit's files by path before the first session starts:
    the engine commits (§5.5 rule 4) only where `context.toml` is tracked.
 4. The agent drafts criteria and shows a digest, opens questions, and builds the first board.
    Then it sets the correctness chain's sources in `[guards]` (§8.1): if they were set before
@@ -2457,16 +2465,16 @@ docs/
   charter.md             *
   framework/contract.md  * # the framework's rules, imported by CLAUDE.md; replaced whole on upgrade, never edited here (G-D0)
   law.md                   # optional: the NFR doc (NFRs, data-model law) with invariant → test map
-  stories/S-n-<slug>.md  * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
+  stories/STORY-n-<slug>.md * or issues/<slug>/PRD.md   # owner's voice (records, or PRD sections mapped in context.toml)
   criteria.md            * or criteria/ or features/*.feature
-  decisions/D-n-<slug>.md * # one record per decision; no index is stored (the listing is printed, and published by CI)
+  decisions/DEC-n-<slug>.md * # one record per decision; no index is stored (the listing is printed, and published by CI)
   deviations/              # append-only records (+ optional generated open-gaps view)
   invariants.md            # the residual-risk register (`[working] register`, §7.4)
   runbooks/              * # method: procedures.md (every procedure in order), manual-mode.md (every engine operation by hand), gate, sabotage, fan-out and release (§7.5), from the kit
   evidence/<id>-<topic>-<date>.md *
   ledger/session-log.md  * # session ledger (one file under the engine lock)
   ledger/ops.jsonl         # engine op log, one JSON line per write
-  working/               * # baton (BTN-n) and pause (PAU-n) records (§5.4)
+  working/               * # baton (BATON-n) and pause (PAUSE-n) records (§5.4)
   archive/README.md        # redirect table
 tasks/                   * # flat; open and closed side by side, `state:` in frontmatter (§5.2)
 .context/                * # engine lock; carries its own .gitignore, never tracked
@@ -2559,7 +2567,7 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   appends the kit block to an existing `CLAUDE.md` only when no kit block (of any version)
   is there, and keeps an existing `context.toml` once it loads. Then edit `context.toml` in
   place: each kind's `dir` and each route's `path` point at what the repo already has, each
-  kind's `prefix` is the framework's form, and the skeletons `init` wrote for components the
+  kind's `prefix` is the framework's form (a task prefix of the repo's own; P3), and the skeletons `init` wrote for components the
   repo keeps elsewhere are deleted rather than routed. A re-run of `init` writes only what that
   edited config points at. Lint (G-R1 and the schemas) shows what still disagrees.
 - **Enable guards incrementally.** Each one starts as a warning, with a dated deadline for

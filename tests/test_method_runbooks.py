@@ -74,7 +74,7 @@ def test_each_method_runbook_has_its_own_route_with_caps(config, name):
 @pytest.mark.criterion("AC-71")
 @pytest.mark.parametrize("name", METHOD)
 def test_an_adopted_repo_that_loses_a_method_runbook_or_outgrows_it_is_red(tmp_path, name):
-    B.init(tmp_path)
+    B.init(tmp_path, {"task": "TK"})
     rel = f"docs/runbooks/{name}"
     assert [f for f in Engine(tmp_path).lint() if f.guard in ("G-R1", "G-D1")] == []
     path = tmp_path / rel

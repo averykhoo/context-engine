@@ -296,7 +296,7 @@ def test_g_d0_fails_a_kit_repo_whose_decision_enum_lacks_accepted(tmp_path):
     def d0() -> list[str]:
         return [ln.split(". Remedy:")[0] for ln in run(["--root", str(tmp_path), "lint"])[1].splitlines() if ln.startswith("G-D0")]
 
-    B.init(tmp_path)
+    B.init(tmp_path, {"task": "TK"})
     _fill_gate(tmp_path)
     assert d0() == []
     cfg = tmp_path / "context.toml"

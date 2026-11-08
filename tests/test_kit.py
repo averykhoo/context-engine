@@ -19,6 +19,7 @@ from context_engine.ledger import EMPTY_LEDGER
 
 REPO = Path(__file__).resolve().parents[1]
 FRAMEWORK = REPO / "docs" / "framework" / "FRAMEWORK.md"
+TASK = {"task": "TK"}  # a new repo's init needs the task prefix (DEC-229)
 
 
 def snapshot(root: Path) -> dict[str, bytes]:
@@ -36,7 +37,7 @@ def test_init_never_overwrites_and_a_second_run_is_a_no_op(tmp_path):
     claude = b"# Our contract\r\n\r\nexisting rules\r\n"
     (tmp_path / "CLAUDE.md").write_bytes(claude)
 
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert "\n" not in out and out.startswith("init: created")
     assert (tmp_path / "docs" / "charter.md").read_bytes() == charter
     new = (tmp_path / "CLAUDE.md").read_bytes()
@@ -46,14 +47,14 @@ def test_init_never_overwrites_and_a_second_run_is_a_no_op(tmp_path):
     assert (tmp_path / "docs" / "ledger" / "session-log.md").read_text(encoding="utf-8") == EMPTY_LEDGER
 
     before = snapshot(tmp_path)
-    again = B.init(tmp_path)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 0 (none)"), again
     assert snapshot(tmp_path) == before
 
 
 @pytest.mark.criterion("AC-31")
 def test_init_dry_run_writes_nothing(tmp_path):
-    out = B.init(tmp_path, dry_run=True)
+    out = B.init(tmp_path, TASK, dry_run=True)
     assert out.startswith("init (dry run): would create") and "context.toml" in out
     assert list(tmp_path.iterdir()) == []
 
@@ -75,7 +76,7 @@ def test_init_refuses_a_file_created_after_its_plan_and_leaves_it_as_it_is(tmp_p
     theirs = b"# their charter, written mid-run\n"
     _plan_then(monkeypatch, lambda root: (root / "docs").mkdir() or (root / "docs" / "charter.md").write_bytes(theirs))
     with pytest.raises(Refusal, match=r"docs/charter.md appeared while init ran") as e:
-        B.init(tmp_path)
+        B.init(tmp_path, TASK)
     assert (tmp_path / "docs" / "charter.md").read_bytes() == theirs
     assert "run init again" in e.value.remedy
 
@@ -86,7 +87,7 @@ def test_init_refuses_a_claude_md_edited_after_its_plan_and_leaves_the_edit(tmp_
     edited = b"# Ours\n\nan edit made while init ran\n"
     _plan_then(monkeypatch, lambda root: (root / "CLAUDE.md").write_bytes(edited))
     with pytest.raises(Refusal, match=r"CLAUDE.md changed while init ran"):
-        B.init(tmp_path)
+        B.init(tmp_path, TASK)
     assert (tmp_path / "CLAUDE.md").read_bytes() == edited
 
 
@@ -94,7 +95,7 @@ def test_init_refuses_a_claude_md_edited_after_its_plan_and_leaves_the_edit(tmp_
 @pytest.mark.parametrize("old,sep",[("rules", "\n\n"), ("rules\n", "\n"), ("rules\n\n", ""), ("", "")])
 def test_the_contract_block_starts_on_its_own_line_after_a_blank_one(tmp_path, old, sep):
     (tmp_path / "CLAUDE.md").write_bytes(old.encode())
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + sep + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
 
 
@@ -102,7 +103,7 @@ def test_the_contract_block_starts_on_its_own_line_after_a_blank_one(tmp_path, o
 def test_an_older_kit_block_is_never_doubled(tmp_path):
     old = "# Ours\n\n<!-- context-engine kit 0.4 begin -->\nframework: 0.4\n<!-- context-engine kit 0.4 end -->\n"
     (tmp_path / "CLAUDE.md").write_text(old, encoding="utf-8")
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old
     assert "CLAUDE.md (holds the kit 0.4 block: replace it" in out, out
 
@@ -128,7 +129,7 @@ def test_a_claude_md_with_its_own_gate_gets_the_kit_block_without_a_second_gate(
     old = f"# Ours\n\n{gate}"
     old = old.replace("\r\n", "\n").replace("\n", "\r\n") if "\r\n" in gate else old
     (tmp_path / "CLAUDE.md").write_bytes(old.encode())
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     new = (tmp_path / "CLAUDE.md").read_bytes().decode()
     assert new.startswith(old) and len(GATES.findall(new)) == 1, new
     assert B.kit_block(new)[1] == B.bootloader_body() and new.rstrip().endswith(B.END), "the whole kit block, and nothing after it"
@@ -136,7 +137,7 @@ def test_a_claude_md_with_its_own_gate_gets_the_kit_block_without_a_second_gate(
     assert f'{NO_STUB}"{heading}"' + (NUDGE if lint else ")") in out, out
     assert "check CLAUDE.md § Gate runs the repo's tests and ends with `&& context-engine lint`" in out.split("; next: ")[1], out
     assert ("\n" not in new.replace("\r\n", "")) if "\r\n" in old else ("\r" not in new), "the file's line endings are kept"
-    assert B.init(tmp_path).startswith("init: created 0"), "a re-run finds the kit block"
+    assert B.init(tmp_path, TASK).startswith("init: created 0"), "a re-run finds the kit block"
 
 
 @pytest.mark.criterion("AC-31")
@@ -155,7 +156,7 @@ def test_a_gate_heading_that_is_not_the_repos_gate_leaves_the_stub_in(tmp_path, 
     next: line asks for the test command."""
     old = f"# Ours\n\n{text}"
     (tmp_path / "CLAUDE.md").write_text(old, encoding="utf-8")
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == old + "\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
     assert NO_STUB not in out and f"replace `{B.GATE_PLACEHOLDER}`" in out, out
 
@@ -163,7 +164,7 @@ def test_a_gate_heading_that_is_not_the_repos_gate_leaves_the_stub_in(tmp_path, 
 @pytest.mark.criterion("AC-31")
 def test_inits_next_line_names_the_bootstrap_steps_in_order_and_the_mcp_server_as_optional(tmp_path):
     """CE-70: the steps of kit README § 2a, in its order; the MCP server is optional, never a step."""
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     nxt = out.split("; next: ")[1]
     steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "run lint", "commit the kit's files by path", "then `session start`"]
     assert [nxt.index(s) for s in steps] == sorted(nxt.index(s) for s in steps), nxt
@@ -172,9 +173,9 @@ def test_inits_next_line_names_the_bootstrap_steps_in_order_and_the_mcp_server_a
     readme = (B.KIT / "README.md").read_text(encoding="utf-8")
     one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
     assert B.GATE_PLACEHOLDER in readme and "The MCP server is optional" in one, "the line's pointers name what is there"
-    assert "; next: " not in B.init(tmp_path), "a re-run that creates nothing has no next steps"
+    assert "; next: " not in B.init(tmp_path, TASK), "a re-run that creates nothing has no next steps"
     (tmp_path / "docs" / "charter.md").unlink()
-    again = B.init(tmp_path)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 1 (docs/charter.md)") and "; next: " not in again, "a re-run that only fills a gap is no bootstrap"
 
 
@@ -232,7 +233,7 @@ def _hook_command(root: Path) -> str:
 def test_init_writes_the_bootloader_the_contract_and_the_hook(tmp_path):
     import sys
 
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     claude = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
     assert claude == f"# {tmp_path.name}: contract\n\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8")
     assert (tmp_path / B.CONTRACT_DEST).read_bytes() == (B.KIT / B.CONTRACT).read_bytes()
@@ -249,7 +250,7 @@ def test_the_hook_command_runs_orient_through_a_shell(tmp_path):
     import os
     import subprocess
 
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     _fill_gate(tmp_path)  # else orient opens with a Contract section for the Gate stub (CE-71)
     env = {k: v for k, v in os.environ.items() if not k.startswith("CE_")}
     r = subprocess.run(_hook_command(tmp_path), shell=True, capture_output=True, text=True, encoding="utf-8", cwd=tmp_path.parent, env=env, timeout=120)
@@ -259,19 +260,19 @@ def test_the_hook_command_runs_orient_through_a_shell(tmp_path):
 
 @pytest.mark.criterion("AC-57")
 def test_a_rerun_finds_its_own_hook_and_a_gitignore_that_misses_the_settings_file_is_named(tmp_path):
-    B.init(tmp_path)
-    again = B.init(tmp_path)
+    B.init(tmp_path, TASK)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 0") and f"{B.SETTINGS} (holds the orient hook)," in again, again
     other = tmp_path / "other"
     (other / ".claude").mkdir(parents=True)
     (other / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
-    out = B.init(other)
+    out = B.init(other, TASK)
     assert (other / B.SETTINGS).exists() and (other / B.SETTINGS_IGNORE).read_bytes() == b"agents.local/\n"
     assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in out, out
     (other / B.SETTINGS_IGNORE).write_bytes(b"/agents.local/\r\nsettings.local.json\r\n")
     (other / B.SETTINGS).unlink()
-    assert "does not ignore" not in B.init(other)
-    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(other, merge_settings=True), "a merge finds the hook already there"
+    assert "does not ignore" not in B.init(other, TASK)
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(other, TASK, merge_settings=True), "a merge finds the hook already there"
 
 
 # -- an existing settings file: the hook goes in only with the owner's yes (DEC-32) -----------
@@ -292,23 +293,23 @@ def test_an_existing_settings_file_without_the_hook_refuses_showing_the_change_a
 
     p = _settings(tmp_path)
     with pytest.raises(Refusal) as e:
-        B.init(tmp_path)
+        B.init(tmp_path, TASK)
     assert e.value.message.startswith(f"{B.SETTINGS} exists, so the hook goes into it: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart and change nothing else")
     assert "ask" in e.value.remedy and "--merge-settings" in e.value.remedy and "--skip-settings" in e.value.remedy
     assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"], "a refusal writes nothing at all"
-    dry = B.init(tmp_path, dry_run=True)  # the owner sees the whole plan, and the question, before answering it
+    dry = B.init(tmp_path, TASK, dry_run=True)  # the owner sees the whole plan, and the question, before answering it
     assert dry.startswith("init (dry run): would create") and f"{B.SETTINGS} (exists without the orient hook)" in dry.split("; warning: ")[0], dry
     assert f"; warning: {B.SETTINGS} is the owner's call: init would append {json.dumps(B.hook_entry(tmp_path))} to hooks.SessionStart" in dry, dry
     too = f"change nothing else in it, and would write {B.SETTINGS_IGNORE} holding settings.local.json beside it (nothing ignores that file)"
     assert too in dry and too in e.value.message, "the question names everything a yes brings"
     assert "--merge-settings" in dry and "--skip-settings" in dry and "; next: " not in dry
     assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"], "a dry run writes nothing"
-    out = B.init(tmp_path, skip_settings=True)
+    out = B.init(tmp_path, TASK, skip_settings=True)
     assert p.read_bytes() == GRANTS.encode() and f"{B.SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)" in out, out
     assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "no ignore file for a settings file init did not write"
     assert "## Hook" in (B.KIT / "README.md").read_text(encoding="utf-8"), "the remedy names a section that exists"
     with pytest.raises(Refusal, match="contradict"):
-        B.init(tmp_path, merge_settings=True, skip_settings=True)
+        B.init(tmp_path, TASK, merge_settings=True, skip_settings=True)
 
 
 @pytest.mark.criterion("AC-57")
@@ -318,7 +319,7 @@ def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_i
 
     old = GRANTS.replace("\n", "\r\n") if crlf else GRANTS
     p = _settings(tmp_path, old)
-    out = B.init(tmp_path, merge_settings=True)
+    out = B.init(tmp_path, TASK, merge_settings=True)
     assert f"{B.SETTINGS} (the orient hook merged in)" in out.split("; skipped")[0], out
     new = p.read_bytes().decode()
     assert ("\n" not in new.replace("\r\n", "")) if crlf else ("\r" not in new), "the file's line endings are kept"
@@ -329,14 +330,14 @@ def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_i
     assert after == before, "nothing else changed"
     assert "opus é" in new, "non-ASCII stays as it was written"
     assert not list((tmp_path / ".claude").glob("*.tmp")), "the atomic write leaves no temp file"
-    again = B.init(tmp_path, merge_settings=True)
+    again = B.init(tmp_path, TASK, merge_settings=True)
     assert p.read_bytes().decode() == new and f"{B.SETTINGS} (holds the orient hook)" in again, again
-    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path), "with the hook there, no flag is needed"
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path, TASK), "with the hook there, no flag is needed"
     other = json.dumps({"hooks": {"SessionStart": [{"matcher": "clear", "hooks": [{"type": "command", "command": "echo hi"}]}]}})
     x = tmp_path / "x"
     x.mkdir()
     _settings(x, other)
-    B.init(x, merge_settings=True)
+    B.init(x, TASK, merge_settings=True)
     starts = json.loads((x / B.SETTINGS).read_text(encoding="utf-8"))["hooks"]["SessionStart"]
     assert starts == [json.loads(other)["hooks"]["SessionStart"][0], B.hook_entry(x)], "an existing SessionStart entry is kept, first"
 
@@ -357,12 +358,12 @@ def test_merge_settings_adds_only_the_hook_keeping_every_key_and_its_order_and_i
 def test_merge_settings_refuses_what_it_cannot_merge_into_and_leaves_it_untouched(tmp_path, text, says):
     p = _settings(tmp_path, text)
     with pytest.raises(Refusal, match=re.escape(says)) as e:
-        B.init(tmp_path, merge_settings=True)
+        B.init(tmp_path, TASK, merge_settings=True)
     assert "left untouched" in e.value.message and "--skip-settings" in e.value.remedy
     assert p.read_bytes() == text.encode()
     p.write_bytes(b'{"a": "\xe9"}')
     with pytest.raises(Refusal, match="is not UTF-8"):
-        B.init(tmp_path, merge_settings=True)
+        B.init(tmp_path, TASK, merge_settings=True)
 
 
 @pytest.mark.criterion("AC-57")
@@ -378,7 +379,7 @@ def test_an_orient_hook_with_another_command_is_never_taken_for_this_repos(tmp_p
     p = _settings(tmp_path, text)
     for flags in ({}, {"merge_settings": True}):
         with pytest.raises(Refusal, match="holds a SessionStart hook running the engine's orient with another command") as e:
-            B.init(tmp_path, **flags)
+            B.init(tmp_path, TASK, **flags)
         assert B.hook_entry(tmp_path)["hooks"][0]["command"] in e.value.remedy and "--skip-settings" in e.value.remedy
     assert p.read_bytes() == text.encode()
 
@@ -391,13 +392,13 @@ def test_merge_settings_refuses_a_hard_linked_or_read_only_file_before_writing_a
     p = _settings(tmp_path)
     os.link(p, tmp_path / "twin.json")
     with pytest.raises(Refusal, match="is hard-linked, and replacing it would split the link"):
-        B.init(tmp_path, merge_settings=True)
+        B.init(tmp_path, TASK, merge_settings=True)
     assert sorted(x.name for x in tmp_path.iterdir()) == [".claude", "twin.json"], "refused at plan time: nothing written"
     (tmp_path / "twin.json").unlink()
     os.chmod(p, stat.S_IREAD)
     try:
         with pytest.raises(Refusal, match="is not writable"):
-            B.init(tmp_path, merge_settings=True)
+            B.init(tmp_path, TASK, merge_settings=True)
         assert p.read_bytes() == GRANTS.encode() and sorted(x.name for x in tmp_path.iterdir()) == [".claude"]
     finally:
         os.chmod(p, stat.S_IREAD | stat.S_IWRITE)
@@ -409,7 +410,7 @@ def test_a_hard_linked_claude_md_stays_linked(tmp_path):
 
     (tmp_path / "CLAUDE.md").write_bytes(b"# Ours\n")
     os.link(tmp_path / "CLAUDE.md", tmp_path / "AGENTS.md")
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     assert B.BEGIN in (tmp_path / "AGENTS.md").read_text(encoding="utf-8"), "CLAUDE.md is written in place, never replaced"
 
 
@@ -421,7 +422,7 @@ def test_a_merge_names_a_gitignore_that_misses_the_settings_file_and_the_cli_ref
 
     _settings(tmp_path)
     (tmp_path / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
-    assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in B.init(tmp_path, merge_settings=True)
+    assert f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in B.init(tmp_path, TASK, merge_settings=True)
     (tmp_path / B.SETTINGS).write_bytes(GRANTS.encode())
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8") and not k.startswith("CE_")}
     r = subprocess.run([sys.executable, "-m", "context_engine", "--root", str(tmp_path), "init"], capture_output=True, env=env, timeout=120)
@@ -434,40 +435,40 @@ def test_a_merge_writes_the_missing_gitignore_and_every_rerun_repeats_a_gitignor
     .claude/.gitignore is written, as on a fresh init; one that misses the line is named on every
     run that finds the hook, not only the merging one."""
     _settings(tmp_path)
-    out = B.init(tmp_path, merge_settings=True)
+    out = B.init(tmp_path, TASK, merge_settings=True)
     assert (tmp_path / B.SETTINGS_IGNORE).read_bytes() == b"settings.local.json\n" and B.SETTINGS_IGNORE in out.split("; skipped")[0], out
     (tmp_path / B.SETTINGS_IGNORE).write_bytes(b"agents.local/\n")
     for flags in ({}, {"merge_settings": True}, {"skip_settings": True}):
-        again = B.init(tmp_path, **flags)
+        again = B.init(tmp_path, TASK, **flags)
         assert f"{B.SETTINGS} (holds the orient hook)" in again and f"{B.SETTINGS_IGNORE} (it does not ignore settings.local.json" in again, (flags, again)
     assert (tmp_path / B.SETTINGS_IGNORE).read_bytes() == b"agents.local/\n", "an existing ignore file is never edited"
     (tmp_path / B.SETTINGS_IGNORE).unlink()
-    again = B.init(tmp_path)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 0") and f"; warning: {B.SETTINGS_IGNORE} is absent and nothing init reads ignores settings.local.json" in again, again
     assert f"{B.SETTINGS_IGNORE}" not in again.split("; warning: ")[0], "an absent file is not reported as skipped"
     assert not (tmp_path / B.SETTINGS_IGNORE).exists(), "only the run that writes the hook writes the ignore file"
     for line, ignored in ((".claude/settings.local.json", True), ("/.claude/", True), ("*.local.json", True), ("settings.json", False)):
         (tmp_path / ".gitignore").write_text(f"# ours\n{line}\n", encoding="utf-8")
-        o = B.init(tmp_path)
+        o = B.init(tmp_path, TASK)
         assert ("; warning: " not in o) is ignored, (line, o)
     for text, ignored in ((".claude/\n!.claude/settings.local.json\n", True),  # git cannot re-include under an excluded directory
                           (".claude/*\n!.claude/settings.json\n", True),  # the usual split: shared settings tracked, local ones not
                           (".claude/*\n!.claude/settings.local.json\n", False),  # the last match wins
                           ("*.json\n!settings.local.json\n", False)):
         (tmp_path / ".gitignore").write_text(text, encoding="utf-8")
-        o = B.init(tmp_path)
+        o = B.init(tmp_path, TASK)
         assert ("; warning: " not in o) is ignored, (text, o)
     (tmp_path / ".gitignore").write_text(".claude/*\n!.claude/settings.json\n", encoding="utf-8")
     (tmp_path / B.SETTINGS_IGNORE).write_text("settings.local.json\n", encoding="utf-8")
-    assert "; warning: " not in B.init(tmp_path), "init never warns about the ignore file it wrote itself"
+    assert "; warning: " not in B.init(tmp_path, TASK), "init never warns about the ignore file it wrote itself"
     (tmp_path / B.SETTINGS_IGNORE).write_text("settings.local.json\n!settings.local.json\n", encoding="utf-8")
-    assert f"; warning: {B.SETTINGS_IGNORE} (it does not ignore" in B.init(tmp_path), "a deeper negation wins"
+    assert f"; warning: {B.SETTINGS_IGNORE} (it does not ignore" in B.init(tmp_path, TASK), "a deeper negation wins"
     (tmp_path / B.SETTINGS_IGNORE).unlink()
     (tmp_path / ".gitignore").unlink()
     (tmp_path / "x").mkdir()
     _settings(tmp_path / "x")
     (tmp_path / "x" / ".gitignore").write_text(".claude\n", encoding="utf-8")
-    B.init(tmp_path / "x", merge_settings=True)
+    B.init(tmp_path / "x", TASK, merge_settings=True)
     assert not (tmp_path / "x" / B.SETTINGS_IGNORE).exists(), "a repo that ignores it already gets no second ignore file"
 
 
@@ -478,29 +479,29 @@ def test_skip_settings_says_the_hook_is_there_when_it_is_and_never_refuses(tmp_p
     import json
 
     _settings(tmp_path)
-    B.init(tmp_path, merge_settings=True)
-    out = B.init(tmp_path, skip_settings=True)
+    B.init(tmp_path, TASK, merge_settings=True)
+    out = B.init(tmp_path, TASK, skip_settings=True)
     assert f"{B.SETTINGS} (holds the orient hook)" in out and "by hand" not in out, out
     by_hand = f"{B.SETTINGS} (--skip-settings: add the SessionStart hook by hand, kit README § Hook)"
     for text in (b"{not json", b'{"a": "\xe9"}', GRANTS.encode()):
         (tmp_path / B.SETTINGS).write_bytes(text)
-        assert by_hand in B.init(tmp_path, skip_settings=True)
+        assert by_hand in B.init(tmp_path, TASK, skip_settings=True)
         assert (tmp_path / B.SETTINGS).read_bytes() == text
     hooked = json.loads(GRANTS)
     hooked["hooks"]["SessionStart"] = [B.hook_entry(tmp_path)]
     (tmp_path / B.SETTINGS).write_bytes(b"\xef\xbb\xbf" + json.dumps(hooked).encode())  # a BOM, as PowerShell 5.1 writes
-    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path, skip_settings=True)
+    assert f"{B.SETTINGS} (holds the orient hook)" in B.init(tmp_path, TASK, skip_settings=True)
     (tmp_path / B.SETTINGS).write_text(json.dumps({**hooked, "disableAllHooks": True}), encoding="utf-8")
-    out = B.init(tmp_path, skip_settings=True)
+    out = B.init(tmp_path, TASK, skip_settings=True)
     assert f"{B.SETTINGS} (--skip-settings: it sets disableAllHooks, so no hook runs: run orient by hand at session start)" in out, out
     gone = '"C:/gone/python.exe" -m context_engine --root "C:/elsewhere" orient'
     hooked["hooks"]["SessionStart"] = [{"hooks": [{"type": "command", "command": gone}]}]
     (tmp_path / B.SETTINGS).write_text(json.dumps(hooked), encoding="utf-8")
-    out = B.init(tmp_path, skip_settings=True)
+    out = B.init(tmp_path, TASK, skip_settings=True)
     assert f"its orient hook runs another command ({gone}): have the owner replace it with {B.hook_entry(tmp_path)['hooks'][0]['command']})" in out, out
     (tmp_path / B.SETTINGS).unlink()
     (tmp_path / B.SETTINGS).mkdir()
-    assert by_hand in B.init(tmp_path, skip_settings=True), "a settings path init cannot read is never a crash under --skip-settings"
+    assert by_hand in B.init(tmp_path, TASK, skip_settings=True), "a settings path init cannot read is never a crash under --skip-settings"
 
 
 @pytest.mark.criterion("AC-57")
@@ -509,7 +510,7 @@ def test_merge_settings_refuses_a_settings_file_changed_after_its_plan_and_keeps
     granted = GRANTS.replace('"Bash(git status)"', '"Bash(git status)", "Bash(ls)"')
     _plan_then(monkeypatch, lambda root: (root / B.SETTINGS).write_bytes(granted.encode()))
     with pytest.raises(Refusal, match=re.escape(f"{B.SETTINGS} changed while init ran, so nothing was written to it")):
-        B.init(tmp_path, merge_settings=True)
+        B.init(tmp_path, TASK, merge_settings=True)
     assert p.read_bytes() == granted.encode(), "the grant Claude Code wrote meanwhile is kept"
     assert not list((tmp_path / ".claude").glob("*.tmp"))
 
@@ -518,7 +519,7 @@ def test_merge_settings_refuses_a_settings_file_changed_after_its_plan_and_keeps
 def test_an_inline_kit_block_is_left_for_the_upgrade_and_the_contract_still_lands(tmp_path):
     inline = f"# Ours\n\n{B.BEGIN}\nframework: 0.6\n\n### Gate\n\n`make test && context-engine lint`\n{B.END}\n"
     (tmp_path / "CLAUDE.md").write_text(inline, encoding="utf-8")
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == inline
     assert f"CLAUDE.md (holds a kit 0.6 block that inlines the rules: replace it with kit/{B.BOOTLOADER} by hand, kit README § Upgrade)" in out, out
     assert (tmp_path / B.CONTRACT_DEST).exists()
@@ -527,7 +528,7 @@ def test_an_inline_kit_block_is_left_for_the_upgrade_and_the_contract_still_land
     boot.mkdir()
     kept = "# Ours\r\n\r\n" + (B.KIT / B.BOOTLOADER).read_text(encoding="utf-8").replace("\n", "\r\n")
     (boot / "CLAUDE.md").write_bytes(kept.encode())
-    out = B.init(boot)
+    out = B.init(boot, TASK)
     assert (boot / "CLAUDE.md").read_bytes() == kept.encode() and "skipped 1 (CLAUDE.md)" in out, out  # a bootloader already there (CRLF too) is kept
 
 
@@ -543,23 +544,23 @@ def test_init_keeps_an_edited_context_toml_and_writes_only_what_it_points_at(tmp
     out = B.init(tmp_path)
     assert out.startswith("init: created 1 (docs/charter.md)"), out
     assert "docs/criteria.md (not in context.toml)" in out and not (tmp_path / "docs/criteria.md").exists()
-    with pytest.raises(Refusal, match="gives task the prefix 'PRJ', not 'T2'"):
-        B.init(tmp_path, {"task": "T2"})
+    with pytest.raises(Refusal, match="gives task the prefix 'PRJ', not 'TK'"):
+        B.init(tmp_path, TASK)
 
 
 @pytest.mark.criterion("AC-31")
 def test_init_refuses_a_context_toml_that_does_not_load_and_bad_prefixes(tmp_path):
     (tmp_path / "context.toml").write_text("[enigne]\n", encoding="utf-8")
     with pytest.raises(Refusal, match="exists and does not load: the top level has unknown key 'enigne'"):
-        B.init(tmp_path)
+        B.init(tmp_path, TASK)
     (tmp_path / "context.toml").write_text("[engine\n", encoding="utf-8")
     with pytest.raises(Refusal, match="exists and is not TOML"):
-        B.init(tmp_path)
+        B.init(tmp_path, TASK)
     with pytest.raises(Refusal, match="share the id prefix"):
-        B.config_text({"task": "D"})
+        B.config_text({"task": "PRJ", "story": "PRJ"})
     with pytest.raises(Refusal, match="does not declare"):
         B.config_text({"nosuch": "X"})
-    with pytest.raises(Refusal, match="upper-case"):
+    with pytest.raises(Refusal, match="2 to 5 capital letters"):
         B.config_text({"task": "t-1"})
 
 
@@ -568,8 +569,81 @@ def test_a_prefix_override_lands_in_its_own_kind_only(tmp_path):
     B.init(tmp_path, {"task": "PRJ", "decision": "DEC"})
     cfg = C.load(tmp_path)
     assert cfg.kinds["task"].prefix == "PRJ" and cfg.kinds["decision"].prefix == "DEC"
-    assert cfg.kinds["question"].prefix == "ASK" and cfg.kinds["story"].prefix == "S"
+    assert cfg.kinds["question"].prefix == "ASK" and cfg.kinds["story"].prefix == "STORY"
     assert B.init(tmp_path, {"task": "PRJ", "decision": "DEC"}).startswith("init: created 0")
+
+
+# -- the standard prefixes (FRAMEWORK P3, DEC-38, CE-56) ------------------------------------
+
+
+def test_the_kit_uses_the_standard_prefixes():
+    """DEC-236: the kit's defaults are config.py::STANDARD_PREFIXES, and the task kind holds the
+    placeholder TASK, which init replaces with the owner's choice (DEC-229)."""
+    from context_engine import criteria as CR
+
+    kinds = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))["kinds"]
+    assert {k: v["prefix"] for k, v in kinds.items() if k != "task"} == {r: p for r, p in C.STANDARD_PREFIXES.items() if r in kinds}
+    assert set(kinds) - {"task"} <= set(C.STANDARD_PREFIXES), "every kit kind but task has a standard prefix"
+    assert kinds["task"]["prefix"] == "TASK"
+    assert CR.PREFIX == C.STANDARD_PREFIXES["criterion"]
+    assert not set(C.RESERVED_PREFIXES) & set(C.STANDARD_PREFIXES.values())
+
+
+def test_init_asks_for_the_task_prefix_on_a_new_repo(tmp_path):
+    """DEC-229: a new repo's init refuses without a task prefix and writes nothing; its dry run
+    warns instead (keyed on the dry run, so also with --merge-settings); a re-run needs none."""
+    with pytest.raises(Refusal, match=r"init needs the task prefix: the kit gives tasks none of their own\. Remedy: ask the owner for 2 to 5 capitals"):
+        B.init(tmp_path)
+    assert list(tmp_path.iterdir()) == [], "a refused init writes nothing"
+    for flags in ({}, {"merge_settings": True}, {"skip_settings": True}):
+        out = B.init(tmp_path, dry_run=True, **flags)
+        assert out.startswith("init (dry run): would create") and "; warning: no task prefix chosen: ask the owner" in out, out
+        assert list(tmp_path.iterdir()) == []
+    assert "no task prefix chosen" not in B.init(tmp_path, TASK, dry_run=True)
+    B.init(tmp_path, {"task": "CE"})
+    cfg = C.load(tmp_path)
+    assert {k: cfg.kinds[k].prefix for k in cfg.kinds} == {"decision": "DEC", "story": "STORY", "task": "CE", "question": "ASK", "baton": "BATON", "pause": "PAUSE"}
+    out = B.init(tmp_path)
+    assert out.startswith("init: created 0") and "no task prefix" not in out, out
+
+
+@pytest.mark.parametrize("kind,prefix,match", [
+    ("task", "T", "is not 2 to 5 capital letters"),
+    ("task", "TASKSS", "is not 2 to 5 capital letters"),
+    ("task", "T2", "is not 2 to 5 capital letters"),
+    ("task", "t", "is not 2 to 5 capital letters"),
+    ("task", "RISK", "prefix RISK is the standard prefix of risk ids, not of task ids"),
+    ("task", "GOAL", "prefix GOAL is the standard prefix of goal ids, not of task ids"),
+    ("task", "AC", "prefix AC is the standard prefix of criterion ids, not of task ids"),
+    ("task", "DEC", "prefix DEC is the standard prefix of decision ids, not of task ids"),
+    ("story", "BATON", "prefix BATON is the standard prefix of baton ids, not of story ids"),
+    ("task", "EXP", "prefix EXP is reserved for experiments and measured runs, a kind not built yet"),
+    ("decision", "HAZ", "prefix HAZ is reserved for unverified hazards, a kind not built yet"),
+    ("story", "STORY", None),
+    ("story", "US", None),
+    ("decision", "DEC", None),
+    ("task", "CE", None),
+    ("task", "TASKS", None),
+])
+def test_init_refuses_a_prefix_outside_the_form_or_taken(kind, prefix, match):
+    """DEC-230: init takes 2 to 5 capitals that are neither reserved nor another role's standard."""
+    if match is None:
+        assert C.from_dict(tomllib.loads(B.config_text({kind: prefix}))).kinds[kind].prefix == prefix
+    else:
+        with pytest.raises(Refusal, match=re.escape(match)):
+            B.config_text({kind: prefix})
+
+
+@pytest.mark.parametrize("prefix,loads", [("T2", False), ("t", False), ("Task", False), ("T", True), ("PRJ", True), ("ABCDEFG", True)])
+def test_the_config_refuses_a_prefix_that_is_not_capitals(prefix, loads):
+    """DEC-230: load checks only capitals, so the old kit's one-letter prefixes keep loading."""
+    raw = tomllib.loads((B.KIT / B.TEMPLATE).read_text(encoding="utf-8"))
+    raw["kinds"]["task"]["prefix"] = prefix
+    if loads:
+        assert C.from_dict(raw).kinds["task"].prefix == prefix
+    else:
+        with pytest.raises(Refusal, match=re.escape(f"kind 'task' has prefix {prefix!r}, which is not capital letters")):
+            C.from_dict(raw)
 
 
 # -- the template is the schema --------------------------------------------------------------
@@ -712,7 +786,7 @@ def test_init_copies_the_runbooks_and_keeps_an_edited_one(tmp_path):
     (tmp_path / "docs" / "runbooks").mkdir(parents=True)
     ours = b"# our own procedures\n"
     (tmp_path / "docs" / "runbooks" / "procedures.md").write_bytes(ours)
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert "docs/runbooks/manual-mode.md" in out.split("; skipped")[0], out
     assert (tmp_path / "docs" / "runbooks" / "manual-mode.md").read_bytes() == (B.KIT / "docs" / "runbooks" / "manual-mode.md").read_bytes()
     assert (tmp_path / "docs" / "runbooks" / "procedures.md").read_bytes() == ours
@@ -767,13 +841,13 @@ def test_line_endings_change_nothing_init_writes_or_lint_checks_in_an_adopting_r
 
     lf, crlf_kit = tmp_path / "a" / "repo", tmp_path / "kit"  # one folder name: CLAUDE.md's heading names it
     lf.mkdir(parents=True)
-    B.init(lf)
+    B.init(lf, TASK)
     shutil.copytree(B.KIT, crlf_kit, ignore=shutil.ignore_patterns("__pycache__"))
     assert "contract.md" in _crlf(crlf_kit)
     monkeypatch.setattr(B, "KIT", crlf_kit)  # an engine installed from a CRLF checkout
     other = tmp_path / "b" / "repo"
     other.mkdir(parents=True)
-    B.init(other)
+    B.init(other, TASK)
     monkeypatch.undo()
     written = sorted(p.relative_to(lf).as_posix() for p in lf.rglob("*") if p.is_file() and p.name != "settings.local.json")
     differ = [rel for rel in written if (other / rel).read_bytes() != (lf / rel).read_bytes()]
@@ -784,7 +858,7 @@ def test_line_endings_change_nothing_init_writes_or_lint_checks_in_an_adopting_r
     assert all(b"\r\n" in (lf / rel).read_bytes() for rel in ("CLAUDE.md", "docs/framework/contract.md", ".gitignore", "docs/runbooks/manual-mode.md"))
     before = {p: p.read_bytes() for p in lf.rglob("*") if p.is_file()}
     assert run(["--root", str(lf), "lint"])[1].strip() == "lint: clean"
-    out = B.init(lf)
+    out = B.init(lf, TASK)
     assert out.startswith("init: created 0 (none); skipped"), out
     assert {p: p.read_bytes() for p in lf.rglob("*") if p.is_file()} == before
 
@@ -840,7 +914,7 @@ def test_orient_asks_for_the_charter_and_criteria_while_they_are_the_kits_templa
     """CE-121 (adhoc AAR entry 34): both were still the templates a week after the cutover, with
     lint clean; orient asks at every session start until they are filled."""
     heading = "## Templates still unfilled: ask the owner\n"
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     _fill_gate(tmp_path)
     key = _cli(tmp_path, "session", "start").split()[1]
 
@@ -874,7 +948,7 @@ def test_g_d0_fails_a_kit_runbook_that_is_missing_or_unrouted(tmp_path):
     def lint() -> list[str]:
         return [ln.split(". Remedy:")[0] for ln in run(["--root", str(tmp_path), "lint"])[1].splitlines() if ln.startswith("G-D0")]
 
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     _fill_gate(tmp_path)
     assert lint() == []
     (tmp_path / "docs/runbooks/release.md").unlink()
@@ -901,7 +975,7 @@ def test_g_d0_fails_a_contract_that_keeps_the_gate_stubs_placeholder(tmp_path):
     from context_engine.cli import run
 
     assert B.gate_placeholders() == [PLACEHOLDER]  # read from the kit's bootloader, after its end marker
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     out = run(["--root", str(tmp_path), "lint"])[1]
     assert f"G-D0 CLAUDE.md: still holds the kit's placeholder `{PLACEHOLDER}`, so its gate names no command to run" in out, out
     assert "kit README § 2a, step 2" in out
@@ -911,7 +985,7 @@ def test_g_d0_fails_a_contract_that_keeps_the_gate_stubs_placeholder(tmp_path):
 
 @pytest.mark.criterion("AC-30")
 def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_path):
-    assert _cli(tmp_path, "init").startswith("init: created 24")
+    assert _cli(tmp_path, "init", "--prefix", "task=TK").startswith("init: created 24")
     _fill_gate(tmp_path)
     assert _cli(tmp_path, "lint") == "lint: clean"
     key = _cli(tmp_path, "session", "start").split()[1]
@@ -919,7 +993,7 @@ def test_an_empty_repo_bootstraps_with_init_alone_and_runs_a_whole_session(tmp_p
     _cli(tmp_path, "task", "new", "First", "--pri", "NOW", key=key)
     show = _cli(tmp_path, "banner", "show")
     assert show.split()[3] == "none", show
-    out = _cli(tmp_path, "session", "close", "--rows", "T-1", "--summary", "bootstrapped", "--guards", "gate not run (no code yet); lint clean", "--read", "orient",
+    out = _cli(tmp_path, "session", "close", "--rows", "TK-1", "--summary", "bootstrapped", "--guards", "gate not run (no code yet); lint clean", "--read", "orient",
                "--banner", "- Bootstrapped.", "--seen", "none", key=key)  # the first close writes the first banner (CE-195)
     assert out.startswith(f"session {key} closed: ledger entry written (1-line summary); banner written (the first)"), out
     assert _cli(tmp_path, "lint") == "lint: clean"
@@ -995,7 +1069,7 @@ def test_this_repos_own_config_still_loads():
 @pytest.mark.criterion("AC-34")
 @pytest.mark.parametrize("note", [None, "# Note\n\nintro\n\n## Next\n\n- x\n", "# Note\r\n\r\nintro\r\n"])
 def test_the_first_banner_is_written_with_seen_none_and_only_then(tmp_path, note):
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     handoff = tmp_path / "HANDOFF.md"
     if note is None:
         handoff.unlink()
@@ -1025,7 +1099,7 @@ def test_lint_g_w1_is_red_when_a_session_closed_and_the_note_has_no_banner(tmp_p
     def lint() -> str:
         return run(["--root", str(tmp_path), "lint"])[1]
 
-    B.init(tmp_path)
+    B.init(tmp_path, TASK)
     _fill_gate(tmp_path)
     key = _cli(tmp_path, "session", "start").split()[1]
     assert lint() == "lint: clean"  # no close yet: nothing is owed
@@ -1124,12 +1198,12 @@ def _check_ignore(root: Path, rel: str) -> bool:
 
 @pytest.mark.criterion("AC-31")
 def test_init_writes_a_gitignore_that_ignores_the_engine_env_and_a_rerun_leaves_it(tmp_path):
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_IGNORE).read_text(encoding="utf-8") == B.ENGINE_IGNORE
     assert B.REPO_IGNORE in out.split("; skipped")[0], out
     assert _check_ignore(tmp_path, f"{B.ENGINE_ENV}/python.exe"), "git ignores the engine's env"
     before = snapshot(tmp_path)
-    again = B.init(tmp_path)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 0 (none)") and f"{B.REPO_IGNORE} (ignores {B.ENGINE_DIR}/)" in again, again
     assert snapshot(tmp_path) == before
 
@@ -1138,7 +1212,7 @@ def test_init_writes_a_gitignore_that_ignores_the_engine_env_and_a_rerun_leaves_
 @pytest.mark.parametrize("old", [b"*.pyc\r\nbuild/", b"*.pyc\nbuild/\n", b"*.pyc\n\n", b"", b"\xef\xbb\xbf# ours\r\n.env\r\n"])
 def test_init_appends_the_engine_env_to_an_existing_gitignore_keeping_every_byte_and_its_line_endings(tmp_path, old):
     (tmp_path / B.REPO_IGNORE).write_bytes(old)
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     new = (tmp_path / B.REPO_IGNORE).read_bytes()
     assert new.startswith(old) and f"{B.REPO_IGNORE} ({B.ENGINE_DIR}/ appended)" in out, (new, out)
     added = new[len(old) :]
@@ -1148,7 +1222,7 @@ def test_init_appends_the_engine_env_to_an_existing_gitignore_keeping_every_byte
     norm = new.replace(b"\r\n", b"\n")
     assert not old or b"\n\n" + B.ENGINE_IGNORE.encode() in norm, "a blank line before the appended lines"
     before = snapshot(tmp_path)
-    assert B.init(tmp_path).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
+    assert B.init(tmp_path, TASK).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
     assert _check_ignore(tmp_path, f"{B.ENGINE_ENV}/bin/python")
 
 
@@ -1170,7 +1244,7 @@ def test_init_leaves_a_gitignore_that_already_ignores_the_engine_env_untouched(t
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / B.REPO_IGNORE).write_bytes(old)
-    out = B.init(repo)
+    out = B.init(repo, TASK)
     assert ((repo / B.REPO_IGNORE).read_bytes() == old) == ignored, out
     assert (f"{B.REPO_IGNORE} (ignores {B.ENGINE_DIR}/)" in out) == ignored, out
     assert _check_ignore(repo, f"{B.ENGINE_ENV}/python.exe"), "after init, git ignores the env"
@@ -1183,11 +1257,11 @@ def test_init_refuses_a_gitignore_edited_after_its_plan_and_leaves_a_non_utf8_on
     with monkeypatch.context() as m:
         _plan_then(m, lambda root: (root / B.REPO_IGNORE).write_bytes(edited))
         with pytest.raises(Refusal, match=r"\.gitignore changed while init ran, so \.context-engine/ was not appended"):
-            B.init(tmp_path)
+            B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_IGNORE).read_bytes() == edited
     latin = b"# caf\xe9\nbuild/\n"
     (tmp_path / B.REPO_IGNORE).write_bytes(latin)
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_IGNORE).read_bytes() == latin and f"; warning: {B.REPO_IGNORE} is not UTF-8" in out, out
 
 
@@ -1216,12 +1290,12 @@ def test_init_writes_a_gitattributes_whose_union_merge_lets_two_branches_append_
         return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "core.autocrlf=false", *args],
                               cwd=tmp_path, capture_output=True, text=True)
 
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_ATTRIBUTES).read_text(encoding="utf-8") == B.union_line(OPLOG)
     assert f"{B.REPO_ATTRIBUTES} ({OPLOG} merge=union)" in out.split("; skipped")[0], out
     assert _merge_attr(tmp_path) == "union"
     before = snapshot(tmp_path)
-    again = B.init(tmp_path)
+    again = B.init(tmp_path, TASK)
     assert again.startswith("init: created 0 (none)") and f"{B.REPO_ATTRIBUTES} (merges {OPLOG} by union)" in again, again
     assert snapshot(tmp_path) == before
     log = tmp_path / OPLOG
@@ -1243,7 +1317,7 @@ def test_init_writes_a_gitattributes_whose_union_merge_lets_two_branches_append_
 @pytest.mark.parametrize("old", [b"*.png binary\r\n*.sh text eol=lf", b"* text=auto\n", b"*.png binary\n\n", b"", b"\xef\xbb\xbf# ours\r\n*.bat eol=crlf\r\n"])
 def test_init_appends_the_union_line_to_an_existing_gitattributes_keeping_every_byte_and_its_line_endings(tmp_path, old):
     (tmp_path / B.REPO_ATTRIBUTES).write_bytes(old)
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     new = (tmp_path / B.REPO_ATTRIBUTES).read_bytes()
     assert new.startswith(old) and f"{B.REPO_ATTRIBUTES} ({OPLOG} merge=union appended)" in out, (new, out)
     added = new[len(old) :]
@@ -1252,7 +1326,7 @@ def test_init_appends_the_union_line_to_an_existing_gitattributes_keeping_every_
     assert added.replace(b"\r\n", b"\n").lstrip(b"\n") == B.union_line(OPLOG).encode()
     assert not old or b"\n\n" + B.union_line(OPLOG).encode() in new.replace(b"\r\n", b"\n"), "a blank line before the appended lines"
     before = snapshot(tmp_path)
-    assert B.init(tmp_path).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
+    assert B.init(tmp_path, TASK).startswith("init: created 0 (none)") and snapshot(tmp_path) == before, "appended once"
     assert _merge_attr(tmp_path) == "union"
 
 
@@ -1274,7 +1348,7 @@ def test_init_leaves_a_gitattributes_that_already_merges_the_op_log_by_union_unt
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / B.REPO_ATTRIBUTES).write_bytes(old)
-    out = B.init(repo)
+    out = B.init(repo, TASK)
     assert ((repo / B.REPO_ATTRIBUTES).read_bytes() == old) == union, out
     assert (f"{B.REPO_ATTRIBUTES} (merges {OPLOG} by union)" in out) == union, out
     assert _merge_attr(repo) == "union", "after init, git merges the op log by union"
@@ -1287,11 +1361,11 @@ def test_init_refuses_a_gitattributes_edited_after_its_plan_and_warns_where_it_c
     with monkeypatch.context() as m:
         _plan_then(m, lambda root: (root / B.REPO_ATTRIBUTES).write_bytes(edited))
         with pytest.raises(Refusal, match=r"\.gitattributes changed while init ran, so the op log's merge=union line was not appended"):
-            B.init(tmp_path)
+            B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_ATTRIBUTES).read_bytes() == edited
     latin = b"# caf\xe9\n*.png binary\n"
     (tmp_path / B.REPO_ATTRIBUTES).write_bytes(latin)
-    out = B.init(tmp_path)
+    out = B.init(tmp_path, TASK)
     assert (tmp_path / B.REPO_ATTRIBUTES).read_bytes() == latin and f"; warning: {B.REPO_ATTRIBUTES} is not UTF-8" in out, out
     spaced = tmp_path / "spaced"
     spaced.mkdir()

@@ -63,7 +63,7 @@ These hold for every operation below. The per-operation sections only list what 
 | **Check the caller** | Know your session key (like `2026-10-08e`) and your actor (`human:<id>`, `process:<id>`, or `<producer>/<version>` such as `claude-code/<model-id>`). Every write below records them. | Each write has to say which session made it and who did it. Without that, nobody can find a change or trace it back (OKF §7). |
 | **Validate before writing** | Check the result against its kind's schema (table below). If it fails, do not save it. | A bad record that reaches disk breaks every later reader. The engine checks before writing any byte. |
 | **Change only your own lines** | Edit only the frontmatter keys the operation names. Keep every other line exactly as it was: order, quoting, comments, unknown keys. Keep the file's line endings. | Byte-stable writes keep diffs reviewable and keep keys that other tools own (OKF §4.1). |
-| **YAML shapes** | Lists in flow style: `deps: [T-2, T-3]`. Dates unquoted: `created: 2026-10-08`. Null is the bare key: `closed:`. Quote any value with `: ` in it. | Quoted dates fail the `date` type, and an unquoted colon makes the YAML mean something else or fail to parse. |
+| **YAML shapes** | Lists in flow style: `deps: [PRJ-2, PRJ-3]`. Dates unquoted: `created: 2026-10-08`. Null is the bare key: `closed:`. Quote any value with `: ` in it. | Quoted dates fail the `date` type, and an unquoted colon makes the YAML mean something else or fail to parse. |
 | **New keys go last** | A key the record does not have yet (`status`, `closed`, `answered`, `done`, `evidence`, `resumed`, `expired_to`, `body_sha`) is added after the last key. An existing key is replaced where it stands, keeping an end-of-line comment. | Keeps every untouched line in place, so the diff shows only the change. |
 | **New records** | Frontmatter, the closing `---`, one blank line, the body, one final newline. `deps: []` is written even when empty. | One shape for every record keeps hand-written and engine-written files identical. |
 | **Bump `updated`** | On every write to a board item (task or question), set `updated: <session key>`. | It is how a reader sees a record was touched this session without reading the op log. |
@@ -74,7 +74,7 @@ These hold for every operation below. The per-operation sections only list what 
 **Op log line**, one JSON object per line, UTF-8, `\n` endings:
 
 ```json
-{"at": "2026-10-08T18:10:28+08:00", "session": "2026-10-08e", "actor": "claude-code/<model-id>", "op": "close", "id": "T-8", "path": "tasks/T-8-dogfood-adoption.md", "fields": ["state", "status", "closed", "moved", "updated", "body"], "mechanical": false}
+{"at": "2026-10-08T18:10:28+08:00", "session": "2026-10-08e", "actor": "claude-code/<model-id>", "op": "close", "id": "PRJ-8", "path": "tasks/PRJ-8-dogfood-adoption.md", "fields": ["state", "status", "closed", "moved", "updated", "body"], "mechanical": false}
 ```
 
 `at` is local time with its offset. `fields` lists the keys changed, plus `"body"` if the body
@@ -82,7 +82,7 @@ changed. `mechanical` is `true` only for housekeeping and the `--mechanical` fla
 `hk.stamp_asked` lines, maps a session-keyed field to the key it was set to when that is not the
 writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the field against it).
 `ids` and `paths`, only on a line that stands for several records (`decision accept`), list each
-record's id and file, in the same order; `id` is then the list folded into ranges (`D-4..6, D-9`)
+record's id and file, in the same order; `id` is then the list folded into ranges (`DEC-n..m, DEC-k`)
 and `path` the first file. Every file in `paths` goes into the commit that carries the line, as
 `path` does.
 
@@ -91,7 +91,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | any new record (task, question, decision, baton, pause) | `new` | the record | every frontmatter key, `type`, `id` and `body_sha` included |
 | task set, promote, dep, comment, touch, close, reopen, section | `set`, `promote`, `dep`, `comment`, `touch`, `close`, `reopen`, `section` | the item | the changed keys, then `updated`, then `body` if the body changed |
 | ask raised | `ask.raised` | one line per question, then one with id = session key, path = the ledger | `["last_asked", "updated"]`; the ledger line `["asked"]` |
-| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `D-n`; `ask new --answered` writes the question's `new` line first) | the question | the changed keys, `updated`, `body` |
+| ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `DEC-n`; `ask new --answered` writes the question's `new` line first) | the question | the changed keys, `updated`, `body` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | hk close | `close`, mechanical (the task close's line) | the item | as task close |
@@ -118,12 +118,12 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 
 | Kind | Id | Directory | Mode | Required keys | Enums and types |
 |---|---|---|---|---|---|
-| decision | `D-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, ACCEPTED, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
-| story | `S-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
-| task | `T-n` | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
+| decision | `DEC-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, ACCEPTED, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
+| story | `STORY-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
+| task | `<prefix>-n`, the prefix init was given (`PRJ-n`) | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
-| baton | `BTN-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
-| pause | `PAU-n` | `docs/working` | stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
+| baton | `BATON-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
+| pause | `PAUSE-n` | `docs/working` | stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
 
 The Mode column is the kind's `mode` value; `stamped` is the session-stamped mode (FRAMEWORK
 §8.0.1).
@@ -263,7 +263,7 @@ The engine makes them one commit; by hand, commit them together at the end.
    ```
    ## <key> · kind: close
 
-   - **rows:** T-8 (runbook written); S-11 (amended)
+   - **rows:** PRJ-8 (runbook written); STORY-11 (amended)
    - **receipts:**
      - guards: `<gate>` green, N passed; context-engine lint: ...
      - read: ...
@@ -378,7 +378,7 @@ clone or CI does not see it; to make it seen, commit the op log (§ context-engi
 Intake, step 7). By hand:
 
 1. Each id must be an existing item of a board kind (a task or a question), and of the form
-   capital letters, a hyphen, digits (`T-12`): the `tasks:` line is read back in that form, so
+   capital letters, a hyphen, digits (`PRJ-12`): the `tasks:` line is read back in that form, so
    an id of another form would drop out of the check unseen. For a request with no item yet, file
    a task first (§ context-engine task new). Your session must have an open stub.
 2. In your stub, delete any `- **tasks:**` line and add one at the end, with no blank line
@@ -869,7 +869,7 @@ is one no other write hands out, so the citation is right before the record exis
 
 ### context-engine task new
 
-1. Pick the kind: task (`T-n`) or question (`ASK-n`; prefer `context-engine ask new`).
+1. Pick the kind: task (`<prefix>-n`, `PRJ-n` say) or question (`ASK-n`; prefer `context-engine ask new`).
 2. The brief is at most 120 characters. Every named dep must exist. The tier's cap must have room
    (NOW 1, NEXT 5, counting open items of both kinds). Otherwise, demote something first.
 3. Id: the highest number in the series + 1. Count file names *and* `id:` keys, open and closed.
@@ -1111,9 +1111,9 @@ looks for: `Closes:` names the task in the commit that finished it (FRAMEWORK §
 
 A message is required, and the item must be closed. **Never reopen an owner question that
 carries `answered:`**, and never delete its `answered:`: its answer is a decision (the one
-`answered: {decision: D-n}` names). To change the answer, `record amend D-n` or
-`decision supersede D-n <new>`, where D-n is the decision that stands now (follow its
-`superseded_by`); for a follow-up, `ask new` citing ASK-n and D-n. A question
+`answered: {decision: DEC-n}` names). To change the answer, `record amend DEC-n` or
+`decision supersede DEC-n <new>`, where DEC-n is the decision that stands now (follow its
+`superseded_by`); for a follow-up, `ask new` citing ASK-n and DEC-n. A question
 closed without `answered:` (by a `task close` run before `close` began refusing questions) may be
 reopened: that is its repair. Set `state: open`, set `closed:` to null, delete `status`, and set `moved` and `updated`.
 Append `- <key> (<actor>): reopened: <message>`.
@@ -1262,7 +1262,7 @@ or demoted to LATER.
 1. The question must be open and carry no `answered:`, and you need the owner's words verbatim
    (the engine takes them as an argument, or written to a file and passed with `--file`). Open with `answered:` means someone reopened it by hand (G-W4): restore `state: closed` and
    `status: deprecated` from git and change the answer through its decision, as in `task reopen`.
-2. New decision `D-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
+2. New decision `DEC-n`: `title`, `actor: owner`, `decided: <today>`, `session: <key>`,
    `decision_status: ACCEPTED` (`PROVISIONAL` if the decision kind's enum lacks `ACCEPTED`), `answers: ASK-n`. Body:
    `Owner, answering ASK-n: *"<words>"*`. Stamp its `body_sha` at once.
    **If the owner delegated the ruling** ("you decide", and an agent or another human made the
@@ -1278,10 +1278,10 @@ or demoted to LATER.
    later amendment; this stop holds whatever `[guards] off` names), and stop as § context-engine
    record new step 2 does if the body cites an id no record has.
 3. On the question, set `state: closed`, `status: deprecated`, `closed: <key>`,
-   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: D-n}` (with
+   `last_asked: <key>`, `answered: {on: <today>, session: <key>, decision: DEC-n}` (with
    `ruled_by: <who ruled>` added for a delegated ruling) and `updated`.
-   Append `- <key> (<actor>): answered by the owner: D-n` (for a delegated ruling,
-   `- <key> (<actor>): answered on the owner's delegation, ruled by <who ruled>: D-n`).
+   Append `- <key> (<actor>): answered by the owner: DEC-n` (for a delegated ruling,
+   `- <key> (<actor>): answered on the owner's delegation, ruled by <who ruled>: DEC-n`).
 4. Report what it unblocks: open items whose deps include it and whose deps are now all closed,
    plus everything in its `blocks`.
 5. If the question was at NOW, check NOW as in § task close and tell the owner.
@@ -1295,7 +1295,7 @@ owner's quote, or under `actor: owner`, it would be frozen as owner intent (FRAM
 
 ### context-engine baton add
 
-New `BTN-n` in `docs/working/`: `title` (first line of the step, cut to 100 characters, never
+New `BATON-n` in `docs/working/`: `title` (first line of the step, cut to 100 characters, never
 refused), `session: <key>`, `state: open`, `created: <today>`, `why` (`''` if none given). Body:
 `<step>` + blank line + `**Why skipped:** <why or "not given">`.
 
@@ -1341,11 +1341,11 @@ blocking orientation (G-W3).
    included (`git status --porcelain=v1 --untracked-files=all`; for a rename take the new path),
    from git itself. Leave out the op log and every path its uncommitted lines name: step 3
    commits them.
-2. New `PAU-n`: `title` (first line of what was in flight, cut to 100 characters), `session`, `state: open`, `created`,
+2. New `PAUSE-n`: `title` (first line of what was in flight, cut to 100 characters), `session`, `state: open`, `created`,
    `branch`, `uncommitted: [...]`, `resume_step`, `evidence` (or `none`), `deferred: [...]`. Body:
    `**In flight:** ...` + blank line + `**Resume step:** ...`.
 3. Commit that file with the op log, at once: `git add -- <path>`, then
-   `git commit --only -m "pause PAU-n (<key>): <first 60 characters of the title>" --trailer "Session: <key>" --trailer "Co-Authored-By: <name> <email>" -- <path> docs/ledger/ops.jsonl`,
+   `git commit --only -m "pause PAUSE-n (<key>): <first 60 characters of the title>" --trailer "Session: <key>" --trailer "Co-Authored-By: <name> <email>" -- <path> docs/ledger/ops.jsonl`,
    adding any path the op log's other uncommitted lines name (§ What every write does,
    **Commit the write**). (`--only` on a file git has never seen fails without the `add`. The
    `--trailer`s are the one trailer paragraph every agent commit ends with, FRAMEWORK §6.10, and
@@ -1450,7 +1450,7 @@ open task its title leads with. By hand:
 1. **The range** (`--scan`): your session's range of § Reconciling foreign commits (procedures.md),
    `<baseline>..<your start head>`, or `<rev>..HEAD` with `--since`. List it oldest first:
    `git log --reverse --format='%H %s [%(trailers:key=Session,valueonly)] [%(trailers:key=Closes,valueonly,separator=%x2C)]' <baseline>..<end>`.
-2. For each commit whose title leads with ids (`T-3: ...`, `T-3, T-4: ...`: the comma-separated
+2. For each commit whose title leads with ids (`PRJ-3: ...`, `PRJ-3, PRJ-4: ...`: the comma-separated
    ids before the first colon) naming an open task (never a question): skip it if its message has no
    `Session:` line (it is foreign: reconcile it, and say so), if its `Closes:` trailers name the item
    (leave it for § context-engine hk close), or if the item's `## Log` already cites the hash (a
@@ -1686,7 +1686,7 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
 ### context-engine record new
 
 1. Take the next free id in the kind's series (as `context-engine task new`), or `--id`, one this
-   session reserved: `D-n` in `docs/decisions`, `S-n` in `docs/stories`, file `<id>-<slug>.md`.
+   session reserved: `DEC-n` in `docs/decisions`, `STORY-n` in `docs/stories`, file `<id>-<slug>.md`.
 2. Frontmatter: `type`, `id`, `title`, then the keys you were given. Any **required** key you
    were not given is filled only if its only possible value is the present: a date-typed key (`decided`,
    `date`) with today, a key-typed one (`session`) with your session key. Everything else
@@ -1928,7 +1928,7 @@ kept current without touching the words; but the keys other operations own carry
 
 `decision accept <ids>` marks PROVISIONAL decisions reviewed: each becomes `ACCEPTED`. Run it once
 the owner has reviewed the agent's calls named (the close digest flags each one), never before.
-`<ids>` are ids, aliases or ranges (`D-4..9`, or `D-4..D-9`: one prefix, low to high, at most 500),
+`<ids>` are ids, aliases or ranges (`DEC-n..m`, or `DEC-n..DEC-m`: one prefix, low to high, at most 500),
 comma- or space-separated, in any number. `--owners` adds every decision still PROVISIONAL that is
 the owner's own (`actor` is `owner` or `human:<id>`, in any case, and no `ruled_by`): the born-ACCEPTED
 rule of § context-engine record new applied to decisions recorded before it, once, after the
@@ -2284,9 +2284,13 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
 1. If `context.toml` exists, keep it: check it loads (`context-engine lint` names what it
    refuses; stop and fix that first), and in steps 3 and 5 create only what it points at (a kind's
    `dir`, a `[working]` path, a route's `path`, the lock's directory).
-2. Otherwise copy `context.toml.template` to `context.toml`; to change a kind's id prefix, edit
-   `prefix` in its `[kinds.<name>]` table (no two kinds may share one, and none may collide with
-   ids the repo already uses).
+2. Otherwise copy `context.toml.template` to `context.toml`, and set `[kinds.task]` `prefix` to
+   the one the owner chose: 2 to 5 capitals naming the board (the kit's `TASK` is a placeholder;
+   without the owner's choice, stop and ask, as the engine refuses). To change another kind's id
+   prefix, edit `prefix` in its `[kinds.<name>]` table. A prefix is 2 to 5 capitals; none may be
+   reserved (`EXP`, `HAZ`) or another kind's standard one (FRAMEWORK P3: `DEC`, `STORY`, `AC`,
+   `ASK`, `RISK`, `GOAL`, `BATON`, `PAUSE`), no two kinds may share one, and none may collide with
+   ids the repo already uses.
 3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md`, `docs/ledger/session-log.md` and
    every runbook under the kit's `docs/runbooks/` (`manual-mode.md`, `procedures.md`, `gate.md`,
    `sabotage.md`, `fan-out.md` and `release.md`) from the kit to the same paths, skipping any that
@@ -2322,7 +2326,8 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    line (FRAMEWORK §5.5 rule 4)` and `<op log> merge=union` the same way; a path with a space or a
    wildcard needs quoting there, so write that line with care, or warn and leave it.
 6. Report in one line what you created, what you skipped, and a warning for each thing the
-   owner must act on (the settings file's ignore line; on a dry run, the settings question), and,
+   owner must act on (the settings file's ignore line; on a dry run, the settings question and a
+   task prefix not yet chosen), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
    Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, then

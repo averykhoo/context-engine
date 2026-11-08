@@ -45,7 +45,7 @@ from . import okf
 from . import review as R
 from .bootstrap import ENGINE_DIR
 from .commit import op_paths
-from .config import CONFIG_NAME, LIVENESS
+from .config import CONFIG_NAME, LIVENESS, RESERVED_PREFIXES, STANDARD_PREFIXES
 from .errors import Refusal
 from .store import ALIASES, OKF_STATUS, Failure, key_order
 
@@ -378,13 +378,25 @@ def ids(e: Engine) -> list[Failure]:
     the op log never shows an id created twice (a reuse), and every alias (a record's earlier id,
     `aliases:`) resolves to one record: it is one word, not the record's own id, not in the form of
     a configured series, and carried by no other record (``Store.alias_problems``, which every
-    write applies too).
+    write applies too). And the `[working] task` kind's prefix is neither a standard prefix of
+    another role (`config.py::STANDARD_PREFIXES`) nor a reserved one (`config.py::RESERVED_PREFIXES`),
+    so a task id never reads as another kind's (FRAMEWORK P3, DEC-231).
 
     Not checked: an id reused before the op log began, or after a record was deleted outside the
-    engine with no op logged (allocation already scans closed records and never reuses, AC-4); and
-    whether an alias was ever really the record's id (it is provenance, set when the record is)."""
+    engine with no op logged (allocation already scans closed records and never reuses, AC-4);
+    whether an alias was ever really the record's id (it is provenance, set when the record is);
+    other kinds' prefixes (a repo's kinds need not carry the kit's names); and prefix length (a
+    config from the old kit has one-letter prefixes, DEC-230)."""
     out: list[Failure] = []
     st = e.store
+    tk = st.config.kinds.get(st.config.working.task) if st.config.working.task else None
+    if tk is not None:
+        role = next((r for r, p in STANDARD_PREFIXES.items() if p == tk.prefix), None)
+        why = (f"is reserved for {RESERVED_PREFIXES[tk.prefix]}, a kind not built yet" if tk.prefix in RESERVED_PREFIXES
+               else f"is the standard prefix of {role} ids, so task ids would read as {role} ids" if role else "")
+        if why:
+            out.append(Failure("G-D2", CONFIG_NAME, f"[kinds.{tk.name}] prefix {tk.prefix} {why} (FRAMEWORK P3)",
+                               "give the board's tasks their own prefix, 2 to 5 capitals naming the board: rename each task to it by hand, keeping its number, with its old id in `aliases` (FRAMEWORK §11.4)"))
     amap = st.alias_map()
     for kind in st.config.kinds.values():
         seen: dict[str, list[str]] = {}

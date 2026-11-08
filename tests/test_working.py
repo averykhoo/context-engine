@@ -2,6 +2,7 @@
 the banner, orient() and the working-state guards (CE-2, AC-10 to AC-17)."""
 
 import copy
+import dataclasses
 import datetime as dt
 import json
 import os
@@ -17,6 +18,7 @@ from context_engine import bootstrap as K
 from context_engine import ledger as L
 from context_engine import okf
 from context_engine.cli import main
+from context_engine.config import from_dict
 from context_engine.errors import Refusal
 from context_engine.guards import ask_options
 from context_engine.working import Engine, status_paths
@@ -376,10 +378,10 @@ def test_session_tasks_refuses_an_id_that_is_no_board_item_and_writes_nothing(en
 @pytest.mark.criterion("AC-155")
 def test_session_tasks_refuses_a_board_id_its_line_would_not_read_back(tmp_path):
     """CE-112 review: the `tasks:` line is parsed with ID_RE (capital letters, hyphen, digits); a
-    board prefix of another form would be written, then silently dropped by the close and G-W6."""
-    cfg = copy.deepcopy(CONFIG)
-    cfg["kinds"]["task"]["prefix"] = "Task"
-    e = _engine(tmp_path / "odd", cfg)
+    board prefix of another form would be written, then silently dropped by the close and G-W6.
+    Config load refuses such a prefix since CE-56, so the engine is given the edited config: the
+    write-time refusal stays the second line."""
+    e = _odd_prefix_engine(tmp_path / "odd", "task", "Task")
     key = started(e)
     rid = task(e, key, "One").id
     assert rid == "Task-1"
@@ -446,10 +448,9 @@ def test_close_refuses_until_next_tier_questions_are_named_as_asked(eng):
 @pytest.mark.criterion("AC-11")
 def test_ask_raised_refuses_a_question_id_its_line_would_not_read_back_and_writes_nothing(tmp_path):
     """CE-152: the `asked:` line is read back with ID_RE, so an id of another form (`Ask-1`) would be
-    written and then drop out of every check unseen; the refusal comes before any `last_asked` stamp."""
-    cfg = copy.deepcopy(CONFIG)
-    cfg["kinds"]["question"]["prefix"] = "Ask"
-    e = _engine(tmp_path / "odd", cfg)
+    written and then drop out of every check unseen; the refusal comes before any `last_asked` stamp.
+    Config load refuses such a prefix since CE-56, so the engine is given the edited config."""
+    e = _odd_prefix_engine(tmp_path / "odd", "question", "Ask")
     key = started(e)
     q = e.ask_new("Pick a colour?", body=ASK_BODY, pri="NEXT", **kw(key))
     assert q.id == "Ask-1"
@@ -965,6 +966,18 @@ def test_demoting_the_now_item_says_g_w5_is_red_and_other_moves_say_nothing(eng)
     assert eng.promote(nxt.id, "NOW", **kw(key)) == f"{nxt.id}: NEXT -> NOW"
     assert eng.promote(now.id, "NEXT", **kw(key)) == f"{now.id}: LATER -> NEXT"
     assert guards(eng, "G-W5") == []
+
+
+def _odd_prefix_engine(root, kind, prefix):
+    """An engine whose `kind` has a prefix config load refuses (not capitals, CE-56): built from the
+    loaded config with that one prefix replaced, to reach the write-time refusals behind it."""
+    with pytest.raises(Refusal, match="not capital letters"):
+        cfg = copy.deepcopy(CONFIG)
+        cfg["kinds"][kind]["prefix"] = prefix
+        _engine(root, cfg)
+    loaded = from_dict(copy.deepcopy(CONFIG))
+    kinds = {**loaded.kinds, kind: dataclasses.replace(loaded.kinds[kind], prefix=prefix)}
+    return Engine(root, dataclasses.replace(loaded, kinds=kinds), today=lambda: TODAY)
 
 
 def _engine(tmp_path, cfg):

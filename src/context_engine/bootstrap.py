@@ -93,7 +93,9 @@ FILES = {
 }
 KEEP = ("docs/decisions", "docs/stories", "docs/working", "docs/evidence", "tasks")  # empty dirs get a .gitkeep
 SELF_IGNORING = (".context", ".scratch")  # each holds a .gitignore of `*`
-PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*$")
+PREFIX_RE = re.compile(r"^[A-Z]{2,5}$")  # a prefix init takes: 2 to 5 capitals (FRAMEWORK P3, DEC-230)
+# init refuses without a task prefix on a repo with no context.toml (DEC-229); a dry run warns instead
+TASK_REMEDY = "ask the owner for 2 to 5 capitals naming this board (e.g. CE), then run init with --prefix task=<PREFIX>"
 
 
 def kit_block(text: str) -> tuple[str, str | None] | None:
@@ -222,14 +224,23 @@ def hook_entry(root: Path) -> dict:
 
 def config_text(prefixes: dict[str, str] | None = None) -> str:
     """The kit's ``context.toml`` with each ``kind=PREFIX`` override applied; refuses one that
-    names no kind, is not an upper-case prefix, or collides with another kind's."""
+    names no kind, is not 2 to 5 capitals, is reserved for a kind not built yet, is the standard
+    prefix of another role (FRAMEWORK P3, DEC-38), or collides with another kind's."""
     text = (KIT / TEMPLATE).read_text(encoding="utf-8")
     kinds = tomllib.loads(text)["kinds"]
     for kind, prefix in (prefixes or {}).items():
         if kind not in kinds:
             raise Refusal(f"--prefix names kind {kind!r}, which the kit does not declare", f"use one of {', '.join(kinds)}")
         if not PREFIX_RE.match(prefix):
-            raise Refusal(f"prefix {prefix!r} for {kind} is not upper-case letters and digits", "write it like D, DEC or T2")
+            raise Refusal(f"prefix {prefix!r} for {kind} is not 2 to 5 capital letters", "write it like DEC or CE (FRAMEWORK P3)")
+        if prefix in C.RESERVED_PREFIXES:
+            raise Refusal(f"prefix {prefix} is reserved for {C.RESERVED_PREFIXES[prefix]}, a kind not built yet", "pick another (FRAMEWORK P3)")
+        role = next((r for r, p in C.STANDARD_PREFIXES.items() if p == prefix), None)
+        if role is not None and role != kind:
+            raise Refusal(
+                f"prefix {prefix} is the standard prefix of {role} ids, not of {kind} ids",
+                f"pick another (FRAMEWORK P3){': a task prefix is 2 to 5 capitals naming the board' if kind == 'task' else ''}",
+            )
         section = re.compile(rf"(^\[kinds\.{re.escape(kind)}\]\n(?:(?!\[).*\n)*?prefix = )\"[^\"]*\"", re.MULTILINE)
         text, n = section.subn(lambda m: f'{m.group(1)}"{prefix}"', text, count=1)
         assert n == 1, kind
@@ -681,7 +692,12 @@ def init(root: Path | str, prefixes: dict[str, str] | None = None, dry_run: bool
         raise Refusal(f"{root} is not a directory", "pass the repo root with --root")
     if merge_settings and skip_settings:
         raise Refusal("--merge-settings and --skip-settings contradict each other", "pass the one the owner chose")
+    unchosen = not (root / C.CONFIG_NAME).exists() and "task" not in (prefixes or {})  # a new repo, its task prefix not given (DEC-229)
+    if unchosen and not dry_run:  # keyed on dry_run, not on plan's settings: nothing is written
+        raise Refusal("init needs the task prefix: the kit gives tasks none of their own", f"{TASK_REMEDY}; `init --dry-run` shows the plan first")
     writes, created, skipped, seen, warnings = plan(root, prefixes, "merge" if merge_settings else "skip" if skip_settings else "preview" if dry_run else "")
+    if unchosen:  # a dry run: it shows the whole plan, and names the question instead of refusing
+        warnings.insert(0, f"no task prefix chosen: {TASK_REMEDY}")
     if not dry_run:
         done: list[str] = []
         for rel, text in writes.items():

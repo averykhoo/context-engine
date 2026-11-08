@@ -55,7 +55,7 @@ def build() -> argparse.ArgumentParser:
     groups = ap.add_subparsers(dest="group", required=True)
 
     ini = _sub(groups, "init", "write the adoption kit's missing files into the repo (FRAMEWORK §6.9) gitignore .context-engine/ and merge the op log by union; never overwrites")
-    ini.add_argument("--prefix", action="append", default=[], metavar="KIND=PREFIX", help="a kind's id prefix, e.g. task=PRJ; repeat for each")
+    ini.add_argument("--prefix", action="append", default=[], metavar="KIND=PREFIX", help="a kind's id prefix, 2 to 5 capitals, e.g. task=PRJ; repeat for each; a new repo needs task=")
     ini.add_argument("--dry-run", action="store_true", help="say what would be written, write nothing")
     ini.add_argument("--merge-settings", action="store_true", help="the owner said yes: add the SessionStart hook to an existing .claude/settings.local.json")
     ini.add_argument("--skip-settings", action="store_true", help="the owner said no: leave an existing .claude/settings.local.json alone; with none, write no hook (the Claude Code plugin runs orient)")

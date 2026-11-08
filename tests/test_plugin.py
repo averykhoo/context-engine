@@ -429,7 +429,7 @@ def test_every_line_a_skill_adds_is_quoted_word_for_word_from_its_sections():
 
 def test_skip_settings_writes_no_hook_when_there_is_no_settings_file(tmp_path):
     """With the plugin carrying the hook, `init --skip-settings` must not write a second one."""
-    out = B.init(tmp_path, skip_settings=True)
+    out = B.init(tmp_path, {"task": "TK"}, skip_settings=True)
     assert not (tmp_path / B.SETTINGS).exists() and not (tmp_path / B.SETTINGS_IGNORE).exists()
     assert f"{B.SETTINGS} ({B.SKIP_ABSENT})" in out, out
     assert (tmp_path / "context.toml").is_file()

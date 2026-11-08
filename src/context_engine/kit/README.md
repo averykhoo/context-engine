@@ -92,8 +92,14 @@ too.
 From the repo root:
 
 ```
-<engine-python> -m context_engine init [--prefix kind=P ...] [--dry-run]
+<engine-python> -m context_engine init --prefix task=<PREFIX> [--prefix kind=P ...] [--dry-run]
 ```
+
+The task prefix is the owner's choice, 2 to 5 capitals naming the board (`CE`, `PRJ`): the kit
+gives tasks none of their own, so on a repo with no `context.toml` init refuses without it, and
+`init --dry-run` warns instead, so ask the owner first. Every other kind takes the standard prefix
+(FRAMEWORK P3): `DEC`, `STORY`, `ASK`, `BATON`, `PAUSE`; criteria are `AC-n`. A prefix init takes
+is 2 to 5 capitals, never a reserved one (`EXP`, `HAZ`) or another kind's standard one.
 
 It writes every kit file the repo is missing and prints one line naming what it created and what
 it skipped. It never overwrites a file, and a file it creates is LF whatever the engine's
@@ -109,7 +115,7 @@ that already has its own Gate (a level 1 or 2 heading reading `Gate`) keeps it a
 init appends the kit block without the bootloader's Gate stub, and says so. An existing `context.toml` is
 kept if it loads (init refuses one that does not, or one whose prefixes disagree with
 `--prefix`), and init then writes only the files and directories that config points at, so it
-can be re-run after the config is edited. `--prefix` changes a kind's id series
+can be re-run after the config is edited, with no `--prefix`. `--prefix` sets a kind's id series
 (`--prefix task=PRJ`): pick prefixes no id already in the repo uses.
 
 Then:
@@ -248,8 +254,9 @@ short, so `orient` still shows the batons and the board.
 `init` writes only what is missing, so run it (or copy by hand), then edit `context.toml` in
 place:
 - each kind's `dir` points at the records the repo already has, and its `prefix` is the
-  framework's form, not the repo's old one: `DEC` for decisions and `ASK` for questions, and a
-  task prefix of the repo's own (`init --prefix decision=DEC --prefix task=<yours>`). The old ids
+  framework's form, not the repo's old one: the standard prefixes (`DEC` for decisions, `ASK`
+  for questions: the kit's defaults), and a task prefix of the repo's own (`init --prefix
+  task=<yours>`). The old ids
   move over in the first session (below);
 - each `[[routes]]` `path` points at the existing file for that component;
 - a skeleton `init` wrote for a component the repo keeps elsewhere is deleted, not routed;

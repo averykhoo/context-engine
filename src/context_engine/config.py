@@ -18,6 +18,17 @@ from .errors import Refusal
 CHANGE_MODES = ("append-only", "replaced", "stamped")
 FIELD_TYPES = ("str", "date", "key", "list", "int")  # `key` is a session key, e.g. 2026-10-08c
 CONFIG_NAME = "context.toml"
+# The standard id prefixes (FRAMEWORK P3, DEC-38): one per role, the kit's defaults. A repo that kept
+# its own at adoption keeps them (DEC-37's aliases, DEC-162); tasks take a per-repo prefix of their own.
+STANDARD_PREFIXES = {
+    "decision": "DEC", "story": "STORY", "criterion": "AC", "question": "ASK",
+    "risk": "RISK", "goal": "GOAL", "baton": "BATON", "pause": "PAUSE",
+}
+# Prefixes held for kinds not built yet (DEC-38): no kind may take one
+RESERVED_PREFIXES = {"EXP": "experiments and measured runs", "HAZ": "unverified hazards"}
+# An id is capitals, a dash and a number (FRAMEWORK P3). Load checks only this form, not init's 2 to 5
+# capitals, so a config the old kit wrote (D, S, T) keeps loading (DEC-230)
+PREFIX_FORM = re.compile(r"[A-Z]+")
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
     "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D4", "G-D5", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
@@ -237,6 +248,11 @@ def from_dict(raw: dict) -> Config:
         for key in ("type", "prefix", "dir"):
             if not k.get(key):
                 raise Refusal(f"kind {name!r} has no `{key}`", f"add `{key} = ...` to [kinds.{name}]")
+        if not PREFIX_FORM.fullmatch(k["prefix"]):
+            raise Refusal(
+                f"kind {name!r} has prefix {k['prefix']!r}, which is not capital letters",
+                "an id is capitals, a dash and a number (FRAMEWORK P3): write the prefix in capitals only, e.g. DEC",
+            )
         if k["prefix"] in prefixes:
             raise Refusal(f"two kinds share the id prefix {k['prefix']!r}", "give each kind its own prefix")
         prefixes.add(k["prefix"])

@@ -27,7 +27,8 @@ commit = "milestones"                # when the engine commits its writes by pat
 # -- record kinds (FRAMEWORK §8.0.1) ------------------------------------------------------
 # Keys of a [kinds.<name>] table:
 #   type        the OKF `type:` value written into every record of the kind
-#   prefix      the id series: prefix "D" gives D-1, D-2, ... Ids are never reused. A repo's earlier
+#   prefix      the id series: prefix "DEC" gives DEC-n ids. Ids are never reused. The kit's are the
+#               standard set (FRAMEWORK P3); a task prefix is the repo's own. A repo's earlier
 #               ids are renamed to it at import, keeping the number, and each old id goes in the
 #               record's `aliases` list, which lookups resolve (FRAMEWORK §11.4)
 #   dir         repo-relative directory holding the records (one file each: <id>-<slug>.md)
@@ -40,7 +41,7 @@ commit = "milestones"                # when the engine commits its writes by pat
 
 [kinds.decision]
 type = "Decision"
-prefix = "D"
+prefix = "DEC"
 dir = "docs/decisions"
 mode = "append-only"
 required = ["title", "actor", "decided", "session", "decision_status"]
@@ -50,7 +51,7 @@ extra_dirs = []
 
 [kinds.story]
 type = "Story"
-prefix = "S"
+prefix = "STORY"
 dir = "docs/stories"
 mode = "append-only"
 required = ["title", "actor", "date", "story_status", "goals"]
@@ -59,7 +60,7 @@ types = { aliases = "list", date = "date", goals = "list", supersedes = "list", 
 
 [kinds.task]
 type = "Task"
-prefix = "T"
+prefix = "TASK"   # init writes the prefix the owner chose: 2 to 5 capitals naming the board, e.g. CE; by hand, set it here
 dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
@@ -78,7 +79,7 @@ types = { aliases = "list", created = "date", moved = "key", updated = "key", cl
 # Batons and pause records: one session-stamped record each (FRAMEWORK §5.4).
 [kinds.baton]
 type = "Baton"
-prefix = "BTN"
+prefix = "BATON"
 dir = "docs/working"
 mode = "stamped"
 required = ["title", "session", "state", "created"]
@@ -87,7 +88,7 @@ types = { session = "key", created = "date", done = "key" }
 
 [kinds.pause]
 type = "Pause"
-prefix = "PAU"
+prefix = "PAUSE"
 dir = "docs/working"
 mode = "stamped"
 required = ["title", "session", "state", "created", "branch", "resume_step"]
