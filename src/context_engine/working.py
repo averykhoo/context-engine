@@ -3101,7 +3101,8 @@ class Engine:
     def doc_archive(self, path: str, to: str = "", why: str = "", lines: str = "", *, session: str, actor: str) -> str:
         """FRAMEWORK §7.3: move a tracked, committed doc, unrepaired, into the archive directory
         (`to`, else `[working] archive`), opened with `ARCHIVED <date>` (first after its
-        frontmatter, whose `liveness:` key becomes FROZEN), and add its row to that directory's
+        frontmatter, whose `liveness:` key becomes FROZEN, or which opens with `liveness: FROZEN`
+        when it has no such key and runs past G-D4's window: CE-154), and add its row to that directory's
         redirect table (`README.md`, made by the first archive there). Material that is not
         markdown moves byte for byte, with no ARCHIVED line: its row dates it. With `lines`
         (`A-B`), prune instead (CE-96): cut those lines of a markdown doc and append them
@@ -3109,7 +3110,9 @@ class Engine:
         Not a milestone (DEC-36): nothing is staged, and the next commit carries the writes with
         their op lines (a whole move shows in git as a rename). Nothing outside the archive is
         rewritten: the reply names each pointer G-D3 newly reports, to repoint by hand. The
-        engine's own control files, `context.toml` and the op log, are refused (CE-158)."""
+        engine's own control files, `context.toml` and the op log, are refused (CE-158); so are
+        a table or archive file with an uncommitted change no op line names, and a doc, archive
+        file or table that changed while the archive ran (CE-154)."""
         self._check(session, actor)
         rel, p = self._doc(path, markdown=False)
         # CE-158 (CE-153, DEC-162): since CE-96 took other material, nothing refused the engine's own control files
@@ -3149,6 +3152,16 @@ class Engine:
                 raise Refusal(f"{rel} is not tracked by git", "commit it first (an archive moves tracked material, `git mv`, so its history follows it), or delete it if it was never worth keeping")
             if self._git("status", "--porcelain=v1", "--", rel).strip():
                 raise Refusal(f"{rel} has uncommitted changes", "commit them, or undo them, first: an archive moves the material as it stands in git, never repaired (FRAMEWORK §7.3)")
+            # CE-154 (DEC-227): the table and the archive file it appends to may carry only what an
+            # uncommitted op line names (an earlier archive's own writes), never a hand edit
+            others = [f"{dest_dir}/{A.REDIRECTS}"] + ([name] if span else [])
+            made = C.pending(self.root, self.store.config.oplog)
+            for x in status_paths(self._git("status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *others)):
+                if x not in made:
+                    raise Refusal(f"{x} has uncommitted changes no op line names",
+                                  "commit them, or undo them, first: an archive appends its row (and a pruned passage) to the file as it stands, so a hand edit would ride into the archive's commit unseen")
+            # CE-154 (DEC-228): what is read here is re-read before the first write
+            seen = {q: (q.read_bytes() if q.is_file() else None) for q in (p, dest, table)}
             text = self._utf8(p, rel) if md else ""
             old = self._utf8(table, f"{dest_dir}/{A.REDIRECTS}") if table.exists() else None
             if span:
@@ -3156,17 +3169,28 @@ class Engine:
                 row = A.redirect_row(f"{rel} lines {span[0]}-{span[1]}", base, today, session, why)
                 how = ""
             elif md:
-                moved = A.archived(text, today, session, rel)
+                window = self.store.config.guards.liveness_lines
+                moved = A.archived(text, today, session, rel, window)
                 if A.frontmatter(text) is None:
                     how = f"first line ARCHIVED {today}"
+                elif A.frontmatter(moved) != A.frontmatter(text):  # CE-154 (DEC-226): a FROZEN key inserted
+                    how = f"ARCHIVED {today} first after its frontmatter, which now opens with `liveness: FROZEN`"
                 else:
                     how = f"ARCHIVED {today} first after its frontmatter" + (", whose `liveness:` is now FROZEN" if A.thawed_keys(text) else "")
+                got = G.declared(moved.replace("\r\n", "\n"), window)
+                if got.word != "FROZEN":
+                    raise Refusal(f"{rel}'s archived copy would read as {got.word or 'no liveness'} to G-D4, not FROZEN: its frontmatter runs past G-D4's first {window} lines with its `liveness:` key outside them",
+                                  "move the `liveness:` key to the top of the frontmatter by hand and commit it, then archive; or archive it by hand (manual-mode.md § context-engine doc archive)")
                 row = A.redirect_row(rel, base, today, session, why)
             else:
                 how = "moved unchanged: not markdown, so no ARCHIVED line; its row dates it"
                 row = A.redirect_row(rel, base, today, session, why)
             redirects = A.redirects(old, dest_dir, row)
             before = self._pointer_reds()
+            for q, was in seen.items():  # a hand or another session may have written while G-D3 ran
+                if (q.read_bytes() if q.is_file() else None) != was:
+                    raise Refusal(f"{q.relative_to(self.root).as_posix()} changed while it was being archived",
+                                  "nothing was written: run it again, and with --lines check the range against the doc as it is now")
             dest.parent.mkdir(parents=True, exist_ok=True)
             if span:
                 self.store.write_text(dest, done)
@@ -3181,21 +3205,22 @@ class Engine:
             self.store.log("doc.archive", rel, p, session, actor, ["pruned" if span else "moved"])
             self.store.log("doc.archive", rel, dest, session, actor, ["archived"])
             self.store.log("doc.archive", rel, table, session, actor, ["redirect"])
-            reds = self._pointer_reds() - before
+            reds = _new_reds(before, self._pointer_reds(), {rel, name})
         if span:
             out = f"{rel}: lines {span[0]}-{span[1]} pruned into {name} under `{A.pruned_heading(rel, today)}`, row added to {dest_dir}/{A.REDIRECTS}"
         else:
             cfg = (self.root / CONFIG_NAME).read_text(encoding="utf-8") if (self.root / CONFIG_NAME).exists() else ""
             warn = f"; context.toml still names {rel}: point it at {name} or drop it, or lint is red (G-R1, G-D4)" if _names_path(cfg, rel) else ""
             out = f"{rel}: archived as {name} ({how}), row added to {dest_dir}/{A.REDIRECTS}{warn}"
-        return out + _pointer_note(sorted(reds), name)
+        return out + _pointer_note(reds, name)
 
     def _prune(self, rel: str, text: str, span: tuple[int, int], dest: Path, name: str, today: str, session: str) -> tuple[str, str]:
         """`doc archive --lines`: (the doc without the passage, the archive file with the passage
         appended under its dated heading), after every check a prune makes, before any write
         (AC-148, DEC-123). Refused: a range past the doc's end, the whole doc (archive it whole), a range
         cutting into the frontmatter, a FROZEN doc (never edited, §7.2), a cut that changes what
-        G-D4 reads, and a blank passage."""
+        G-D4 reads in the doc itself (a declaration where it declared none included, whatever
+        `[guards] liveness_given` gives it: CE-154, DEC-225), and a blank passage."""
         first, last = span
         n = A.line_count(text)
         if last > n:
@@ -3212,20 +3237,26 @@ class Engine:
             raise Refusal(f"{rel} is FROZEN", "nothing to do: a frozen doc is never edited (FRAMEWORK §7.2); archive it whole if it is in the way")
         kept, passage = A.cut(text, first, last)
         after = G.declared(kept.replace("\r\n", "\n"), window)
-        if own.word and after.word != own.word:
-            raise Refusal(f"--lines {first}-{last} would leave G-D4 reading {after.word or 'no liveness'} in {rel}, which declares {own.word} on line {own.line}",
-                          "keep the declaration, and the line that opens its block (a blank line, a heading or the frontmatter), out of the range")
+        if after.word != own.word:  # a cut never changes what the doc itself declares (CE-154, DEC-225)
+            if own.word:
+                raise Refusal(f"--lines {first}-{last} would leave G-D4 reading {after.word or 'no liveness'} in {rel}, which declares {own.word} on line {own.line}",
+                              "keep the declaration, and the line that opens its block (a blank line, a heading or the frontmatter), out of the range")
+            # a word in passing made a declaration, whatever liveness_given gives the doc
+            also = f", and [guards] liveness_given ({given[rel][1]}) gives it {given[rel][0]}" if rel in given else ""
+            raise Refusal(f"--lines {first}-{last} would make line {after.line} of {rel} a liveness declaration ({after.word}) where it declares none in its first {window} lines{also}",
+                          f"choose a range that leaves that line where it opens no block in the first {window} lines (keep the line above it), or prune another passage")
         if not passage.strip():
             raise Refusal(f"--lines {first}-{last} of {rel} are blank", "name the passage to prune")
         prior = self._utf8(dest, name) if dest.exists() else None
         return kept, A.pruned(prior, passage, rel, today, session)
 
-    def _pointer_reds(self) -> collections.Counter:
-        """G-D3's failures as (doc, message), counted; none when `[guards] off` names G-D3. What a
-        write adds to them is what it left pointing at a path or heading that is gone (CE-96, DEC-121)."""
+    def _pointer_reds(self) -> list[tuple[str, str]]:
+        """G-D3's failures as (doc, message), in G-D3's order; none when `[guards] off` names G-D3.
+        What a write adds to them (``_new_reds``) is what it left pointing at a path or heading
+        that is gone (CE-96, DEC-121)."""
         if "G-D3" in self.store.config.guards.off:
-            return collections.Counter()
-        return collections.Counter((f.path, f.message) for f in G.links(self))
+            return []
+        return [(f.path, f.message) for f in G.links(self)]
 
     # -- write-time prose checks (CE-63, INV-60) --------------------------------------------
 
@@ -4061,6 +4092,29 @@ def _line_span(lines: str, rel: str) -> tuple[int, int]:
     if first < 1 or last < first:
         raise Refusal(f"--lines {lines} is not a range of {rel}'s lines", "give `A-B` (or `A`): the passage's first and last lines, numbered from 1 as an editor numbers them")
     return first, last
+
+
+LINE_AT_RE = re.compile(r"^line \d+: ")  # how every G-D3 message opens (guards.py::links, ::path_pointers)
+
+
+def _new_reds(before: list[tuple[str, str]], after: list[tuple[str, str]], moved: set[str]) -> list[tuple[str, str]]:
+    """The G-D3 failures of ``after`` (as (doc, message)) that ``before`` does not account for,
+    sorted (CE-154, DEC-224). Matched as a multiset, by doc and by message with its leading
+    `line N: ` blanked, since a cut or an ARCHIVED line above a pointer already red moves it; and
+    the docs in ``moved`` (the doc and its archived copy) count as one doc, since the write moved
+    lines between them."""
+
+    def key(f: tuple[str, str]) -> tuple[str | None, str]:
+        return (None if f[0] in moved else f[0], LINE_AT_RE.sub("", f[1]))
+
+    had = collections.Counter(key(f) for f in before)
+    out = []
+    for f in after:
+        if had[key(f)] > 0:
+            had[key(f)] -= 1
+        else:
+            out.append(f)
+    return sorted(out)
 
 
 def _pointer_note(reds: list[tuple[str, str]], name: str) -> str:

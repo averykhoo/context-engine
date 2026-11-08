@@ -1522,7 +1522,9 @@ is frozen (§ task close), so G-D4 is never red between a close and its freeze.
 ### context-engine doc archive
 
 For a file git tracks, with no uncommitted change: a whole doc or other file (the steps below),
-or a passage of a doc (§ Pruning part of a doc, after them).
+or a passage of a doc (§ Pruning part of a doc, after them). Neither the redirect table nor,
+for a passage, the archive file may have an uncommitted change no op line names (an earlier
+archive's own writes, still uncommitted, are fine): a hand edit would ride into the commit.
 
 1. The archive directory is `--to`, else `[working] archive` (the kit's default is
    `docs/archive`). Stop if the file is already in it, if a file of its name is already there
@@ -1537,8 +1539,12 @@ or a passage of a doc (§ Pruning part of a doc, after them).
    the doc as it was, in its own line endings. A doc with frontmatter keeps it on top: the
    ARCHIVED line goes first after its closing `---`, where G-D4 reads it too, and a `liveness:`
    key in it, which G-D4 reads first, becomes
-   `liveness: FROZEN  # ARCHIVED <today>; was <its old value>`. Material that is not markdown
-   moves byte for byte, with no ARCHIVED line: its row dates it.
+   `liveness: FROZEN  # ARCHIVED <today>; was <its old value>`. If the frontmatter has no
+   `liveness:` key and the ARCHIVED line would fall below G-D4's window (`[guards]
+   liveness_lines`, 10 by default), put `liveness: FROZEN  # ARCHIVED <today>` first in the
+   frontmatter; if its `liveness:` key lies outside the window, stop: move the key to the top
+   by hand and commit that first. Material that is not markdown moves byte for byte, with no
+   ARCHIVED line: its row dates it.
 4. Add its row to `<dir>/README.md`, the directory's one redirect table, after the last
    row of the table headed `| Was | Now | Archived | Why |`. Its cells: the old path; a markdown
    link whose text and target are both the archived file's name; `<today> (session <key>)`; the
@@ -1553,7 +1559,8 @@ or a passage of a doc (§ Pruning part of a doc, after them).
    to the old path in a doc lint reads (G-D3) is red too: in a living doc, point it at the
    archived copy by hand. The engine rewrites none of them; its reply names each pointer G-D3
    newly reports (by hand: compare `context-engine lint`'s G-D3 lines before and after the
-   move). The archived copy's own links are never repaired: if G-D3 reads the archive
+   move; a pointer already red that only changed line, or moved into the archived copy, is
+   not new). The archived copy's own links are never repaired: if G-D3 reads the archive
    directory, take it out of `[guards] links` and `paths`.
 
 **Pruning part of a doc** (an orientation note over its cap): which lines go is a judgement;
@@ -1562,9 +1569,10 @@ doc is markdown, tracked, committed (the lines named are the lines in git) and n
 frozen doc is never edited).
 
 1. Cut lines A to B, numbered from 1 as an editor numbers them. Not the whole doc (archive it
-   whole), not into its frontmatter, and not so that G-D4 reads another liveness: keep the
-   declaration, and the blank line, heading or frontmatter that opens its block, out of the
-   range. A blank passage is nothing to prune.
+   whole), not into its frontmatter, and not so that G-D4 reads another liveness, or a
+   declaration where the doc declared none (whatever `[guards] liveness_given` gives it):
+   keep the declaration, and the blank line, heading or frontmatter that opens its block, out
+   of the range, and keep the line above a word in passing. A blank passage is nothing to prune.
 2. Append the passage unchanged to `<dir>/<stem>-pruned.md` (for `HANDOFF.md`,
    `HANDOFF-pruned.md`): a blank line, `## Pruned from <doc> on <today>`, a blank line, the
    passage. The headings are the file's index. A new archive file opens with

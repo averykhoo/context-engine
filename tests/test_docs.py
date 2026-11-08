@@ -297,6 +297,8 @@ def test_archive_refuses_what_it_cannot_move_unrepaired_and_writes_nothing(repo)
     archive(repo, "docs/sub/old.md")  # takes the name docs/archive/old.md first
     (repo / "docs/latin").mkdir()
     (repo / "docs/latin/README.md").write_bytes("# Archiv\n\nGelöscht.\n".encode("latin-1"))  # a redirect table not in UTF-8
+    git(repo, "add", "docs/latin/README.md")  # committed, so the archive reaches its read (CE-154: a hand edit is refused first)
+    git(repo, "commit", "-q", "-m", "latin")
     write(repo, "decisions/DEC-1.md", "# A decision\n\nLIVING.\n")
     cfg = load(repo)
     bare = dataclasses.replace(cfg, working=dataclasses.replace(cfg.working, archive=""))
@@ -528,3 +530,156 @@ def test_the_archive_text_functions_keep_a_bom_and_line_endings():
     assert A.cut(bom + "a\r\nb\r\nc", 3, 3) == (bom + "a\r\nb\r\n", "c")
     assert A.line_count(bom + "a\nb\n") == 2 and A.line_count("a\nb") == 2
     assert A.pruned("X", "c", "a.md", "2026-10-08", KEY) == "X\n\n## Pruned from a.md on 2026-10-08\n\nc\n"
+
+
+# -- doc archive: pointer reds, liveness, long frontmatter, the uncommitted check (CE-154) -----
+
+
+@pytest.mark.criterion("AC-149")
+def test_archive_names_only_pointers_the_archive_made_red(tmp_path):
+    """CE-154 (DEC-224): a pointer already red below the cut, or moved into the archive file,
+    changes its line but is not new: only the pointer the prune broke is named."""
+    root = tmp_path / "repo"
+    target(root, {**DOCS, "guards": {**DOCS["guards"], "links": ["docs/index.md", "docs/notes.md", "docs/archive"]}})
+    (root / "docs/archive").mkdir()
+    write(root, "docs/index.md", "# Index\n\nLIVING.\n\n- [what is gone](notes.md#old)\n")
+    write(root, "docs/notes.md", NOTES.replace("- b\n", "- b\n- [lost](nowhere.md)\n") + "- [gone](nowhere.md)\n")
+    _init(root)
+    assert sorted(f"{f.path}: {f.message.split(':')[0]}" for f in Engine(root).lint() if f.guard == "G-D3") == [
+        "docs/notes.md: line 14", "docs/notes.md: line 9"]
+    out = archive(root, "docs/notes.md", lines="5-10")
+    assert out.endswith("; G-D3 now reports pointers to what moved, none rewritten: docs/index.md line 5; point each at docs/archive/notes-pruned.md by hand"), out
+    assert "docs/notes.md line" not in out and "whose own pointers" not in out, out
+    assert sorted(f"{f.path}: {f.message.split(':')[0]}" for f in Engine(root).lint() if f.guard == "G-D3") == [
+        "docs/archive/notes-pruned.md: line 9", "docs/index.md: line 5", "docs/notes.md: line 8"]  # the two already red, moved
+
+
+def test_new_reds_match_failures_by_doc_and_message_without_their_line_as_a_multiset():
+    from context_engine.working import _new_reds
+
+    assert _new_reds([("a.md", "line 3: x")], [("a.md", "line 1: x"), ("a.md", "line 2: x")], set()) == [("a.md", "line 2: x")]
+    assert _new_reds([("a.md", "line 3: x")], [("b.md", "line 9: x")], {"a.md", "b.md"}) == []
+    assert _new_reds([("a.md", "line 3: x")], [("b.md", "line 9: x")], set()) == [("b.md", "line 9: x")]
+    assert _new_reds([("a.md", "line 3: link `y1.md`")], [("a.md", "line 3: link `y2.md`")], set()) == [("a.md", "line 3: link `y2.md`")]  # only `line N:` is blanked
+    assert _new_reds([], [("b.md", "z"), ("a.md", "line 2: x")], set()) == [("a.md", "line 2: x"), ("b.md", "z")]  # sorted
+
+
+@pytest.mark.criterion("AC-148")
+def test_archive_lines_refuses_a_cut_that_makes_a_declaration_where_config_gives_the_liveness(tmp_path):
+    """CE-154 (DEC-225): with the doc's liveness given by `[guards] liveness_given` alone, a cut
+    that turns a word in passing into a declaration is refused, writing nothing."""
+    root = tmp_path / "repo"
+    target(root, {**DOCS, "guards": {**DOCS["guards"], "liveness_given": {"docs/given.md": "LIVING"}}})
+    write(root, "docs/given.md", "# G\n\nAn intro\nthat wraps.\nACTIVE-PLAN is a word in passing here.\n\n- a\n")
+    _init(root)
+    assert reds(Engine(root)) == []
+    status, files = git(root, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(root)
+    with pytest.raises(Refusal) as r:
+        archive(root, "docs/given.md", lines="3-4")
+    assert r.value.message == ("--lines 3-4 would make line 3 of docs/given.md a liveness declaration (ACTIVE-PLAN) where it declares none"
+                               " in its first 10 lines, and [guards] liveness_given (docs/given.md) gives it LIVING"), r.value.message
+    assert r.value.remedy.startswith("choose a range that leaves that line where it opens no block in the first 10 lines"), r.value.remedy
+    assert git(root, "status", "--porcelain=v1", "--untracked-files=all") == status
+    assert snapshot(root) == files
+    assert archive(root, "docs/given.md", lines="7").startswith("docs/given.md: lines 7-7 pruned into docs/archive/given-pruned.md")
+    assert reds(Engine(root)) == []
+
+
+@pytest.mark.criterion("AC-147")
+def test_archive_opens_a_long_frontmatter_with_liveness_frozen(repo):
+    """CE-154 (DEC-226): a frontmatter with no `liveness:` key that would push the ARCHIVED line
+    past G-D4's window opens with `liveness: FROZEN`; a `liveness:` key past the window refuses."""
+    keys = lambda n: "".join(f"k{i}: {i}\n" for i in range(n))  # noqa: E731
+    write(repo, "spike/fm7.md", "---\n" + keys(7) + "---\n\n# L\n")
+    write(repo, "spike/fm8.md", "---\n" + keys(8) + "---\n\n# L\n")
+    write(repo, "spike/fm8crlf.md", ("---\n" + keys(8) + "---\n\n# L\n").replace("\n", "\r\n"))
+    write(repo, "spike/fmk.md", "---\n" + keys(9) + "liveness: LIVING\n---\n\n# L\n")  # the key on line 11
+    commit_all(repo)
+    out = archive(repo, "spike/fm7.md")
+    assert out == "spike/fm7.md: archived as docs/archive/fm7.md (ARCHIVED 2026-10-08 first after its frontmatter), row added to docs/archive/README.md"
+    fm7 = (repo / "docs/archive/fm7.md").read_text(encoding="utf-8")
+    assert fm7 == "---\n" + keys(7) + f"---\nARCHIVED 2026-10-08 (session {KEY}), from spike/fm7.md.\n\n\n# L\n"
+    assert G.declared(fm7, 10).line == 10  # the ARCHIVED line, the window's last
+    out = archive(repo, "spike/fm8.md")
+    assert out == ("spike/fm8.md: archived as docs/archive/fm8.md (ARCHIVED 2026-10-08 first after its frontmatter,"
+                   " which now opens with `liveness: FROZEN`), row added to docs/archive/README.md"), out
+    assert (repo / "docs/archive/fm8.md").read_text(encoding="utf-8") == (
+        "---\nliveness: FROZEN  # ARCHIVED 2026-10-08\n" + keys(8) + f"---\nARCHIVED 2026-10-08 (session {KEY}), from spike/fm8.md.\n\n\n# L\n")
+    archive(repo, "spike/fm8crlf.md")
+    assert (repo / "docs/archive/fm8crlf.md").read_bytes().decode("utf-8") == (
+        "---\nliveness: FROZEN  # ARCHIVED 2026-10-08\n" + keys(8) + f"---\nARCHIVED 2026-10-08 (session {KEY}), from spike/fm8crlf.md.\n\n\n# L\n").replace("\n", "\r\n")
+    status, files = git(repo, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(repo)
+    with pytest.raises(Refusal) as r:
+        archive(repo, "spike/fmk.md")
+    assert r.value.message.startswith("spike/fmk.md's archived copy would read as no liveness to G-D4, not FROZEN"), r.value.message
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == status
+    assert snapshot(repo) == files
+    for name in ("fm7.md", "fm8.md", "fm8crlf.md"):
+        assert G.declared((repo / "docs/archive" / name).read_text(encoding="utf-8"), 10).word == "FROZEN", name
+    assert reds(Engine(repo)) == []
+    assert A.archived("---\n" + keys(8) + "---\n", "2026-10-08", KEY, "a.md") == "---\n" + keys(8) + f"---\nARCHIVED 2026-10-08 (session {KEY}), from a.md.\n\n"  # no window: as before
+
+
+@pytest.mark.criterion("AC-83")
+def test_archive_refuses_a_hand_edit_to_its_table_or_archive_file(repo):
+    """CE-154 (DEC-227): the table and the archive file may carry uncommitted changes only where
+    an op line names them (an earlier archive's own writes), never a hand edit."""
+    archive(repo, "docs/sub/old.md")
+    archive(repo, "docs/b.md")  # two in a row, no commit between (DEC-36): the table's change is the engine's
+    ops.OPS["commit"].call(Engine(repo), ops.Caller(KEY, ACTOR), message="CE-1: archive two")
+    write(repo, "docs/notes.md", NOTES)
+    commit_all(repo)
+    archive(repo, "docs/notes.md", lines="5-9")
+    ops.OPS["commit"].call(Engine(repo), ops.Caller(KEY, ACTOR), message="CE-1: prune the notes")
+    assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == ""
+
+    def refused(path, says, **kw):
+        status, files = git(repo, "status", "--porcelain=v1", "--untracked-files=all"), snapshot(repo)
+        with pytest.raises(Refusal) as r:
+            archive(repo, path, **kw)
+        assert r.value.message == says, r.value.message
+        assert git(repo, "status", "--porcelain=v1", "--untracked-files=all") == status
+        assert snapshot(repo) == files
+
+    table = (repo / "docs/archive/README.md").read_bytes()
+    (repo / "docs/archive/README.md").write_bytes(table + b"hand\n")
+    refused("docs/fm.md", "docs/archive/README.md has uncommitted changes no op line names")
+    (repo / "docs/archive/README.md").write_bytes(table)
+    kept = (repo / "docs/archive/notes-pruned.md").read_bytes()
+    (repo / "docs/archive/notes-pruned.md").write_bytes(kept + b"hand\n")
+    refused("docs/notes.md", "docs/archive/notes-pruned.md has uncommitted changes no op line names", lines="7")
+    (repo / "docs/archive/notes-pruned.md").write_bytes(kept)
+    write(repo, "docs/hand/README.md", "# H\n\nLIVING.\n")  # untracked, by hand
+    refused("docs/fm.md", "docs/hand/README.md has uncommitted changes no op line names", to="docs/hand")
+
+
+@pytest.mark.criterion("AC-83")
+def test_archive_refuses_when_a_file_changes_while_it_runs(repo, monkeypatch):
+    """CE-154 (DEC-228): the doc, the archive file and the table are re-read before the first
+    write; one that changed since they were read refuses the archive, writing nothing."""
+    write(repo, "docs/notes.md", NOTES)
+    commit_all(repo)
+    real = Engine._pointer_reds
+    late = {"path": "docs/notes.md", "text": b"- late\n"}
+
+    def racing(self):
+        if late:  # the first call, between the reads and the writes
+            q = repo / late.pop("path")
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.write_bytes((q.read_bytes() if q.exists() else b"") + late.pop("text"))
+        return real(self)
+
+    monkeypatch.setattr(Engine, "_pointer_reds", racing)
+    ops_before = (repo / "ops.jsonl").read_bytes() if (repo / "ops.jsonl").exists() else None
+    with pytest.raises(Refusal) as r:
+        archive(repo, "docs/notes.md", lines="5-9")
+    assert r.value.message == "docs/notes.md changed while it was being archived", r.value.message
+    assert (repo / "docs/notes.md").read_text(encoding="utf-8") == NOTES + "- late\n"  # the late line is kept
+    assert not (repo / "docs/archive").exists()
+    assert ((repo / "ops.jsonl").read_bytes() if (repo / "ops.jsonl").exists() else None) == ops_before
+    late.update({"path": "docs/archive/README.md", "text": b"# Archive\n"})
+    with pytest.raises(Refusal) as r:
+        archive(repo, "docs/old.md")
+    assert r.value.message == "docs/archive/README.md changed while it was being archived", r.value.message
+    assert (repo / "docs/old.md").read_text(encoding="utf-8") == OLD and not (repo / "docs/archive/old.md").exists()
+    assert ((repo / "ops.jsonl").read_bytes() if (repo / "ops.jsonl").exists() else None) == ops_before

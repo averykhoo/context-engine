@@ -98,11 +98,13 @@ def thawed_keys(text: str) -> list[int]:
     return [i for i in range(1, end or 0) if (m := G.FM_LIVENESS_RE.match(flat[i])) and m.group(1) != "FROZEN"]
 
 
-def archived(text: str, date: str, session: str, was: str) -> str:
+def archived(text: str, date: str, session: str, was: str, window: int | None = None) -> str:
     """``text`` opened with its ARCHIVED line (FRAMEWORK §7.3: the first line), then a blank line.
     A doc with frontmatter keeps it on top and takes the ARCHIVED line first after it, where G-D4
     reads it too; a `liveness:` key there, which G-D4 reads before any line below, becomes FROZEN,
-    keeping its old value in a comment (DEC-122). Nothing else in it changes."""
+    keeping its old value in a comment (DEC-122). With G-D4's ``window`` given, a frontmatter with
+    no `liveness:` key that would push the ARCHIVED line past the window opens with
+    `liveness: FROZEN  # ARCHIVED <date>` instead (CE-154, DEC-226). Nothing else in it changes."""
     bom = "\ufeff" if text.startswith("\ufeff") else ""
     body = text[len(bom):]
     lines = _lines(body)
@@ -115,8 +117,11 @@ def archived(text: str, date: str, session: str, was: str) -> str:
     for i in thawed_keys(text):
         flat = head[i].rstrip("\r\n")
         head[i] = f"liveness: FROZEN  # ARCHIVED {date}; was {flat[len('liveness:'):].strip()}" + head[i][len(flat):]
-    if not head[end].endswith("\n"):  # the frontmatter is the whole file, with no final newline
-        head[end] += nl
+    keys = [ln.rstrip("\r\n") for ln in head[1:end]]
+    if window is not None and end + 2 > window and not any(G.FM_LIVENESS_RE.match(k) for k in keys):
+        head.insert(1, f"liveness: FROZEN  # ARCHIVED {date}{nl}")  # else the ARCHIVED line is past G-D4's window
+    if not head[-1].endswith("\n"):  # the frontmatter is the whole file, with no final newline
+        head[-1] += nl
     return bom + "".join(head) + f"{stamp}{nl}{nl}" + "".join(lines[end + 1:])
 
 

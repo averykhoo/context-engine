@@ -1844,8 +1844,9 @@ cite for each item.
 
 - `git mv` the material, never repair it.
 - First line: `ARCHIVED YYYY-MM-DD`; in a doc with frontmatter, the first line after it, and a
-  `liveness:` key there becomes FROZEN. Material that is not markdown moves unchanged: its row
-  dates it.
+  `liveness:` key there becomes FROZEN; a frontmatter with no such key, long enough to push the
+  ARCHIVED line past G-D4's window, opens with `liveness: FROZEN` instead. Material that is not
+  markdown moves unchanged: its row dates it.
 - One redirect table per archive directory: its `README.md`, one row per archived doc or pruned
   passage (old path, new link, date, why). Nothing else in an archive is repaired, extended or
   kept current.
@@ -1859,7 +1860,9 @@ cite for each item.
   `--lines`, it prunes instead: those lines leave the doc and are appended unchanged to
   `<dir>/<stem>-pruned.md` under `## Pruned from <doc> on <date>`. Which lines go is the
   session's judgement; the cut is the engine's, and it refuses one that would change the doc's
-  liveness. It rewrites nothing outside the archive: its reply names each pointer G-D3 newly
+  liveness, or make a declaration where the doc declared none. It refuses a redirect table or
+  archive file with an uncommitted change no op line names, and a file that changed while it
+  ran. It rewrites nothing outside the archive: its reply names each pointer G-D3 newly
   reports. A copy kept beside a living doc before a rewrite (§6.12) is made by hand.
 
 ### 7.4 Residual-risk register vs unverified hazards
