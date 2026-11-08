@@ -3,7 +3,7 @@ type: Task
 id: CE-193
 title: Pick up audio-workspace's context-engine feedback (entries 1-10 at 2026-11-06, and any since)
 brief: Take entries into records here; never edit the entries in audio-workspace
-pri: NOW
+pri: LATER
 state: open
 deps: []
 goals: [G-6]
@@ -42,3 +42,4 @@ The adhoc trial's feedback was taken in already (CE-7; frozen copy `docs/evidenc
 - 2026-11-06e (claude-code/claude-opus-5-5): audio-workspace ba31e29d (2026-11-06e, local, unpushed; its gate passed): its CLAUDE.md now tells sessions to append context-engine feedback to docs/context-engine-feedback.md. US-21's criterion is AC-185 (planned).
 - 2026-11-07e (claude-code/claude-opus-5-5): 2026-11-08 pick-up, entries 1-12 (all; next is 13): 1 CE-177/DEC-155; 2 US-20/CE-194; 3 done, no task (guards.py::ask_problems, CE-44/CE-158/CE-201; audio-workspace needs a re-pin); 4 CE-208; 5 and 10 CE-209; 6 and 7 done by CE-195 (DEC-163, US-21); 8 ASK-37; 9 CE-210; 11 CE-211; 12 ASK-38, its words not taken here as owner words. Also filed CE-212 (task show corrupts a body naming PLACEHOLDER, seen on this item). Calls: DEC-316.
 - 2026-11-07e (claude-code/claude-opus-5-5): fix round 1: the milestone of DEC-316 (856bd83) committed CE-208, CE-209 and CE-212 lint-red (G-D3); fixed by hand and committed here. Root cause filed as CE-213 (task new, comment and section have no write-time G-D3 twin).
+- 2026-11-07e (claude-code/claude-haiku-5-5): Done: feedback entries 1-12 taken into records (commits b489e83 CE-193: fix G-D3 citations and 856bd83 committed; log entries 1-12). Left for owner: answers to ASK-37 (entry 8 actor string) and ASK-38 (entry 12), and the audio-workspace re-pin for entry 3; entries 13 onward wait for the next pick-up.

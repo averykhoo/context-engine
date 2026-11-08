@@ -3,13 +3,13 @@ type: Task
 id: CE-40
 title: Move framework rules out of the owner's global CLAUDE.md
 brief: "Audit each global rule: where it lives in the framework or move it; machine facts stay; trimming is the owner's call"
-pri: LATER
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-13a
 created: 2026-10-13
-moved: 2026-10-13a
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 goals: [G-6, G-7]
 ---
 
