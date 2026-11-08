@@ -2,14 +2,14 @@
 type: Task
 id: CE-181
 title: '[gate] cannot hold a long multi-command gate, and banner set stales a gate whose scope holds HANDOFF.md'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-03b
 created: 2026-11-04
-moved: 2026-11-03b
-updated: 2026-11-03b
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 [gate] cannot hold a long multi-command gate, and banner set stales a gate whose scope holds HANDOFF.md.
