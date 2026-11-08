@@ -1525,3 +1525,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a unit-level pin needs a fixture with a noun.verb after ### 8.1, not yet written
 - **control:** collective: gate lint of this repo's records against the real FRAMEWORK (G-D12)
 - **from:** CE-164, session 2026-11-07e
+
+## INV-217: INV-86's new title understates the residual: the gate_receipt regex \bgate\b[^;,.]*?\bnot run\b also accepts a not run that is not said of the gate when it follows the word gate in the same clause ('gate green but lint not run', 'Gate status: lint not run' both pass with no gate result); reword INV-86 to 'a not run after the word gate in the same clause'
+
+- **affects:** a session closing with a guards receipt
+- **why not eliminated:** a regex cannot tell whose not run it is without parsing the sentence; the clause bound was chosen as good enough
+- **control:** individual: the gate_receipt pattern in context.toml and the refusal remedy text
+- **from:** CE-165, session 2026-11-07e
+
+## INV-218: kit manual-mode.md (session close step 2) and cli.py's --guards help still say 'or that it was not run and why' / 'or not run' without saying the not run must open the receipt or be said of the gate
+
+- **affects:** a writer following the runbook or --help rather than the refusal
+- **why not eliminated:** the plan left them as they are, trusting the refusal's remedy to guide the writer
+- **control:** individual: the refusal remedy text of the guards-receipt check
+- **from:** CE-165, session 2026-11-07e
+
+## INV-219: DEC-288 narrows the literal 'whole receipt is not run' reading that DEC-162 (itself PROVISIONAL, actor 'owner asked') took over; the owner has not reviewed it
+
+- **affects:** the owner
+- **why not eliminated:** an agent's call stays PROVISIONAL until the owner reviews it
+- **control:** individual: decision accept after owner review (DEC-288 PROVISIONAL status)
+- **from:** CE-165, session 2026-11-07e
+
+## INV-220: working.py::Engine._followable's fallback remedy for an unknown kind (f"{verb} a closed session only") is unpinned by any test
+
+- **affects:** a future maintainer adding a followable kind
+- **why not eliminated:** no other kind exists today so the branch is unreachable
+- **control:** individual: none beyond review; pin it when a new kind is added
+- **from:** CE-165, session 2026-11-07e
+
+## INV-221: doc_freeze's with self.store.lock() gap is still unpinned (removing the lock leaves the suite green)
+
+- **affects:** concurrent sessions freezing docs
+- **why not eliminated:** out of CE-165's scope; the builder flagged it
+- **control:** individual: none yet; a lock-presence test like criterion_new's would pin it
+- **from:** CE-165, session 2026-11-07e
