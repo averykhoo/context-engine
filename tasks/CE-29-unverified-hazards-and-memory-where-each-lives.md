@@ -3,7 +3,7 @@ type: Task
 id: CE-29
 title: 'Unverified hazards and memory: where each lives, how it is promoted (to an invariant or the contract) or pruned'
 brief: 'Hazards are volatile, invariants durable: keep them apart (FRAMEWORK §2.1); memory is promoted or pruned, never a rule'
-pri: NOW
+pri: LATER
 state: open
 deps: []
 source: session 2026-10-12b
@@ -20,3 +20,4 @@ Filed by CE-16 from the coverage map (docs/evidence/framework-coverage-2026-10-1
 - 2026-10-15c (claude-code/claude-opus-5-5): dedupe-6 (2026-10-15c review): a hazard has 3-4 homes (the orientation note, "the board", task ## Traps, the register), and the spec never says which one a task-scoped hazard goes in. Recommendation (agent, given to the owner in chat; awaiting their word): a trap lives where its lifetime matches. (1) Known, and true only while one task is open: that task's ## Traps. (2) Suspected but unconfirmed ("do NOT fix blind"): a board row labelled hazard, which gives it an id, a tier, staleness and a close that resolves it into a register entry, a fix or a dismissal. (3) Confirmed and durable, outliving any task: a register INV-n (the task close already files residuals there). Drop the orientation note as a home: the banner is overwritten at every close. A trap in CLAUDE.md is a register entry or a runbook trap, plus a pointer.
 - 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): the 2026-10-15c trap-home recommendation is accepted as given. A trap lives where its lifetime matches: task ## Traps, a hazard board row, or a register INV-n; never the banner. Writing it into FRAMEWORK stays under the CE-7 hold.
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: Exit criterion 1 (coverage components 13 and 23): DEC-72 lifted the CE-7 freeze and DEC-50 rules the trap home, so the FRAMEWORK write-up is unblocked. The memory half stays the owner's.
+- 2026-11-07e (claude-code/claude-haiku-5-5): Hazards half done and independently verified for the part this session could do, via commits ["fe33a2f engine: new DEC-311 (also carried the CE-29 promote to NOW)","77543a3 engine: new DEC-312","baeff93 engine: new DEC-313","6b784e7 engine: new DEC-314","64bf888 engine: new DEC-315","cb362ca CE-29: an unverified hazard is a board row labelled `hazard`; its close resolves it"]; left for the owner: the memory half (promote or prune general lessons into contract rules, which stays the owner call per the 2026-10-30a log), so the task stays open.

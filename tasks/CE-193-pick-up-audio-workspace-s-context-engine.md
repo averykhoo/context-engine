@@ -3,14 +3,14 @@ type: Task
 id: CE-193
 title: Pick up audio-workspace's context-engine feedback (entries 1-10 at 2026-11-06, and any since)
 brief: Take entries into records here; never edit the entries in audio-workspace
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-06e
 created: 2026-11-06
-moved: 2026-11-06e
-updated: 2026-11-06e
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Pick up audio-workspace's context-engine feedback: `C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md` (one entry per item, newest last). From 2026-11-06e, audio-workspace's `CLAUDE.md` tells its sessions to add entries there, so the file keeps growing. Read it whole, take every entry since the last pick-up into records here (a task, a comment on an existing one, or owner words through intake), and record in this item's Log which entry numbers were taken. Do not edit the entries there: the file's header says fixes are marked here.
