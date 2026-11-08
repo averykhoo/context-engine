@@ -418,9 +418,12 @@ class Engine:
         """What is wrong with a close's ``guards:`` receipt under ``[working] gate_receipt`` (CE-123):
         a receipt that does not match carries no gate pass count and says nothing of the gate not
         being run, so the gate's baseline cannot be read from it (gate.md § Test baselines). On by
-        default, with the kit's pattern (config.py::GATE_RECEIPT, CE-192, DEC-162); ``''`` is off.
+        default, with the kit's pattern (config.py::GATE_RECEIPT, CE-192, DEC-162), where `not
+        run` counts only when it opens the receipt or is said of the gate in the same clause, so
+        "lint not run" is no gate result (CE-165, DEC-288); ``''`` is off.
 
-        Not checked: whether the count is true, or is the gate's and not some other suite's."""
+        Not checked: whether the count or the `not run` is true, or is the gate's and not some
+        other suite's (INV-86)."""
         pattern = self.w.gate_receipt
         if not pattern or re.search(pattern, guards):
             return None

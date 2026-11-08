@@ -606,12 +606,12 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **control:** individual: the op log's section lines; the reviewer reads them (FRAMEWORK §5.2, manual-mode § task close)
 - **from:** CE-108, session 2026-10-30a
 
-## INV-86: a guards receipt passes gate_receipt on the words 'not run' anywhere in it (e.g. 'lint not run'), with no gate result
+## INV-86: a guards receipt passes gate_receipt on a 'not run' that opens it or is said of the gate in the same clause, true or not, with no gate result
 
 - **affects:** owners reading a close's guards receipt as proof the gate ran
-- **why not eliminated:** the check is a presence check by design; it cannot tell whether the statement is true or about the gate
-- **control:** individual: the receipt is verbatim in the ledger and the close digest, read by the owner; docstring Not checked
-- **from:** CE-123, session 2026-10-30a
+- **why not eliminated:** the check is a presence check by design; it cannot tell whether the statement is true
+- **control:** technical: the default pattern counts `not run` only opening the receipt or said of the gate (`^\s*not run\b|\bgate\b[^;,.]*?\bnot run\b`), so "lint not run" is refused (CE-165, DEC-288); individual: the receipt is verbatim in the ledger and the close digest, read by the owner; docstring Not checked
+- **from:** CE-123, session 2026-10-30a; narrowed by CE-165, session 2026-11-07e
 
 ## INV-87: neither the criterion ops nor lint check that a retired criteria row names the decision that retired it, that a deviates row names its deviation entry, or that a story marked sign-off: required keeps its criteria planned (FRAMEWORK §3.3)
 

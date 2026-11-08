@@ -232,20 +232,36 @@ def test_a_paused_follow_up_keeps_its_follows_line(eng):
     assert eng.read_ledger().get(key).field("follows") == "2026-10-07a"
 
 
+def _abandoned(e) -> str:
+    """A session abandoned by another one, its key returned (the `abandoned` case below)."""
+    dead = e.session_start(actor=ACTOR)
+    e.session_abandon(dead, force=True, **kw(e.session_start(actor=ACTOR)))
+    return dead
+
+
 @pytest.mark.criterion("AC-123")
-@pytest.mark.parametrize("make, follows, says", [
-    (lambda e: None, "2026-09-01a", "the ledger has no session 2026-09-01a to follow"),
-    (lambda e: e.session_start(actor=ACTOR), "", "is `kind: open`, not closed"),
-    (lambda e: e.session_pause(e.session_start(actor=ACTOR), actor=ACTOR, rows="x", deferred="y"), "2026-10-08a", "is `kind: pause`, not closed"),
-])
-def test_session_start_refuses_to_follow_a_session_that_is_not_closed(eng, make, follows, says):
+@pytest.mark.parametrize("make, follows, says, remedy", [
+    (lambda e: None, "2026-09-01a", "the ledger has no session 2026-09-01a to follow",
+     "pass the key of a closed session, as its `## <key> · kind: close` heading in ledger.md shows it"),
+    (lambda e: e.session_start(actor=ACTOR), "", "session {k} is `kind: open`, not closed, so there is nothing to follow up",
+     "it is still open: work in it if it is yours, or wait for its close"),
+    (lambda e: e.session_pause(e.session_start(actor=ACTOR), actor=ACTOR, rows="x", deferred="y"), "2026-10-08a",
+     "session {k} is `kind: pause`, not closed, so there is nothing to follow up",
+     "resume its pause record instead (`pause resume <id>`, orient lists it)"),
+    (_abandoned, "", "session {k} is `kind: abandoned`, not closed, so there is nothing to follow up",
+     "its unfinished work is in the baton it was abandoned with: do that baton"),
+], ids=["missing", "open", "pause", "abandoned"])
+def test_session_start_refuses_to_follow_a_session_that_is_not_closed(eng, make, follows, says, remedy):
     """CE-84: only a closed session is followed up; an open one is worked in, a paused one
-    resumed. The refusal writes nothing: no stub, no key minted."""
+    resumed, an abandoned one's baton done. The refusal writes nothing: no stub, no key minted.
+    CE-165: each kind's reason and remedy, exactly."""
     made = make(eng)
     follows = follows or made
     before = (eng.root / "ledger.md").read_bytes()
-    with pytest.raises(Refusal, match=re.escape(says)):
+    with pytest.raises(Refusal) as r:
         eng.session_start(actor=ACTOR, follows=follows)
+    assert r.value.message == says.format(k=follows)
+    assert r.value.remedy == remedy
     assert (eng.root / "ledger.md").read_bytes() == before
 
 
@@ -2676,7 +2692,10 @@ def test_a_guards_receipt_without_a_gate_result_is_refused_and_fails_lint_at_res
     assert "gate_receipt" in f.remedy and "''" in f.remedy
     key = started(e)
     before = (e.root / "ledger.md").read_bytes()
-    for bad in ("sabotage: drop the check -> red; lint clean", "gate green", "ok  example.com/x 0.1s"):
+    # CE-165 (DEC-288, INV-86): `not run` counts only opening the receipt or said of the gate
+    for bad in ("sabotage: drop the check -> red; lint clean", "gate green", "ok  example.com/x 0.1s",
+                "lint not run", "lint: clean; tests not run", "gate green; lint not run",
+                "sabotage: drop the check -> red; lint not run", "not running yet"):
         with pytest.raises(Refusal, match="has no gate result") as err:
             e.session_close(key, actor=ACTOR, rows="CE-1", summary=["did it"], receipts=receipts(guards=bad))
         assert "pass count" in err.value.remedy and "gate_receipt" in err.value.remedy
@@ -2686,6 +2705,14 @@ def test_a_guards_receipt_without_a_gate_result_is_refused_and_fails_lint_at_res
     key = started(e)
     e.session_close(key, actor=ACTOR, rows="CE-1", summary=["docs only"], receipts=receipts(guards="gate not run: docs only; lint clean"))
     assert guards(e, "G-W6") == []
+    for good in ("not run: docs only", "Not run", "gate: not run (no code change); lint: clean",
+                 "lint: clean; gate not run here (records only)", "the gate was not run (docs only)", "1112 passed; lint not run"):
+        e.session_close(started(e), actor=ACTOR, rows="CE-1", summary=["docs only"], receipts=receipts(guards=good))
+        assert guards(e, "G-W6") == [], good
+    rest = _engine(tmp_path / "rest", CONFIG)  # at rest too: lint reads the newest close with the same pattern
+    (rest.root / "ledger.md").write_text(LEDGER.replace("guards: gate 3 passed", "guards: lint not run", 1), encoding="utf-8")
+    [f] = guards(rest, "G-W6")
+    assert f.message.startswith("the newest close (2026-10-07b): the `guards` receipt has no gate result"), f.message
 
     cfg = copy.deepcopy(CONFIG)
     cfg["working"]["gate_receipt"] = ""  # set to '' explicitly: off

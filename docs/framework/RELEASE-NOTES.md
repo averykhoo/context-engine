@@ -66,10 +66,12 @@ component, procedure, guard and operation.
   <old> <new>`) or retitles one before the first lint under this engine.
 - **A close's `guards:` receipt needs the gate's result by default.** `[working] gate_receipt` now
   defaults, in the engine and not only in `context.toml.template`, to the kit's pattern
-  `(?i)\d+ passed|passed \d+|not run`. In a repo that never set it, `session close` refuses a
-  `guards:` receipt with no pass count and no "not run", and lint (G-W6) fails the newest close
-  already in the ledger whose `guards:` line has neither. FRAMEWORK §6.3, §8.4 G-W6; DEC-162,
-  DEC-223, CE-192. **Upgrade:** if your gate prints no `N passed` (e.g. `go test` prints `ok
+  `(?i)\d+ passed|passed \d+|^\s*not run\b|\bgate\b[^;,.]*?\bnot run\b`. In a repo that never set
+  it, `session close` refuses a `guards:` receipt with no pass count and no "not run", and lint
+  (G-W6) fails the newest close already in the ledger whose `guards:` line has neither. A "not
+  run" counts only where it opens the receipt or is said of the gate in the same clause, so "lint
+  not run" is no gate result (CE-165, DEC-288). FRAMEWORK §6.3, §8.4 G-W6; DEC-162, DEC-223,
+  CE-192. **Upgrade:** if your gate prints no `N passed` (e.g. `go test` prints `ok
   <pkg> 0.1s`), set `gate_receipt` under `[working]` to a pattern its result line matches, or to
   `''` to turn the check off; this is the ruling's intent (a check is on where nobody opted in).
   Otherwise the next close that quotes the gate's count (or says it was not run, and why) clears G-W6.

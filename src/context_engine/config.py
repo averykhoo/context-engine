@@ -55,8 +55,10 @@ class Kind:
 
 
 # The kit's `[working] gate_receipt` pattern (kit/context.toml.template carries the same value,
-# pinned equal by AC-32's test): the engine's default since CE-192 (DEC-162); '' turns it off
-GATE_RECEIPT = r"(?i)\d+ passed|passed \d+|not run"
+# pinned equal by AC-32's test): the engine's default since CE-192 (DEC-162); '' turns it off.
+# `not run` counts only where it opens the receipt or is said of the gate in the same clause
+# (CE-165, DEC-288, INV-86): "lint not run" carries no gate result
+GATE_RECEIPT = r"(?i)\d+ passed|passed \d+|^\s*not run\b|\bgate\b[^;,.]*?\bnot run\b"
 
 
 @dataclass(frozen=True)

@@ -1226,7 +1226,8 @@ numbered for citation (the order is below):
    - receipts:
      - the guard results, the gate's own pass count among them (or that it was not run, and
        why): the gate's test baseline is read from this receipt, so unless `[working]
-       gate_receipt` is `''` (its default is a pass count or `not run`), `session.close` refuses a
+       gate_receipt` is `''` (its default is a pass count, or `not run` opening the receipt or
+       said of the gate, so "lint not run" is no gate result), `session.close` refuses a
        `guards:` receipt that does not match it and lint fails the newest close (G-W6);
      - `read:` what was read to start work (e.g. `board only` / `board + note`), which
        **measures how cheap orientation is (job 3)**;
