@@ -1630,3 +1630,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** verifier did not re-run the full 13-minute gate
 - **control:** individual: gate status --require code and the pre-push full gate
 - **from:** CE-181, session 2026-11-07e
+
+## INV-232: The prompt in .claude/agents/housekeeper.md writes the tier-1 line as `<short sha> <id>: tier 1: ...` but hk_run prints it with a `  - not done: ` prefix; a model should still match it
+
+- **affects:** the housekeeper agent
+- **why not eliminated:** matching is left to the model, not code
+- **control:** individual: the first live housekeeper run confirms the match
+- **from:** CE-12, session 2026-11-07e
+
+## INV-233: Engine-made commits whose title names an open task (e.g. fb1a908 `engine: new DEC-302, promote CE-12`) produce tier-1 lines the agent must skip every session
+
+- **affects:** the housekeeper agent token cost
+- **why not eliminated:** the scan lists any title mention, engine commits included
+- **control:** individual: the agent prompt tells it to skip them; a scan filter on engine: titles would reduce it
+- **from:** CE-12, session 2026-11-07e
+
+## INV-234: No test pins that a --text citing a different commit hash still gets the sha prefix (code tests prefix-of-full-hash, not any-hash-present)
+
+- **affects:** future edits to hk_comment
+- **why not eliminated:** behaviour is correct but unpinned
+- **control:** individual: the existing scan tests cover the cited-own-hash cases only
+- **from:** CE-12, session 2026-11-07e
+
+## INV-235: The housekeeper agent has never run against a live MCP server (server is stale), so the hk_ tool names resolving is unconfirmed
+
+- **affects:** the housekeeper agent
+- **why not eliminated:** MCP server restart needed
+- **control:** individual: test_this_repos_housekeeping_agent_names_only_hk_tools checks names against the tool registry; first live run confirms
+- **from:** CE-12, session 2026-11-07e
+
+## INV-236: DEC-302..306 are PROVISIONAL and await the owner review
+
+- **affects:** the owner
+- **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them
+- **control:** individual: context-engine decision accept after owner review
+- **from:** CE-12, session 2026-11-07e
