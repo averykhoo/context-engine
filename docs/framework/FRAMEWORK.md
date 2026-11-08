@@ -169,11 +169,12 @@ replaced kinds have tool-owned frontmatter and hand-written bodies.
   `init` asks for it, and lint (G-D2) reds a task prefix that is a standard or reserved one. A
   prefix `init` takes is 2 to 5 capitals. The prefixes of record kinds are per-repo config
   (`[kinds.*].prefix`); the form is not, and a repo that kept its own prefixes at adoption keeps
-  them (§11.4). Goals and register entries are not record kinds, so
-  their prefixes (`G`, `INV`) are fixed by the engine. Guard and drift names (`G-D3`, `DR1`)
+  them (§11.4). Goals are not a record kind: the charter's rows say which goal prefix a repo
+  uses, `GOAL` in a new one. Register entries are not a record kind either, and their prefix
+  (`INV`) is fixed by the engine. Guard and drift names (`G-D3`, `DR1`)
   belong to this document, not to a repo. A record stamped before a repo took up the form keeps
-  its old ids verbatim (owner words are never rewritten), and the guards read a legacy goal id
-  `G3` as `G-3`.
+  its old ids verbatim (owner words are never rewritten), and the guards read `GOAL-3`, `G-3`
+  and the legacy `G3` as one goal, by number; a new write spells it as the charter does.
 
 **P4. Provenance on anything that can go stale:**
 - **who:** the actor vocabulary in §6.5, with the model id for agents;
@@ -432,8 +433,9 @@ from them, not from the broken process.
 **Rule:** one charter per repo, signed off by the owner. Agents change it only through an owner question,
 then a decision, then the edit. Every goal is served by at least one story (G-I1).
 
-**Goal ids:** each goal leads a row of the charter's goal table with its id, `G-n` (P3), so the
-guards can read it: `| G-1 | <goal> | <how it is measured> |`.
+**Goal ids:** each goal leads a row of the charter's goal table with its id, `GOAL-n` (P3; a
+charter that uses `G-n` keeps it), so the guards can read it: `| GOAL-1 | <goal> | <how it is
+measured> |`.
 
 **Bootstrapping cost to the owner:** about one page, given in chat (§6.9).
 
@@ -464,7 +466,7 @@ template is ever imposed on the owner, and the agent never rewrites the owner's 
   `direct edit`;
 - a status, `story_status: live | unspecified | unconfirmed | retired` (OKF reserves `status`,
   §9.3.1);
-- `goals:` the charter goal(s) it serves, by id (`[G-1, G-3]`; G-I1).
+- `goals:` the charter goal(s) it serves, by id (`[GOAL-1, GOAL-3]`; G-I1).
 
 **Owner words are verbatim.** Agent text inside a story is labelled `AGENT:` and becomes owner
 intent only once accepted.
@@ -746,7 +748,7 @@ a single revertible cutover commit.
 - frontmatter: `type: Task` (OKF), `id, title, brief, pri, deps, state, created, moved,
   updated, closed, source, labels`; a question also carries `last_asked`, `blocks` and, once
   answered, `answered`;
-- `goals`: the charter goals (`G-n`) a task serves, at least one, set at `task new --goals` and
+- `goals`: the charter goals (`GOAL-n`) a task serves, at least one, set at `task new --goals` and
   changed by `task set`; G-I1 checks every open task's goals against the charter where
   `[guards] task_goals` names the kind, and the write refuses a goal the charter lacks. Closed
   tasks are history and are not read. The re-rank (§6.14) cites them;
@@ -1794,7 +1796,7 @@ cite for each item.
 1. **Propose:** the coordinator sends a ranking agent (judgement, so the strongest model the
    contract names) to read the goals, the milestone, and every open item's brief and deps. It
    persists its proposal to its own file and returns, per item, keep, promote, demote or drop,
-   each with a one-line reason citing a `G-n` or an exit criterion; an item serving no goal is
+   each with a one-line reason citing a `GOAL-n` or an exit criterion; an item serving no goal is
    flagged for SOMEDAY or retirement.
 2. **Verify:** a second, different agent checks the proposal: no item above an open item it
    depends on, NOW holds one, NEXT at most five, every move cites a goal or criterion (§6.6).

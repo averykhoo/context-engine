@@ -3,6 +3,8 @@ stories, G-I2 story provenance, G-T1 stories specified, G-T2 criteria claimed, G
 sourced. Each is red on what it protects, off while a source it needs is unset, and red when a
 set source yields nothing, so a reworded table cannot pass by finding nothing (DEC-33)."""
 
+import re
+
 import pytest
 
 from context_engine.config import from_dict
@@ -103,7 +105,7 @@ def test_g_i1_every_goal_has_a_story_and_every_story_names_goals_of_the_charter(
     story(chain, "US-5", goals="[G-7]", status="retired")  # history: not checked
     assert reds(make(chain), "G-I1") == [
         "docs/stories/US-3-words.md: US-3 `goals` names G-9, which is not a goal of the charter",
-        "docs/stories/US-3-words.md: US-3 `X1` in `goals` is not a goal id (G-n)",
+        "docs/stories/US-3-words.md: US-3 `X1` in `goals` is not a goal id (GOAL-n, or G-n)",
         "docs/stories/US-4-words.md: US-4 names no goal (`goals` is empty)",
     ]
     for sid in ("US-3", "US-4"):
@@ -117,10 +119,10 @@ def test_g_i1_reds_a_charter_goal_id_not_in_the_one_form_twice_or_missing_and_a_
     edit(chain, "docs/charter.md", "| G-2 | two |", "| G2 | two |\n| G-1 | again |")
     assert reds(make(chain), "G-I1") == [
         "docs/charter.md: line 8: goal id G2 is not in the standard id form",
-        "docs/charter.md: line 9: goal id G-1 leads two rows",
+        "docs/charter.md: line 9: goal 1 leads two rows (G-1, G-1)",
     ]
     write(chain, "docs/charter.md", "# Charter\n\n| # | Goal |\n|---|---|\n| Goal 1 | reworded |\n")
-    assert reds(make(chain), "G-I1") == ["docs/charter.md: no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked"]
+    assert reds(make(chain), "G-I1") == ["docs/charter.md: no goal rows: no table row starts with a goal id (`| GOAL-1 | ... |`), so no story's goals can be checked"]
     assert reds(make(chain, charter="docs/gone.md"), "G-I1") == ["context.toml: [guards] charter names docs/gone.md, which does not exist"]
     assert reds(make(chain, charter=""), "G-I1") == []  # off while unset
     write(chain, "docs/charter.md", CHARTER)
@@ -182,7 +184,7 @@ def test_record_new_story_refuses_bad_provenance_and_goals_before_writing(chain)
     ok = {"actor": "owner", "date": "2026-10-13", "story_status": "live", "goals": "[G-1, G-2]"}
     for bad, match in [
         ({"goals": "[G-3]"}, r"names G-3, which is not a goal of the charter"),
-        ({"goals": "[G1]"}, r"`G1` in `goals` is not in the standard id form; write G-1"),
+        ({"goals": "[G1]"}, r"`G1` in `goals` is not in the charter's form; write G-1"),
         ({"goals": "[]"}, r"names no goal"),
         ({"actor": "claude-code/x"}, r"`actor: claude-code/x` is none of"),
         ({"story_status": "unconfirmed"}, r"`unconfirmed` is for a story an agent reconstructed"),
@@ -251,7 +253,7 @@ def test_g_i1_every_open_task_names_goals_of_the_charter_in_the_standard_form(ch
     assert reds(goal_tasks(chain), "G-I1") == [
         "tasks/CE-2-x.md: CE-2 names no goal (`goals` is empty)",
         "tasks/CE-3-x.md: CE-3 `goals` names G-9, which is not a goal of the charter",
-        "tasks/CE-4-x.md: CE-4 `G2` in `goals` is not in the standard id form; write G-2",
+        "tasks/CE-4-x.md: CE-4 `G2` in `goals` is not in the charter's form; write G-2",
     ]
     assert reds(make(chain), "G-I1") == []  # off while `task_goals` is unset
     assert reds(goal_tasks(chain, off=["G-I1"]), "G-I1") == []
@@ -266,7 +268,7 @@ def test_g_i1_task_goals_without_a_charter_is_red_half_set(chain):
 @pytest.mark.criterion("AC-86")
 def test_task_new_and_task_set_refuse_goals_the_charter_lacks_before_writing(chain):
     e = goal_tasks(chain)
-    for goals, match in [([], r"names no goal"), (["G-3"], r"names G-3, which is not a goal of the charter"), (["G1"], r"not in the standard id form; write G-1")]:
+    for goals, match in [([], r"names no goal"), (["G-3"], r"names G-3, which is not a goal of the charter"), (["G1"], r"not in the charter's form; write G-1")]:
         with pytest.raises(Refusal, match=match):
             e.new("task", "New", goals=goals, **W)
         assert not (chain / "tasks").exists() or list((chain / "tasks").iterdir()) == []
@@ -293,7 +295,7 @@ def test_task_reopen_refuses_a_task_that_would_reopen_with_no_goals(chain):
     for tid, match in [("CE-1", r"reopening CE-1 would leave an open task G-I1 fails: the task names no goal"), ("CE-2", r"names G-9, which is not a goal of the charter")]:
         with pytest.raises(Refusal, match=match) as r:
             e.reopen(tid, "more to do", **W)
-        assert f"`task set {tid} --set goals=[G-n,...]`" in r.value.remedy
+        assert f"`task set {tid} --set goals=[GOAL-n,...]`" in r.value.remedy
         assert e.store.get(tid).doc.get("state") == "closed"
     e.set("CE-1", {"goals": "[G-1]"}, **W)  # the remedy: a closed task takes its goals
     assert e.reopen("CE-1", "more to do", **W) == "CE-1: reopened"
@@ -486,3 +488,49 @@ def test_g_t2_is_red_on_a_missing_tests_path_or_no_claim_and_off_while_tests_is_
     assert all_reds(make(chain, working={"criteria": ""})) == {"G-T2": [half]}  # half set: red; G-T1 and G-T6 are off
     assert all_reds(make(chain, working={"criteria": ""}, tests=["nope"])) == {"G-T2": [half, "context.toml: [guards] tests names nope, which does not exist"]}
     assert all_reds(make(chain, working={"criteria": ""}, tests=[])) == {}  # no criteria file, no tests: the trace guards are off
+
+
+# -- goal ids: GOAL-n, G-n and the legacy Gn are one goal, by number (CE-56, DEC-232) --------
+
+
+MIXED = "# Charter\n\n## Goals\n\n| # | Goal |\n|---|---|\n| G-1 | one |\n| GOAL-2 | two |\n| GOAL-10 | ten |\n"
+
+
+def test_goal_ids_read_goal_n_g_n_and_the_legacy_gn_as_one_goal_by_number():
+    from context_engine import guards as G
+
+    assert [G.goal_id(x) for x in ("GOAL-1", "G-3", "G3", "**GOAL-4**", "GOAL3", "G-03", "Goal-5")] == ["GOAL-1", "G-3", "G-3", "GOAL-4", None, None, None]
+    assert [G.goal_number(x) for x in ("GOAL-12", "G-12", "G12", "GOAL12")] == [12, 12, 12, None]
+
+
+def test_g_i1_reads_a_charter_mixing_goal_n_and_g_n_and_a_new_write_takes_the_charters_spelling(tmp_path):
+    write(tmp_path, "docs/charter.md", MIXED)
+    write(tmp_path, "docs/criteria.md", CRITERIA)
+    write(tmp_path, "tests/test_a.py", TEST)
+    write(tmp_path, "docs/decisions/DEC-1-x.md", "---\ntype: Decision\nid: DEC-1\ntitle: t\n---\n\nwhy\n")
+    story(tmp_path, "US-1", goals="[G1]")  # stored, legacy: reads as goal 1
+    story(tmp_path, "US-2", goals="[GOAL-1]")  # stored, in the other form: still goal 1
+    assert reds(make(tmp_path), "G-I1") == [
+        "docs/charter.md: goal GOAL-2 is served by no story",
+        "docs/charter.md: goal GOAL-10 is served by no story",
+    ], "unserved goals come out by number: 2 before 10"
+    story(tmp_path, "US-3", goals="[GOAL-2, G-10]")
+    story(tmp_path, "US-4", goals="[GOAL-9]")
+    assert reds(make(tmp_path), "G-I1") == ["docs/stories/US-4-words.md: US-4 `goals` names GOAL-9, which is not a goal of the charter"]
+    e = make(tmp_path)
+    ok = {"actor": "owner", "date": "2026-10-13", "story_status": "live"}
+    for goals, match in [("[GOAL-1]", "`GOAL-1` in `goals` is not in the charter's form; write G-1"), ("[G-2]", "`G-2` in `goals` is not in the charter's form; write GOAL-2"),
+                         ("[GOAL-9]", "names GOAL-9, which is not a goal of the charter")]:
+        with pytest.raises(Refusal, match=re.escape(match)):
+            e.record_new("story", "New", "words", {**ok, "goals": goals}, **W)
+    assert e.record_new("story", "New", "words", {**ok, "goals": "[G-1, GOAL-2]"}, **W).doc.get("goals") == ["G-1", "GOAL-2"]
+
+
+def test_g_i1_reds_two_rows_of_one_goal_number_a_legacy_row_and_a_goal3_row(chain):
+    edit(chain, "docs/charter.md", "| G-2 | two |", "| G-2 | two |\n| G-3 | three |\n| GOAL-3 | again |\n| G4 | four |\n| GOAL5 | five |")
+    story(chain, "US-3", goals="[G-3, G-4]")
+    assert reds(make(chain), "G-I1") == [
+        "docs/charter.md: line 12: a row of the goal table is led by `GOAL5`, which is not a goal id, so the row is not read as a goal",
+        "docs/charter.md: line 10: goal 3 leads two rows (G-3, GOAL-3)",
+        "docs/charter.md: line 11: goal id G4 is not in the standard id form",
+    ]

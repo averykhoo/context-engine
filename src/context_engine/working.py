@@ -854,7 +854,7 @@ class Engine:
 
     def _task_goal_check(self, kind: str, goals: list[str]) -> None:
         """Refuse a task of the `[guards] task_goals` kind whose `goals` are not goals of the
-        charter in the standard form (G-I1 at write time). Quiet for other kinds and while G-I1
+        charter, spelled as the charter spells them (G-I1 at write time). Quiet for other kinds and while G-I1
         is off or has no charter to read."""
         g = self.store.config.guards
         if kind != g.task_goals or "G-I1" in g.off:
@@ -866,7 +866,7 @@ class Engine:
             raise Refusal(f"no task's goals can be checked against the charter: {bad[0].path}: {bad[0].message}", bad[0].remedy)
         problems = G.goal_problems(goals, known, legacy=False)
         if problems:
-            raise Refusal(f"the task {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), f"pass `--goals G-n,...` naming the charter goals it serves ({', '.join(sorted(known, key=lambda x: int(x[2:])))}); a goal the charter lacks is an owner question (FRAMEWORK §3.1)")
+            raise Refusal(f"the task {problems[0]}" + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""), f"pass `--goals` naming the charter goals it serves, as the charter spells them ({', '.join(sorted(known, key=G.goal_number))}); a goal the charter lacks is an owner question (FRAMEWORK §3.1)")
 
     def _board_set(self, rid: str, changes: dict[str, Any], *, session: str, actor: str, unset: tuple[str, ...] = (), body: Callable[[str], str] | None = None, check: Callable[[Record], None] | None = None, mechanical: bool = False, op: str = "set", as_: dict[str, str] | None = None) -> Record:
         kind = self.store.config.kind_for_id(rid)
@@ -1316,7 +1316,7 @@ class Engine:
                 self._task_goal_check(rec.kind.name, D.as_list(rec.doc.get("goals")))
             except Refusal as r:
                 raise Refusal(f"reopening {rid} would leave an open task G-I1 fails: {r.message}",
-                              f"name the charter goals it serves first, `task set {rid} --set goals=[G-n,...]` (a closed task takes it), then reopen it") from None
+                              f"name the charter goals it serves first, as the charter spells them, `task set {rid} --set goals=[GOAL-n,...]` (a closed task takes it), then reopen it") from None
 
         self._board_set(rid, {"state": "open", "closed": None, "moved": session}, session=session, actor=actor, unset=("status",), check=check, body=self._log_line(session, actor, f"reopened: {msg.strip()}"), op="reopen")
         return f"{rid}: reopened"

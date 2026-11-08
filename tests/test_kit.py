@@ -586,6 +586,8 @@ def test_the_kit_uses_the_standard_prefixes():
     assert set(kinds) - {"task"} <= set(C.STANDARD_PREFIXES), "every kit kind but task has a standard prefix"
     assert kinds["task"]["prefix"] == "TASK"
     assert CR.PREFIX == C.STANDARD_PREFIXES["criterion"]
+    charter = (B.KIT / "docs/charter.md").read_text(encoding="utf-8")
+    assert [g for _, g, _ in G.charter_goals(charter)[0]] == [f"{C.STANDARD_PREFIXES['goal']}-1"], "the kit's charter row is GOAL-1"
     assert not set(C.RESERVED_PREFIXES) & set(C.STANDARD_PREFIXES.values())
 
 

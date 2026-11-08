@@ -10,7 +10,7 @@ a process the owner starts: Claude Code starts the engine's MCP server itself, p
 | `bootloader.md` | appended to `CLAUDE.md` | the kit block: the `framework:` line and an `@`-import of the contract; then a `## Gate` stub for the repo's own test command |
 | `contract.md` | `docs/framework/contract.md` | the framework's rules (its Environment, Gate, Procedures and Rules sections), imported by `CLAUDE.md`; the framework's file, replaced whole on upgrade |
 | `HANDOFF.md` | `HANDOFF.md` | the orientation note, with no banner yet |
-| `docs/charter.md` | `docs/charter.md` | the charter, goals with `G-n` ids |
+| `docs/charter.md` | `docs/charter.md` | the charter, goals with `GOAL-n` ids |
 | `docs/criteria.md` | `docs/criteria.md` | the criteria table and how a test claims one |
 | `docs/ledger/session-log.md` | `docs/ledger/session-log.md` | the empty session ledger |
 | `docs/runbooks/procedures.md` | `docs/runbooks/procedures.md` | every procedure's steps in order, the engine command and the by-hand step side by side |
@@ -119,7 +119,7 @@ can be re-run after the config is edited, with no `--prefix`. `--prefix` sets a 
 (`--prefix task=PRJ`): pick prefixes no id already in the repo uses.
 
 Then:
-1. Fill `docs/charter.md` with the owner (goals get `G-n` ids).
+1. Fill `docs/charter.md` with the owner (goals get `GOAL-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
    real one (a `CLAUDE.md` with its own Gate got no stub: check that gate ends with
    `&& context-engine lint`), and read every `provenance:` note in `context.toml`. Every number

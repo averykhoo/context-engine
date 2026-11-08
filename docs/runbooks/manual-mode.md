@@ -732,7 +732,8 @@ first bullet's check that every record parses.
   unset: `[guards] charter` (G-I1), `[guards] stories`, the kind holding the stories (G-I1, G-I2,
   G-T1, G-T6), `[working] criteria` (G-T1, G-T2, G-T6) and `[guards] tests` (G-T2). A set path
   that does not exist is red. List three things: the charter's goals (each table row whose first
-  cell is a goal id, `G-n`; a legacy `G3` is red there, but reads as `G-3` in a story's `goals`),
+  cell is a goal id, `GOAL-n`, or `G-n` in a charter that uses it; a legacy `G3` is red there, but
+  reads as goal 3 in a story's `goals`; `GOAL-3`, `G-3` and `G3` are one goal, by number),
   the criteria (each table row whose first cell is an id, with its `from` and `status` cells by the
   table's header; a source column may be headed `from`, `story` or `source`), and the claims (each
   match of the `[guards] claim` pattern, by default `criterion("AC-n")` or `criterion: AC-n`, in
@@ -883,8 +884,8 @@ is one no other write hands out, so the citation is right before the record exis
    it is over 48 characters, take the first 48 and drop everything from the last `-` on, even a
    whole word. An empty slug gives `tasks/<id>.md`. The slug never changes afterwards.
 5. Frontmatter, in order: `type`, `id`, `title`, `brief` (if any), `pri` (default LATER),
-   `state: open`, `deps: [...]`, `goals: [G-n, ...]` (for a task where `[guards] task_goals` names
-   the kind: at least one goal of the charter, in the form `G-n`), `source: session <key>`,
+   `state: open`, `deps: [...]`, `goals: [GOAL-n, ...]` (for a task where `[guards] task_goals` names
+   the kind: at least one goal of the charter, spelled as the charter spells it), `source: session <key>`,
    `created: <today>`, `moved: <key>`, `updated: <key>`. Body, unless you write your own:
 
    ```
@@ -922,7 +923,7 @@ repo's own board (`aliases=[1h, est-activity]`), under G-D2's alias rule (§ lin
 replaces the old one: name every alias that is dropped in the reply, since it no longer resolves.
 Only a write that sets `aliases` checks them; a clash made elsewhere shows in lint G-D2.
 `goals` on a task where `[guards] task_goals` names the kind: at least one goal of the charter,
-each in the form `G-n`; never unset it on an open task (lint G-I1).
+each spelled as the charter spells it; never unset it on an open task (lint G-I1).
 Stop, writing nothing, if you were given `stale_after` and it is empty, not a timestamp with
 its offset (`2026-12-01T00:00:00Z`, OKF §5.5; a bare date is not one), or already passed by the
 clock (one equal to now is taken), whatever the item's state: G-D4 of § context-engine lint
@@ -1698,7 +1699,7 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    vocabulary but not `retired`, and `unconfirmed` when the actor is an agent's (§ context-engine
    record confirm moves it on), there is no `status: deprecated`, `supersedes` or
    `superseded_by` (§ context-engine record retire writes those), and `goals` names at least one
-   goal of the charter, each written `G-n`. A record carried over from a repo's own log (an entry
+   goal of the charter, each spelled as the charter spells it (`GOAL-n`, or `G-n`). A record carried over from a repo's own log (an entry
    added after its import) gets `aliases: [<old id>]` here, under G-D2's alias rule; a decision's
    aliases are fixed from then on (`decision set` refuses them). For a decision, stop unless it
    passes G-I3 of § context-engine lint: a ruling made on the owner's delegation (the owner said

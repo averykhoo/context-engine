@@ -1897,7 +1897,8 @@ READ_FORM = r"[A-Z]+-[0-9]+"
 ID_RE = re.compile(rf"(?<![\w-]){READ_FORM}(?![\w-])")
 ROW_ID_RE = re.compile(READ_FORM)  # a criterion row's whole first cell (criteria_rows; working.py::Engine._criterion_ids reads it too)
 PIPE_RE = re.compile(r"(?<!\\)\|")  # a cell boundary; a GFM-escaped `\|` stays inside its cell
-GOAL_RE = re.compile(r"G-?([1-9][0-9]*)")  # `G-3`, and the legacy `G3` of records written before the standard id form
+GOAL_RE = re.compile(r"(?:GOAL-|G-?)([1-9][0-9]*)")  # `GOAL-3` (the standard prefix, P3), `G-3`, and the legacy `G3` of records written before the standard id form: one goal, by number (DEC-232)
+CHARTER_FORM = re.compile(r"(?:GOAL|G)-[1-9][0-9]*")  # how a charter row writes a goal id: `GOAL-3`, or `G-3` in a charter that uses G-n
 STORY_STATUSES = ("live", "unspecified", "unconfirmed", "retired")  # FRAMEWORK §3.2
 CRITERION_STATUSES = ("planned", "tested", "manual", "deviates", "retired")  # FRAMEWORK §3.3
 CLAIMED = ("tested", "manual")  # the statuses G-T2 requires a claim for
@@ -1916,10 +1917,24 @@ SOURCE_COLUMNS = ("from", "story", "source")  # a criteria table's source column
 INTENT_OFF = "unset it in [guards] to switch the guard off"
 
 
+def _goal_text(text: str) -> str:
+    return str(text).strip().strip("*`").strip()
+
+
+def goal_number(text: str) -> int | None:
+    """The number of a goal id (`GOAL-3`, `G-3` or the legacy `G3`: 3); None if it is not one."""
+    m = GOAL_RE.fullmatch(_goal_text(text))
+    return int(m.group(1)) if m else None
+
+
 def goal_id(text: str) -> str | None:
-    """A goal id in the standard id form (`G-3`), from `G-3` or the legacy `G3`; None if it is not one."""
-    m = GOAL_RE.fullmatch(text.strip().strip("*`").strip())
-    return f"G-{m.group(1)}" if m else None
+    """A goal id in a standard id form, as written (`GOAL-3` or `G-3`), or `G-3` from the legacy
+    `G3`; None if it is not one. `GOAL3` and `G-03` are not goal ids."""
+    t = _goal_text(text)
+    if CHARTER_FORM.fullmatch(t):
+        return t
+    n = goal_number(t)
+    return None if n is None else f"G-{n}"
 
 
 def row_cells(line: str) -> list[str]:
@@ -2065,21 +2080,23 @@ def story_problems(doc) -> list[str]:
 
 
 def goal_problems(goals, known: set[str], legacy: bool = True) -> list[str]:
-    """G-I1 on one story's or open task's `goals`: at least one, each a goal of the charter (`known`). A legacy
-    `G3` reads as `G-3` in the stored files (``legacy``); a new write must use the standard form. `record new`
-    calls it too."""
+    """G-I1 on one story's or open task's `goals`: at least one, each a goal of the charter (`known`),
+    matched by number, so `GOAL-3`, `G-3` and the legacy `G3` name one goal (DEC-232). The stored files
+    may use any of the three (``legacy``); a new write must spell the goal as the charter does, so one
+    repo never spells one goal two ways. `record new` calls it too."""
     values = D.as_list(goals)
     if not values:
         return ["names no goal (`goals` is empty)"]
+    by_n = {goal_number(k): k for k in known}
     out = []
     for v in values:
-        gid = goal_id(v)
-        if gid is None:
-            out.append(f"`{v}` in `goals` is not a goal id (G-n)")
-        elif not legacy and v != gid:
-            out.append(f"`{v}` in `goals` is not in the standard id form; write {gid}")
-        elif gid not in known:
-            out.append(f"`goals` names {gid}, which is not a goal of the charter")
+        n = goal_number(v)
+        if n is None:
+            out.append(f"`{v}` in `goals` is not a goal id (GOAL-n, or G-n)")
+        elif n not in by_n:
+            out.append(f"`goals` names {goal_id(v)}, which is not a goal of the charter")
+        elif not legacy and str(v) != by_n[n]:
+            out.append(f"`{v}` in `goals` is not in the charter's form; write {by_n[n]}")
     return out
 
 
@@ -2112,15 +2129,19 @@ def known_goals(e: Engine) -> tuple[set[str] | None, list[Failure]]:
     out: list[Failure] = []
     found, strays = charter_goals(_text(path))
     for n, raw in strays:
-        out.append(Failure("G-I1", rel, f"line {n}: a row of the goal table is led by `{raw}`, which is not a goal id, so the row is not read as a goal", "lead each goal's row with its id in the standard form, G-n (FRAMEWORK P3), or move the row out of the goal table"))
+        out.append(Failure("G-I1", rel, f"line {n}: a row of the goal table is led by `{raw}`, which is not a goal id, so the row is not read as a goal", "lead each goal's row with its id in the standard form, GOAL-n (or G-n) (FRAMEWORK P3), or move the row out of the goal table"))
     if not found:
-        out.append(Failure("G-I1", rel, "no goal rows: no table row starts with a goal id (`| G-1 | ... |`), so no story's goals can be checked", f"give each goal a row led by its id, G-n (FRAMEWORK §3.1), or {INTENT_OFF}"))
+        out.append(Failure("G-I1", rel, "no goal rows: no table row starts with a goal id (`| GOAL-1 | ... |`), so no story's goals can be checked", f"give each goal a row led by its id, GOAL-n (or G-n) (FRAMEWORK §3.1), or {INTENT_OFF}"))
     seen: set[str] = set()
+    first: dict[int, str] = {}  # goal number -> the id of the row it first leads (DEC-232: one goal, by number)
     for n, gid, raw in found:
-        if raw.strip("*`").strip() != gid:
-            out.append(Failure("G-I1", rel, f"line {n}: goal id {raw} is not in the standard id form", f"write it {gid} (FRAMEWORK P3); a story's `goals` may keep the legacy {raw}, which reads as {gid}"))
-        if gid in seen:
-            out.append(Failure("G-I1", rel, f"line {n}: goal id {gid} leads two rows", "give the newer goal the next free id (ids are never reused, P3)"))
+        num = goal_number(gid)
+        if not CHARTER_FORM.fullmatch(raw.strip("*`").strip()):
+            out.append(Failure("G-I1", rel, f"line {n}: goal id {raw} is not in the standard id form", f"write it GOAL-{num}, or G-{num} where the charter uses G-n (FRAMEWORK P3); a story's `goals` may keep the legacy {raw}, which reads as goal {num}"))
+        if num in first:
+            out.append(Failure("G-I1", rel, f"line {n}: goal {num} leads two rows ({first[num]}, {gid})", "give the newer goal the next free number (ids are never reused, P3)"))
+            continue
+        first[num] = gid
         seen.add(gid)
     out += [Failure("G-I1", rel, m, rem) for m, rem in charter_problems(_text(path))]
     return seen, out
@@ -2164,7 +2185,7 @@ def charter_problems(text: str) -> list[tuple[str, str]]:
 def goals(e: Engine) -> list[Failure]:
     """G-I1: every goal of the charter (`[guards] charter`) is named by a story that is not
     retired, and every such story names at least one goal, each a goal of the charter (a legacy
-    `G3` reads as `G-3`). Off while `charter` is unset; red when `charter` is set without
+    `G3` reads as `G-3`, and `GOAL-3`, `G-3` and `G3` are one goal, by number). Off while `charter` is unset; red when `charter` is set without
     `stories` (half set, as G-D12's pair), when the charter is missing or yields no goal rows,
     and on a charter goal id not in the standard form. With `task_goals` set, every open task names
     goals of the charter too (`task_goal_failures`), and `task_goals` without `charter` is red.
@@ -2182,21 +2203,22 @@ def goals(e: Engine) -> list[Failure]:
     if not known:
         return out
     out += task_goal_failures(e, known)
+    by_n = {goal_number(k): k for k in known}
     served: set[str | None] = set()
     for rid, rel, doc in _stories(e):
         if doc.get("story_status") == "retired":
             continue
         for p in goal_problems(doc.get("goals"), known):
             out.append(Failure("G-I1", rel, f"{rid} {p}", f"a story's goals are set at `record new` and never rewritten: if the charter lacks the goal, ask the owner (it may be a new goal, FRAMEWORK §6.2 step 2); if the story names the wrong one, record it again with the right goals and the owner's words as they are (`record new story`), then retire this one: {retire_hint(rid)}"))
-        served |= {goal_id(v) for v in D.as_list(doc.get("goals"))}
-    for gid in sorted(known - served, key=lambda x: int(x[2:])):
+        served |= {by_n.get(goal_number(v)) for v in D.as_list(doc.get("goals"))}
+    for gid in sorted(known - served, key=goal_number):
         out.append(Failure("G-I1", g.charter, f"goal {gid} is served by no story", f"record the owner's story for it (`record new story ... --set goals=[{gid}]`), or ask the owner whether the goal still stands (FRAMEWORK §3.1)"))
     return out
 
 
 def task_goal_failures(e: Engine, known: set[str]) -> list[Failure]:
     """G-I1 on the board (CE-99, DEC-64): every open item of the `[guards] task_goals` kind names
-    at least one goal in `goals`, each a goal of the charter, in the standard id form (a task's
+    at least one goal in `goals`, each a goal of the charter, spelled as the charter spells it (a task's
     goals are set by `task set`, so no legacy form is kept). Off while `task_goals` is unset.
 
     Not checked: closed items (history, filed before tasks carried goals), whether an item really
@@ -2217,7 +2239,7 @@ def task_goal_failures(e: Engine, known: set[str]) -> list[Failure]:
         if rid is None or doc.get("state") != "open":
             continue
         for p in goal_problems(doc.get("goals"), known, legacy=False):
-            out.append(Failure("G-I1", st._rel(path), f"{rid} {p}", f"name the charter goals it serves: `context-engine task set {rid} --set goals=[G-n, ...]`; an item serving no goal is a rerank's to flag for SOMEDAY or retirement (procedures § Rerank), and a goal the charter lacks is an owner question (FRAMEWORK §3.1)"))
+            out.append(Failure("G-I1", st._rel(path), f"{rid} {p}", f"name the charter goals it serves, as the charter spells them: `context-engine task set {rid} --set goals=[GOAL-n, ...]`; an item serving no goal is a rerank's to flag for SOMEDAY or retirement (procedures § Rerank), and a goal the charter lacks is an owner question (FRAMEWORK §3.1)"))
     return out
 
 

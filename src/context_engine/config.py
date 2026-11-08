@@ -137,7 +137,7 @@ class Guards:
     retired_glyphs: tuple[str, ...] = ()  # G-D7: glyphs no file may use any more
     coverage_spec: str = ""  # G-D12: the framework spec whose components, procedures and G-ids must be owned; unset (with coverage_maps) is off
     coverage_maps: str = ""  # G-D12: a repo-relative glob of dated coverage maps; the newest by the date and session letters in its file name is read
-    charter: str = ""  # G-I1: the charter, whose table rows led by a goal id (`G-n`) are the goals a story's `goals` may name; unset is off
+    charter: str = ""  # G-I1: the charter, whose table rows led by a goal id (`GOAL-n`, or `G-n`) are the goals a story's `goals` may name; unset is off
     stories: str = ""  # G-I1, G-I2, G-T1, G-T6: the record kind holding the stories; unset turns all four off
     task_goals: str = ""  # G-I1: the board kind whose open items must name the charter goals they serve in `goals` (CE-99, DEC-64); unset is off
     tests: tuple[str, ...] = ()  # G-T2: files and directories whose claims trace tests and drivers to criteria; empty is off
