@@ -1686,3 +1686,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** record commits followed the gate run
 - **control:** collective: every push runs the whole gate plus tools/linux_gate.py
 - **from:** CE-194, session 2026-11-07e
+
+## INV-240: The undo list omits the op correct (Store.correct, record correct) on an agent's decision; on a story it falls under every op on a story and is kept
+
+- **affects:** an operator rolling back a session by hand
+- **why not eliminated:** design prose only, no engine op yet
+- **control:** individual: FRAMEWORK 6.13 item list read by the operator, CE-215 builds the op
+- **from:** CE-18, session 2026-11-07e
+
+## INV-241: hk close logs the op close and the runbook list says a close is undone by reopening, but FRAMEWORK 6.13 item 2 keeps housekeeping closes made for others, so a reader must apply item 2's classes before the per-op list
+
+- **affects:** an operator rolling back a session by hand
+- **why not eliminated:** two sources need to be read together
+- **control:** individual: FRAMEWORK 6.13 item 2 and the procedures.md Rollback and close section
+- **from:** CE-18, session 2026-11-07e
+
+## INV-242: git apply is atomic even without --check, so test_an_overlapping_hunk_is_refused_and_the_file_is_left_untouched cannot tell check-then-apply from apply alone; only the --reject sabotage shows the difference
+
+- **affects:** a maintainer changing the recipe
+- **why not eliminated:** the test pins the outcome, and test_the_runbook_gives_the_commands_these_tests_run pins the --check text
+- **control:** individual: tests/test_rollback_recipe.py both tests
+- **from:** CE-18, session 2026-11-07e
+
+## INV-243: first-commit^ is undefined when first is the repo's root commit and this edge case is not documented
+
+- **affects:** an operator rolling back a session whose first commit is the root
+- **why not eliminated:** a session that rolls back to the root commit is rare
+- **control:** individual: procedures.md Rollback and close section, read by the operator
+- **from:** CE-18, session 2026-11-07e
+
+## INV-244: tools/sabotage_ce24.py still targets the old heading 6.13 Rollback and close (not designed), and the frozen docs/evidence/framework-coverage-2026-11-07e.md row still says not designed
+
+- **affects:** a reader of the old sabotage script or the frozen evidence
+- **why not eliminated:** kept evidence and frozen provenance are not edited, and the gate does not run the script
+- **control:** individual: live context-engine coverage shows 6.13 as open work owned by CE-18 and CE-215
+- **from:** CE-18, session 2026-11-07e
+
+## INV-245: The list of compensating ops has never been run end to end on a real session
+
+- **affects:** an operator rolling back a real session by hand
+- **why not eliminated:** design only, the engine op is deferred to CE-215
+- **control:** individual: tests/test_rollback_recipe.py covers the git recipe only, CE-215 owns the end-to-end run
+- **from:** CE-18, session 2026-11-07e
