@@ -1273,3 +1273,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** manual-mode fallback is rare and the entry is reviewed by hand
 - **control:** individual: docs/runbooks/manual-mode.md pushed receipt step
 - **from:** CE-176, session 2026-11-07e
+
+## INV-181: tools/sabotage_ce185.py's runner counts a row red on any non-zero pytest exit code and does not check the reason, so 'ALL RED' is weaker than sabotage_ce55's verdict check
+
+- **affects:** future sabotage-row authors
+- **why not eliminated:** pre-existing before CE-186; the verifier re-ran the three new rows with a fresh PYTHONPYCACHEPREFIX and each went red for the right reason
+- **control:** collective: the sabotage rule in CLAUDE.md (hand check of each row's red reason)
+- **from:** CE-186, session 2026-11-07e
