@@ -1392,3 +1392,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them
 - **control:** individual: decision accept after owner review
 - **from:** CE-196, session 2026-11-07e
+
+## INV-198: The orient notice has no opt-out (DEC-260, PROVISIONAL): an adopter using only the CLI, or a harness other than Claude Code, sees a rank-2 part naming a claude command on every orient
+
+- **affects:** CLI-only adopters and non-Claude-Code harnesses
+- **why not eliminated:** the owner chose a notice until a tool call marks the clone, and an opt-out was not built; DEC-260 is PROVISIONAL awaiting owner review
+- **control:** individual: DEC-260 owner review; orient notice cleared by the clone mark after one MCP tool call
+- **from:** CE-177, session 2026-11-07e
+
+## INV-199: This repo's own orient shows the MCP notice until the stale MCP server is restarted and one tool call reaches the engine
+
+- **affects:** sessions in this repo until the owner restarts Claude Code
+- **why not eliminated:** the running MCP server predates the change and restarting Claude Code is the owner's action
+- **control:** individual: the clone mark written by the first MCP tool call after restart
+- **from:** CE-177, session 2026-11-07e
+
+## INV-200: The extra rank-2 orient part adds bytes; in an adopter with a tight byte cap it could push other rank-2 parts out of orient
+
+- **affects:** adopters with a tight orient byte cap
+- **why not eliminated:** the notice is needed until the clone is marked, and its size is bounded but not budgeted against a cap
+- **control:** reduce: orient byte cap and rank ordering in working.py; notice disappears once the clone is marked
+- **from:** CE-177, session 2026-11-07e
+
+## INV-201: Contract open issue: the 0.6 release notes already say the contract changes, and whether the MCP-server-is-optional wording in kit/contract.md can change within 0.6 or needs 0.7 is undecided; the builder left the contract untouched, so contract wording still calls MCP optional
+
+- **affects:** adopters reading the contract, and the owner
+- **why not eliminated:** a framework version rule is the owner's call
+- **control:** individual: lint G-D0 keeps contract.md equal to kit/contract.md; owner ruling on 0.6 vs 0.7
+- **from:** CE-177, session 2026-11-07e
+
+## INV-202: No test covers a mark-write failure through the MCP tool itself (verifier item E6); only the lower layer is tested
+
+- **affects:** engine maintainers
+- **why not eliminated:** a failing mark write is hard to provoke through the stdio tool and the lower-layer test covers the logic
+- **control:** reduce: the lower-layer mark-write failure test in tests/test_working.py
+- **from:** CE-177, session 2026-11-07e
