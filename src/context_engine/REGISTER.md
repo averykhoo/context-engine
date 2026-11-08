@@ -1350,3 +1350,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them; the MCP server is loaded once per Claude Code start
 - **control:** individual: decision accept after owner review; CLI used until restart
 - **from:** CE-190, session 2026-11-07e
+
+## INV-192: review.py::retire on an entry with an empty risk writes a heading with no space after the colon and a trailing space
+
+- **affects:** the register reader
+- **why not eliminated:** cosmetic only; such an entry is already G-W13 red (names no risk)
+- **control:** individual: G-W13 flags an entry that names no risk
+- **from:** CE-196, session 2026-11-07e
+
+## INV-193: A non-entry '## ' section after the last register entry falls inside that entry's block in review.py::entries and review.py::_add_line
+
+- **affects:** whoever edits the register by hand
+- **why not eliminated:** a '- **x:**' line in that section would be read as the entry's last field; no such section exists today
+- **control:** individual: the register file layout keeps entries last
+- **from:** CE-196, session 2026-11-07e
+
+## INV-194: working.py::Engine.lint_review picks the remedy by testing each entry_problems message for the substring 'retired'
+
+- **affects:** the operator reading a lint remedy
+- **why not eliminated:** a future problem message quoting risk text could get the wrong remedy
+- **control:** individual: tests of lint_review remedies
+- **from:** CE-196, session 2026-11-07e
+
+## INV-195: site.py::Site.register_page intro (N residual risks) shows no retired count
+
+- **affects:** the site reader
+- **why not eliminated:** the plan did not ask for one
+- **control:** individual: register show prints the retired lines
+- **from:** CE-196, session 2026-11-07e
+
+## INV-196: INV-90 hand-written retired line has brackets in its why, which the op would refuse
+
+- **affects:** whoever retires an entry by hand
+- **why not eliminated:** stylistic difference from the hand form only; heading forms agree and G-W13 is clean on the packaged register
+- **control:** individual: G-W13
+- **from:** CE-196, session 2026-11-07e
+
+## INV-197: DEC-251..DEC-257 are PROVISIONAL and await owner review
+
+- **affects:** the owner
+- **why not eliminated:** agent calls stay PROVISIONAL until the owner reviews them
+- **control:** individual: decision accept after owner review
+- **from:** CE-196, session 2026-11-07e
