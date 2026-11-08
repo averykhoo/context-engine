@@ -15,7 +15,7 @@ updated: 2026-11-07e
 
 `ask comment`: record an owner's partial answer to a question verbatim, as a milestone, leaving the question open (audio-workspace feedback item 4).
 
-**What happened** (audio-workspace `docs/context-engine-feedback.md` entry 4, agent-raised, 2026-11-06): the owner answered ASK-102 there conditionally ("errors should be visible yes, this might be merged with 101 depending on how the above exploration goes") and ASK-104 with a counter-proposal and a question back. Neither words closed the question, and the engine has only `ask answer` (which closes it) and `ask raised`, so those owner words lived only in the chat until the final answers; a lost session would have lost them.
+**What happened** (audio-workspace `docs/context-engine-feedback.md` entry 4, agent-raised, 2026-11-06): the owner answered its question 102 conditionally ("errors should be visible yes, this might be merged with 101 depending on how the above exploration goes") and its question 104 with a counter-proposal and a question back. Neither words closed the question, and the engine has only `ask answer` (which closes it) and `ask raised`, so those owner words lived only in the chat until the final answers; a lost session would have lost them.
 
 **At HEAD cb362ca:** the `ask` group has only new, raised, later and answer (cli.py, the `("ask", v)` op map). `task comment ASK-n` works on a question (working.py::Engine.comment), but it logs under the agent's actor as a one-line Log entry, rides with the next commit instead of being a milestone (DEC-36), and does not mark the words as the owner's.
 

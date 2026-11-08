@@ -15,7 +15,7 @@ updated: 2026-11-07e
 
 `task show` splices the Log into any `PLACEHOLDER` in a record's body, not only the Log's (found while picking up audio-workspace feedback, CE-193).
 
-**What happened** (2026-11-08, session 2026-11-07e): `task show CE-193` printed its item 3, which cites `guards.py::ASK_PLACEHOLDER_RE`, as `guards.py::ASK_` followed by the whole Log entry and then `_RE`. The file on disk is right; only the read is wrong.
+**What happened** (2026-11-08, session 2026-11-07e): `task show CE-193` printed its item 3, which cites `guards.py::ASK_PLACEHOLDER_RE`, with the Log entry spliced into the middle of that symbol name. The file on disk is right; only the read is wrong.
 
 **At HEAD cb362ca:** working.py::Engine.show builds the shown Log as `okf.set_section(body, "Log", "PLACEHOLDER").replace("PLACEHOLDER", ...)`, and `str.replace` replaces every occurrence in the body. Any record whose text names `PLACEHOLDER` (ASK_PLACEHOLDER_RE, GATE_PLACEHOLDER and others are cited across the board) is shown corrupted, through the CLI and the MCP server alike.
 

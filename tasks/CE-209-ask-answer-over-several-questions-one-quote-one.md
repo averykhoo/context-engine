@@ -15,7 +15,7 @@ updated: 2026-11-07e
 
 `ask answer` over several questions: one quote, one commit, and each decision names what the owner's words accepted (audio-workspace feedback items 5 and 10).
 
-**What happened** (audio-workspace `docs/context-engine-feedback.md`, agent-raised, 2026-11-06): entry 5, the owner answered three questions there with "okay to all" (ASK-98/99/100, its D-404..D-406); the verbatim words say nothing of what was approved, only the agent-written `--title` does, and nothing ties it to the Recommendation the owner saw. Entry 10, four answers in one reply made four commits; a batch of answers is one owner act.
+**What happened** (audio-workspace `docs/context-engine-feedback.md`, agent-raised, 2026-11-06): entry 5, the owner answered three questions there with "okay to all" (its questions 98, 99 and 100, recorded as its D-404..D-406); the verbatim words say nothing of what was approved, only the agent-written `--title` does, and nothing ties it to the Recommendation the owner saw. Entry 10, four answers in one reply made four commits; a batch of answers is one owner act.
 
 **At HEAD cb362ca:** working.py::Engine.ask_answer takes one id and is a milestone, so one commit per answer (DEC-36). Its `--ruled-by`/`--ruling` (CE-113) cover only a ruling the owner delegated (guards.py::delegation_problems, G-I3), not the owner's own "yes to all".
 
