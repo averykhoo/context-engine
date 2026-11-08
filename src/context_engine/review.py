@@ -40,7 +40,8 @@ CLASSES = ("eliminated", "reduced", "residual")
 RUNGS = ("eliminate", "reduce", "collective", "individual")  # P17's ladder, strongest first
 FAME = ("F", "A", "M", "E")
 RISK_KEYS = ("rung", "why", "control", "affects")
-ENTRY_FIELDS = ("affects", "why not eliminated", "control", "from")
+ENTRY_FIELDS = ("affects", "why not eliminated", "control", "from")  # G-W13's required fields
+SHOWN = (*ENTRY_FIELDS, "merged", "retired")  # what `register show` prints, in this order (CE-196)
 PACKAGED = "REGISTER.md"  # package data: the engine's own register, handed over with it
 TEMPLATE = """affects: <who can be hurt: the building session, the next session, the owner, a person using plain git, every deployed repo>
 - eliminated: <a risk the design cannot produce>
@@ -69,6 +70,8 @@ HEADER = header(PREFIX)
 _RISK = re.compile(r"^- ([A-Za-z]+):\s*(.*)$")
 _ENTRY = re.compile(r"^## ([A-Z]+-(\d+)):[ \t]*(.*)$", re.MULTILINE)  # any prefix: a register kept from before keeps its own
 _FIELD = re.compile(r"^- \*\*(.+?):\*\*[ \t]*(.*)$", re.MULTILINE)
+# a retired entry's heading: `(retired <session>: <why>) <risk>` (CE-196, INV-97's hand form)
+_RETIRED = re.compile(r"^\(retired ([^\s:()]+): ([^()]*)\)[ \t]*(.*)$")
 
 
 @dataclass
@@ -179,15 +182,30 @@ def check(body: str) -> tuple[Review | None, list[str]]:
 
 @dataclass
 class Entry:
+    """One ``## <id>: <heading>`` block. ``risk`` is the bare risk, a retired marker parsed off,
+    so G-W13 and a re-close's idempotency key on it whether or not it is retired (CE-196);
+    ``head`` is the heading as written."""
+
     id: str
     n: int
     risk: str
     fields: dict[str, str]
+    head: str = ""
 
     @property
     def source(self) -> str:
         """The task id in ``from:``, e.g. ``CE-3`` from ``CE-3, session 2026-10-12b``."""
         return self.fields.get("from", "").split(",")[0].strip()
+
+    @property
+    def retired(self) -> bool:
+        """It has a ``retired:`` line."""
+        return bool(self.fields.get("retired"))
+
+    @property
+    def marked(self) -> bool:
+        """Its heading says ``(retired <session>: <why>)`` (G-W13 checks the two agree)."""
+        return bool(_RETIRED.match(self.head))
 
 
 def entries(text: str) -> list[Entry]:
@@ -197,7 +215,10 @@ def entries(text: str) -> list[Entry]:
     for i, m in enumerate(heads):
         block = text[m.end() : heads[i + 1].start() if i + 1 < len(heads) else len(text)]
         fields = {k.strip().lower(): v.strip() for k, v in _FIELD.findall(block)}
-        out.append(Entry(m.group(1), int(m.group(2)), m.group(3).strip(), fields))
+        raw = m.group(3).strip()
+        marker = _RETIRED.match(raw)
+        risk = marker.group(3).strip() if marker else raw
+        out.append(Entry(m.group(1), int(m.group(2)), risk, fields, head=raw))
     return out
 
 
@@ -270,6 +291,10 @@ def entry_problems(es: list[Entry]) -> list[str]:
         for f in ENTRY_FIELDS:
             if not e.fields.get(f):
                 out.append(f"{e.id} has no `{f}:` line")
+        if e.marked and not e.retired:
+            out.append(f"{e.id} says retired in its heading but has no `retired:` line")
+        elif e.retired and not e.marked:
+            out.append(f"{e.id} has a `retired:` line but its heading does not say `(retired <session>: <why>)`")
     return out
 
 
@@ -279,9 +304,12 @@ def packaged() -> Path:
 
 
 def summary(text: str, where: str) -> str:
+    """`register show`: the count (every entry, retired ones too: their ids are never reused),
+    `, M retired` when any is, then each entry's heading as written and its ``SHOWN`` lines."""
     es = entries(text)
-    lines = [f"register {where}: {len(es)} residual risk{'s' if len(es) != 1 else ''}"]
+    gone = sum(e.retired or e.marked for e in es)
+    lines = [f"register {where}: {len(es)} residual risk{'s' if len(es) != 1 else ''}" + (f", {gone} retired" if gone else "")]
     for e in es:
-        lines.append(f"\n{e.id}: {e.risk}")
-        lines += [f"  {f}: {e.fields[f]}" for f in ENTRY_FIELDS if e.fields.get(f)]
+        lines.append(f"\n{e.id}: {e.head or e.risk}")
+        lines += [f"  {f}: {e.fields[f]}" for f in SHOWN if e.fields.get(f)]
     return "\n".join(lines)

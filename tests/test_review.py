@@ -361,6 +361,69 @@ def test_g_w13_reports_a_residual_missing_from_the_register_and_a_malformed_entr
     assert "RISK-2 names no risk" in [f.message for f in _guards(e, "G-W13")]
 
 
+# -- (c2) a retired entry: kept, marked, shown (CE-196) ------------------------------------------
+
+RETIRED_LINE = "- **retired:** session 2026-11-06c (claude-code/x): merged into RISK-2, DEC-9; kept so its id is never reused"
+MERGED_LINE = "- **merged:** RISK-1 folded into this entry, session 2026-11-06c"
+
+
+def _retire_by_hand(reg: Path) -> None:
+    """RISK-1 merged into RISK-2 by hand, in the form INV-89 and INV-90 were (2026-11-06c)."""
+    text = reg.read_text(encoding="utf-8")
+    one, two = text.split("\n## RISK-2:")
+    one = one.replace("## RISK-1: a dead process", "## RISK-1: (retired 2026-11-06c: merged into RISK-2, DEC-9) a dead process")
+    reg.write_text(one.rstrip("\n") + "\n" + RETIRED_LINE + "\n\n## RISK-2:" + two.rstrip("\n") + "\n" + MERGED_LINE + "\n", encoding="utf-8")
+
+
+@pytest.mark.criterion("AC-194")
+def test_a_retired_entry_keeps_its_bare_risk_so_g_w13_and_a_reclose_still_match_it(eng):
+    e, key = eng
+    rid = _reviewed(e, key)
+    e.close(rid, "done", **kw(key))
+    reg = e.root / "docs/invariants.md"
+    _retire_by_hand(reg)
+    es = R.entries(reg.read_text(encoding="utf-8"))
+    assert [(x.id, x.risk, x.retired, x.marked) for x in es] == [("RISK-1", "a dead process holds the lock", True, True), ("RISK-2", "an actor is misattributed", False, False)]
+    assert es[0].head == "(retired 2026-11-06c: merged into RISK-2, DEC-9) a dead process holds the lock"
+    assert _guards(e, "G-W13") == []  # the reviewed residual is still in the register: the marker is not its risk
+    e.reopen(rid, "one more thing", **kw(key))
+    assert "residuals filed" not in e.close(rid, "done again", **kw(key))  # nor is it filed again
+    assert [x.id for x in R.entries(reg.read_text(encoding="utf-8"))] == ["RISK-1", "RISK-2"]
+
+
+@pytest.mark.criterion("AC-194")
+def test_register_show_prints_the_heading_as_written_the_retired_and_merged_lines_and_the_count(eng):
+    e, key = eng
+    e.close(_reviewed(e, key), "done", **kw(key))
+    assert e.register_show().startswith("register docs/invariants.md: 2 residual risks\n")  # none retired: as before
+    _retire_by_hand(e.root / "docs/invariants.md")
+    out = e.register_show()
+    assert out.startswith("register docs/invariants.md: 2 residual risks, 1 retired\n")  # a retired id still counts: never reused
+    assert "\nRISK-1: (retired 2026-11-06c: merged into RISK-2, DEC-9) a dead process holds the lock\n" in out
+    assert "\n  retired: session 2026-11-06c (claude-code/x): merged into RISK-2, DEC-9; kept so its id is never reused" in out
+    assert "\n  merged: RISK-1 folded into this entry, session 2026-11-06c" in out
+    pkg = R.summary(R.packaged().read_text(encoding="utf-8"), "x")  # the reported bug, on the engine's own register
+    assert re.match(r"register x: \d+ residual risks, \d+ retired\n", pkg)
+    assert "\nINV-97: (retired 2026-11-06c: a duplicate of INV-95, DEC-162) an adopter's stored decision index.md" in pkg
+    assert "\n  retired: session 2026-11-06c (claude-code/claude-opus-5-5): a reworded duplicate of INV-95 (DEC-162); kept so its id is never reused" in pkg
+    assert "\n  merged: INV-90 folded into this entry, session 2026-11-06c (DEC-162)" in pkg
+
+
+@pytest.mark.criterion("AC-194")
+def test_g_w13_fails_a_retired_heading_and_a_retired_line_that_disagree(eng):
+    e, key = eng
+    e.close(_reviewed(e, key), "done", **kw(key))
+    reg = e.root / "docs/invariants.md"
+    good = reg.read_text(encoding="utf-8")
+    _hand_edit(reg, "## RISK-2: an actor is misattributed", "## RISK-2: (retired k: x) an actor is misattributed")
+    fails = _guards(e, "G-W13")
+    assert [f.message for f in fails] == ["RISK-2 says retired in its heading but has no `retired:` line"]
+    assert "(retired <session>: <why>)" in fails[0].remedy and "- **retired:** session <session>" in fails[0].remedy
+    reg.write_text(good.rstrip("\n") + "\n- **retired:** session k (a): x; kept so its id is never reused\n", encoding="utf-8")
+    assert [f.message for f in _guards(e, "G-W13")] == ["RISK-2 has a `retired:` line but its heading does not say `(retired <session>: <why>)`"]
+    assert R.entry_problems(R.entries(R.packaged().read_text(encoding="utf-8"))) == []  # INV-90 and INV-97 agree
+
+
 # -- (d) the handover: the engine's register ships with it -------------------------------------
 
 

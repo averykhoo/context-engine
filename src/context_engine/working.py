@@ -1379,6 +1379,9 @@ class Engine:
                     where = self.w.register or "no register configured"
                     out.append(Failure("G-W13", rel, f"{h.id} is closed but {len(missing)} of its residuals are not in the register ({where}): {missing[0][:60]!r}", "copy each into the register as its next id (manual-mode.md § context-engine task close)"))
         for p in R.entry_problems(es):
+            if "retired" in p:  # the heading's marker and the `retired:` line disagree (CE-196)
+                out.append(Failure("G-W13", self.w.register, p, "a retired entry carries both: `## <id>: (retired <session>: <why>) <risk>` and a last `- **retired:** session <session> (<actor>): <why>; kept so its id is never reused` line; a live one carries neither"))
+                continue
             out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own id, one number each"))
         return out
 

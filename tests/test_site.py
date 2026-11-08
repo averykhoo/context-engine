@@ -33,6 +33,7 @@ CONFIG = {
     "guards": {"stories": "story"},
 }
 REGISTER = "# Residual-risk register\n\n## INV-1: a risk that stays\n\n- **affects:** the owner\n- **control:** CE-2's guard\n- **from:** CE-2, session 2026-11-06a\n"
+REGISTER += "\n## INV-2: (retired 2026-11-06c: a duplicate of INV-1) the same risk again\n\n- **affects:** the owner\n- **from:** CE-2, session 2026-11-06a\n- **retired:** session 2026-11-06c (claude-code/x): a duplicate of INV-1; kept so its id is never reused\n"
 HREF = re.compile(r'href="([^"]*)"')
 
 
@@ -118,6 +119,7 @@ def test_the_site_holds_every_record_and_every_link_resolves(tmp_path):
     assert '<a href="https://example.org/spec">https://example.org/spec</a>.' in body  # the sentence's full stop is not the URL's
     assert "; not AC-9." in pages["decision/DEC-1.html"]  # no page for criteria: plain text
     assert 'id="INV-1"' in pages["register.html"] and 'href="task/CE-2.html"' in pages["register.html"]
+    assert '<h2 id="INV-2">INV-2: (retired 2026-11-06c: a duplicate of <a href="register.html#INV-1">INV-1</a>) the same risk again</h2>' in pages["register.html"]  # the heading as written (CE-196)
     assert "Not available here" in pages["coverage.html"]  # no [guards] coverage_spec: says why, builds the rest
 
 

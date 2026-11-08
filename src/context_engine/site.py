@@ -246,7 +246,7 @@ class Site:
         out = [f"<p>{len(self.register)} residual risks (FRAMEWORK §7.4).</p>"]
         for x in self.register:
             fields = "".join(f"<tr><th>{esc(k)}</th><td>{self.link(v, 0)}</td></tr>" for k, v in x.fields.items())
-            out.append(f'<h2 id="{esc(x.id)}">{esc(x.id)}: {self.link(x.risk, 0)}</h2>\n<table>{fields}</table>')
+            out.append(f'<h2 id="{esc(x.id)}">{esc(x.id)}: {self.link(x.head or x.risk, 0)}</h2>\n<table>{fields}</table>')
         return self.page("Residual-risk register", "\n".join(out), 0)
 
     def index_page(self) -> str:
