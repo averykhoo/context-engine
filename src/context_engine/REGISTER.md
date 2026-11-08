@@ -1238,3 +1238,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** CI parity check is a push-time step
 - **control:** collective: CLAUDE.md § Gate requires tools/linux_gate.py before every push
 - **from:** CE-56, session 2026-11-07e
+
+## INV-176: token figures leave out cache_read and were matched to the CE-191 comment and the opus baselines by magnitude only; the CE-195/197 baseline convention is not re-measurable
+
+- **affects:** the owner ruling on DEC-45
+- **why not eliminated:** the baselines were recorded before any helper script and their transcripts were not re-summed
+- **control:** individual: per-task comments on CE-198 and the no-close like-for-like comparison
+- **from:** CE-198, session 2026-11-07e
+
+## INV-177: the trial's tasks were pinned small tasks, and opus-with-planner tasks outside it ran a median 547k (trial -25.9% against them), so the 30% margin may not hold on a mixed population
+
+- **affects:** the owner ruling on DEC-45
+- **why not eliminated:** eligibility selects the tasks, and no same-task opus control exists
+- **control:** individual: DEC-173 size floor and the eligibility filter
+- **from:** CE-198, session 2026-11-07e

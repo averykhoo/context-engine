@@ -4,13 +4,15 @@ id: CE-198
 title: 'Trial: sonnet builders under an opus verifier on the next 6 pinned-design code tasks'
 brief: comment each trial task's tokens, FAIL rounds and escalation here; verifier stays opus and never fixes
 pri: NEXT
-state: open
+state: closed
 deps: []
 goals: [G-1]
 source: session 2026-11-07b
 created: 2026-11-07
-moved: 2026-11-07b
+moved: 2026-11-07e
 updated: 2026-11-07e
+status: deprecated
+closed: 2026-11-07e
 ---
 
 Trial sonnet builders under an opus verifier (DEC-173; shape from docs/evidence/article-takeaways-advice-2026-11-07a.md).
@@ -46,3 +48,6 @@ Decides: adopt if the median tokens per task fall by 30% or more and FAIL rounds
 - 2026-11-07e (claude-code/claude-sonnet-5-5): CE-201: TRIAL TASK 3 of 6 (DEC-177 shape). 391k subagent tokens: plan 65k (opus), build 167k (sonnet), verify r1 92k (opus), close 67k; 324k without the close. 0 FAIL rounds, escalated no. No trap-class bug reached the verifier (it noted the DEC-175 amendment carries its dated header twice, cosmetic: the engine adds one and amend.md carried another). Verifier design calls: 3 SOUND, 1 DRIFT (that cosmetic header).
 - 2026-11-07e (claude-code/claude-sonnet-5-5): CE-179: TRIAL TASK 4 of 6 (DEC-177 shape). 554k subagent tokens: plan 89k (opus), build 297k (sonnet), verify r1 104k (opus), close 65k; 490k without the close. 0 FAIL rounds, escalated no. No trap-class bug reached the verifier. Verifier design calls: 4 SOUND, 0 DRIFT. The sonnet builder was the costliest of the four (297k).
 - 2026-11-07e (claude-code/claude-sonnet-5-5): CE-150: TRIAL TASK 5 of 6 (DEC-177 shape). 514k subagent tokens: plan 145k (opus), build 196k (sonnet), verify r1 107k (opus), close 66k; 447k without the close. 0 FAIL rounds, escalated no. No listed trap-class bug reached the verifier; it did find the fence-exclusion tests weak (a one-row fence reads as header-only either way, so stripping the fences stayed green) and the by-hand runbook text not updated. Verifier design calls: 6 SOUND, 1 minor DRIFT (docs/runbooks/manual-mode.md and its kit copy still describe the old criterion-row rule).
+- 2026-11-07e (claude-code/claude-sonnet-5-5): CE-152: TRIAL TASK 6 of 6 (DEC-177 shape). 428k subagent tokens: plan 73k (opus), build 196k (sonnet), verify r1 94k (opus), close 65k; 363k without the close, the CE-191 convention (input + cache-creation + output; cache reads not counted). 0 FAIL rounds, escalated no. No listed trap-class bug reached the verifier; it found two test/design gaps: DEC-194's claim that a missing id stays listed is unpinned (changing the filter to exclude 'missing' stayed green; the code is right) and the ask_raised remedy leads to a session_close refusal for a NOW/NEXT Ask- question (pre-existing, session_close uses ID_RE too). Verifier design calls: 6 SOUND, 0 DRIFT.
+- 2026-11-07e (claude-code/claude-sonnet-5-5): closed: trial verdict ADOPT: median tokens 405k (w/o close; 471k with close) vs opus baselines, -42.0% against all five (CE-195 1.15M, CE-197 926k, CE-187 698k, CE-158 543k, CE-161 604k; median 698k), -61.0% against the item's two (1.04M), -32.9% against the three later ones (604k); FAIL rounds 0,0,0,0,0,2 (median 0) against 2,3,1,1,1 (median 1), so no rise; 1 escalation (CE-191) against the 2 that drop it. Trial tokens count the planner and leave out cache_read; compare the no-close figure, since the baselines carry no close. Caveat: opus+planner tasks outside the trial (ineligible, different mix) ran a median 547k w/o close, so -25.9% against them. The owner rules on DEC-45; it is not edited here. Arithmetic: .scratch/ce198-numbers/verdict.md (gitignored).
+  residual risk: INV-176, INV-177
