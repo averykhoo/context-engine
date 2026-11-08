@@ -3,13 +3,13 @@ type: Task
 id: CE-29
 title: 'Unverified hazards and memory: where each lives, how it is promoted (to an invariant or the contract) or pruned'
 brief: 'Hazards are volatile, invariants durable: keep them apart (FRAMEWORK §2.1); memory is promoted or pruned, never a rule'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 source: session 2026-10-12b
 created: 2026-10-12
-moved: 2026-10-30a
-updated: 2026-10-30a
+moved: 2026-11-07e
+updated: 2026-11-07e
 goals: [G-7]
 ---
 
