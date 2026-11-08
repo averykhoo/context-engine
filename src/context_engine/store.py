@@ -721,11 +721,18 @@ class Store:
         try:
             co = commit_mod.co_author(actor, strict=False)  # a bad CE_CO_AUTHOR cannot refuse a write already made
             self.last_commit = commit_mod.commit(self.root, self.config.oplog, session, title=title, lead=tuple(lead), body=body,
-                                                 trailers=tuple(trailers), co_author=co, lane=commit_mod.EVERY_LANE if every else self.lane)
+                                                 trailers=tuple(trailers), co_author=co, lane=commit_mod.EVERY_LANE if every else self.lane,
+                                                 handoff=self._handoff())
         except Exception as exc:  # a commit never undoes, or hides, the write it follows
             self.last_commit = commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}; commit the op log and the paths its uncommitted lines name by hand")
         if always and not self.last_commit.sha:
             self._missed = self.last_commit
+
+    def _handoff(self) -> str | None:
+        """The orientation note's path as op lines name it, or None when none is set: a commit
+        carries it with its banner only when only ``banner.set`` lines name it (CE-175)."""
+        h = self.config.working.handoff
+        return Path(h).as_posix() if h else None
 
     def commit_paths(self, text: str, paths: list[str], session: str, sweep: bool = False, co_author: str | None = None,
                      lane: str | None = None) -> commit_mod.Outcome:
@@ -737,7 +744,8 @@ class Store:
         gate: the session runs it first."""
         with self._lock():
             try:
-                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, co_author=co_author, lane=lane)
+                return commit_mod.commit(self.root, self.config.oplog, session, text=text, paths=tuple(paths), sweep=sweep, co_author=co_author, lane=lane,
+                                         handoff=self._handoff())
             except Exception as exc:
                 return commit_mod.Outcome(note=f"the commit raised {type(exc).__name__}: {exc}")
 

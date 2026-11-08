@@ -64,6 +64,15 @@ tree; the reply names the other session whose lines were carried. Under the mile
 record stays uncommitted until the next milestone, whoever makes it, so that window is wide; a
 half-edit that breaks the frontmatter stops the commit instead (INV-42).
 
+The orientation note (``[working] handoff``) is the exception (CE-175, DEC-292..295): it is the one
+file the engine writes that sessions also edit by hand, and its banner is written inside a milestone
+the session does not choose (``session close --banner``). So when a commit carries the note only
+because op lines name it, and every one of those lines is ``banner.set``, it carries HEAD's note
+with the working banner grafted in (``banner_only``), built in the temporary index; hand edits
+outside the banner stay uncommitted, and the reply says so. A path given to the session's own
+commit goes whole; so does the note when HEAD lacks it, when it has no banner, or when the graft
+equals the working file. Records still go whole (INV-42 is unchanged).
+
 Every commit the engine makes ends in one trailer paragraph: a task close's ``Closes:``, then
 ``Session:``, then a ``Co-Authored-By:`` line naming the agent that made the writes (CE-197,
 DEC-170), so no agent commit goes without it. ``co_author`` resolves that line, first hit wins: an
@@ -142,6 +151,7 @@ class Outcome:
     carried: tuple[str, ...] = field(default_factory=tuple)
     left: tuple[tuple[str, int], ...] = field(default_factory=tuple)  # (session or `<key> lane <lane>`, op lines) left uncommitted (CE-125, CE-126)
     warn: str = ""  # committed, but something after it failed and needs a hand step
+    banner_only: tuple[str, ...] = field(default_factory=tuple)  # the orientation note, committed as HEAD's plus the banner (CE-175)
 
     def line(self) -> str:
         """The suffix for the operation's one-line reply."""
@@ -153,6 +163,7 @@ class Outcome:
                 extra.append(f"left out as gitignored: {', '.join(self.left_out)}")
             if self.left:
                 extra.append(left_behind(self.left))
+            extra += [banner_kept(p) for p in self.banner_only]
             if self.warn:
                 extra.append(f"WARNING: {self.warn}")
             return f"; committed {self.sha}" + (f" ({'; '.join(extra)})" if extra else "")
@@ -170,6 +181,52 @@ def left_behind(left: tuple[tuple[str, int], ...]) -> str:
                 f"or once it is known dead, `context-engine commit --sweep` takes them")
     return (f"left uncommitted: {each}, with the files they name; the agent working each lane commits its own, "
             f"its session's close takes every lane, and once a session is known dead, `context-engine commit --sweep` takes them")
+
+
+def banner_kept(path: str) -> str:
+    """What a reply says of an orientation note committed with its banner only (CE-175)."""
+    return f"{path}: its banner only, so the hand edits beside it stay uncommitted, for whoever made them to commit {path} by path"
+
+
+def banner_only(head: str, working: str) -> str | None:
+    """HEAD's orientation note with the working note's banner in it, in HEAD's newline style, or
+    None when the working note has no banner (CE-175). Pure."""
+    from . import ledger as L  # here, not at the top: ledger imports store, which imports this module
+
+    b = L.find_banner(working)
+    if b is None:
+        return None
+    return L.replace_banner(head, b.key, b.text)
+
+
+def _banner_grafts(git: "_Git", root: Path, handoff: str | None, ops: list[dict], paths: list[str],
+                   given: tuple[str, ...]) -> dict[str, bytes]:
+    """``{handoff: blob}`` when the commit is to carry the orientation note with its banner only
+    (CE-175): the note is carried, not given; every op line taken that names it is ``banner.set``;
+    HEAD has it and the working note has a banner; and the graft differs from the working note,
+    CRLF read as LF. Else empty: the note goes whole, as before."""
+    if not handoff or handoff not in paths or handoff in given:
+        return {}
+    if any(o.get("op") != "banner.set" for o in ops if handoff in op_paths(o)):
+        return {}
+    f = root / handoff
+    if not f.is_file():
+        return {}
+    with tempfile.TemporaryFile() as out:  # the raw blob: `_Git.run` decodes with replacement
+        p = subprocess.run(["git", "show", f"HEAD:./{handoff}"], cwd=root, stdin=subprocess.DEVNULL, stdout=out,
+                           stderr=subprocess.DEVNULL, timeout=GIT_TIMEOUT, env=git.env)
+        out.seek(0)
+        raw = out.read()
+    if p.returncode != 0:
+        return {}  # HEAD lacks the note: the first commit of it goes whole
+    try:
+        head, working = raw.decode("utf-8"), f.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return {}
+    graft = banner_only(head, working)
+    if graft is None or graft.replace("\r\n", "\n") == working.replace("\r\n", "\n"):
+        return {}
+    return {handoff: graft.encode("utf-8")}
 
 
 def label(session: object, lane: str | None) -> str:
@@ -561,7 +618,7 @@ def _others(lines: list[dict], session: str, lane: str | None = None) -> tuple[s
 
 def commit(root: Path, oplog: str, session: str, *, title: str | None = None, lead: tuple[str, ...] = (), body: str = "",
            trailers: tuple[str, ...] = (), text: str | None = None, paths: tuple[str, ...] = (), sweep: bool = False,
-           co_author: str | None = None, lane: str | None = None) -> Outcome:
+           co_author: str | None = None, lane: str | None = None, handoff: str | None = None) -> Outcome:
     """Commit ``session``'s uncommitted op lines of ``lane`` (``select``: None is the
     coordinator's, ``EVERY_LANE`` every lane; with ``sweep``, every line) with the files they
     name. Call it holding the lock.
@@ -570,7 +627,9 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     (``message``). The session's own commit passes its message as ``text`` and its own
     ``paths``, relative to ``root`` (``session_message``); then every case that commits nothing
     says why, since a commit was asked for. ``co_author`` is the resolved ``Co-Authored-By:``
-    value (``co_author()``), None for none."""
+    value (``co_author()``), None for none. ``handoff`` is the orientation note's path
+    (``[working] handoff``): carried for ``banner.set`` lines alone, it goes with its banner only
+    (``_banner_grafts``, CE-175)."""
     asked = text is not None
     remedy = (f"commit by hand: `git commit -o {oplog} <the paths its uncommitted lines name>` with a "
               f"last trailer paragraph of `Session: {session}` and, for an agent, its `Co-Authored-By:` "
@@ -603,7 +662,7 @@ def commit(root: Path, oplog: str, session: str, *, title: str | None = None, le
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # a killed hook may still hold a file
         try:
             how = dict(title=title, lead=tuple(lead), body=body, trailers=tuple(trailers), co_author=co_author, lane=lane)
-            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep)
+            return _commit(git, root, oplog, session, prefix.strip(), Path(tmp), remedy, how, text, tuple(paths), sweep, handoff)
         except subprocess.TimeoutExpired:
             lock = gitdir / "index.lock"
             left = f"; it left {lock} behind: remove it once no git command is running" if lock.exists() and lock.stat().st_mtime >= started - 1 else ""
@@ -714,7 +773,7 @@ def _detached(git: _Git, gitdir: Path) -> bool:
 
 
 def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: Path, remedy: str, how: dict,
-            text: str | None, given: tuple[str, ...], sweep: bool = False) -> Outcome:
+            text: str | None, given: tuple[str, ...], sweep: bool = False, handoff: str | None = None) -> Outcome:
     lane = how.get("lane")
     log = root / oplog
     fresh: list[str] = []
@@ -796,12 +855,14 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
             under = prefix + rel + "/"
             untracked += [k[len(prefix):] for k, v in codes.items() if v == "??" and k.startswith(under)]
     untracked = list(dict.fromkeys(untracked))
+    grafts = _banner_grafts(git, root, handoff, ops, paths, given)  # the orientation note's banner only (CE-175)
+    partial = bool(left or grafts)  # a temporary index: a partial op log, or a grafted note
     msg = tmp / "message"
     msg.write_bytes((session_message(text, ops, session, how["co_author"], lane) if text is not None else message(ops, session, **how)).encode("utf-8"))
     before = _rev(git, "HEAD")
     try:
-        if left:  # another session's lines stay out: commit a partial op log from a temporary index
-            c = _commit_partial(git, tmp, prefix, oplog, head_text, fresh, paths, msg)
+        if partial:  # another session's lines, or hand edits beside a banner, stay out: a temporary index
+            c = _commit_partial(git, tmp, prefix, oplog, head_text, fresh, paths, msg, grafts)
             if isinstance(c, Outcome):
                 return dataclasses.replace(c, note=f"{c.note}; {remedy}", left=whose)
         else:
@@ -813,17 +874,17 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     except subprocess.TimeoutExpired:
         sha = _landed(git, before, msg)
         if not sha:  # it timed out before HEAD moved: nothing was committed
-            if not left:
+            if not partial:
                 _unstage(git, tmp, untracked)
             raise
         # HEAD moved to this commit, then git was stopped (a post-commit hook): committed (CE-127)
         warn = f"git took over {GIT_TIMEOUT}s after the commit landed (a post-commit hook?) and was stopped"
-        r = _reset(git, tmp, prefix, [oplog, *(p for p in paths if p != oplog)] if left else paths)
+        r = _reset(git, tmp, prefix, [oplog, *(p for p in paths if p != oplog)] if partial else paths)
         if r:
             warn += f"; {r}"
         c = subprocess.CompletedProcess("timed-out-after-commit", 0, f"[{sha}]", warn)
     if c.returncode != 0:
-        if not left:
+        if not partial:
             _unstage(git, tmp, untracked)
         if any(n in c.stdout for n in NOTHING):
             return Outcome(note="nothing to commit: no path given has a change", paths=tuple(paths), left=whose)
@@ -834,12 +895,16 @@ def _commit(git: _Git, root: Path, oplog: str, session: str, prefix: str, tmp: P
     if text is not None:  # the session's own commit reports what git committed, not what it was given
         shown = git.run("show", "--name-only", "-z", "--format=", "HEAD").stdout
         paths = [x.strip("\n") for x in shown.split("\0") if x.strip("\n")]
-    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session, lane), left=whose, warn=warn)
+    return Outcome(sha=sha, paths=tuple(paths), left_out=tuple(left_out), carried=_others(ops, session, lane), left=whose, warn=warn,
+                   banner_only=tuple(grafts))
 
 
-def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: str, taken: list[str], paths: list[str], msg: Path):
-    """The commit when another session's lines stay out (CE-125). In a temporary index made from
-    HEAD: ``paths`` as they are in the tree, and the op log as HEAD's lines plus ``taken``. Then
+def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: str, taken: list[str], paths: list[str], msg: Path,
+                    grafts: dict[str, bytes] | None = None):
+    """The commit when another session's lines stay out (CE-125), or the orientation note goes
+    with its banner only (``grafts``, CE-175). In a temporary index made from HEAD: ``paths`` as
+    they are in the tree, the op log as HEAD's lines plus ``taken``, and each graft's path as its
+    blob. Then
     ``git commit`` of that index, so hooks run, and the real index's entries for those paths are
     set to what was committed, as ``git commit --only`` leaves them. The working op log is never
     touched, and the real index not until the commit has landed, so a failure leaves nothing to
@@ -849,7 +914,8 @@ def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: st
     r = alt.run("read-tree", "HEAD")
     if r.returncode != 0:
         return Outcome(note=f"`git read-tree HEAD` failed ({_first_error(r)})")
-    rest = [p for p in paths if p != oplog]
+    grafts = grafts or {}
+    rest = [p for p in paths if p != oplog and p not in grafts]
     if rest:
         a = alt.write("add", f"--pathspec-from-file={_pathspec(tmp, 'add', rest)}", "--pathspec-file-nul")
         if a.returncode != 0:
@@ -863,9 +929,18 @@ def _commit_partial(git: _Git, tmp: Path, prefix: str, oplog: str, head_text: st
     u = alt.run("update-index", "--add", "--cacheinfo", f"100644,{h.stdout.strip()},{prefix}{oplog}")  # from the top of the work tree
     if u.returncode != 0:
         return Outcome(note=f"`git update-index` failed ({_first_error(u)})")
+    for n, (rel, data) in enumerate(grafts.items()):  # HEAD's note with the new banner, never the working file (CE-175)
+        g = tmp / f"graft-{n}"
+        g.write_bytes(data)
+        h = alt.run("hash-object", "-w", "--no-filters", str(g))
+        if h.returncode != 0:
+            return Outcome(note=f"`git hash-object` failed ({_first_error(h)})")
+        u = alt.run("update-index", "--add", "--cacheinfo", f"100644,{h.stdout.strip()},{prefix}{rel}")
+        if u.returncode != 0:
+            return Outcome(note=f"`git update-index` failed ({_first_error(u)})")
     c = alt.write("commit", "-F", str(msg))
     if c.returncode == 0:
-        r = _reset(git, tmp, prefix, [oplog, *rest])
+        r = _reset(git, tmp, prefix, [oplog, *rest, *grafts])
         if r:
             c.stderr = r
             c.args = "reset-failed"

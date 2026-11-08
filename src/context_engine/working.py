@@ -2280,6 +2280,7 @@ class Engine:
             extra.append(f"left out as gitignored: {', '.join(out.left_out)}")
         if out.left:
             extra.append(C.left_behind(out.left))
+        extra += [C.banner_kept(p) for p in out.banner_only]  # the orientation note's banner only (CE-175)
         if out.warn:
             extra.append(f"WARNING: {out.warn}")
         n = len(out.paths)

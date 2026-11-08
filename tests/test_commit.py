@@ -1385,3 +1385,129 @@ def test_the_session_commit_is_not_refused_for_another_sessions_unparseable_op_l
     with pytest.raises(Refusal, match=rf"lint fails on what this commit carries: G-W7 ops\.jsonl: 1 op line this commit would take does not parse as JSON \(line \d+: [^)]*{re.escape(c.session)}"):
         run(mrepo, "commit", c, message="Board: file CE-3")
     assert count(mrepo) == before
+
+
+# -- the orientation note's banner goes alone (CE-175) ------------------------------------------
+
+
+A_FACT = "- A's uncommitted fact, mid-edit."
+
+
+def _hand_edit(root: Path) -> None:
+    """Session A's hand edit to the orientation note, outside the banner, not yet committed."""
+    with open(root / "HANDOFF.md", "a", encoding="utf-8", newline="\n") as f:
+        f.write(f"\n{A_FACT}\n")
+
+
+def _banner(root: Path, c, text: str = "- B's banner.") -> str:
+    sha = run(root, "banner_show", c)[1].split()[3]
+    return run(root, "banner_set", c, text=text, seen=sha)[1]
+
+
+@pytest.mark.criterion("AC-76")
+def test_a_banner_commit_carries_the_banner_not_a_hand_edit_beside_it(mrepo):
+    """CE-175, the repro: session B's banner set is a milestone, and its commit carried all of
+    HANDOFF.md, session A's half-done hand edit with it. It now carries HEAD's note with the new
+    banner in it; A's edit stays in the tree, and the reply says so."""
+    b = start(mrepo)
+    _hand_edit(mrepo)
+    line = _banner(mrepo, b)
+    assert re.search(rf"; committed {head(mrepo)} \(HANDOFF\.md: its banner only, so the hand edits beside it stay uncommitted", line), line
+    at_head = git(mrepo, "show", "HEAD:HANDOFF.md")
+    assert f"## Banner ({b.session})\n\n- B's banner.\n" in at_head and A_FACT not in at_head, at_head
+    assert A_FACT in (mrepo / "HANDOFF.md").read_text(encoding="utf-8")
+    assert git(mrepo, "status", "--porcelain") == " M HANDOFF.md\n"
+    changed = [ln for ln in git(mrepo, "diff", "HEAD", "--", "HANDOFF.md").splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+    assert [ln.rstrip("\r") for ln in changed] == ["+", f"+{A_FACT}"], changed  # nothing else differs
+
+
+@pytest.mark.criterion("AC-78")
+def test_a_given_orientation_note_goes_whole(mrepo):
+    """CE-175: a path given to the session's own commit goes as the working file, whatever lines
+    name it; so the hand edits a banner commit left behind are committed by path."""
+    b = start(mrepo)
+    _hand_edit(mrepo)
+    _banner(mrepo, b)
+    _, line = run(mrepo, "commit", b, paths=["HANDOFF.md"], message="Notes: A's fact")
+    assert "banner only" not in line and A_FACT in git(mrepo, "show", "HEAD:HANDOFF.md"), line
+    assert git(mrepo, "status", "--porcelain") == ""
+    (mrepo / "context.toml").write_text(_toml({**MILESTONE_CONFIG, "engine": {**MILESTONE_CONFIG["engine"], "commit": "off"}}), encoding="utf-8")
+    git(mrepo, "commit", "-q", "-m", "commit = off", "--", "context.toml")
+    _hand_edit(mrepo)
+    _banner(mrepo, b, "- B's banner, again.")  # commits nothing: its banner.set line is uncommitted when the note is given
+    _, line = run(mrepo, "commit", b, paths=["HANDOFF.md"], message="Notes: the banner and A's second fact")
+    assert "banner only" not in line and git(mrepo, "show", "HEAD:HANDOFF.md").count(A_FACT) == 2, line
+    assert "- B's banner, again." in git(mrepo, "show", "HEAD:HANDOFF.md") and git(mrepo, "status", "--porcelain") == ""
+
+
+def test_banner_only_grafts_the_working_banner_onto_heads_note():
+    """CE-175's pure step: HEAD's note, its banner replaced by the working note's, in HEAD's own
+    newline style; None when the working note has no banner."""
+    assert C.banner_only("# H\n\n## Facts\n", "# H\n\n## Facts\n- x\n") is None
+    crlf = "# H\r\n\r\n## Banner (2026-10-07b)\r\n\r\n- old\r\n\r\n## Facts\r\n\r\n- f\r\n"
+    working = "# H\n\n## Banner (2026-11-08b)\n\n- new\n\n## Facts\n\n- f\n- hand\n"
+    assert C.banner_only(crlf, working) == "# H\r\n\r\n## Banner (2026-11-08b)\r\n\r\n- new\r\n\r\n## Facts\r\n\r\n- f\r\n"
+    assert C.banner_only("# H\n\n## Facts\n\n- f\n", working) == "# H\n\n## Banner (2026-11-08b)\n\n- new\n\n## Facts\n\n- f\n"  # the first banner
+
+
+def test_an_unchanged_or_untracked_note_takes_the_plain_path(mrepo):
+    """CE-175: with no hand edit the graft is the working note (a CRLF checkout of an LF note
+    included), and when HEAD lacks the note there is nothing to graft onto: either way the whole
+    file goes, as before, and the reply adds nothing."""
+    b = start(mrepo)
+    note = mrepo / "HANDOFF.md"
+    lf = note.read_bytes().replace(b"\r\n", b"\n")  # `write_text` writes CRLF on Windows
+    note.write_bytes(lf)
+    git(mrepo, "commit", "-q", "-m", "an LF note", "--", "HANDOFF.md")
+    note.write_bytes(lf.replace(b"\n", b"\r\n"))  # CRLF in the tree, LF at HEAD
+    line = _banner(mrepo, b)
+    assert line.endswith(f"; committed {head(mrepo)}") and git(mrepo, "status", "--porcelain") == "", line
+    git(mrepo, "rm", "-q", "--cached", "HANDOFF.md")
+    git(mrepo, "commit", "-q", "-m", "HANDOFF.md out of git")
+    _hand_edit(mrepo)
+    line = _banner(mrepo, b, "- B's banner, again.")
+    assert line.endswith(f"; committed {head(mrepo)}") and A_FACT in git(mrepo, "show", "HEAD:HANDOFF.md"), line
+    assert git(mrepo, "status", "--porcelain") == ""
+
+
+def test_a_note_another_op_wrote_goes_whole(mrepo):
+    """CE-175: the graft is only for a note nothing but banner.set lines name; a line of any other
+    op naming it means that op's write is in the note, so the whole file goes."""
+    b = start(mrepo)
+    _hand_edit(mrepo)
+    store = eng(mrepo).store
+    store.log("note.edit", "HANDOFF", mrepo / "HANDOFF.md", b.session, ACTOR, ["facts"])  # another op that wrote the note
+    line = _banner(mrepo, b)
+    assert "banner only" not in line and A_FACT in git(mrepo, "show", "HEAD:HANDOFF.md"), line
+
+
+@pytest.mark.criterion("AC-78")
+def test_the_sessions_own_commit_grafts_a_banner_line_it_takes(mrepo):
+    """CE-175 under `commit = "off"`: the banner set commits nothing, and the session's own commit
+    of another path takes its banner.set line, so it carries the note with its banner only."""
+    (mrepo / "context.toml").write_text(_toml({**MILESTONE_CONFIG, "engine": {**MILESTONE_CONFIG["engine"], "commit": "off"}}), encoding="utf-8")
+    git(mrepo, "commit", "-q", "-m", "commit = off", "--", "context.toml")
+    b = start(mrepo)
+    _hand_edit(mrepo)
+    before = count(mrepo)
+    _banner(mrepo, b)
+    assert count(mrepo) == before
+    (mrepo / "other.py").write_text("x = 1\n", encoding="utf-8")
+    _, line = run(mrepo, "commit", b, paths=["other.py"], message="CE-1: other")
+    assert re.search(r"^committed \w+: 4 paths \(HANDOFF\.md: its banner only, so the hand edits beside it stay uncommitted", line), line
+    at_head = git(mrepo, "show", "HEAD:HANDOFF.md")
+    assert "- B's banner." in at_head and A_FACT not in at_head, at_head
+    assert git(mrepo, "status", "--porcelain") == " M HANDOFF.md\n"
+
+
+def test_a_clean_close_with_a_banner_leaves_a_hand_edit_beside_it(mrepo):
+    """CE-175 through `session close --banner`, the milestone a session does not choose."""
+    b = start(mrepo)
+    _hand_edit(mrepo)
+    sha = run(mrepo, "banner_show", b)[1].split()[3]
+    _, line = run(mrepo, "session_close", b, rows="none", summary=["nothing"], guards="gate 3 passed", read="board",
+                  banner="- B's banner.", seen=sha)
+    assert "HANDOFF.md: its banner only" in line, line
+    at_head = git(mrepo, "show", "HEAD:HANDOFF.md")
+    assert "- B's banner." in at_head and A_FACT not in at_head, at_head
+    assert git(mrepo, "status", "--porcelain") == " M HANDOFF.md\n"
