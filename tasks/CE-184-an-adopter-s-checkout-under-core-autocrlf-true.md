@@ -2,14 +2,14 @@
 type: Task
 id: CE-184
 title: An adopter's checkout under core.autocrlf=true drifts to CRLF and stales its content-addressed gate rows
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-04a
 created: 2026-11-04
-moved: 2026-11-04a
-updated: 2026-11-04a
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 An adopter's checkout under core.autocrlf=true drifts to CRLF and stales its content-addressed gate rows.
