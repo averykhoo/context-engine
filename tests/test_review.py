@@ -424,6 +424,122 @@ def test_g_w13_fails_a_retired_heading_and_a_retired_line_that_disagree(eng):
     assert R.entry_problems(R.entries(R.packaged().read_text(encoding="utf-8"))) == []  # INV-90 and INV-97 agree
 
 
+def _retires(e) -> list[tuple[str, list, str]]:
+    log = [json.loads(ln) for ln in (e.root / "ops.jsonl").read_text(encoding="utf-8").splitlines()]
+    return [(x["id"], x["fields"], x["path"]) for x in log if x["op"] == "register.retire"]
+
+
+def _block(text: str, rid: str) -> str:
+    """Entry ``rid``'s lines, its heading first, up to the next heading."""
+    return re.search(rf"^## {rid}:.*?(?=^## |\Z)", text, flags=re.MULTILINE | re.DOTALL).group(0)
+
+
+@pytest.mark.criterion("AC-194")
+def test_register_retire_marks_the_entry_in_place_and_keeps_g_w13_green(eng):
+    e, key = eng
+    rid = _reviewed(e, key)
+    e.close(rid, "done", **kw(key))
+    reg = e.root / "docs/invariants.md"
+    before = reg.read_text(encoding="utf-8")
+    out = e.register_retire("RISK-1", "a duplicate of RISK-2, DEC-9", **kw(key))
+    assert out == "RISK-1: retired in docs/invariants.md (a duplicate of RISK-2, DEC-9); kept so its id is never reused"  # one line (AC-19)
+    text = reg.read_text(encoding="utf-8")
+    one = _block(text, "RISK-1").rstrip("\n").splitlines()
+    assert one[0] == f"## RISK-1: (retired {key}: a duplicate of RISK-2, DEC-9) a dead process holds the lock"
+    assert one[1:-1] == _block(before, "RISK-1").rstrip("\n").splitlines()[1:]
+    assert one[-1] == f"- **retired:** session {key} ({ACTOR}): a duplicate of RISK-2, DEC-9; kept so its id is never reused"
+    assert text.split("## RISK-1:")[0] == before.split("## RISK-1:")[0] and _block(text, "RISK-2") == _block(before, "RISK-2")
+    assert [(x.id, x.risk, x.retired) for x in R.entries(text)] == [("RISK-1", "a dead process holds the lock", True), ("RISK-2", "an actor is misattributed", False)]
+    assert _guards(e, "G-W13") == []
+    e.reopen(rid, "one more thing", **kw(key))
+    assert "residuals filed" not in e.close(rid, "done again", **kw(key))  # the retired residual is not filed again
+    assert [x.id for x in R.entries(reg.read_text(encoding="utf-8"))] == ["RISK-1", "RISK-2"]
+    assert _retires(e) == [("RISK-1", ["retired"], "docs/invariants.md")]
+    other = _reviewed(e, key, GOOD.replace("a dead process", "a second process").replace("an actor is", "an actor was"))
+    assert e.close(other, "done", **kw(key)).endswith("residuals filed as RISK-3, RISK-4")  # the floor does not move
+
+
+@pytest.mark.criterion("AC-194")
+def test_register_retire_into_merges_and_a_second_merge_extends_the_one_merged_line(eng):
+    e, key = eng
+    e.close(_reviewed(e, key), "done", **kw(key))
+    e.close(e.new("task", "Plain work", **kw(key)).id, "done", residuals=[STATED], **kw(key))
+    reg = e.root / "docs/invariants.md"
+    reg.write_bytes(reg.read_bytes().replace(b"\n", b"\r\n"))  # a CRLF register is written back LF
+    assert e.register_retire("RISK-1", "DEC-9", "RISK-2", **kw(key)) == "RISK-1: retired in docs/invariants.md (merged into RISK-2, DEC-9); kept so its id is never reused"
+    assert b"\r" not in reg.read_bytes()
+    text = reg.read_text(encoding="utf-8")
+    assert _block(text, "RISK-1").startswith(f"## RISK-1: (retired {key}: merged into RISK-2, DEC-9) a dead process holds the lock\n")
+    assert _block(text, "RISK-2").rstrip("\n").splitlines()[-1] == f"- **merged:** RISK-1 folded into this entry, session {key}"
+    e.register_retire("RISK-3", "", "RISK-2", **kw(key))  # the merge is the reason
+    text = reg.read_text(encoding="utf-8")
+    assert _block(text, "RISK-3").startswith(f"## RISK-3: (retired {key}: merged into RISK-2) the register is edited by hand\n")
+    two = _block(text, "RISK-2")
+    assert two.count("**merged:**") == 1 and f"- **merged:** RISK-1 folded into this entry, session {key}; RISK-3 folded into this entry, session {key}\n" in two
+    assert [x[:2] for x in _retires(e)] == [("RISK-1", ["retired"]), ("RISK-2", ["merged"]), ("RISK-3", ["retired"]), ("RISK-2", ["merged"])]
+    assert _guards(e, "G-W13") == []
+    e.register_retire("RISK-2", "no longer reachable", **kw(key))  # its last field is `merged:`, not `from:`
+    last = _block(reg.read_text(encoding="utf-8"), "RISK-2").rstrip("\n").splitlines()[-2:]
+    assert last[0].startswith("- **merged:**") and last[1].startswith(f"- **retired:** session {key} ({ACTOR}): no longer reachable;")
+    text = reg.read_text(encoding="utf-8")  # RISK-3, the file's last entry, ends it with its retired line and one newline
+    assert text.endswith(f"({ACTOR}): merged into RISK-2; kept so its id is never reused\n") and not text.endswith("\n\n")
+    assert e.register_show().startswith("register docs/invariants.md: 3 residual risks, 3 retired\n")
+    assert _guards(e, "G-W13") == []
+
+
+@pytest.mark.criterion("AC-194")
+@pytest.mark.parametrize(
+    "first, rid, why, into, reason",
+    [
+        (None, "RISK-9", "x", "", "RISK-9 is not in docs/invariants.md"),
+        (None, "RISK-1", "", "", "retiring RISK-1 gives no reason"),
+        (None, "RISK-1", "  ", "", "retiring RISK-1 gives no reason"),
+        (None, "RISK-1", "two\nlines", "", "holds a line break or a round bracket"),
+        (None, "RISK-1", "see (DEC-9)", "", "holds a line break or a round bracket"),
+        (None, "RISK-1", "x", "RISK-1", "RISK-1 cannot be merged into itself"),
+        (None, "RISK-1", "x", "RISK-9", "RISK-9, the entry to merge RISK-1 into, is not in docs/invariants.md"),
+        ("RISK-1", "RISK-1", "again", "", "RISK-1 is already retired"),
+        ("RISK-1", "RISK-2", "x", "RISK-1", "RISK-1 is retired, so RISK-2 cannot be merged into it"),
+    ],
+)
+def test_register_retire_refuses_before_writing_anything(eng, first, rid, why, into, reason):
+    e, key = eng
+    e.close(_reviewed(e, key), "done", **kw(key))
+    if first:
+        e.register_retire(first, "a duplicate", **kw(key))
+    reg, log = e.root / "docs/invariants.md", e.root / "ops.jsonl"
+    before = (reg.read_bytes(), log.read_bytes())
+    with pytest.raises(Refusal) as r:
+        e.register_retire(rid, why, into, **kw(key))
+    assert reason in r.value.message, r.value.message
+    assert (reg.read_bytes(), log.read_bytes()) == before
+
+
+@pytest.mark.criterion("AC-194")
+def test_register_retire_refuses_with_no_register_and_with_no_file_yet(tmp_path):
+    for d in ("a", "b"):
+        (tmp_path / d).mkdir()
+    e, key = _repo(tmp_path / "a", register=None)
+    with pytest.raises(Refusal, match=re.escape("[working] has no `register` path")):
+        e.register_retire("RISK-1", "x", **kw(key))
+    e, key = _repo(tmp_path / "b")
+    with pytest.raises(Refusal, match="it has no file yet"):
+        e.register_retire("RISK-1", "x", **kw(key))
+    assert not (e.root / "docs/invariants.md").exists()
+
+
+@pytest.mark.criterion("AC-194")
+def test_register_retire_on_the_cli_says_one_line_and_exits_2_on_a_bracket(eng, capsys):
+    e, key = eng
+    e.close(_reviewed(e, key), "done", **kw(key))
+    base = ["--root", str(e.root), "--session", key, "--actor", ACTOR, "register", "retire"]
+    assert main([*base, "RISK-1", "--why", "a (dup)"]) == 2
+    capsys.readouterr()
+    assert main([*base, "RISK-1", "--why", "a duplicate", "--into", "RISK-2"]) == 0
+    out = capsys.readouterr().out
+    assert out == "RISK-1: retired in docs/invariants.md (merged into RISK-2, a duplicate); kept so its id is never reused\n"
+
+
 # -- (d) the handover: the engine's register ships with it -------------------------------------
 
 

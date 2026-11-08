@@ -336,6 +336,10 @@ def build() -> argparse.ArgumentParser:
     rg = _sub(groups, "register", "the residual-risk register (FRAMEWORK §7.4)").add_subparsers(dest="op", required=True)
     rgs = _sub(rg, "show", "the register's entries")
     rgs.add_argument("--engine", action="store_true", help="the engine's own register, shipped with the package")
+    rgr = _sub(rg, "retire", "retire a register entry in place: its heading marked `(retired <session>: <why>)`, a `retired:` line added, its id never reused")
+    rgr.add_argument("id", help="the entry, e.g. `INV-97`")
+    rgr.add_argument("--why", default="", help="why it is no longer live, one line without brackets, e.g. `a duplicate of INV-95, DEC-162`")
+    rgr.add_argument("--into", default="", help="the live entry it is merged into; it gains a `merged:` line")
 
     si = _sub(groups, "site", "the records as a static HTML site, built on demand and never stored (FRAMEWORK §6.5)").add_subparsers(dest="op", required=True)
     sb = _sub(si, "build", "build the site into a new or empty directory outside the repo (or git-ignored in it): decisions, stories, the board, coverage, the register")
@@ -401,6 +405,7 @@ CLI_OPS = {
     ("doc", "freeze"): "doc_freeze",
     ("doc", "archive"): "doc_archive",
     ("register", "show"): "register_show",
+    ("register", "retire"): "register_retire",
     ("site", "build"): "site_build",
     ("banner", "show"): "banner_show",
     ("banner", "set"): "banner_set",

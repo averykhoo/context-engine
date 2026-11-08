@@ -109,6 +109,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status"]` |
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new register ids |
+| register retire | `register.retire`; with `--into`, a second line for the target | id = the entry (then the target), path = the register | `["retired"]`; the target's `["merged"]` |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
 | doc freeze | `doc.freeze` | id and path = the doc | `["liveness"]` |
 | doc archive | `doc.archive`, three lines | id = the old path; path = the old path, then the archived copy, then the redirect table (`--lines`: the doc, then the archive file, then the table) | `["moved"]` (`--lines`: `["pruned"]`), `["archived"]`, `["redirect"]` |
@@ -1534,9 +1535,12 @@ second run write nothing.
 ### context-engine register show
 
 Read the register file named by `[working] register` (the kit's default is `docs/invariants.md`).
-Print `register <path>: <N> residual risks`, then for each `## <id>: <risk>` entry (`RISK-n`,
-or a kept register's own prefix), a blank line, `<id>: <risk>` and its `affects`, `why not eliminated`, `control` and `from` lines, each
-indented two spaces. A register file that does not exist yet is empty: print `register <path>: 0
+Print `register <path>: <N> residual risks`, N counting every entry, retired ones too, and then
+`, <M> retired` when M entries are retired. Then, for each `## <id>: <heading>` entry (`RISK-n`,
+or a kept register's own prefix), print a blank line, `<id>: <heading>` with the heading as written
+(a retired entry's `(retired <session>: <why>)` included), and its `affects`, `why not
+eliminated`, `control`, `from`, `merged` and `retired` lines, those it has, each indented two
+spaces. A register file that does not exist yet is empty: print `register <path>: 0
 residual risks` and say the first `task close` that files a residual creates it (a missing
 `[working] register` is still an error). With `--engine`, read instead the `REGISTER.md` inside the installed
 `context_engine` package (`<interpreter> -c "import context_engine, os;
@@ -1546,7 +1550,45 @@ print(os.path.dirname(context_engine.__file__))"` prints the directory) and say 
 **Why:** the register is handed over with the work (P17: regulations 7 and 11 of Singapore's Design for Safety
 Regulations). The engine's own
 register ships inside the package, so a repo the engine is pointed at can read what the engine
-cannot protect it from, without a checkout of the engine (FRAMEWORK §7.4).
+cannot protect it from, without a checkout of the engine (FRAMEWORK §7.4). A retired entry prints
+its marker and its `retired:` line, so it does not read as live.
+
+### context-engine register retire
+
+`register retire <id> --why "<why>"`, or `--into <id>` to merge it into another entry, retires
+an entry in place. It is never deleted.
+
+1. Refuse, writing nothing, when:
+   - `[working] register` is not set;
+   - `--why` holds a line break or a round bracket;
+   - `--why` is empty and there is no `--into`;
+   - the register has no entry `<id>`, or no file yet;
+   - the entry is already retired: its heading says `(retired ...)`, or it has a `retired:` line.
+     A retirement is final.
+   - With `--into <target>`: the target is `<id>` itself, is not in the register, or is retired.
+2. The reason is `<why>`. With `--into <target>` it is `merged into <target>`, then `, <why>`
+   when a why is given.
+3. Rewrite the entry's heading `## <id>: <risk>` as `## <id>: (retired <session>: <reason>) <risk>`.
+4. After the entry's last `- **<field>:**` line, add `- **retired:** session <session> (<actor>):
+   <reason>; kept so its id is never reused`.
+5. With `--into`, go to the target's entry. If it has a `- **merged:**` line, extend that line with
+   `; <id> folded into this entry, session <session>`. If it has none, add `- **merged:** <id> folded
+   into this entry, session <session>` after its last field line.
+6. Change no other byte. A CRLF file is written back LF.
+7. Log one op line: `op: register.retire`, `id` the entry, `path` the register, `fields:
+   ["retired"]`. With `--into`, log a second line: `id` the target, `fields: ["merged"]`. This is
+   not a milestone: the next commit carries it.
+
+**Why:** an id is never reused (FRAMEWORK P3, §7.4). So an entry that is no longer live, a
+duplicate or one folded into another, stays in the file, and it must not read as live:
+- the heading says so to a reader of plain git;
+- the `retired:` line says who retired it, when and why;
+- `register show` prints both.
+
+The marker is parsed off the heading, so the entry's risk is unchanged, and G-W13 and a re-close
+still match a task's residual to it. G-W13 fails an entry whose heading and `retired:` line
+disagree, so a retirement half done by hand shows. The reason is one line without brackets
+because the marker is found by its brackets.
 
 ## Docs: freeze and archive
 

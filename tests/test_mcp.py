@@ -83,6 +83,7 @@ CALLS = {
     "criterion_new": (["the words", "--from", "US-1, DEC-2", "--status", "planned", "--under", "Core", "--id", "AC-9"], {"text": "the words", "source": "US-1, DEC-2", "status": "planned", "under": "Core", "id": "AC-9"}),
     "criterion_set": (["AC-9", "--status", "retired", "--text", "w", "--from", "DEC-2"], {"id": "AC-9", "status": "retired", "text": "w", "source": "DEC-2"}),
     "register_show": (["--engine"], {"engine": True}),
+    "register_retire": (["RISK-9", "--why", "w", "--into", "RISK-8"], {"id": "RISK-9", "why": "w", "into": "RISK-8"}),
     "banner_show": ([], {}),
     "banner_set": (["--seen", "abc", "--text", "new"], {"seen": "abc", "text": "new"}),
     "gate_run": (["--readers"], {"readers": True}),
@@ -222,8 +223,8 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="gate 3 passed", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
-    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write)
-    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "decision_accept", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set"}
+    # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write; register_retire, which needs a register: test_review)
+    assert untested == {"session_pause", "session_abandon", "pause_open", "pause_resume", "record_stamp", "init", "decision_supersede", "decision_accept", "hk_close", "hk_comment", "hk_run", "decision_import", "record_retire", "record_confirm", "commit", "doc_freeze", "doc_archive", "criterion_new", "criterion_set", "register_retire"}
 
 
 @pytest.mark.criterion("AC-186")

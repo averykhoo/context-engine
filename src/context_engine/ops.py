@@ -520,6 +520,12 @@ def register_show(e: Engine, c: Caller, engine: bool = False) -> tuple[int, str]
     return 0, e.register_show(engine=engine)
 
 
+@op(write=True)
+def register_retire(e: Engine, c: Caller, id: str, why: str = "", into: str = "") -> tuple[int, str]:
+    """Retire a residual-risk register entry in place: its heading gains `(retired <session>: <why>)` and the entry a last `retired:` line; it stays in the file so its id is never reused. `into` merges it into another live entry, which gains (or extends) one `merged:` line, and the reason reads `merged into <into>[, <why>]`. `why` is one line without brackets, empty only with `into`. Final: an entry already retired is refused, and nothing undoes it. Not a milestone: the next commit carries it."""
+    return 0, e.register_retire(id, why, into, **c.kw)
+
+
 # -- the published site (FRAMEWORK §6.5, §9.3, CE-185) ----------------------------------------
 
 

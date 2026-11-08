@@ -1347,6 +1347,48 @@ class Engine:
             raise Refusal(f"no register at {path}", "reinstall the engine: its REGISTER.md is package data")
         return R.summary(path.read_bytes().decode("utf-8"), where)
 
+    def register_retire(self, rid: str, why: str = "", into: str = "", *, session: str, actor: str) -> str:
+        """CE-196: retire a register entry in place (FRAMEWORK §7.4: an id is never reused, so it
+        is never deleted): its heading gains ``(retired <session>: <why>)`` and its block a last
+        ``retired:`` line (``review.py::retire``, INV-97's hand form). With ``into`` it is merged
+        into that live entry, which gains or extends one ``merged:`` line, and the reason reads
+        ``merged into <into>[, <why>]``. Final: an entry already retired is refused. Not a
+        milestone (DEC-257): the next commit carries it."""
+        self._check(session, actor)
+        if not self.w.register:
+            raise Refusal("[working] has no `register` path", "set `register = \"<repo-relative path>\"` in [working] of context.toml; the engine's own register is retired in the engine's repo")
+        why = why.strip()
+        if any(c in why for c in "\r\n()"):
+            raise Refusal(f"the reason {why[:60]!r} holds a line break or a round bracket", "give it as one line without brackets, e.g. `a duplicate of INV-95, DEC-162`: the heading's `(retired <session>: <why>)` is read by its brackets")
+        if not why and not into:
+            raise Refusal(f"retiring {rid} gives no reason", f"pass `--why \"<why it is no longer live, e.g. a duplicate of INV-95, DEC-162>\"`, or `--into <id>` to merge it into a live entry")
+        path, rel = self.root / self.w.register, self.w.register
+        listed = "`context-engine register show` lists its entries"
+        with self.store.lock():
+            if not path.exists():
+                raise Refusal(f"{rid} is not in {rel}: it has no file yet", "the first `task close` that files a residual creates it")
+            text = path.read_bytes().decode("utf-8").replace("\r\n", "\n")
+            es = {e.id: e for e in R.entries(text)}
+            e = es.get(rid)
+            if e is None:
+                raise Refusal(f"{rid} is not in {rel}", listed)
+            if e.retired or e.marked:
+                raise Refusal(f"{rid} is already retired ({e.fields.get('retired') or e.head})", "a retirement is final: there is nothing to do")
+            if into:
+                t = es.get(into)
+                if into == rid:
+                    raise Refusal(f"{rid} cannot be merged into itself", "name the live entry it is merged into, or retire it with --why alone")
+                if t is None:
+                    raise Refusal(f"{into}, the entry to merge {rid} into, is not in {rel}", listed)
+                if t.retired or t.marked:
+                    raise Refusal(f"{into} is retired, so {rid} cannot be merged into it", f"merge it into a live entry ({listed}, the retired ones marked), or retire it with --why alone")
+            note = (f"merged into {into}" + (f", {why}" if why else "")) if into else why
+            self.store.write_text(path, R.retire(text, rid, note, session, actor, into))
+            self.store.log("register.retire", rid, path, session, actor, ["retired"])
+            if into:
+                self.store.log("register.retire", into, path, session, actor, ["merged"])
+        return f"{rid}: retired in {rel} ({note}); kept so its id is never reused"
+
     def _engine_register_line(self) -> str | None:
         """Orient's pointer at the engine's register, in a repo that is not the engine's own."""
         pkg = R.packaged()
@@ -1380,7 +1422,7 @@ class Engine:
                     out.append(Failure("G-W13", rel, f"{h.id} is closed but {len(missing)} of its residuals are not in the register ({where}): {missing[0][:60]!r}", "copy each into the register as its next id (manual-mode.md § context-engine task close)"))
         for p in R.entry_problems(es):
             if "retired" in p:  # the heading's marker and the `retired:` line disagree (CE-196)
-                out.append(Failure("G-W13", self.w.register, p, "a retired entry carries both: `## <id>: (retired <session>: <why>) <risk>` and a last `- **retired:** session <session> (<actor>): <why>; kept so its id is never reused` line; a live one carries neither"))
+                out.append(Failure("G-W13", self.w.register, p, "a retired entry carries both: `## <id>: (retired <session>: <why>) <risk>` and a last `- **retired:** session <session> (<actor>): <why>; kept so its id is never reused` line; a live one carries neither (manual-mode.md § context-engine register retire)"))
                 continue
             out.append(Failure("G-W13", self.w.register, p, "give every entry `affects`, `why not eliminated`, `control` and `from` lines and its own id, one number each"))
         return out

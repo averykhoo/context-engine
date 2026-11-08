@@ -15,7 +15,8 @@ A board item above the threshold carries ``review: [<trigger>, ...]`` (the trigg
 ``task promote <id> NOW`` refuses while :func:`problems` finds anything, and ``task close``
 appends every ``residual:`` line to the register: one markdown file of ``## <prefix>-n: <risk>``
 entries, appended idempotently (keyed on the task id and the risk text). The prefix is the one the
-register's entries use (``series``), ``RISK`` for a new register (FRAMEWORK P3, DEC-233).
+register's entries use (``series``), ``RISK`` for a new register (FRAMEWORK P3, DEC-233). An entry
+no longer live is retired in place (:func:`retire`, ``register retire``), never deleted (CE-196).
 
 The engine's own register ships inside the package (:data:`PACKAGED`), so a repo the engine is
 pointed at can read it (``register show --engine``). That is how the engine hands its residual
@@ -273,6 +274,46 @@ def append(text: str | None, rv: Review, source: str, session: str, floor: int =
         added.append(f"{prefix}-{n}")
         n += 1
     return text, added
+
+
+def _block(text: str, rid: str) -> tuple[re.Match, int]:
+    """The heading match of entry ``rid`` and the end of its block (the next heading, or the end)."""
+    heads = list(_ENTRY.finditer(text))
+    for i, m in enumerate(heads):
+        if m.group(1) == rid:
+            return m, heads[i + 1].start() if i + 1 < len(heads) else len(text)
+    raise KeyError(rid)
+
+
+def _add_line(text: str, rid: str, line: str) -> str:
+    """``line`` added after the last ``- **x:**`` line of entry ``rid`` (after its heading, a blank
+    line between, when it has none)."""
+    m, end = _block(text, rid)
+    last = [f for f in _FIELD.finditer(text, m.end(), end)]
+    at = last[-1].end() if last else m.end()
+    return text[:at] + ("\n" if last else "\n\n") + line + text[at:]
+
+
+def retire(text: str, rid: str, note: str, session: str, actor: str, into: str = "") -> str:
+    """The register text with entry ``rid`` retired in place (CE-196, INV-97's hand form): its
+    heading becomes ``## <rid>: (retired <session>: <note>) <risk>`` and its block gains a last
+    ``- **retired:**`` line; with ``into``, that entry's ``- **merged:**`` line is extended, or
+    added. Every other byte is kept (CRLF is read as LF). The caller checks both entries exist,
+    are live and differ, and that ``note`` is one line without brackets."""
+    text = text.replace("\r\n", "\n")
+    m, _ = _block(text, rid)
+    text = text[: m.start(3)] + f"(retired {session}: {note}) {m.group(3).strip()}" + text[m.end(3) :]
+    text = _add_line(text, rid, f"- **retired:** session {session} ({actor}): {note}; kept so its id is never reused")
+    if into:
+        folded = f"{rid} folded into this entry, session {session}"
+        t, end = _block(text, into)
+        merged = [f for f in _FIELD.finditer(text, t.end(), end) if f.group(1).strip().lower() == "merged"]
+        if merged:
+            f = merged[-1]
+            text = text[: f.start()] + f.group(0).rstrip() + f"; {folded}" + text[f.end() :]
+        else:
+            text = _add_line(text, into, f"- **merged:** {folded}")
+    return text
 
 
 def entry_problems(es: list[Entry]) -> list[str]:

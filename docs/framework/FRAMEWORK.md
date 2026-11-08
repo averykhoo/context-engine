@@ -1918,6 +1918,12 @@ cite for each item.
   The file is created by the first close that files a residual; until then `context-engine
   register show` reports it empty. `context-engine register show` prints it; G-W13 checks
   that every closed reviewed task's residuals are in it and that every entry is whole.
+  An entry no longer live is retired in place, never deleted, so its id is never reused:
+  `context-engine register retire <id> --why <why>` puts `(retired <session>: <why>)` before
+  its risk and adds a last `- **retired:**` line; with `--into <id>` it is merged into a live
+  entry, which gains a `- **merged:**` line. The marker is not part of the risk, so G-W13 and a
+  re-close still match the entry, and G-W13 fails an entry whose marker and `retired:` line
+  disagree.
 - **The register is handed over with the work:** the engine's own register is
   `src/context_engine/REGISTER.md`, shipped as package data, so it travels with the engine to
   every repo it is pointed at (§11), to whoever next takes the structure over (P17). There,
@@ -2102,7 +2108,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
-| Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own (§7.4) |
+| Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own; `register.retire(id, why, into)`: an entry retired in place, or merged into a live one, never deleted (§7.4) |
 | Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line, or, in a doc that declares none, after its title, else first after its frontmatter, else as its first line (§6.7, §7.2); `doc.archive(path, to, why, lines)`: a whole doc or file into an archive directory with its redirect row, or the lines named pruned into it (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
 | Commits | `commit(paths, message, sweep)`: the session's own commit by path, with its op log lines HEAD lacks (every line with `sweep`) and the files they name; refuses when lint fails on a path it carries; runs no gate (§5.5 rule 4) |
