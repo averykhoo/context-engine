@@ -1483,3 +1483,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** no push was asked for
 - **control:** collective: CLAUDE.md Gate section requires tools/linux_gate.py green before every push
 - **from:** CE-184, session 2026-11-07e
+
+## INV-211: check_lane runs on every op, reads included, so a malformed CE_AGENT in the environment makes orient and the SessionStart hook refuse
+
+- **affects:** any session started with a malformed CE_AGENT
+- **why not eliminated:** validating on every op is the simplest place to catch a bad lane
+- **control:** reduce: check_lane refusal names the bad value
+- **from:** CE-126, session 2026-11-07e
+
+## INV-212: an unparseable line cut inside the lane value has no closing quote, so commit.py::lane_of finds no lane and the line is filed as the coordinator's
+
+- **affects:** a subagent's torn op line
+- **why not eliminated:** a truncated line carries no recoverable lane
+- **control:** reduce: lint flags unparseable op lines
+- **from:** CE-126, session 2026-11-07e
+
+## INV-213: under EVERY_LANE the close or pause reply and its commit message do not say that a lane's lines went in (commit.py::_others is empty)
+
+- **affects:** the coordinator auditing a close
+- **why not eliminated:** reply wording was not extended for lanes
+- **control:** individual: the coordinator reads git show of the commit
+- **from:** CE-126, session 2026-11-07e
+
+## INV-214: fan-out.md has about 12 bytes left under the G-D1 byte cap
+
+- **affects:** the next edit to fan-out.md
+- **why not eliminated:** the one-line CE_AGENT rule used the remaining room
+- **control:** reduce: G-D1 byte cap fails the gate on overflow
+- **from:** CE-126, session 2026-11-07e
+
+## INV-215: workflow scripts that spawn task agents do not yet pass CE_AGENT=<task id>, so a subagent's lines are still filed as the coordinator's until they do
+
+- **affects:** the coordinator and every fanned-out task
+- **why not eliminated:** scripts are outside this task's code scope
+- **control:** individual: the fan-out.md one-line rule; coordinator follow-up
+- **from:** CE-126, session 2026-11-07e
