@@ -105,6 +105,11 @@ component, procedure, guard and operation.
   the parts keyed on a scope holding them. `gate status`, not orient, reports stale parts.
   FRAMEWORK §8.5 G-V1, §6.3 item 7; DEC-296 to DEC-300, CE-181. **Upgrade:** none; a
   single-command `[gate]` works as before.
+- **A new principle, P19: a green gate is the whole release decision.** A check only a human
+  runs (a `manual` criterion's hand-run driver, a smoke script run by hand, a playtest) is filed
+  as a board item to automate it, never accepted as a residual risk; P7, §3.3 and §7.4 point at
+  it. Nothing enforces it yet: CE-206 files the lint, and CE-207 the contract's line at the next
+  contract bump. FRAMEWORK §1 P19; US-20, DEC-307 to DEC-310, CE-194. No upgrade step.
 
 ## 0.5, from 2026-10-30: changes since the cut
 

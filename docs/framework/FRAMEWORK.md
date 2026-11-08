@@ -56,7 +56,7 @@ clean close, pause) are engine operations, and every one has a by-hand fallback 
 | § | Section | What it covers |
 |---|---|---|
 | 0 | What this framework is for | Who does what (owner intent, agents the rest), the four jobs, and the stance: plain files, records through a tool, mechanical refusal over warnings |
-| 1 | Principles | P1 to P18: one home per statement, change modes, stable ids, provenance, caps, guards that have been seen to fail, owner attention, concurrency, design for a context-free agent, fallbacks, design for safety and maintainability |
+| 1 | Principles | P1 to P19: one home per statement, change modes, stable ids, provenance, caps, guards that have been seen to fail, owner attention, concurrency, design for a context-free agent, fallbacks, design for safety and maintainability, a green gate as the whole release decision |
 | 2 | The components at a glance | The components by layer, how each changes and who writes it; terms; which separations are load-bearing |
 | 3 | The intent layer and the correctness chain | Charter, stories, criteria (including research repos), the chain from goal to test and its guards, the deviation register |
 | 4 | Drift: kinds and guards | Each way records drift from reality, and the guard (or the absence of one) for it |
@@ -217,6 +217,8 @@ every guard has been shown to fail.**
     headroom;**
   - **the doc tools are themselves pinned by tests inside the gate.**
 - **Each guard's docstring says what it deliberately does NOT check.**
+- **The gate these guards make up is the whole release decision** (P19): a check that runs
+  outside it is a gap to automate.
 
 **P8. Owner attention is the scarcest resource.**
 - **The "who decides" test**, in this order:
@@ -360,6 +362,19 @@ design so that maintenance is easy, safe and economical over the whole life of t
 repo, §10, or a new engine subsystem) and in a task's design review (§5.2). **When a process
 here breaks or a rule is unclear, re-derive the intent from P17 and P18** and fix the process
 from them, not from the broken process.
+
+**P19. A green gate is the whole release decision, so every check that matters runs in it.**
+- A change the gate passes may ship without a human checking it: no playtest, no hand-run smoke
+  driver, no look over it before a push. So the gate's tests are as comprehensive as they can be,
+  and each one runs automatically.
+- **A check only a human runs is a gap in the gate,** filed as a board item to automate it as
+  soon as it is found: a `manual` criterion's hand-run driver (§3.3), a smoke script run by hand
+  before a release, a manual playtest. It is never accepted as a residual risk (§7.4, P17) or
+  left as the check's settled form; while the item is open, the board shows the gap.
+- A check that cannot be automated yet keeps its item open, saying what automating it needs; it
+  is not closed by accepting it.
+- The owner's permission to push (§6.8) and their sign-off on criteria (§3.3) are decisions,
+  not checks: they stay the owner's (P8), and a green gate does not stand in for them.
 
 ---
 
@@ -550,6 +565,9 @@ Each criterion has:
 
 A `manual` criterion whose driver is re-run by date carries that date in an optional
 `stale_after` column of its table, as an absolute instant; G-D4 is red once it passes (§9.3).
+
+A `manual` criterion is a gap in the gate (P19): a board item to automate its driver stays open
+while the criterion is `manual`.
 
 **Owner sign-off** is separate from test status:
 - `verified:` in OKF terms, naming `human:owner` and when (its shape is not settled, §9.3);
@@ -1915,6 +1933,9 @@ cite for each item.
   risk; `none` is refused when the task's design review lists a residual; the answer, with every
   register id the close files, is logged on the task, so a skipped question shows), and from any session that
   notices a risk and confirms it (an unverified hazard, once confirmed, below).
+- **A check only a human runs is not a control** (P19): a risk whose only check is a hand-run one
+  goes to the board as an item to automate that check, not to the register as a residual. A rule
+  a reader must remember (P17's individual rung) is still a residual and still goes here.
 - **Where it lives:** one markdown file named by `[working] register` (a target repo:
   `docs/invariants.md`, §10). It is not a record kind, so it is read and fixed by hand (P18 A).
   Each entry is `## RISK-n: <risk>` followed by four lines: `- **affects:**`, `- **why not
