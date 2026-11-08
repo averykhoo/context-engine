@@ -16,6 +16,7 @@ rows in order; the "By hand" column is the fallback when the engine errs.
 
 What sessions miss here, word for word from the runbook (the engine's gate checks each line):
 - Install the engine into its own environment, pinned to a release tag or commit
+- Ask the owner for the task prefix first, 2 to 5 capitals naming the board
 - put the real test command into `CLAUDE.md` § Gate
 - Lint is green, then commit the kit's files by path, before the first session
 - Every number you add there (a cap, a budget, a window) needs one ... then the literal words

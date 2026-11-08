@@ -2294,7 +2294,9 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    prefix, edit `prefix` in its `[kinds.<name>]` table. A prefix is 2 to 5 capitals; none may be
    reserved (`EXP`, `HAZ`) or another kind's standard one (FRAMEWORK P3: `DEC`, `STORY`, `AC`,
    `ASK`, `RISK`, `GOAL`, `BATON`, `PAUSE`), no two kinds may share one, and none may collide with
-   ids the repo already uses.
+   ids the repo already uses: search the files git tracks (`git ls-files`, skipping binary files
+   and any over 1 MB) for each prefix as an id of its own, `<PREFIX>-n` or `<PREFIX>n`, and warn
+   for each prefix found, with how often and where first.
 3. Copy `HANDOFF.md`, `docs/charter.md`, `docs/criteria.md`, `docs/ledger/session-log.md` and
    every runbook under the kit's `docs/runbooks/` (`manual-mode.md`, `procedures.md`, `gate.md`,
    `sabotage.md`, `fan-out.md` and `release.md`) from the kit to the same paths, skipping any that
@@ -2330,8 +2332,8 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    line (FRAMEWORK §5.5 rule 4)` and `<op log> merge=union` the same way; a path with a space or a
    wildcard needs quoting there, so write that line with care, or warn and leave it.
 6. Report in one line what you created, what you skipped, and a warning for each thing the
-   owner must act on (the settings file's ignore line; on a dry run, the settings question and a
-   task prefix not yet chosen), and,
+   owner must act on (the settings file's ignore line; a prefix already in use; on a dry run, the
+   settings question and a task prefix not yet chosen), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
    Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, then

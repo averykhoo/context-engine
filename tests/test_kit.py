@@ -650,6 +650,36 @@ def test_the_config_refuses_a_prefix_that_is_not_capitals(prefix, loads):
             C.from_dict(raw)
 
 
+
+def test_init_census_warns_where_a_prefix_is_already_used(tmp_path):
+    """DEC-234: a new repo's init warns, never refuses, for each prefix already cited as an id in
+    the tracked files; untracked files, a prefix glued to another id, a repo git cannot list and
+    a re-run on an existing config give none."""
+    import subprocess
+
+    def git(root, *args):
+        subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    (repo / "notes.md").write_text("see STORY-3 and TK12, then STORY-4\n", encoding="utf-8")
+    (repo / "glued.md").write_text("G-TK12 and TK12x and xSTORY-1\n", encoding="utf-8")
+    (repo / "blob.bin").write_bytes(b"\0TK-7\n")
+    git(repo, "add", "notes.md", "glued.md", "blob.bin")
+    (repo / "loose.md").write_text("TK-1 untracked\n", encoding="utf-8")
+    out = B.init(repo, TASK, dry_run=True)
+    assert "; warning: the story prefix STORY already appears 2 times in tracked files (first: notes.md: STORY-3)" in out, out
+    assert "; warning: the task prefix TK already appears 1 time in tracked files (first: notes.md: TK12): pick one those ids do not use (`--prefix task=<PREFIX>`)" in out, out
+    assert out.count("already appears") == 2, out
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    (plain / "notes.md").write_text("TK-1\n", encoding="utf-8")
+    assert "already appears" not in B.init(plain, TASK), "not a git repo: no census"
+    B.init(repo, TASK)
+    assert "already appears" not in B.init(repo, TASK), "an existing config: no census"
+
+
 # -- the template is the schema --------------------------------------------------------------
 
 

@@ -33,6 +33,7 @@ import json
 import math
 import os
 import re
+import subprocess
 import tempfile
 import sys
 import tomllib
@@ -95,6 +96,8 @@ KEEP = ("docs/decisions", "docs/stories", "docs/working", "docs/evidence", "task
 SELF_IGNORING = (".context", ".scratch")  # each holds a .gitignore of `*`
 PREFIX_RE = re.compile(r"^[A-Z]{2,5}$")  # a prefix init takes: 2 to 5 capitals (FRAMEWORK P3, DEC-230)
 # init refuses without a task prefix on a repo with no context.toml (DEC-229); a dry run warns instead
+CENSUS_MAX_BYTES = 1 << 20  # the census skips a tracked file larger than this (a data file, not prose citing ids)
+CENSUS_PROBE = 8192  # ...and one with a NUL in its first this many bytes (binary)
 TASK_REMEDY = "ask the owner for 2 to 5 capitals naming this board (e.g. CE), then run init with --prefix task=<PREFIX>"
 
 
@@ -301,6 +304,7 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
     else:
         cfg = C.from_dict(tomllib.loads(text))
         writes[C.CONFIG_NAME] = text
+        warnings += census(root, {k.name: k.prefix for k in cfg.kinds.values()})
     uses = _uses(cfg)
     for src, dst in FILES.items():
         if not _used(dst, uses):
@@ -390,6 +394,46 @@ def plan(root: Path, prefixes: dict[str, str] | None = None, settings: str = "")
     _plan_engine_ignore(root, writes, skipped, seen, labels, warnings)
     _plan_union(root, cfg.oplog, writes, skipped, seen, labels, warnings)
     return writes, [labels.get(k, k) for k in writes], skipped, seen, warnings
+
+
+def census(root: Path, kinds: dict[str, str]) -> list[str]:
+    """One warning per kind whose prefix already appears as an id (`<PREFIX>-n` or `<PREFIX>n`, as
+    a word of its own: not `G-TK12`, not `TK12x`) in the files git tracks under ``root``, naming
+    the count and the first hit (DEC-234, CE-167: zanzibar's audit labels D7 and S-1 collided with
+    the old kit's defaults). It never refuses: a hit may be this kind's own ids from before.
+
+    Not checked: untracked files, files over CENSUS_MAX_BYTES, binary ones (a NUL in the first
+    CENSUS_PROBE bytes), and a repo git cannot list (not a repo, no git): no census, no warning."""
+    try:
+        r = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if r.returncode != 0:
+        return []
+    pats = {kind: re.compile(rf"(?<![A-Za-z0-9_-]){re.escape(p)}-?[0-9]+(?![A-Za-z0-9_])") for kind, p in kinds.items()}
+    count = dict.fromkeys(kinds, 0)
+    first: dict[str, str] = {}
+    for rel in sorted(f for f in r.stdout.decode("utf-8", "replace").split("\0") if f):
+        path = Path(root) / rel
+        try:
+            if not path.is_file() or path.stat().st_size > CENSUS_MAX_BYTES:
+                continue
+            data = path.read_bytes()
+        except OSError:
+            continue
+        if b"\0" in data[:CENSUS_PROBE]:
+            continue
+        text = data.decode("utf-8", "replace")
+        for kind, pat in pats.items():
+            hits = [m.group(0) for m in pat.finditer(text)]
+            if hits:
+                count[kind] += len(hits)
+                first.setdefault(kind, f"{rel}: {hits[0]}")
+    return [
+        f"the {kind} prefix {kinds[kind]} already appears {n} time{'s' if n != 1 else ''} in tracked files (first: {first[kind]}): "
+        f"pick one those ids do not use (`--prefix {kind}=<PREFIX>`), or keep it if they are this kind's ids"
+        for kind, n in count.items() if n
+    ]
 
 
 def _plan_engine_ignore(root: Path, writes: dict[str, str], skipped: list[str], seen: dict[str, str], labels: dict[str, str], warnings: list[str]) -> None:

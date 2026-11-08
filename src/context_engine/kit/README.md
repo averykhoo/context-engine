@@ -116,7 +116,9 @@ init appends the kit block without the bootloader's Gate stub, and says so. An e
 kept if it loads (init refuses one that does not, or one whose prefixes disagree with
 `--prefix`), and init then writes only the files and directories that config points at, so it
 can be re-run after the config is edited, with no `--prefix`. `--prefix` sets a kind's id series
-(`--prefix task=PRJ`): pick prefixes no id already in the repo uses.
+(`--prefix task=PRJ`): pick prefixes no id already in the repo uses. On a repo with no
+`context.toml`, init warns (it never refuses) for each prefix that already appears as an id
+(`STORY-7`, `STORY7`) in the files git tracks, naming how often and where first.
 
 Then:
 1. Fill `docs/charter.md` with the owner (goals get `GOAL-n` ids).
