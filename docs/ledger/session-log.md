@@ -7,10 +7,55 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-07e · kind: open
+## 2026-11-07e · kind: close
 
-- **opened:** 2026-11-07T23:56:35+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-07d
+- **rows:** CE-132, CE-151, CE-160, CE-157, CE-173, CE-180, CE-150, CE-179, CE-201, CE-174, CE-200
+  (closed, wave 1); CE-155, CE-152, CE-183, CE-171, CE-172, CE-154, CE-170, CE-189, CE-192, CE-56
+  (closed, wave 2); CE-186, CE-165, CE-126, CE-176, CE-177, CE-178, CE-184, CE-188, CE-190, CE-196,
+  CE-164, CE-181, CE-175, CE-194, CE-12, CE-18 (closed, wave 3); CE-198 (closed, verdict ADOPT);
+  CE-29, CE-40, CE-193 (agent part done and verified, open for the owner's part); CE-202, CE-203,
+  CE-204, CE-205, CE-206..CE-214 (new, LATER); CE-215 (new, SOMEDAY); US-23 (new, owner); AC-200,
+  AC-201 (new, planned); ASK-37, ASK-38 (new, raised); DEC-179..DEC-323 (new, PROVISIONAL);
+  INV-114..INV-245 (new)
+- **receipts:**
+  - guards: gate FAILED in 1188.7s (1 failed, 2045 passed in 1186.50s (0:19:46)) on
+    g1/code:006e63726ce5a052, g1/code+readers:33274388d241c9d3: the one failure is
+    tests/test_repo_records.py::test_this_repos_records_pass_lint on G-W5 (NOW holds 0); lint: G-W5
+    only
+  - read: orient (SessionStart hook), CLAUDE.md, contract, procedures.md § Housekeeping and § Clean
+    close, CE-198, DEC-177; board census by 5 sonnet agents (.scratch/triage-2026-11-07e)
+  - asked: ASK-37, ASK-38
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Owner asked for everything that does not need them: 38 items closed in 3 serial waves (opus
+    planner, sonnet or opus builder, independent opus verifier); 5 FAIL rounds in all, none
+    unresolved.
+  - CE-198 closed ADOPT: sonnet builders under an opus planner and verifier, median 405k per task,
+    -42% on the opus baselines, 1 escalation; the owner rules on DEC-45.
+  - US-23 (owner): a blind planner replay found the sonnet/opus gap no bigger than opus-vs-opus
+    noise (LOW confidence; CE-204 holds the fair trial); evidence in
+    docs/evidence/us23-planner-and-cost-2026-11-08.md.
+  - Cost anatomy: every gate wait over 5 minutes lost the prompt cache, about 20% of the session's
+    cost (CE-205); the cheapest agent ends near 160-170k context; the close step is worth moving to
+    haiku.
+  - Agent calls PROVISIONAL for owner review: DEC-179..DEC-323 (the builders' and planners' design
+    calls); residual risks INV-114..INV-245.
+  - Left for the owner: CE-29 (memory half), CE-40 (paste the trimmed global CLAUDE.md from
+    docs/evidence/global-claude-md-audit-2026-11-07e.md), CE-193 (ASK-37, ASK-38).
+  - Gate red on G-W5 only (NOW empty after the closes; 2045 passed, 1 failed); the owner picks the
+    next NOW.
+- **Still owed:**
+  - owner: pick the next NOW item (task promote <id> NOW); the gate is red on G-W5 until then
+  - owner: review the PROVISIONAL decisions DEC-179..DEC-323 (decision accept) and rule on DEC-45
+    (CE-198 ADOPT)
+  - owner: answer ASK-37 and ASK-38; paste CE-40's trimmed global CLAUDE.md; CE-29's memory half
+  - owner: push the commits ahead of origin/main once the gate and tools/linux_gate.py are green
+    (ask first, DEC-22)
+  - owner: restart Claude Code so the MCP server runs the current engine
+  - owner: delete this session's untracked .scratch run dirs (wave-2026-11-07e, triage-2026-11-07e,
+    us23, ce198-numbers) once satisfied; their conclusions are tracked
 - **start head:** f24ae53d9a313125127260bc0ccc21df2249a307
 
 ---

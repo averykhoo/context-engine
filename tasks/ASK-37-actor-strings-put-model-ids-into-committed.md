@@ -10,7 +10,7 @@ source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
 updated: 2026-11-07e
-last_asked:
+last_asked: 2026-11-07e
 ---
 
 **Question:** Should an agent's actor stay harness/model-id in committed records?
