@@ -3,14 +3,14 @@ type: Task
 id: CE-190
 title: 'A lighter shape for one-off owner permissions: ask answer --grant, no decision minted'
 brief: 'DEC-162: owner words on the ask record and the ledger summary; shape ruled at build time'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-1]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 A lighter shape for one-off owner permissions: `ask answer --grant` (DEC-162).
