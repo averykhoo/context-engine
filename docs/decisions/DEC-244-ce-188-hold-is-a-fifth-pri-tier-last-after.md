@@ -7,6 +7,9 @@ decided: 2026-11-08
 session: 2026-11-07e
 decision_status: PROVISIONAL
 body_sha: sha256:4bddbfcb355bf7e71798112ff45e800d108f0e617c57aec9a84414b6d37580e6
+refs: [DEC-162]
+tasks: [CE-188]
+code: [src/context_engine/working.py::HOLD]
 ---
 
 Ruled at build time under DEC-162 (the owner filed the HOLD tier and left its shape to the agent, cheap to undo).

@@ -331,6 +331,8 @@ commit messages and code comments keep the old ids.
    it while it is missing), then run `context-engine decision accept --owners` once: it marks
    every owner's decision still PROVISIONAL ACCEPTED, in one op line. An agent's calls stay
    PROVISIONAL until the owner reviews them and `decision accept <ids>` takes them.
+   Optionally, add `HOLD` to the task kind's `pri` enum, after SOMEDAY, as the new template has
+   it: a held tier that is never ready and that the re-rank skips (FRAMEWORK §5.2).
 3. `context-engine lint`; fix every failure (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
    not match).

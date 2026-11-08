@@ -64,7 +64,7 @@ prefix = "TASK"   # init writes the prefix the owner chose: 2 to 5 capitals nami
 dir = "tasks"
 mode = "replaced"
 required = ["title", "pri", "state", "created"]
-enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY"], state = ["open", "closed"] }
+enums = { pri = ["NOW", "NEXT", "LATER", "SOMEDAY", "HOLD"], state = ["open", "closed"] }
 types = { aliases = "list", created = "date", moved = "key", updated = "key", closed = "key", deps = "list", goals = "list", labels = "list", review = "list" }
 
 [kinds.question]

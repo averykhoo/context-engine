@@ -120,7 +120,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 |---|---|---|---|---|---|
 | decision | `DEC-n` | `docs/decisions` | append-only | title, actor, decided, session, decision_status | decision_status: BUILT, ACCEPTED, PROVISIONAL, DEFERRED, SUPERSEDED, REJECTED; decided date; session key; tags, supersedes, superseded_by, relaxes, narrowed_by, creates, amends, retires, tasks, code, refs lists |
 | story | `STORY-n` | `docs/stories` | append-only | title, actor, date, story_status, goals | story_status: live, unspecified, unconfirmed, retired; date date; goals, supersedes, superseded_by lists |
-| task | `<prefix>-n`, the prefix init was given (`PRJ-n`) | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
+| task | `<prefix>-n`, the prefix init was given (`PRJ-n`) | `tasks` | replaced | title, pri, state, created | pri: NOW, NEXT, LATER, SOMEDAY, HOLD; state: open, closed; created date; moved, updated, closed keys; deps, labels, review lists |
 | question | `ASK-n` | `tasks` | replaced | title, pri, state, created | as task, plus blocks list, last_asked key |
 | baton | `BATON-n` | `docs/working` | stamped | title, session, state, created | state: open, done, expired; session, done keys; created date |
 | pause | `PAUSE-n` | `docs/working` | stamped | title, session, state, created, branch, resume_step | state: open, done, expired; session, resumed keys; created date; uncommitted, deferred lists |
@@ -292,12 +292,13 @@ The engine makes them one commit; by hand, commit them together at the end.
 6. With a new banner, do § context-engine banner set's steps 2, 3 and 5, under your session
    key.
 7. Last, count the open board items and those at NOW, as the close leaves them (step 4 may have
-   closed one). If NOW holds fewer than its cap (`[working.caps]`, 1 by default) while any item is
-   open, G-W5 is red: the close stands (a warning, never a refusal), but say so in the owner
+   closed one). If NOW holds fewer than its cap (`[working.caps]`, 1 by default) while any item not
+   at HOLD is open, G-W5 is red: the close stands (a warning, never a refusal), but say so in the owner
    digest, with G-W5's message, naming the NEXT items (or saying NEXT is empty), and ask the owner
    which one to promote (§ context-engine task promote). Do not pick it yourself. The engine says
    the same at the end of its reply's first line, after `WARNING:`, whoever emptied NOW; it says
-   nothing when NOW is at or over its cap, when nothing is open, or when `[guards] off` names G-W5.
+   nothing when NOW is at or over its cap, when nothing but held (HOLD) items is open, or when
+   `[guards] off` names G-W5.
 
 **Why:** the close is what the next session trusts. The receipts prove the gate ran and say
 what was read. The asked check stops owner questions going unraised for days (G-W6, G-W8). The 7-line cap keeps the digest something the owner will actually read (FRAMEWORK §5.6).
@@ -449,9 +450,9 @@ list`, a `grep` of the ledger for `kind: open`, `task list`, `task show <id>`, `
    then, each only when it has a line, in this order:
    - a `Next work waits on parked items: tell the owner` part (its bytes come with part 4's):
      for each open NOW or NEXT item, and each board id on a banner line holding the word
-     `next`, whose `deps` names an open SOMEDAY item, `- <id> (<pri>, named next in the banner)
-     waits on <dep>, which is SOMEDAY (parked): drop the dep, promote it, or re-rank <id>` (the
-     `, named next in the banner` only for a banner id); the rest is `task show <id>`;
+     `next`, whose `deps` names an open SOMEDAY or HOLD item, `- <id> (<pri>, named next in the
+     banner) waits on <dep>, which is SOMEDAY (parked): drop the dep, promote it, or re-rank <id>`
+     (for a HOLD dep, `which is HOLD (held)`; the `, named next in the banner` only for a banner id); the rest is `task show <id>`;
    - a `Plans to freeze: their items are closed` part (its bytes come with part 4's; off
      with G-D4): each ACTIVE-PLAN doc G-D4 reads whose named board items are all closed, with how
      to freeze it: `doc freeze <path>`, or, when it has a `[guards] liveness_given` entry, that
@@ -625,7 +626,8 @@ first bullet's check that every record parses.
   `accept` op log line (§ decision accept). *Why: the owner answers a question in one line only when it carries
   what they need to decide; the doc guards and G-I3 skip a deprecated decision as history, so a
   hand-set `status` hides one; an agent's call accepted by hand leaves no record of its review.*
-- **G-W5**: NOW holds exactly 1 open item (if any are open). NEXT holds at most 5.
+- **G-W5**: NOW holds exactly 1 open item (if any not at HOLD are open: a board of held items
+  only may leave NOW empty). NEXT holds at most 5.
 - **G-W6**: the newest close has `rows:`, a `guards:` receipt and a `read:` receipt; its
   `guards:` text matches `[working] gate_receipt` unless that is `''`; and where it has a
   `- **tasks:**` line, its `rows:` names every id on that line. *Why: the close's refusal of
@@ -947,6 +949,16 @@ Item open; `pri` a valid tier; the target tier has room, not counting the item i
 `moved: <key>`, `updated: <key>`. **Moving the NOW item down** can leave NOW short: check NOW as
 in § task close and tell the owner.
 
+**HOLD** (the last tier, where the task kind's `pri` enum has it) means held: parked until
+something outside the board releases it. A held item is never ready: G-W5's NOW rule and the
+empty-NOW warnings do not count it, a re-rank never reads or moves it (`procedures.md` § Rerank),
+and orient flags a NOW or NEXT item whose dep is held. Move an item into HOLD with a
+`task comment` naming what releases it, and out of it (`task promote <id> <tier>`) when that
+happens or the owner says so; neither move is restricted, and HOLD has no cap. Where the enum
+lacks HOLD, a promote to it is refused like any unknown tier, and the remedy says how to enable
+it: add "HOLD" to `pri` in `enums` under `[kinds.<kind>]`, after SOMEDAY, as the kit's
+`context.toml.template` has it. A question is never held.
+
 **Promoting to NOW an item that carries `review:`** (it is above the threshold, FRAMEWORK §5.2):
 first check its `## Design review` section by hand, and do not promote while any check fails.
 Start a review from this template (the engine knows it verbatim, so a copy left unchanged is
@@ -980,8 +992,8 @@ The charter's `Last rerank:` line (in its § Next milestone) holds the session k
 full re-rank (`procedures.md` § Rerank), or `never`. Step 5 of the re-rank replaces the value with
 the session's key; it is the one edit to the charter that needs no owner. The line is a record of
 when the re-rank ran, never a trigger. A re-rank is due (what orient says) only when NEXT holds no
-task while tasks are open: what NOW holds does not matter, and an owner question does not count
-as a task. Where `[guards] charter` is set and the line has a value, orient quotes it after the
+task while tasks not at HOLD are open: what NOW holds does not matter, an owner question does not
+count as a task, and neither does a held task. Where `[guards] charter` is set and the line has a value, orient quotes it after the
 reason (`(last rerank: <value>)`). The owner can ask for a re-rank at any time.
 
 **Why:** the full re-rank reads the whole board, so it runs once a sprint: when the five NEXT
@@ -1079,8 +1091,8 @@ engine refuses the close until then, and names each such doc; with `[guards] off
 does not check.
 
 **If the item was at NOW**, count the open items at NOW once it is closed. If NOW holds fewer
-than its cap (`[working.caps]`, 1 by default) while any item stays open, G-W5 is red from now
-on: tell the owner, naming the NEXT items (or saying NEXT is empty), and ask which one to
+than its cap (`[working.caps]`, 1 by default) while any item not at HOLD stays open, G-W5 is red
+from now on: tell the owner, naming the NEXT items (or saying NEXT is empty), and ask which one to
 promote (§ task promote) before you run the gate. Do not pick it yourself. The engine closes
 anyway and says the same at the end of its reply to the close. It says nothing when NOW is still at or
 over its cap (G-W5's own remedy applies then) or when `[guards] off` names G-W5.
@@ -1151,7 +1163,7 @@ ever appended to.
 ### context-engine task list
 
 From frontmatter only: open items by default (`--state closed|all`), optionally filtered by
-`--pri` or `--label`. Sort by tier (NOW, NEXT, LATER, SOMEDAY), then prefix alphabetically (ASK
+`--pri` or `--label`. Sort by tier (NOW, NEXT, LATER, SOMEDAY, HOLD), then prefix alphabetically (ASK
 before T), then number. One line each: pri and id each padded to 7 characters, the title, then
 `  (closed <key>)` and `  [deps: a, b]` where they apply. No match prints `no matching items`.
 

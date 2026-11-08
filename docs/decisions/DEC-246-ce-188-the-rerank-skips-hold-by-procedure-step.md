@@ -7,6 +7,8 @@ decided: 2026-11-08
 session: 2026-11-07e
 decision_status: PROVISIONAL
 body_sha: sha256:6d78ad0029cc728c5fd577eaafa1985995ed41c8ed357a17c2babaa0f0339157
+refs: [DEC-162]
+tasks: [CE-188]
 ---
 
 Ruled at build time under DEC-162.

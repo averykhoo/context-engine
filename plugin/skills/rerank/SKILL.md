@@ -13,7 +13,8 @@ disagrees with the runbook the repo is pinned to. `context-engine` means the eng
 repo's contract names (`<engine-python> -m context_engine`, with `CE_ACTOR` and `CE_SESSION` set).
 
 What sessions miss here, word for word from the runbook (the engine's gate checks each line):
-- Every open item is read, so it costs tokens: run it once a sprint, not once a session.
+- Held items (HOLD) are never read, ranked or moved by it
+- Every open item not at HOLD is read, so it costs tokens: run it once a sprint, not once a session.
 - each with a one-line reason that cites a goal (`GOAL-n`) or an exit criterion of the milestone
 - A second, different agent verifies the proposal
 - Drops, retirements and any change to the milestone wait for the owner

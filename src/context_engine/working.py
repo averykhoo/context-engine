@@ -113,6 +113,11 @@ def same_agent(a: str, b: str) -> bool:
     return x[1] == y[1] or x[1].startswith(y[1] + "-") or y[1].startswith(x[1] + "-")
 
 
+def _unheld(recs: list[Record]) -> list[Record]:
+    """The records not at HOLD (CE-188): the open items that count as live work."""
+    return [r for r in recs if r.doc.get("pri") != HOLD]
+
+
 def _resolved(alias: str | None, rid: str) -> str:
     """The line that says an alias was looked up, so a reader knows which record answered."""
     return f"{alias} is an alias of {rid}\n" if alias else ""
@@ -123,6 +128,10 @@ HOUSEKEEPER = "process:housekeep"
 BANNER_REST = "`context-engine banner show`"  # where orient says the rest of a cut banner is
 RERANK_HOW = "The full rerank is procedures.md § Rerank: run it now that NEXT is empty, or whenever the owner asks."
 RERANK_REST = "procedures.md § Rerank"
+# The held tier (CE-188, DEC-162): an open item at it is never ready, so G-W5's NOW rule, the empty-NOW
+# warnings and `rerank_due` leave it out, and `parked_deps` flags a dep on it. Read by its literal name,
+# like NOW, NEXT and SOMEDAY: a repo whose `pri` enum lacks it gets none of this.
+HOLD = "HOLD"
 # orient's banner is served last but one (CE-75); `Last close`, a copy of a ledger entry, after it (CE-195)
 BANNER_RANK, LAST_CLOSE_RANK = 3, 4
 # The `housekeeping:` receipt a one-call close checks its entry's prose with before `hk run close`
@@ -408,7 +417,7 @@ class Engine:
         D1), so a repo's first close under CE-195 cuts it; a banner already written this session
         (`banner set` before the close) gives `banner: set`.
 
-        When the close leaves NOW below its cap while board items stay open (G-W5 red, whoever
+        When the close leaves NOW below its cap while board items not at HOLD stay open (G-W5 red, whoever
         emptied NOW and whether `hk run close` did), the first line of the reply ends with a
         WARNING that gives G-W5's message and the `task promote <id> NOW` remedy, for the owner
         digest. It is a warning, never a refusal (DEC-162: a close once everything asked for is
@@ -817,10 +826,11 @@ class Engine:
     # -- the board (FRAMEWORK §5.2) -----------------------------------------------------
 
     def _now_short(self, open_: list[Record]) -> str | None:
-        """G-W5's NOW rule: while anything is open, NOW holds exactly its cap. The failure's
-        message when ``open_`` breaks it, else None (read by G-W5, by `close` and by `session close`, CE-36, CE-191)."""
+        """G-W5's NOW rule: while any item not at HOLD is open, NOW holds exactly its cap (a board
+        of held items only may leave NOW empty, CE-188). The failure's message when ``open_``
+        breaks it, else None (read by G-W5, by `close` and by `session close`, CE-36, CE-191)."""
         cap = self.w.caps.get("NOW")
-        if cap is None or not open_:
+        if cap is None or not _unheld(open_):
             return None
         holders = [r.id for r in open_ if r.doc.get("pri") == "NOW"]
         return None if len(holders) == cap else f"NOW holds {len(holders)} ({_one(holders)}); the cap is exactly {cap}"
@@ -944,9 +954,13 @@ class Engine:
 
     def promote(self, rid: str, pri: str, *, session: str, actor: str) -> str:
         self._check(session, actor)
-        allowed = self.store.config.kind_for_id(rid).enums.get("pri", ())
+        kind = self.store.config.kind_for_id(rid)
+        allowed = kind.enums.get("pri", ())
         if allowed and pri not in allowed:
-            raise Refusal(f"priority {pri!r}", f"use one of {', '.join(allowed)}")
+            hint = ""
+            if pri == HOLD and kind.name == self.w.task:  # CE-188: the held tier is optional; say how to enable it
+                hint = f"; to hold items, add \"{HOLD}\" to `pri` in `enums` under [kinds.{kind.name}], after SOMEDAY, as the kit's context.toml.template has it"
+            raise Refusal(f"priority {pri!r}", f"use one of {', '.join(allowed)}{hint}")
         old: list[str] = []
 
         def check(rec: Record) -> None:
@@ -1158,7 +1172,7 @@ class Engine:
 
     def _now_left(self, was: list[str]) -> str:
         """CE-36: taking an item off NOW (`close`, `ask answer`, a demoting `promote`) can leave NOW
-        below its cap while items stay open, which fails G-W5 at the next gate. Say so in the op's
+        below its cap while items not at HOLD stay open, which fails G-W5 at the next gate. Say so in the op's
         reply, with the remedy; never refuse, never promote: the next NOW item is the owner's call.
         Quiet when G-W5 is off, and when NOW is still at or over its cap (refilling is then not
         the remedy; G-W5 says what is)."""
@@ -1168,10 +1182,11 @@ class Engine:
         return f"; {left}" if left else ""
 
     def _now_refill(self) -> str:
-        """G-W5's message and remedy for a NOW below its cap while items stay open, without the
-        leading "; ", or "" when there is nothing to say (CE-36, CE-191): G-W5 is off, [working]
-        names no board kinds (`_board` would refuse, and `session_close` calls this after it has
-        written), there is no NOW cap, NOW is at or over its cap, or nothing is open. Shared by
+        """G-W5's message and remedy for a NOW below its cap while items not at HOLD stay open,
+        without the leading "; ", or "" when there is nothing to say (CE-36, CE-191, CE-188): G-W5
+        is off, [working] names no board kinds (`_board` would refuse, and `session_close` calls
+        this after it has written), there is no NOW cap, NOW is at or over its cap, or nothing
+        but held items is open (`_now_short`). Shared by
         `_now_left` (which op emptied NOW) and `session_close` (the board as the close leaves it),
         so the two cannot drift. Both call it after they have written, so it never refuses: a
         board record that does not parse (a hand edit in progress, legal under G-5) is passed
@@ -3535,12 +3550,13 @@ class Engine:
 
     def rerank_due(self) -> list[str]:
         """Why a full rerank of the board is due (procedures § Rerank; FRAMEWORK §5.2; CE-99,
-        DEC-64 and its 2026-10-20f amendment): NEXT holds no task while tasks are open (the
-        sprint is done). NOW does not count, and neither do owner questions on the board (they
-        wait on the owner, not on a rank). Orient flags it; nothing here runs it. The charter's
+        DEC-64 and its 2026-10-20f amendment): NEXT holds no task while tasks not at HOLD are
+        open (the sprint is done). NOW does not count, and neither do owner questions on the
+        board (they wait on the owner, not on a rank) or held tasks (HOLD, CE-188: the rerank
+        never reads them). Orient flags it; nothing here runs it. The charter's
         `Last rerank:` line, where `[guards] charter` is set, is only quoted, never a trigger."""
         task = self.w.task
-        open_tasks = [r for r in self._open_board() if r.kind.name == task] if task else []
+        open_tasks = _unheld([r for r in self._open_board() if r.kind.name == task]) if task else []
         if not open_tasks or any(r.doc.get("pri") == "NEXT" for r in open_tasks):
             return []
         line = f"NEXT holds no task, {len(open_tasks)} open: the sprint is done"
@@ -3571,7 +3587,7 @@ class Engine:
         """Each item the session may take up next whose `deps` it cannot meet (CE-116; adhoc AAR
         entry 28: the banner's next task waited on a SOMEDAY task and nothing said so): the open
         NOW and NEXT items and the board ids a banner line holding the word "next" names, each
-        dep that is an open SOMEDAY item (parked).
+        dep that is an open SOMEDAY item (parked) or an open HOLD item (held, CE-188).
 
         Not checked: a dep that is open at LATER (work not yet done, not parked); a dep that is
         no board item (lint's to report); a "next" the banner names without the word on its line."""
@@ -3587,8 +3603,8 @@ class Engine:
             why = []
             for d in (str(x) for x in D.as_list(rec.doc.get("deps"))):
                 dep = heads.get(d)
-                if dep is not None and dep.doc.get("state") == "open" and dep.doc.get("pri") == "SOMEDAY":
-                    why.append(f"{d}, which is SOMEDAY (parked)")
+                if dep is not None and dep.doc.get("state") == "open" and dep.doc.get("pri") in ("SOMEDAY", HOLD):
+                    why.append(f"{d}, which is {dep.doc.get('pri')} ({'held' if dep.doc.get('pri') == HOLD else 'parked'})")
             if why:
                 where = f"{rec.doc.get('pri')}" + (", named next in the banner" if rid in named_next else "")
                 out.append(f"- {rid} ({where}) waits on {'; '.join(why)}: drop the dep, promote it, or re-rank {rid}")

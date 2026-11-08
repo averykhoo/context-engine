@@ -7,6 +7,9 @@ decided: 2026-11-08
 session: 2026-11-07e
 decision_status: PROVISIONAL
 body_sha: sha256:25dee8e6a1d54d0a5487b968557e74274401fe84c20bb2fe3f58ee208efd5ac1
+refs: [DEC-162]
+tasks: [CE-188]
+code: [src/context_engine/working.py::Engine._now_short]
 ---
 
 Ruled at build time under DEC-162.

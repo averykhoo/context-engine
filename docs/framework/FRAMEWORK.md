@@ -800,13 +800,16 @@ a single revertible cutover commit.
 - bodies are rewritten whole by hand, or one section at a time
   (`task.section`).
 
-**Ranking:** NOW (exactly 1), NEXT (≤5), LATER, SOMEDAY. An owner assignment overrides the
+**Ranking:** NOW (exactly 1), NEXT (≤5), LATER, SOMEDAY, HOLD. HOLD, the optional last tier of the
+task kind, is held: parked until something outside the board releases it, so it is never ready.
+No NOW rule and no rerank counts it, it has no cap, and it enters with a comment naming what
+releases it. An owner assignment overrides the
 ranking. Do not re-rank at session start. Ranking runs at two cadences:
 - **the standup, at every clean close** (§6.3 item 4): a light reorder of what the session
   touched, with no full read of the board;
 - **the sprint, the full re-rank** (§6.14): every open item read against the charter's goals and
-  its next milestone, when NEXT holds no task while tasks are open (orient says "rerank due"; NOW
-  does not count), or when the owner asks. Orient flags it; it never runs it. Re-ranking every
+  its next milestone, when NEXT holds no task while tasks not at HOLD are open (orient says "rerank due";
+  NOW does not count), or when the owner asks. Orient flags it; it never runs it. Re-ranking every
   session, or every time NOW empties or owner direction lands, would spend that read when the
   order is unlikely to have changed.
 
@@ -815,8 +818,8 @@ a pointer row.
 
 **Closing:** a closed item leaves the board, with a `closed:` line in its own `## Log` and its id
 in the session's ledger `rows:`. Nothing is open and done at once. Taking the NOW item off NOW
-(closing it, answering it if it is an owner question, or demoting it) while others stay open
-leaves G-W5 red: the operation still succeeds, and its reply says so and asks the owner which item
+(closing it, answering it if it is an owner question, or demoting it) while others not at HOLD stay
+open leaves G-W5 red: the operation still succeeds, and its reply says so and asks the owner which item
 to promote (the engine picks none). When NEXT holds no task, the sprint is over: the re-rank
 (§6.14) proposes what comes next.
 
@@ -1789,20 +1792,22 @@ light reorder (§6.3 item 4, the standup); this is the sprint, which reads every
 runs once a sprint, not once a session. It forms new intent (an order), so it is not housekeeping
 (§6.11).
 
-**When:** NEXT holds no task while tasks are open (whatever NOW holds; an owner question is not
-a task), or the owner asks. Orient says "rerank due" only in the first case; the
+**When:** NEXT holds no task while tasks not at HOLD are open (whatever NOW holds; an owner
+question is not a task, and a held task does not count), or the owner asks. Orient says "rerank due" only in the first case; the
 charter's `Last rerank:` line records when the last re-rank ran and is quoted
 beside it, never a trigger. It flags; it never runs the re-rank. Every open task names, in `goals`, the
 charter goals it serves (G-I1, where `[guards] task_goals` is set), so the re-rank has a goal to
 cite for each item.
 
 1. **Propose:** the coordinator sends a ranking agent (judgement, so the strongest model the
-   contract names) to read the goals, the milestone, and every open item's brief and deps. It
+   contract names) to read the goals, the milestone, and the brief and deps of every open item
+   not at HOLD (a held item is never read, ranked or moved by the re-rank). It
    persists its proposal to its own file and returns, per item, keep, promote, demote or drop,
    each with a one-line reason citing a `GOAL-n` or an exit criterion; an item serving no goal is
    flagged for SOMEDAY or retirement.
 2. **Verify:** a second, different agent checks the proposal: no item above an open item it
-   depends on, NOW holds one, NEXT at most five, every move cites a goal or criterion (§6.6).
+   depends on, NOW holds one, NEXT at most five, no move touches a HOLD item, every move cites a
+   goal or criterion (§6.6).
 3. **Apply:** the coordinator applies the promotes and demotes (cheap to undo, so the agent's call,
    P8), one task comment per move carrying its reason, and flags every move in the close digest.
 4. **Owner calls:** drops, retirements and a change of milestone wait for the owner, raised as
@@ -2318,7 +2323,7 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   only `decision.supersede` writes them, with both links); an agent's call that is ACCEPTED is named by a logged `accept` line (`decision.accept`,
   §6.5). Not checked: whether a question's parts are any good, a closed question, and whether
   whoever ran `decision.accept` reviewed the calls.
-- **G-W5:** tier caps: NOW = 1, NEXT ≤ 5.
+- **G-W5:** tier caps: NOW = 1 while any item not at HOLD is open, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` (by default a gate
   pass count, or a statement that the gate was not run; `''` checks nothing), and a `rows:` line

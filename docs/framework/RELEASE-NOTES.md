@@ -65,6 +65,17 @@ component, procedure and guard.
   <pkg> 0.1s`), set `gate_receipt` under `[working]` to a pattern its result line matches, or to
   `''` to turn the check off; this is the ruling's intent (a check is on where nobody opted in).
   Otherwise the next close that quotes the gate's count (or says it was not run, and why) clears G-W6.
+- **A HOLD tier: held items are never ready.** HOLD is an optional fifth `pri` tier of the task
+  kind, last after SOMEDAY, for an item parked until something outside the board releases it. An
+  open item at HOLD does not count for G-W5's NOW rule (a board of held items only may leave NOW
+  empty, and `task close` and `session close` then give no empty-NOW warning), nor for orient's
+  "rerank due"; orient flags a NOW or NEXT item whose dep is held (`which is HOLD (held)`); the
+  re-rank never reads or moves a held item; it has no cap, and `task list` sorts it last. An item
+  enters HOLD with a `task comment` naming what releases it. `task promote <id> HOLD` where the
+  enum lacks HOLD is refused as before, with a remedy saying how to enable it. FRAMEWORK §5.2,
+  §6.14, §8.4 G-W5; DEC-162, CE-188. **Upgrade:** optional: add `HOLD` to the task kind's `pri`
+  enum in `context.toml`, after SOMEDAY, as `context.toml.template` has it; without it nothing
+  changes.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
