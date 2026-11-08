@@ -3,14 +3,14 @@ type: Task
 id: CE-165
 title: Pin the tests the 2026-10-30a verifiers found loose
 brief: Each pin is sabotaged before it is believed (DEC-11)
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-30a
 created: 2026-10-31
-moved: 2026-11-01a
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 Pin the tests the 2026-10-30a verifiers found loose.
