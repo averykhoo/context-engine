@@ -301,6 +301,12 @@ commit messages and code comments keep the old ids.
 4. Board items and open questions: `task new` or `ask new`, with `--id` to keep a number (`Q8`
    as `--id ASK-8`), then `task set <id> --set aliases=[<old id>, ...]` (for a question too; a
    list may hold several, e.g. a rank and a slug, and the next `aliases=` replaces the whole list).
+   A board with history (its own `moved`, `updated`, `closed` or `last_asked` values) goes through
+   `task import <file> [--kind question]` instead, all or nothing: a JSON Lines file, one
+   `{"id": ..., "fields": {...}, "body": "..."}` per line, every value kept and recorded on the
+   import's op line, so G-W7 is clean on the result (manual-mode.md § context-engine task import).
+   A value a session-key field cannot hold (a plain date) is refused: keep it in a key of the
+   repo's own, e.g. `legacy_moved`. Commit the import by path, as step 3 says.
    An answered question stays history: its decision holds the answer. An open question's body
    (`--body-file`) states its context, two or more options and a recommendation with its why,
    which `ask new` checks (FRAMEWORK §5.3): fill in what the old record lacks first.

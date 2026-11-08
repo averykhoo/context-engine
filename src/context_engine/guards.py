@@ -47,7 +47,7 @@ from .bootstrap import ENGINE_DIR
 from .commit import op_paths
 from .config import CONFIG_NAME, LIVENESS, RESERVED_PREFIXES, STANDARD_PREFIXES
 from .errors import Refusal
-from .store import ALIASES, OKF_STATUS, Failure, key_order
+from .store import ALIASES, OKF_STATUS, SESSION_OWNED, Failure, key_order
 
 if TYPE_CHECKING:
     from .working import Engine
@@ -1375,14 +1375,14 @@ def provenance(e: Engine) -> list[Failure]:
 
 # -- G-W7 tool-owned frontmatter ---------------------------------------------------------
 
-SESSION_OWNED = ("moved", "updated", "closed", "last_asked")
 UNPARSEABLE = "do not parse as JSON"  # G-W7's op log parse failure; working.py::_unparseable_oplog matches it
 
 
 def tool_owned(e: Engine) -> list[Failure]:
     """G-W7 on the stored files: every session-keyed tool-owned key of a board item (`moved`, `updated`,
     `closed`, `last_asked`) names the session of the newest logged operation that wrote it (or
-    the key that line's `as` records for it: housekeeping stamping `last_asked`, CE-6); a
+    the value that line's `as` records for it: housekeeping stamping `last_asked`, CE-6, or an
+    import keeping a legacy board's history, CE-178); a
     value no operation wrote must be older than the op log's first entry (written before the
     engine ran the board). Every op log line parses.
 
@@ -1415,7 +1415,7 @@ def tool_owned(e: Engine) -> list[Failure]:
             op = newest.get((r.id, k))
             if op is not None:
                 stamped = op.get("as") if isinstance(op.get("as"), dict) else {}
-                want = str(stamped.get(k) or op.get("session"))  # `as`: housekeeping stamped another session's key (CE-6)
+                want = str(stamped.get(k) or op.get("session"))  # `as`: housekeeping stamped another session's key (CE-6), or an import kept a legacy value (CE-178)
                 if v != want:
                     said = f"stamped {want}" if stamped.get(k) else f"was in session {op.get('session')}"
                     out.append(Failure("G-W7", rel, f"`{k}: {v}`, but the newest operation that wrote it ({op.get('op')}, {op.get('at', '?')}) {said}", f"restore `{k}` from git: {k} is changed only by an operation (manual-mode.md § What every write does)"))

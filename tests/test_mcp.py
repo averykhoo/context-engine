@@ -42,6 +42,7 @@ CALLS = {
     "task_close": (["CE-1", "-m", "done", "--body", "Sabotage: x -> y red"], {"id": "CE-1", "msg": "done", "body": "Sabotage: x -> y red"}),
     "task_reopen": (["CE-1", "-m", "again"], {"id": "CE-1", "msg": "again"}),
     "task_section": (["CE-1", "Traps", "t"], {"id": "CE-1", "name": "Traps", "text": "t"}),
+    "task_import": (["board.jsonl", "--kind", "question"], {"path": "board.jsonl", "kind": "question"}),
     "task_list": (["--state", "all", "--pri", "NOW", "--label", "l"], {"state": "all", "pri": "NOW", "label": "l"}),
     "task_show": (["CE-1", "--section", "Log", "--head", "0"], {"id": "CE-1", "section": "Log", "head": 0}),
     "ask_new": (["Q", "--pri", "LATER", "--brief", "b", "--blocks", "CE-1", "--body", "x", "--id", "ASK-8", "--answered", "w", "--decision-title", "D", "--ruling", "r", "--ruled-by", "claude-code/fable"], {"title": "Q", "pri": "LATER", "brief": "b", "blocks": ["CE-1"], "body": "x", "id": "ASK-8", "answered": "w", "decision_title": "D", "ruling": "r", "ruled_by": "claude-code/fable"}),
@@ -200,6 +201,9 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("task_close", id="CE-2", msg="done")
     w("task_reopen", id="CE-2", msg="not yet")
     w("task_promote", id="CE-2", pri="NEXT")
+    row = {"id": "CE-50", "fields": {"title": "Legacy", "pri": "LATER", "state": "open", "created": "2026-08-05", "moved": "2026-08-05a"}}
+    (root / "board.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    w("task_import", path="board.jsonl")  # CE-178
     w("ask_new", title="Which way?", body=ASK_BODY)
     w("id_reserve", kind="task", count=2)
     w("ask_raised", ids=["ASK-1"])

@@ -681,6 +681,9 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("session_abandon", key=dead.session, force=True)
     (mrepo / "log.md").write_text("### DEC-91 -- Old *(owner, 2026-01-01)*\n\nwords\n", encoding="utf-8")
     w("decision_import", path="log.md")
+    row = {"id": "CE-50", "fields": {"title": "Legacy", "pri": "LATER", "state": "open", "created": "2026-08-05", "moved": "2026-08-05a"}}
+    (mrepo / "board.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    w("task_import", path="board.jsonl")  # not a milestone, as decision import is not (CE-178)
     hand = "---\ntype: Decision\nid: DEC-90\ntitle: By hand\nactor: owner\ndecided: 2026-10-08\nsession: 2026-10-08a\ndecision_status: BUILT\n---\n\nwords\n"
     (mrepo / "decisions" / "DEC-90-by-hand.md").write_text(hand, encoding="utf-8")
     w("record_stamp", ids=["DEC-90"])

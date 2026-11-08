@@ -2105,7 +2105,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Orientation | `orient()`: the §6.1 read in one capped response; `routes()`: where each component lives; `coverage()`: each component, procedure and guard of this text with its build status (G-D12); `site.build(outdir)`: the records as a static HTML site in a new or empty directory outside the tracked tree, never stored (§6.5; CI publishes it) |
 | Batons and pauses | `baton.add`, `baton.done`, `pause.open`, `pause.resume` (§5.4) |
 | Banner | `banner.show`; `banner.set(text, seen)` (§5.5) |
-| Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
+| Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `import(path, kind)`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
 | Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
@@ -2351,7 +2351,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
 - **G-W7:** every record kind's tool-owned frontmatter is changed only by the tool; `moved` is
   consistent with the session-stamped op log. The lint checks each board item's `moved`,
   `updated`, `closed` and `last_asked` against the session of the newest logged operation that
-  wrote it (a value no operation wrote must predate the log), and that every log line parses.
+  wrote it, or the value that line's `as` records for it (housekeeping's `last_asked` stamp, or
+  a `task.import` keeping a legacy board's values, §11.4); a value no operation wrote must predate
+  the log; and every log line parses.
   The values of `state`, `pri` and `deps` are refused at write time; the log does not record
   values, so the lint cannot recheck them.
 - **G-W8:** no clean close while an overdue owner question (§5.3) has not been raised this
@@ -2620,3 +2622,10 @@ first stories and criteria are recorded (§6.9 step 4), and until then they are 
   citations still resolve; the old file is retired with a line pointing at the records in the
   import's commit, so nobody appends to it by hand; anchor links into it break and get a
   redirect table. Until then the old file is read as it is.
+- **A legacy board migrates by `task.import`** (a JSON Lines file of id, fields and body, all or
+  nothing): every id is kept as `decision.import` keeps them, every `moved`, `updated`, `closed`
+  and `last_asked` value is kept and recorded on the import's op line (`as`), so G-W7 checks the
+  file against it and a later hand edit is still red, and nothing is defaulted. A value the schema
+  does not take (a plain date in a session-key field) is refused, never converted: it is kept in a
+  key of the repo's own. `as` is written only by the import, so `task.new --id` cannot pass a chosen
+  `moved` off as history.

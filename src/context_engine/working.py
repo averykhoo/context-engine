@@ -38,7 +38,7 @@ from . import gate as GATE
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import CONFIG_NAME, Config
 from .errors import Refusal
-from .store import ACTOR_RE, ALIASES, BodyCheck, Failure, Record, Store, _now, amended, coerce, key_order
+from .store import ACTOR_RE, ALIASES, SESSION_OWNED, BodyCheck, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a run (CE-108)
@@ -927,6 +927,67 @@ class Engine:
                 raise Refusal(f"{rid} is not an id of the {k.name} series", f"give an id of the form {k.prefix}-n, or none for the next free one")
             return self.store.create_many(kind, [(rid.strip(), fields, text)], session=session, actor=actor, op="new")[0]
         return self.store.new(kind, fields, text, session=session, actor=actor)
+
+    def import_board(self, path: str, *, kind: str = "task", session: str, actor: str) -> str:
+        """Import a legacy board from a JSON Lines file (FRAMEWORK §11.4, CE-178): one object per
+        line, `{"id": ..., "fields": {...}, "body": "..."}` (`body` optional), every id kept. A
+        string under a key the kind types `date`, `int` or `key` is converted as the CLI converts
+        it, so a plain date in a session-key field (`moved: 2026-07-29`) is refused, naming its
+        line and id, never converted. All or nothing (`Store.create_many`), and each record's op
+        line keeps the `moved`, `updated`, `closed` and `last_asked` values it was written with
+        (``keep_history``), so G-W7 checks the file against them. Nothing is invented: no
+        `moved`, `updated`, `source` or body a record lacks, and no tier-cap, deps or goals check
+        (lint reports those on the result)."""
+        self._check(session, actor)
+        if kind not in self._board():
+            raise Refusal(f"{kind!r} is not a board kind", f"use one of {', '.join(self._board())}")
+        k = self.store.config.kind(kind)
+        src = Path(path) if Path(path).is_absolute() else self.root / path
+        if not src.is_file():
+            raise Refusal(f"no file {path}", 'give the path of the JSON Lines file, one record per line: {"id": ..., "fields": {...}, "body": "..."}')
+        rows: list[tuple[int, Any]] = []
+        bad: list[str] = []
+        for n, line in enumerate(src.read_bytes().decode("utf-8-sig").split("\n"), 1):  # not splitlines: a JSON string may hold U+2028
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                bad.append(f"line {n}: does not parse as JSON")
+                continue
+            if not isinstance(row, dict) or "id" not in row or "fields" not in row:
+                bad.append(f"line {n}: not an object with id, fields and body")
+            elif extra := sorted(set(row) - {"id", "fields", "body"}):
+                bad.append(f'line {n}: unknown key "{extra[0]}"')
+            elif not isinstance(row["id"], str):
+                bad.append(f"line {n}: id is not a string")
+            elif not isinstance(row["fields"], dict):
+                bad.append(f"line {n}: fields is not an object")
+            elif not isinstance(row.get("body", ""), str):
+                bad.append(f"line {n}: body is not a string")
+            else:
+                rows.append((n, row))
+        if bad:
+            raise Refusal(f"{path} has {len(bad)} {'line' if len(bad) == 1 else 'lines'} that {'is not a record' if len(bad) == 1 else 'are not records'} ({'; '.join(bad)})",
+                          'each non-blank line is one JSON object, {"id": "<id>", "fields": {...}, "body": "<text>"} (body optional, no other key): fix the lines named, then import again')
+        if not rows:
+            raise Refusal(f"{path} holds no records", 'write one JSON object per line, {"id": "<id>", "fields": {...}, "body": "<text>"}')
+        items: list[tuple[str, dict[str, Any], str]] = []
+        for n, row in rows:
+            fields: dict[str, Any] = {}
+            for key, value in row["fields"].items():
+                if isinstance(value, str) and k.types.get(key) in ("date", "int", "key"):
+                    try:
+                        value = coerce(k, key, value)
+                    except Refusal as r:
+                        raise Refusal(f"line {n} ({row['id']}): {r.message}",
+                                      f"{r.remedy}. An import keeps a legacy value only where the schema takes it (moved, updated, closed and last_asked are session keys: a date and letters): "
+                                      f"keep any other in a key of the repo's own, e.g. `legacy_{key}`, then import again") from None
+                fields[key] = value
+            items.append((row["id"], fields, row.get("body", "")))
+        recs = self.store.create_many(kind, items, session=session, actor=actor, op="import", keep_history=True)
+        kept = sum(1 for r in recs if any(r.doc.get(x) not in (None, "") for x in SESSION_OWNED))
+        return f"imported {len(recs)} {kind} records into {k.dir}, history kept on {kept} of them (an import is not a milestone: commit it by path)"
 
     def reserve(self, kind: str, count: int = 1, *, session: str, actor: str) -> str:
         """Reserve the next ``count`` ids of a kind's series for this session (CE-105, CE-119), so

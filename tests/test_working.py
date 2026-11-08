@@ -826,6 +826,194 @@ def test_a_closed_record_of_a_kind_off_the_board_gets_no_status(eng):
     assert doc.get("state") == "closed" and "status" not in doc.data
 
 
+# -- task import: a legacy board's history kept for G-W7 (CE-178) ------------------------------
+
+LEGACY_CLOSED = {"id": "CE-7", "fields": {"title": "Old", "pri": "LATER", "state": "closed", "created": "2026-07-29", "moved": "2026-09-10b", "updated": "2026-09-16a", "closed": "2026-09-16a"}, "body": "Old body.\n"}
+LEGACY_OPEN = {"id": "CE-8", "fields": {"title": "Open", "pri": "LATER", "state": "open", "created": "2026-08-05", "moved": "2026-08-16c", "updated": "2026-08-17a"}, "body": "B.\n"}
+
+
+def _jsonl(eng, rows, name="board.jsonl", prefix="") -> str:
+    """A JSON Lines file under the root, one row per line (a str row is written as it is)."""
+    text = "".join((r if isinstance(r, str) else json.dumps(r)) + "\n" for r in rows)
+    (eng.root / name).write_text(prefix + text, encoding="utf-8")
+    return name
+
+
+def _w7(eng):
+    return [f for f in eng.lint() if f.guard == "G-W7"]
+
+
+def _board_files(eng):
+    return sorted(p.name for p in (eng.root / "tasks").glob("*.md")) if (eng.root / "tasks").exists() else []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_keeps_a_legacy_boards_history_and_g_w7_is_clean(eng):
+    """E1: every value kept verbatim, the closed item deprecated (CE-179), each op line's `as`
+    holding exactly the session-keyed values the record was written with."""
+    key = started(eng)
+    out = eng.import_board(_jsonl(eng, [LEGACY_CLOSED, LEGACY_OPEN]), **kw(key))
+    assert out.startswith("imported 2 task records into tasks, history kept on 2 of them"), out
+    old, new = _written(eng, "CE-7"), _written(eng, "CE-8")
+    assert (old.get("moved"), old.get("updated"), old.get("closed"), old.get("created")) == ("2026-09-10b", "2026-09-16a", "2026-09-16a", dt.date(2026, 7, 29))
+    assert old.get("status") == "deprecated" and old.body.strip() == "Old body."
+    assert (new.get("moved"), new.get("updated")) == ("2026-08-16c", "2026-08-17a")
+    lines = _oplog(eng)[-2:]
+    assert [(o["op"], o["id"], o["session"]) for o in lines] == [("import", "CE-7", key), ("import", "CE-8", key)]
+    assert lines[0]["as"] == {"moved": "2026-09-10b", "updated": "2026-09-16a", "closed": "2026-09-16a"}
+    assert lines[1]["as"] == {"moved": "2026-08-16c", "updated": "2026-08-17a"}
+    assert _w7(eng) == []
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_keeps_a_legacy_key_newer_than_the_op_logs_first_session(eng):
+    """E2: the op log already runs, and the kept key is newer than its first session (an
+    exemption by age would red it)."""
+    key = started(eng)
+    task(eng, key, title="Already here")
+    row = {"id": "CE-9", "fields": {**LEGACY_OPEN["fields"], "moved": "2099-01-01a"}}
+    eng.import_board(_jsonl(eng, [row]), **kw(key))
+    assert _w7(eng) == []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_hand_edit_after_a_task_import_is_red_under_g_w7(eng):
+    """E3: G-W7 compares the file with the value the import line kept."""
+    key = started(eng)
+    eng.import_board(_jsonl(eng, [LEGACY_CLOSED, LEGACY_OPEN]), **kw(key))
+    (path,) = (eng.root / "tasks").glob("CE-7-*.md")
+    path.write_text(path.read_text(encoding="utf-8").replace("moved: 2026-09-10b", "moved: 2026-09-11a"), encoding="utf-8")
+    (fail,) = _w7(eng)
+    assert "`moved: 2026-09-11a`" in fail.message and "stamped 2026-09-10b" in fail.message, fail.message
+
+
+@pytest.mark.criterion("AC-196")
+def test_an_operation_after_a_task_import_takes_its_keys_over(eng):
+    """E4: a touch writes `moved` and `updated` as the session; G-W7 follows the newest line."""
+    key = started(eng)
+    eng.import_board(_jsonl(eng, [LEGACY_CLOSED, LEGACY_OPEN]), **kw(key))
+    eng.touch("CE-8", **kw(key))
+    assert _written(eng, "CE-8").get("moved") == key
+    assert _w7(eng) == []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_refuses_a_plain_date_in_a_session_key_naming_its_line(eng):
+    """E5: never converted; nothing written."""
+    key = started(eng)
+    n = len(_oplog(eng))
+    row = {"id": "CE-9", "fields": {**LEGACY_OPEN["fields"], "moved": "2026-07-29"}}
+    with pytest.raises(Refusal) as r:
+        eng.import_board(_jsonl(eng, [LEGACY_OPEN, row]), **kw(key))
+    assert "line 2 (CE-9): moved='2026-07-29' is not a session key" in r.value.message, r.value.message
+    assert "legacy_moved" in r.value.remedy
+    assert _board_files(eng) == [] and len(_oplog(eng)) == n
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_is_all_or_nothing(eng):
+    """E6: the second record lacks a required key, so the first is not written either."""
+    key = started(eng)
+    n = len(_oplog(eng))
+    bad = {"id": "CE-9", "fields": {k: v for k, v in LEGACY_OPEN["fields"].items() if k != "created"}}
+    with pytest.raises(Refusal, match="created"):
+        eng.import_board(_jsonl(eng, [LEGACY_OPEN, bad]), **kw(key))
+    assert _board_files(eng) == [] and len(_oplog(eng)) == n
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_names_every_bad_line_in_one_refusal(eng):
+    """E7: four bad lines, one refusal naming them all; no records, or only blank lines, are
+    refused; a byte-order mark is read past."""
+    key = started(eng)
+    rows = ["{not json", "[1, 2]", {"id": "CE-9", "fields": {}, "extra": 1}, {"id": 7, "fields": {}}]
+    with pytest.raises(Refusal) as r:
+        eng.import_board(_jsonl(eng, rows), **kw(key))
+    msg = r.value.message
+    assert "4 lines" in msg, msg
+    for part in ("line 1: does not parse as JSON", "line 2: not an object with id, fields and body", 'line 3: unknown key "extra"', "line 4: id is not a string"):
+        assert part in msg, (part, msg)
+    for text in ("", "\n  \n\n"):
+        (eng.root / "empty.jsonl").write_text(text, encoding="utf-8")
+        with pytest.raises(Refusal, match="holds no records"):
+            eng.import_board("empty.jsonl", **kw(key))
+    assert _board_files(eng) == []
+    eng.import_board(_jsonl(eng, [LEGACY_OPEN], prefix="﻿"), **kw(key))
+    assert _written(eng, "CE-8").get("moved") == "2026-08-16c"
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_invents_nothing(eng):
+    """E8: no moved, updated, source or body a record lacks, and no `as` when it holds no
+    session-keyed value."""
+    key = started(eng)
+    row = {"id": "CE-9", "fields": {"title": "Bare", "pri": "LATER", "state": "open", "created": "2026-08-05"}}
+    out = eng.import_board(_jsonl(eng, [row]), **kw(key))
+    assert "history kept on 0 of them" in out, out
+    doc = _written(eng, "CE-9")
+    assert not {"moved", "updated", "source", "closed"} & set(doc.data), doc.data
+    assert doc.body.strip() == ""
+    assert "as" not in _oplog(eng)[-1]
+    assert _w7(eng) == []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_question_import_keeps_last_asked(eng):
+    """E9: --kind question."""
+    key = started(eng)
+    row = {"id": "ASK-7", "fields": {"title": "Q", "pri": "LATER", "state": "open", "created": "2026-08-05", "moved": "2026-08-05a", "last_asked": "2026-09-06a"}, "body": ASK_BODY}
+    eng.import_board(_jsonl(eng, [row]), kind="question", **kw(key))
+    assert _oplog(eng)[-1]["as"] == {"moved": "2026-08-05a", "last_asked": "2026-09-06a"}
+    assert _w7(eng) == []
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_of_a_kind_off_the_board_is_refused(eng):
+    """E10."""
+    key = started(eng)
+    row = {"id": "DEC-7", "fields": {"title": "D", "actor": "owner", "decided": "2026-08-05", "session": "2026-08-05a", "decision_status": "BUILT"}}
+    with pytest.raises(Refusal, match="'decision' is not a board kind"):
+        eng.import_board(_jsonl(eng, [row]), kind="decision", **kw(key))
+
+
+@pytest.mark.criterion("AC-196")
+def test_only_an_import_keeps_history_on_its_op_line(eng):
+    """E11: create_many without keep_history (task new --id, decision import) logs no `as`, so
+    a chosen `moved` is red under G-W7."""
+    key = started(eng)
+    fields = {"title": "Chosen", "pri": "LATER", "state": "open", "created": TODAY, "moved": "2026-09-10b"}
+    eng.store.create_many("task", [("CE-9", fields, "B.\n")], session=key, actor=ACTOR, op="new")
+    assert "as" not in _oplog(eng)[-1]
+    (fail,) = _w7(eng)
+    assert "`moved: 2026-09-10b`" in fail.message, fail.message
+
+
+@pytest.mark.criterion("AC-196")
+def test_a_task_import_with_a_duplicate_id_writes_nothing(eng):
+    """E12."""
+    key = started(eng)
+    n = len(_oplog(eng))
+    with pytest.raises(Refusal):
+        eng.import_board(_jsonl(eng, [LEGACY_OPEN, {**LEGACY_OPEN, "body": "again\n"}]), **kw(key))
+    assert _board_files(eng) == [] and len(_oplog(eng)) == n
+
+
+@pytest.mark.criterion("AC-196")
+def test_task_import_runs_from_the_cli_and_as_an_mcp_tool(eng, capsys):
+    """E13: the operation reaches both surfaces (ops.OPS gives the MCP tool for free)."""
+    from context_engine import ops
+    from context_engine.mcp import make_tool
+
+    key = started(eng)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    assert main([*base, "task", "import", _jsonl(eng, [LEGACY_CLOSED])]) == 0, capsys.readouterr().err
+    assert "imported 1 task records" in capsys.readouterr().out
+    out = make_tool(ops.OPS["task_import"], eng.root, ops.Caller(key, ACTOR))(path=_jsonl(eng, [LEGACY_OPEN], name="more.jsonl"))
+    assert "imported 1 task records" in out, out
+    assert _w7(eng) == []
+
+
 @pytest.mark.criterion("AC-12")
 @pytest.mark.parametrize("msg", ["", "   "])
 def test_close_without_a_message_is_refused(eng, msg):

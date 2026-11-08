@@ -82,8 +82,10 @@ These hold for every operation below. The per-operation sections only list what 
 
 `at` is local time with its offset. `fields` lists the keys changed, plus `"body"` if the body
 changed. `mechanical` is `true` only for housekeeping and the `--mechanical` flag. `as`, only on
-`hk.stamp_asked` lines, maps a session-keyed field to the key it was set to when that is not the
-writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the field against it).
+`hk.stamp_asked` and `task import` lines, maps a session-keyed field to the key it was set to when
+that is not the writer's session: `"as": {"last_asked": "<the receipt's key>"}` (G-W7 checks the
+field against it); a `task import` line maps each of `moved`, `updated`, `closed` and `last_asked`
+the record holds to its kept legacy value.
 `ids` and `paths`, only on a line that stands for several records (`decision accept`), list each
 record's id and file, in the same order; `id` is then the list folded into ranges (`DEC-n..m, DEC-k`)
 and `path` the first file. Every file in `paths` goes into the commit that carries the line, as
@@ -111,6 +113,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
 | decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status"]` |
 | decision import | `import`, one line per record | the record | every frontmatter key |
+| task import | `import`, one line per record, with `as` when it holds a session-keyed value | the record | every frontmatter key |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new register ids |
 | register retire | `register.retire`; with `--into`, a second line for the target | id = the entry (then the target), path = the register | `["retired"]`; the target's `["merged"]` |
 | id reserve | `id.reserve`, one line per id | id = the reserved id, path = `""` (it writes no file) | `[]` |
@@ -840,8 +843,8 @@ first bullet's check that every record parses.
 - **G-W7**: for each board item and each of `moved`, `updated`, `closed`, `last_asked`: the value
   equals the `session` of the newest op log line for that id whose `fields` lists the key; with
   no such line, the value is older than the log's first session. Every op log line parses as
-  JSON. A line carrying `as` (housekeeping's `last_asked` stamp) is checked against the key
-  `as` gives for that field instead. *Why: those keys are written only by operations, so a
+  JSON. A line carrying `as` (housekeeping's `last_asked` stamp, or a `task import` keeping a
+  legacy board's history) is checked against the key `as` gives for that field instead. *Why: those keys are written only by operations, so a
   mismatch is a hand edit.*
 - **G-W9**: for each op log line with `"op": "close"` and `"mechanical": true`: the item's
   `## Log` has a line `- <that session> (<actor>): closed: done in <sha> (its `Closes: <id>`
@@ -929,6 +932,33 @@ is one no other write hands out, so the citation is right before the record exis
 
 **Why:** one file per item, with no renames, so every reference keeps working. The caps keep the
 board a ranking, not a pile (G-W5). The brief is a constraint, not a summary (FRAMEWORK §5.2).
+
+### context-engine task import
+
+Bring a legacy board in with its history (FRAMEWORK §11.4): `task import <file> [--kind <board
+kind>]`. Nothing is written if any check fails.
+1. The file is JSON Lines, UTF-8 (a byte-order mark is read past): each non-blank line is one
+   object, `{"id": "<id>", "fields": {...}, "body": "<text>"}`, `body` optional, no other key.
+   Name every line that is not one at once, and stop.
+2. The kind is a board kind. Each id is new, as § context-engine task new step 3 says for a kept
+   number, and no two lines share one. Write each value as given, with nothing defaulted (no
+   `moved`, `updated`, `source` or body the line lacks); a string under a key the kind types
+   `date` or `int` becomes one. A value under a key the kind types `key` must be a session key
+   (a date and letters): a plain date (`moved: 2026-07-29`) stops the import, naming its line and
+   id; keep such a value in a key of the repo's own (`legacy_moved`), never converted.
+3. Write each file as § context-engine task new steps 4 and 5 say (its path from its title), with
+   `type`, `id`, then the fields as given, and `status: deprecated` on one whose `state` is
+   `closed` (a `status` the `state` contradicts stops the import). Each record must pass the
+   kind's schema.
+4. One op line per record (§ What every write does): `"op": "import"`, `"fields"`: every
+   frontmatter key, and `"as"`: each of `moved`, `updated`, `closed` and `last_asked` the record
+   holds, with its value (no `as` when it holds none). No tier cap, deps or goals check: run lint
+   on the result. Not a milestone: commit it by path.
+
+**Why:** G-W7 checks every `moved`, `updated`, `closed` and `last_asked` against the op log, so a
+legacy value no operation wrote is red; the import line's `as` records the values it kept, and
+G-W7 checks the file against them, so a later hand edit is still red. A plain date is refused
+because a session-key field holds only a key, and converting one would invent history.
 
 ### context-engine task set
 

@@ -125,6 +125,9 @@ def build() -> argparse.ArgumentParser:
     nb.add_argument("--body-file", type=Path, help="read --body from a file (a long or multi-line body: a command line cannot carry one)")
     n.add_argument("--id", default="", help="an id this session reserved (`id reserve`), or keep an imported number: a never-used id of the kind's series (default: the next free one)")
     n.add_argument("--goals", default="", help="the charter goals it serves, as the charter spells them, e.g. GOAL-2,GOAL-7; required where [guards] task_goals names the kind")
+    ti = _sub(t, "import", "write a legacy board's records from a JSON Lines file, all or nothing: each id kept, and the moved/updated/closed/last_asked values kept on the import's op line (G-W7)")
+    ti.add_argument("path", help='the JSON Lines file, one {"id": ..., "fields": {...}, "body": "..."} object per line')
+    ti.add_argument("--kind", default="task", help="the board kind the records are (default: task)")
     st = _sub(t, "set", "set or unset frontmatter fields no operation owns (e.g. brief, labels, aliases)")
     st.add_argument("id", help="the item's id")
     st.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="a field to set; repeat for each")
@@ -368,7 +371,7 @@ CLI_OPS = {
     ("routes", None): "routes",
     ("coverage", None): "coverage",
     ("lint", None): "lint",
-    **{("task", v): f"task_{v}" for v in ("new", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
+    **{("task", v): f"task_{v}" for v in ("new", "import", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
     **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer")},
     ("id", "reserve"): "id_reserve",
     ("baton", "list"): "baton_list",

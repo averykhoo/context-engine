@@ -41,6 +41,10 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[a-z]+$")
 ACTOR_RE = re.compile(r"^(human:\S+|process:\S+|[A-Za-z0-9._-]+/[A-Za-z0-9._:+-]+)$")  # OKF §7
 OKF_STATUS = ("draft", "stable", "deprecated")  # OKF §5.4
 TOOL_OWNED = ("type", "id", "body_sha")
+# The board's session-keyed tool-owned keys: only an operation writes them, and G-W7 checks each
+# against the op log (`guards.py::tool_owned`); an import keeping a legacy board's values records
+# them on its op line's `as` (CE-178)
+SESSION_OWNED = ("moved", "updated", "closed", "last_asked")
 # A caller's check of an append-only body a write is about to leave, (id, body now, body as it
 # would be written), which may refuse before anything is written (CE-183: G-D3's write-time twin)
 BodyCheck = Callable[[str, str, str], None]
@@ -1029,15 +1033,19 @@ class Store:
                 self._write_all([r for _, r in todo], lambda r: self._log(op, r.id, r.path, session, actor, fields[r.id], False))
         return recs
 
-    def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str) -> list[Record]:
+    def create_many(self, kind_name: str, items: list[tuple[str, dict[str, Any], str]], *, session: str, actor: str, op: str, keep_history: bool = False) -> list[Record]:
         """Write several new records with ids the caller chose (an import keeps every id), all or
         nothing: each id must be free and each record valid before any file is written. An id
         another session reserved (`id reserve`) is not free; one this session reserved is. Each
         item is (id, fields, body); append-only records are stamped when they are created. A board
         item (`[working] board`) closed at creation gets `status: deprecated` (FRAMEWORK §9.3, G-W4),
-        and one whose `status` contradicts its `state` is refused (CE-179)."""
+        and one whose `status` contradicts its `state` is refused (CE-179). ``keep_history`` (set only
+        by `task import`, CE-178): each board item's op line records, in ``as``, the value of every
+        `SESSION_OWNED` key it is written with, so G-W7 checks the file against the legacy value the
+        import kept and not against this session; off, a chosen `moved` cannot pass G-W7 this way."""
         self._check_caller(session, actor)
         kind = self.config.kind(kind_name)
+        keep = keep_history and kind.name in self.config.working.board
         out: list[Record] = []
         with self._lock():
             used = self.ids_in_use(kind)
@@ -1072,8 +1080,15 @@ class Store:
                 raise Refusal("two of the records share an id or a file name", "give each its own id and title")
             for r in out:
                 r.path.parent.mkdir(parents=True, exist_ok=True)
-            self._write_all(out, lambda r: self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False))
+            self._write_all(out, lambda r: self._log(op, r.id, r.path, session, actor, list(r.doc.data.keys()), False, _kept(r.doc) if keep else None))
         return out
+
+
+def _kept(doc: okf.Document) -> dict[str, str] | None:
+    """The `as` of an import line that keeps a legacy board's history (CE-178): each
+    `SESSION_OWNED` key the record holds, with its value as written; None when it holds none."""
+    kept = {k: str(doc.get(k)) for k in SESSION_OWNED if doc.get(k) not in (None, "")}
+    return kept or None
 
 
 def amended(body: str, text: str, session: str, actor: str) -> str:

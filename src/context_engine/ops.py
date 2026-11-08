@@ -192,6 +192,12 @@ def task_new(e: Engine, c: Caller, title: str, kind: str = "task", pri: str = "L
 
 
 @op(write=True)
+def task_import(e: Engine, c: Caller, path: str, kind: str = "task") -> tuple[int, str]:
+    """Import a legacy board: `path` is a JSON Lines file, one `{"id": ..., "fields": {...}, "body": "..."}` object per line (`body` optional, no other key), of the board kind `kind`. Every id and value kept, nothing defaulted; all or nothing. Each record's op line keeps the moved/updated/closed/last_asked values it was written with, so G-W7 checks them; a value the schema does not take (a plain date in a session-key field) is refused, naming its line: keep it in a key of the repo's own. Not a milestone: commit it by path."""
+    return 0, e.import_board(path, kind=kind, **c.kw)
+
+
+@op(write=True)
 def task_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None, unset: list[str] | None = None, mechanical: bool = False) -> tuple[int, str]:
     """Set or unset frontmatter fields the operations do not own (e.g. brief, labels, `aliases`: the item's earlier ids, e.g. aliases=[1h])."""
     return 0, e.set(id, fields or {}, unset=tuple(unset or ()), mechanical=mechanical, **c.kw)
