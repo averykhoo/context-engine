@@ -1427,3 +1427,38 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** a failing mark write is hard to provoke through the stdio tool and the lower-layer test covers the logic
 - **control:** reduce: the lower-layer mark-write failure test in tests/test_working.py
 - **from:** CE-177, session 2026-11-07e
+
+## INV-203: store.py::coerce turns '', 'null' and '~' into None, so a legacy string 'null' under a typed key (moved) is silently written as an empty value with no as entry, and manual-mode § context-engine task import step 2 does not mention it
+
+- **affects:** an owner importing a legacy board with literal null strings
+- **why not eliminated:** a legacy value that reads as null is indistinguishable from a deliberate empty one at import
+- **control:** individual: none yet; the runbook step 2 should name the coercion
+- **from:** CE-178, session 2026-11-07e
+
+## INV-204: AC-196 and FRAMEWORK §11.4 say 'as is written only by the import' but hk.stamp_asked (working.py, via _board_set as_) also writes as; only the G-W7 bullet names it
+
+- **affects:** a reader of AC-196 or §11.4, and the next session trusting them
+- **why not eliminated:** spec wording written before stamp_asked was counted as a second writer
+- **control:** individual: the G-W7 bullet in FRAMEWORK names it; AC-196 and §11.4 wording need correcting
+- **from:** CE-178, session 2026-11-07e
+
+## INV-205: When create_many refuses on schema (e.g. moved given as a JSON int 20260729) the message names the target file, not the input line or id; only the coerce path names the line
+
+- **affects:** an owner importing a large legacy board
+- **why not eliminated:** schema refusal fires after the input row is lost to the batch
+- **control:** individual: none; the owner finds the row by value
+- **from:** CE-178, session 2026-11-07e
+
+## INV-206: task import trusts kept values as given: no dry run and no tier-cap, deps or goals check at import, and plain dates (zanzibar has 120+) need a key of the repo's own
+
+- **affects:** an owner importing a legacy board such as zanzibar
+- **why not eliminated:** import is a one-shot bulk write that mirrors the legacy board verbatim
+- **control:** individual: G-W7 and lint run after the import; runbook describes the step
+- **from:** CE-178, session 2026-11-07e
+
+## INV-207: tools/sabotage_ce14.py AC-51 row anchors on 'if v != str(op.get("session")):' but guards.py::tool_owned now has 'if v != want:', so the scripted sabotage is stale and cannot go red for AC-51
+
+- **affects:** whoever re-runs sabotage_ce14 to believe AC-51
+- **why not eliminated:** the guard was refactored without the script anchor being updated; already stale before CE-178
+- **control:** individual: none; the sabotage rule is hand-run until the anchor is fixed
+- **from:** CE-178, session 2026-11-07e
