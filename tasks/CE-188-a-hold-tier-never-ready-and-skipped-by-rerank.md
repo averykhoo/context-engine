@@ -3,14 +3,14 @@ type: Task
 id: CE-188
 title: 'A HOLD tier: never ready, and skipped by rerank'
 brief: 'DEC-162: SOMEDAY stands in today and rerank still touches it; shape ruled at build time'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-1]
 source: session 2026-11-06c
 created: 2026-11-06
-moved: 2026-11-06c
-updated: 2026-11-06c
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 A HOLD tier: an engine tier that is never ready and that rerank (CE-99) skips (DEC-162).
