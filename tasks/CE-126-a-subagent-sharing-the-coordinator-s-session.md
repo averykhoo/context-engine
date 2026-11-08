@@ -3,14 +3,14 @@ type: Task
 id: CE-126
 title: A subagent sharing the coordinator's session key defeats CE-125's per-session op-line split
 brief: "From CE-125's build (2026-10-22b): subagents run under the parent key, so their lines cannot be told apart"
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-2]
 source: session 2026-10-22b
 created: 2026-10-22
-moved: 2026-10-22b
-updated: 2026-10-23f
+moved: 2026-11-07e
+updated: 2026-11-07e
 ---
 
 A subagent sharing the coordinator's session key defeats CE-125's per-session op-line split.
