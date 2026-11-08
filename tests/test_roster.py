@@ -61,3 +61,30 @@ def test_the_roster_keeps_fable_to_the_arbiter_explore_to_a_scout_that_need_not_
     # a push ("nothing but the fix it pushes when a run is red") must fail.
     watcher = rows["watcher"]["Writes"]
     assert re.fullmatch(r"nothing: no (?:[\w-]+, )*[\w-]+ or push", watcher), watcher
+
+
+HOUSEKEEPER = REPO / ".claude" / "agents" / "housekeeper.md"
+
+
+@pytest.mark.criterion("AC-203")
+def test_this_repos_housekeeping_agent_names_only_hk_tools():
+    """This repo's tier-1 housekeeping agent (CE-12, DEC-302, DEC-306) works only through the
+    `hk_` operations (FRAMEWORK §6.11): its frontmatter has no key that could widen it (a missing
+    `tools` inherits every tool; `mcpServers` adds servers), and every tool it names is an `hk_`
+    operation the engine has, `hk_comment` among them. The kit ships no such file (DEC-97)."""
+    from ruamel.yaml import YAML
+
+    from context_engine import ops
+
+    text = HOUSEKEEPER.read_text(encoding="utf-8").replace("\r\n", "\n")
+    assert text.startswith("---\n"), text[:40]
+    front = YAML(typ="safe").load(text[4 : text.index("\n---\n", 4)])
+    assert set(front) == {"name", "description", "tools", "model"}, sorted(front)
+    assert front["name"] == "housekeeper" and front["model"] == "haiku", front
+    raw = front["tools"]
+    tools = [t.strip() for t in (raw.split(",") if isinstance(raw, str) else raw or []) if str(t).strip()]
+    assert tools, raw
+    for t in tools:
+        m = re.fullmatch(r"mcp__context-engine__(hk_\w+)", t)
+        assert m and m.group(1) in ops.OPS, (t, sorted(o for o in ops.OPS if o.startswith("hk_")))
+    assert "mcp__context-engine__hk_comment" in tools, tools
