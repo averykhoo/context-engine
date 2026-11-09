@@ -4,13 +4,16 @@ id: ASK-38
 title: Take audio-workspace's D-413 (decide derivable or cheap-to-reverse questions; an ask decide path) into the framework (item 12)?
 brief: Its words are owner words in audio-workspace only; intake here needs your yes first
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
-last_asked: 2026-11-07e
+updated: 2026-11-10a
+last_asked: 2026-11-10a
+status: deprecated
+closed: 2026-11-10a
+answered: {on: 2026-11-10, session: 2026-11-10a, decision: DEC-325}
 ---
 
 **Question:** Should audio-workspace's D-413 become framework intent here, and with fable?
@@ -29,3 +32,7 @@ last_asked: 2026-11-07e
 **Recommendation:** A, flagged as your call: the cheap-to-undo half is already P8, so the new parts are small, and you asked for fable's opinion by name, which DEC-18 permits; one cheap fable call per derivable question, never a fan-out. Any contract wording waits for the next framework version bump.
 
 **Blocks:** none
+
+## Log
+
+- 2026-11-10a (claude-code/claude-opus-5-5): answered by the owner: DEC-325
