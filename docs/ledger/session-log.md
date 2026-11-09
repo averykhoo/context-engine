@@ -7,10 +7,32 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-10a · kind: open
+## 2026-11-10a · kind: close
 
-- **opened:** 2026-11-10T07:30:47+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-07e
+- **rows:** ASK-37 (answered, DEC-324); ASK-38 (answered, DEC-325); US-24 (new, owner); DEC-326
+  (new, owner); AC-205, AC-206 (new, planned); CE-216, CE-217, CE-218, CE-219 (new, LATER); CE-193,
+  CE-198 (commented)
+- **receipts:**
+  - guards: not run
+  - read: orient (hook); ASK-37, ASK-38, CE-193, DEC-45, DEC-173, CE-198 Log; audio-workspace D-413
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Owner answered the open questions: ASK-37 option D (DEC-324: committed actors name the model by
+    a normalized display name, from fable's second opinion); CE-216 carries it out
+  - ASK-38 option A (DEC-325): audio-workspace's D-413 taken in as US-24 with the owner's 2026-11-09
+    words; AC-205, AC-206 planned; CE-217 (triage step), CE-218 (ask decide, after CE-217)
+  - DEC-45 ruled: adopt sonnet builders for pinned-design code tasks (DEC-326, from CE-198's ADOPT);
+    CE-219 updates CLAUDE.md, fan-out.md and FRAMEWORK 6.6
+  - Tier-1 housekeeping lines not judged: the housekeeper agent needs the MCP server, not registered
+    in this clone; the lines are optional
+- **Still owed:**
+  - pick a NOW item: G-W5 red, rerank due
+  - CE-29 and CE-40 owner parts
+  - push of the commits ahead of origin/main: ask first; gate and tools/linux_gate.py green
+  - register the MCP server and restart Claude Code
+  - owner's call: delete .scratch/asks-2026-11-09, .scratch/asks-2026-11-10 and the earlier run dirs
 - **start head:** 6834f29d15a7c21f5ffc93f6ff014c275cbf023e
 
 ---
