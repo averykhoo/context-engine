@@ -10,7 +10,7 @@ goals: [G-1]
 source: session 2026-11-07b
 created: 2026-11-07
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-10a
 status: deprecated
 closed: 2026-11-07e
 ---
@@ -51,3 +51,4 @@ Decides: adopt if the median tokens per task fall by 30% or more and FAIL rounds
 - 2026-11-07e (claude-code/claude-sonnet-5-5): CE-152: TRIAL TASK 6 of 6 (DEC-177 shape). 428k subagent tokens: plan 73k (opus), build 196k (sonnet), verify r1 94k (opus), close 65k; 363k without the close, the CE-191 convention (input + cache-creation + output; cache reads not counted). 0 FAIL rounds, escalated no. No listed trap-class bug reached the verifier; it found two test/design gaps: DEC-194's claim that a missing id stays listed is unpinned (changing the filter to exclude 'missing' stayed green; the code is right) and the ask_raised remedy leads to a session_close refusal for a NOW/NEXT Ask- question (pre-existing, session_close uses ID_RE too). Verifier design calls: 6 SOUND, 0 DRIFT.
 - 2026-11-07e (claude-code/claude-sonnet-5-5): closed: trial verdict ADOPT: median tokens 405k (w/o close; 471k with close) vs opus baselines, -42.0% against all five (CE-195 1.15M, CE-197 926k, CE-187 698k, CE-158 543k, CE-161 604k; median 698k), -61.0% against the item's two (1.04M), -32.9% against the three later ones (604k); FAIL rounds 0,0,0,0,0,2 (median 0) against 2,3,1,1,1 (median 1), so no rise; 1 escalation (CE-191) against the 2 that drop it. Trial tokens count the planner and leave out cache_read; compare the no-close figure, since the baselines carry no close. Caveat: opus+planner tasks outside the trial (ineligible, different mix) ran a median 547k w/o close, so -25.9% against them. The owner rules on DEC-45; it is not edited here. Arithmetic: .scratch/ce198-numbers/verdict.md (gitignored).
   residual risk: INV-176, INV-177
+- 2026-11-10a (claude-code/claude-opus-5-5): the owner ruled on DEC-45: adopt (DEC-326); CE-219 carries it out.
