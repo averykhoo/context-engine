@@ -9,7 +9,7 @@ goals: [G-1]
 source: session 2026-11-10a
 created: 2026-11-10
 moved: 2026-11-10b
-updated: 2026-11-10b
+updated: 2026-11-10c
 ---
 
 Carry out DEC-326 (owner's ruling on DEC-45, from CE-198's ADOPT): sonnet builders become the default for code tasks whose plan pins the design, above DEC-173's size floor. An opus planner and an opus verifier stay, and a task escalates to opus after 2 FAIL rounds.
@@ -22,3 +22,7 @@ Carry out DEC-326 (owner's ruling on DEC-45, from CE-198's ADOPT): sonnet builde
 
 - DEC-326, DEC-45, DEC-173, CE-198's Log
 - docs/evidence/article-takeaways-advice-2026-11-07a.md
+
+## Log
+
+- 2026-11-10c (claude-code/claude-opus-5-5): de35180: CE-219: promote to NOW (owner, 2026-11-10)
