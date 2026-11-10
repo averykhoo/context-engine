@@ -1458,7 +1458,8 @@ def test_an_unchanged_or_untracked_note_takes_the_plain_path(mrepo):
     note = mrepo / "HANDOFF.md"
     lf = note.read_bytes().replace(b"\r\n", b"\n")  # `write_text` writes CRLF on Windows
     note.write_bytes(lf)
-    git(mrepo, "commit", "-q", "-m", "an LF note", "--", "HANDOFF.md")
+    if git(mrepo, "status", "--porcelain", "--", "HANDOFF.md"):  # on Linux the note is LF already
+        git(mrepo, "commit", "-q", "-m", "an LF note", "--", "HANDOFF.md")
     note.write_bytes(lf.replace(b"\n", b"\r\n"))  # CRLF in the tree, LF at HEAD
     line = _banner(mrepo, b)
     assert line.endswith(f"; committed {head(mrepo)}") and git(mrepo, "status", "--porcelain") == "", line
