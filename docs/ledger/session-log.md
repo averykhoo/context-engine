@@ -7,10 +7,33 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-10c · kind: open
+## 2026-11-10c · kind: close
 
-- **opened:** 2026-11-10T18:59:43+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-10b
+- **rows:** DEC-327 (new, owner); CE-224, CE-225, CE-226, CE-227 (new, NEXT); CE-216, CE-182
+  (commented, .scratch salvage)
+- **receipts:**
+  - guards: 622 passed
+  - read: orient (hook); the planner's and auditor's reports
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Owner okayed trialling the elephant-goldfish ideas (DEC-327): CE-224 settled findings, CE-225
+    plan-citation check, CE-226 naive plan reader, CE-227 starved second verifier, all at NEXT
+  - CE-217/CE-218 planned (opus, read-only; .scratch/plan-217-218/plan.md): two builds in sequence,
+    CE-217 docs (opus builder), CE-218 ask decide (sonnet builder, opus verifier); no owner-only
+    calls; waits on the owner's ordering
+  - .scratch swept with the owner's yes after a sonnet audit: 196M to 0.4M via the Recycle Bin; one
+    salvage (fable's ASK-37 rationale) transcribed to CE-216; ce167_import.py kept (CE-182 note);
+    private-surveys, redaction and CE-182's probe kept; ce-156 not audited, left
+  - Pushed 3d6451b..661a2dd (owner: push whenever) after the reader gate (622 passed) and
+    tools/linux_gate.py (2063 passed); CI gate and pages green (runs 42806049171, 42806049046); the
+    MCP server is live after the owner's restart
+- **Still owed:**
+  - owner: build CE-217/CE-218 before or after the CE-224..227 trials (recommend: as the trials'
+    first builds)
+  - build CE-219 (NOW)
+  - CE-29 and CE-40 owner parts
 - **start head:** 00467a53e3aadc57994f23b2baf88e6fb3b20dba
 
 ---
