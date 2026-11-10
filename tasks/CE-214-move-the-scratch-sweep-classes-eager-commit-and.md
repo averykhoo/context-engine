@@ -10,7 +10,7 @@ goals: [G-6, G-7]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-10b
 ---
 
 Filed by CE-40's builder (session 2026-11-07e, 2026-11-08), as DEC-320 says. CE-40's audit, `docs/evidence/global-claude-md-audit-2026-11-07e.md` § 3, found four framework-shaped rules in the owner's global `~/.claude/CLAUDE.md` that no FRAMEWORK, contract or runbook text holds (0 hits at HEAD, checked by that doc's § 5 checker), plus one candidate:
@@ -22,3 +22,7 @@ Filed by CE-40's builder (session 2026-11-07e, 2026-11-08), as DEC-320 says. CE-
 - R10 (candidate): a session that starts a long-lived process owns stopping it, and names what it leaves up. Proposed home: `docs/runbooks/fan-out.md` § Watchers.
 
 A kit change: every runbook edit goes to both `src/context_engine/kit/docs/runbooks/` and `docs/runbooks/` byte-equal and LF (CE-46), and plugin skill quotes (tests/test_plugin.py) may need updating. Once moved, the owner can drop the matching lines from the global file's "Not yet in the framework" section.
+
+## Log
+
+- 2026-11-10b (claude-code/claude-opus-5-5): adhoc's layer-2 note (owner paste, 2026-11-10) adds a portable line for this item: sweep deletes must be recoverable (trash, not rm -rf) and are done by the session, never the auditor. Windows Recycle Bin quirks (whole folder refused, a shell inside it blocks the move) stay machine notes.
