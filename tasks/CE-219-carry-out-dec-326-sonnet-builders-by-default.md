@@ -2,14 +2,14 @@
 type: Task
 id: CE-219
 title: 'Carry out DEC-326: sonnet builders by default for pinned-design code tasks (CLAUDE.md, fan-out.md, FRAMEWORK 6.6)'
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-1]
 source: session 2026-11-10a
 created: 2026-11-10
-moved: 2026-11-10a
-updated: 2026-11-10a
+moved: 2026-11-10b
+updated: 2026-11-10b
 ---
 
 Carry out DEC-326 (owner's ruling on DEC-45, from CE-198's ADOPT): sonnet builders become the default for code tasks whose plan pins the design, above DEC-173's size floor. An opus planner and an opus verifier stay, and a task escalates to opus after 2 FAIL rounds.
