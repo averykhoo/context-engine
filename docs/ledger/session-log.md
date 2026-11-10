@@ -7,10 +7,35 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-10b · kind: open
+## 2026-11-10b · kind: close
 
-- **opened:** 2026-11-10T11:49:51+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-10a
+- **rows:** CE-219 (promoted to NOW); CE-220, CE-221, CE-222, CE-223 (new, LATER, from adhoc's
+  layer-2 note); CE-214 (commented)
+- **receipts:**
+  - guards: 2058 passed
+  - read: orient (hook); CE-175 test; adhoc note (owner paste); the two agent reports
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-07b
+- **summary** (the owner digest):
+  - Owner made CE-219 NOW and asked for a push: pushed fc317a7..3d6451b after the gate (2058 passed)
+    and tools/linux_gate.py; CI gate and pages green (runs 42755706522, 42755706693)
+  - The first Linux gate was red: CE-175's LF-note test committed a no-op on Linux; fixed in
+    3d6451b. Lesson: the wave verifiers ran only the Windows gate, so a Windows-only test got
+    through (the CE-67 trap)
+  - adhoc's layer-2 note audited: 5 of 11 already shipped; CE-220 (long jobs), CE-221 (workflow
+    agents), CE-222 (clean-checkout skips), CE-223 (multi-line text via a file) filed; CE-214 gains
+    the recoverable-deletes line; docs/evidence/adhoc-layer2-feedback-2026-11-10.md
+  - google/elephant-goldfish-model reviewed (zero-context design-doc reviewers before code):
+    docs/evidence/elephant-goldfish-model-vs-our-review-2026-11-10.md; four candidates wait on the
+    owner (settled findings, a cited-symbol check, a naive plan reader, a starved second verifier)
+- **Still owed:**
+  - file elephant-goldfish candidates 1-4 as tasks? (owner's call)
+  - build CE-219 (NOW)
+  - CE-29 and CE-40 owner parts
+  - register the MCP server and restart Claude Code
+  - owner's call: delete .scratch run dirs (asks-2026-11-09, asks-2026-11-10,
+    adhoc-feedback-2026-11-10, egm-2026-11-10, push-2026-11-10b, ci-watch, and the earlier ones)
 - **start head:** 42ce256d1c924d346796f87f63f62ca462fdce32
 
 ---
