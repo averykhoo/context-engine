@@ -1728,3 +1728,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** design only, the engine op is deferred to CE-215
 - **control:** individual: tests/test_rollback_recipe.py covers the git recipe only, CE-215 owns the end-to-end run
 - **from:** CE-18, session 2026-11-07e
+
+## INV-246: The AC-207 test pins no wording from floor check (c) (framework files, the repo's contract, CI workflow), so that check can drift unnoticed
+
+- **affects:** owner and future editors of the section 6.6 floor check
+- **why not eliminated:** AC-207's text says only checks, and pinning exact wording is an owner call not yet made
+- **control:** reduce: tests/test_roster.py::test_the_build_ladder_puts_only_a_pinned_code_build_on_the_reading_tier (AC-207, does not pin the wording)
+- **from:** CE-219, session 2026-11-11a
+
+## INV-247: CLAUDE.md is at 140/140 lines and fan-out.md at 7990/8000 bytes, so the next edit to either needs a trim
+
+- **affects:** whoever edits CLAUDE.md or fan-out.md next
+- **why not eliminated:** the size caps are the house budget, so raising them is an owner decision and the next edit must trim
+- **control:** reduce: tests/test_method_runbooks.py::test_each_method_runbook_has_its_own_route_with_caps covers fan-out.md's byte cap; no test of CLAUDE.md's line count was found
+- **from:** CE-219, session 2026-11-11a
+
+## INV-248: The AC-71 wider case assumes the frontmatter closes within the first 10 lines (it closes at line 8 today)
+
+- **affects:** future editors of task frontmatter fixtures in that test
+- **why not eliminated:** the case builds its over-wide text from a fixed 10-line window, a fixture assumption rather than a checked property
+- **control:** reduce: tests/test_method_runbooks.py::test_an_adopted_repo_that_loses_a_method_runbook_or_outgrows_it_is_red (the window is not checked)
+- **from:** CE-219, session 2026-11-11a
+
+## INV-249: CE-228's dep op left deps [], so it is tied to CE-207 only in prose (Do it with CE-207)
+
+- **affects:** the coordinator ordering CE-228 after CE-207
+- **why not eliminated:** the engine's deps field was not set for this link, so the ordering lives in prose only
+- **control:** reduce: none enforced; the link is in CE-228's body text
+- **from:** CE-219, session 2026-11-11a
+
+## INV-250: FRAMEWORK section 6.6's coordinator bullet still reads each task, even a lone one until CE-228
+
+- **affects:** readers of section 6.6 until CE-228 closes
+- **why not eliminated:** CE-228 owns the edit and is a separate open task
+- **control:** reduce: the new paragraph directly under that bullet names the exception; CE-228 closes the gap
+- **from:** CE-219, session 2026-11-11a
+
+## INV-251: Running gate run with CE_AGENT set makes about 14 session tests fail
+
+- **affects:** anyone running the gate from a subagent shell with CE_AGENT set
+- **why not eliminated:** the failures come from the lane variable in the test environment, and no board item owns them yet
+- **control:** reduce: none yet; the verifier asked for a board item, which the closer did not file
+- **from:** CE-219, session 2026-11-11a
