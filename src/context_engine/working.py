@@ -2339,6 +2339,8 @@ class Engine:
         if not opinion or not opinion_by:
             raise Refusal(f"a decision closing {rid} without the second opinion, or without who gave it",
                           "ask the arbiter (FRAMEWORK §6.6) for one opinion and pass it verbatim with `--opinion` or `--opinion-file`, and its model id with `--opinion-by`; a question not worth an opinion is not decided here")
+        if re.search(r"[\r\n]", opinion_by):
+            raise Refusal("the opinion's author holds a line break, which would put its own lines into the decision's body", "pass one line, the arbiter's model id, with `--opinion-by`")
         if self._owner_shaped(opinion_by):
             raise Refusal(f"the opinion is by {opinion_by!r}, which reads as the owner: the owner's words are never a second opinion", f"for the owner's answer, use `ask answer {rid}`")
         for name, text in (("reasoning", why), ("opinion", opinion)):
@@ -2386,7 +2388,8 @@ class Engine:
         today = self.today().isoformat()
         body = (f"Agent decision closing {rid}, PROVISIONAL until the owner confirms it (`decision accept` on this decision) or overturns it (`ask answer {rid}`).\n\n"
                 f"{why}\n\nDerived from: {', '.join(sources)}.\n\n## Second opinion\n\n{opinion_by}, {today}, verbatim:\n\n{opinion}\n")
-        # no `## Amendments` check: the `## ` heading refusal above already stops that line
+        if amends := G.amendments_in_new_text(body):  # the composed body, whatever its parts say or `[guards] off` names (CE-147)
+            raise Refusal(f"the decision deciding {rid} {amends}", "the decision's own sections are written for it; a later note goes in with `record amend <id> \"<text>\"`")
         self._cites_known(body, f"decision deciding {rid}", session)
         self._plans_frozen(rid)  # the decision closes the question, so a plan naming it freezes first
         was: list[str] = []

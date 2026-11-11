@@ -3288,6 +3288,69 @@ def test_ask_decide_wants_an_owner_source_an_open_question_and_a_stub(eng, tmp_p
 
 
 @pytest.mark.criterion("AC-206")
+def test_ask_decide_takes_a_live_story_or_a_charter_goal_as_the_owners_source_and_no_other_story_or_rejected_decision(tmp_path):
+    """The three owner sources (a live story, a standing owner decision, a charter goal) each tried alone."""
+    cfg = copy.deepcopy(CONFIG)
+    cfg["kinds"]["story"] = {"type": "Story", "prefix": "US", "dir": "stories", "mode": "append-only", "required": ["title"], "types": {"goals": "list"}}
+    cfg["kinds"]["decision"]["enums"] = {"decision_status": ["PROVISIONAL", "BUILT", "ACCEPTED", "SUPERSEDED", "REJECTED"]}
+    cfg["guards"]["charter"] = "charter.md"
+    e = _engine(tmp_path / "r", cfg)
+    (e.root / "charter.md").write_text("# Charter\n\n## Goals\n\n| # | Goal |\n|---|---|\n| G-1 | one |\n", encoding="utf-8")
+    key = started(e)
+    live = e.record_new("story", "Live story", "the owner wants blue", {"actor": "owner", "story_status": "live"}, **kw(key))
+    retired = e.record_new("story", "Old story", "the owner once wanted red", {"actor": "owner", "story_status": "retired"}, **kw(key))
+    rejected = e.record_new("decision", "Rejected choice", "the owner chose red", {"actor": "owner", "decision_status": "REJECTED"}, **kw(key))
+    qs = [e.ask_new(f"Which colour {n}?", body=ASK_BODY, **kw(key)) for n in range(4)]
+    for src, says in ((retired.id, "is the owner's"), (rejected.id, "is the owner's")):  # a story that is not live and an owner decision turned down are not the owner's standing words
+        before = _snap(e, qs[0])
+        with pytest.raises(Refusal, match=says):
+            _decide(e, key, qs[0].id, [src])
+        assert _snap(e, qs[0]) == before
+    _decide(e, key, qs[1].id, [live.id])  # a live story
+    _decide(e, key, qs[2].id, ["G-1"])  # a charter goal
+    with pytest.raises(Refusal, match="names no record or charter goal"):
+        _decide(e, key, qs[3].id, ["G-9"])  # a goal the charter does not list
+    for q, src in ((qs[1], live.id), (qs[2], "G-1")):
+        dec = e.store.get(_decided(e, q.id))
+        assert dec.doc.get("actor") == "agent (test)" and dec.doc.get("refs") == [q.id, src]
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_decide_refuses_an_opinion_by_that_would_write_lines_into_the_decisions_body(eng):
+    """The author line is composed into the body outside the `## ` check on why and opinion: a line break in it, with a
+    `## Amendments` line below, would put text outside `body_sha` that reads as a later amendment."""
+    key = started(eng)
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    before = _snap(eng, q)
+    for by in ("claude-code/fable\n\n## Amendments\n\nThe owner later said: the opposite.", "claude-code/fable\r\n## Second opinion", "fable\nmore"):
+        with pytest.raises(Refusal, match="holds a line break"):
+            _decide(eng, key, q.id, [owner.id], opinion_by=by)
+        assert _snap(eng, q) == before
+    assert not _decisions(eng)[1:]  # only the owner's
+    _decide(eng, key, q.id, [owner.id])  # one clean line is still taken
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_decide_refuses_an_amendments_line_in_the_composed_body_whatever_part_it_came_from(eng, monkeypatch):
+    """Defence in depth: a composed body holding `## Amendments` is refused even where the part checks let it by (here the
+    date, the one part nothing else reads)."""
+    key = started(eng)
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    before = _snap(eng, q)
+
+    class Day(dt.date):
+        def isoformat(self):
+            return "2026-10-08\n\n## Amendments\n\nlater"
+
+    monkeypatch.setattr(eng, "today", lambda: Day(2026, 10, 8))
+    with pytest.raises(Refusal, match="holds a `## Amendments` line"):
+        _decide(eng, key, q.id, [owner.id])
+    assert _snap(eng, q) == before
+
+
+@pytest.mark.criterion("AC-206")
 def test_ask_decide_refuses_an_answered_question_and_an_open_one_carrying_agent_decided(eng):
     key = started(eng)
     owner = _owner(eng, key)
