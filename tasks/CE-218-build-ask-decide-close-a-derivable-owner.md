@@ -2,13 +2,13 @@
 type: Task
 id: CE-218
 title: 'Build ask decide: close a derivable owner question by an agent decision (US-24)'
-pri: LATER
+pri: NOW
 state: open
 deps: [CE-217]
 goals: [G-7]
 source: session 2026-11-10a
 created: 2026-11-10
-moved: 2026-11-10a
+moved: 2026-11-11a
 updated: 2026-11-11a
 ---
 
