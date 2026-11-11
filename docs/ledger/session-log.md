@@ -7,10 +7,38 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-11a · kind: open
+## 2026-11-11a · kind: close
 
-- **opened:** 2026-11-11T09:01:47+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-10c
+- **rows:** CE-219 (closed); CE-217 (closed); CE-218 (closed); CE-228, CE-229 (new: contract lines
+  held for the next framework version); DEC-328..DEC-336 (new, PROVISIONAL); INV-246..INV-259 (new);
+  CE-224, CE-226 (trial rows)
+- **receipts:**
+  - guards: 2102 passed (linux gate on ac81f73); gate status: code green; lint: G-W5 only
+  - read: orient; the two workflow results; the CE-224/CE-226 trial rows
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: set
+- **summary** (the owner digest):
+  - Owner said go: built CE-219 (size floor and build ladder in FRAMEWORK 6.6, CLAUDE.md, banner),
+    CE-217 (US-24 triage step: derivable / cheap to undo / ask, FRAMEWORK 5.3 and 6.5, procedures)
+    and CE-218 (ask decide, sonnet builder, 1 FAIL round then PASS); all independently verified,
+    Linux gate green on each
+  - First wave run was wasted on a coordinator script bug: builds were serialized in plan-finish
+    order, so CE-217/218 ran before CE-219 and stopped on the NOW conflict (about 2.1M tokens);
+    fixed by a strict in-order loop and re-run
+  - Trials: CE-226 naive reader found 17-41 findings per plan, mostly judged real gaps by the
+    planner, but anticipated few of the verifier's residuals (1 of 6 on CE-217); CE-224
+    FIX/CONTEST/ESCALATE never got past FIX (no contests), so no evidence yet
+  - Agent calls PROVISIONAL for owner review: DEC-328..DEC-336 (DEC-329: contract left unchanged,
+    line held in CE-228; CE-229 holds US-24's contract line)
+  - G-W5 red: NOW is empty after the closes, so the gate is red and nothing is pushed; the owner
+    picks the next NOW, then the push (gate, linux_gate, CI watcher)
+- **Still owed:**
+  - owner: pick the next NOW (recommend CE-225, the plan-citation check), then push
+  - owner: review DEC-328..DEC-336
+  - CE-29 and CE-40 owner parts
+  - owner's call: delete .scratch/wave-2026-11-11a and plan-217-218 (conclusions are in the closes
+    and the trial rows)
 - **start head:** c7e0a1ece9ee72c82fa23027fa2166bb69e942bb
 
 ---
