@@ -2,14 +2,14 @@
 type: Task
 id: CE-217
 title: "Specify US-24 and build its triage step: decide derivable questions with fable's opinion before asking"
-pri: LATER
+pri: NOW
 state: open
 deps: []
 goals: [G-7]
 source: session 2026-11-10a
 created: 2026-11-10
-moved: 2026-11-10a
-updated: 2026-11-10a
+moved: 2026-11-11a
+updated: 2026-11-11a
 ---
 
 Specify and build US-24's triage step (owner words: US-24; ruling DEC-325, answering ASK-38 with option A).
