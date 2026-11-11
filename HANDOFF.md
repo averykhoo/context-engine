@@ -3,7 +3,7 @@
 LIVING. Orientation note (FRAMEWORK §5.1). The banner holds durable lines only, replaced when one changes;
 no session history here (that is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-07b)
+## Banner (2026-11-11a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
@@ -13,11 +13,13 @@ no session history here (that is `docs/ledger/session-log.md`). The banner carri
   ba31e29d handles itself, owner 2026-11-07b); a reboot frees CE-182's 42 DLL names.
 - **Records site:** https://averykhoo.github.io/context-engine/, built by `.github/workflows/pages.yml` (`site build`, DEC-159).
 - **The MCP server runs stale code after an engine change:** use the CLI, and ask the owner to restart Claude Code.
-- **Lesson (2026-11-02a..2026-11-06c):** a task runs as one workflow: builder, an independent verifier, fix rounds until PASS,
-  then the push and a CI watcher; under DEC-173's size floor the coordinator edits directly, and pinned-design code tasks
-  try sonnet builders (CE-198, comment each task's numbers). `task close` files a reviewed item's residuals itself.
-- **The top-level session coordinates (DEC-44, DEC-60):** every task goes through subagents that persist to files; checks and
-  verification go to agents; the top level keeps owner words, the final call on a verifier's report, and trivial bookkeeping.
+- **Lesson (2026-11-02a..2026-11-10a):** a task runs as one workflow: an opus planner, a builder, an independent opus
+  verifier, fix rounds until PASS, then the push and a CI watcher; under DEC-173's size floor the coordinator edits
+  directly. A code task whose design the planner pinned gets a sonnet builder, opus after 2 FAILs (DEC-326): log each
+  escalation as a task comment starting `escalated:`. `task close` files a reviewed item's residuals itself.
+- **The top-level session coordinates (DEC-44, DEC-60):** every task above the size floor goes through subagents that persist
+  to files; checks and verification go to agents; the top level keeps owner words, the final call on a verifier's report, and
+  trivial bookkeeping.
 - **Every push: gate, then `tools/linux_gate.py` (CI is Linux, this machine Windows: CE-67), then a CI watcher.**
 - **The engine commits at milestones (CE-45, CE-55, DEC-36);** commit your own work with `context-engine commit <paths> -m`;
   close a task after its work is committed (`task close` carries `Closes:`).
