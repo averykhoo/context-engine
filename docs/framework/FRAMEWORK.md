@@ -234,7 +234,9 @@ every guard has been shown to fail.**
     owner has reviewed it and `decision.accept` marks it ACCEPTED, while a decision in the owner's
     own words is born ACCEPTED (§6.5);
   - a consultation with another model is a recommendation, not an order.
-- **Ration what is raised:** standing owner questions are bounded by the NEXT cap (§5.3).
+- **Ration what is raised:** a question is triaged before it is raised, so what follows from the
+  owner's recorded intent or is cheap to undo never reaches them (§5.3), and standing owner
+  questions are bounded by the NEXT cap (§5.3).
 
 **P9. Skip what can be recovered; never skip what would be lost.**
 - Procedures may be shortened at an awkward stopping point (§6.4).
@@ -855,9 +857,10 @@ into the flat directory once the schema carries `state` (§11.4).
   - why it is owner-only (the "who decides" test, P8);
   - **two or more options**, with the agent's **recommendation** and its reasoning: one the
     agent holds with reasonable confidence, and the why in a line. Spend only cheap effort on
-    reaching it: reading, a quick probe, a short subagent. Not a long `fable` session, and not
-    building and testing a feature to find out. Where a recommendation would cost too much to
-    reach, or genuinely needs human judgement, the question says which, and why, in place of one;
+    reaching it: reading, a quick probe, a short subagent. Not a long `fable` session (the
+    triage's one arbiter call, below, is the most a question gets), and not building and testing
+    a feature to find out. Where a recommendation would cost too much to reach, or genuinely
+    needs human judgement, the question says which, and why, in place of one;
   - what it blocks: the blocked tasks declare `deps: [ASK-n]`, and closing the question
     unblocks them.
 - **Rationing:**
@@ -876,8 +879,11 @@ into the flat directory once the schema carries `state` (§11.4).
   - only humans on the remote-control channel are reminded in chat; questions for anyone else
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
-  recorded **immediately** (§6.4 item 0). `task close ASK-n` is refused, and its remedy names
-  `ask answer`. **A one-off permission** (the owner says yes to one thing, a push or a release,
+  recorded **immediately** (§6.4 item 0), or, for a question already open that the triage finds
+  derivable, by the agent's own decision: PROVISIONAL, never `actor: owner`, never `answers:`,
+  written and the question closed in one write, named in the close digest, and superseded by the
+  owner's decision if the owner answers it later. `task close ASK-n` is refused, and its remedy
+  names `ask answer`. **A one-off permission** (the owner says yes to one thing, a push or a release,
   making no choice that later work must keep) is the one answer that mints no decision:
   `ask answer --grant` writes the words verbatim into the question's own `## Grant`
   section, `Owner, granting ASK-n: *"<words>"*`, and its `answered:` holds that section's hash in
@@ -907,12 +913,23 @@ into the flat directory once the schema carries `state` (§11.4).
   grant)` for one given in chat: it takes no title and no ruling (a ruling is a call, so a
   decision), and refuses words holding a `## ` heading line, which would end the section; a
   granted question never reopens either, and a follow-up is a new question citing it.
-- **The agent never answers its own question.** If the agent can decide, it was not an owner
-  question.
-- **A reversible recommendation is the agent's decision, not a question.** Where the
-  recommendation is cheap to undo (P8), the agent makes the call: a decision with the agent's own
-  actor and `decision_status: PROVISIONAL`, carrying the options and the why, and flagged in the
-  close digest (§5.6) so the owner can push back. No `ASK-n` row is opened.
+- **Triage before raising.** Before a question is filed, and before an open one is raised again
+  at session start, the session sorts it into one of three:
+  1. **derivable:** the answer follows from records it can cite (the charter's goals, the owner's
+     stories, the owner's decisions not superseded, this document's principles), adds no goal,
+     priority or preference, and is not a call P8 keeps for the owner (a push, a release, a
+     published tag, deleting untracked files, owner words, anything outside the repo). The
+     session asks the arbiter (§6.6) for one second opinion, then records its own decision,
+     PROVISIONAL, citing its sources (§6.5). If the arbiter finds it not derivable, or picks
+     another option, it is not derivable: it goes to the owner carrying both views;
+  2. **cheap to undo and leaving the direction unchanged** (P8): the agent decides it, PROVISIONAL,
+     even when neither it nor a second opinion is sure; no `ASK-n` row is opened and no second
+     opinion is needed;
+  3. **the rest** is an owner question, stated as above. Where the agent cannot hold a
+     recommendation with reasonable confidence, it adds the arbiter's opinion, verbatim, under
+     `## Second opinion` in the question's body.
+  Each call made under 1 or 2 is flagged in the close digest (§5.6), so the owner can push back.
+  One arbiter call per question, one question at a time: a batch of them is a fan-out.
 
 ### 5.4 Batons and pause records
 
@@ -1188,9 +1205,9 @@ Hygiene (caps, stale banner, expired batons) is **detected by the gate**. The me
    to a named table of the criteria doc, and `criterion set` rewrites cells of one row (a
    census's rewrite or retirement, or `tested` once a claiming test was seen red); every other
    byte of the doc stays as it was, and each refuses what G-T2 or G-T6 would then fail.
-4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them. One whose
-   recommendation is cheap to undo is not owner-only (P8): the agent decides it, PROVISIONAL,
-   and flags it in the digest.
+4. Owner-only uncertainties become `ASK-n` rows (§5.3); never guess at them. Triage each first
+   (§5.3): one that is derivable, or cheap to undo and leaving the direction unchanged (P8), is
+   not owner-only: the agent decides it, PROVISIONAL, and flags it in the digest.
 5. If the new intent contradicts an existing decision or criterion, say so at once, and record
    the outcome as a decision that supersedes or amends the old one. A story the owner withdraws,
    or one a new story replaces, is retired with the owner's words (`record retire`, §3.2). A
@@ -1354,6 +1371,14 @@ reported a problem and the agent decided the fix).
   this shape when given a ruling and who made it; `record.new` refuses a decision that breaks it,
   and so does lint (G-I3, §8.1). A delegated ruling stamped `actor: owner`, or quoted as the
   owner's words, would become frozen owner intent that no amendment can take back.
+- **A triage decision** (§5.3) is the agent's own call: `actor: agent (<model-id>)`,
+  `decision_status: PROVISIONAL`, and never `owner asked`, since a standing instruction to
+  triage is not a delegation of this ruling, so it has no `ruled_by`. Its text holds the call and
+  its why, then a line `Derived from: <ids>` naming the records it follows from (which `refs`
+  lists too, with the question's `ASK-n` where one is open). A derivable one ends in a
+  `## Second opinion` section, led by `<model-id>, <date>, verbatim:` and quoting the arbiter
+  whole. All of it is written when the decision is created, above `## Amendments`, so `body_sha`
+  covers it: the quote is provenance, and a copy in scratch is no record (P10).
 
 **Decisions are records: one OKF file per decision**, `docs/decisions/<prefix>-n-<slug>.md`
 (`DEC-n` here), written only through the engine. "Why is X like this?" is answered by one small
@@ -1544,6 +1569,9 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
   Never fan out with fable: it wastes tokens.
 - When it really is necessary, do whatever minimizes its cost: one agent, the narrowest prompt,
   a capped output, verdicts back rather than prose. Say why in the session summary.
+- The triage's second opinion (§5.3) is the arbiter's (the roster below): one call per question,
+  the narrowest prompt and a capped output; it runs on `fable` only where the owner asked for
+  that role, a standing ask counting.
 - The default for delegated work is the cheapest model that can do it, on three tiers: the
   least for a watcher, the reading tier for bulk reading and a census, and the most for code and
   review; but a code build whose design a planner pinned takes the reading tier (the build

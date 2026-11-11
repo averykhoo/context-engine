@@ -260,3 +260,22 @@ def test_procedures_runbook_names_every_mcp_tool_its_naming_rule_misses():
     assert odd, "the walk found no exception: has CLI_OPS changed shape?"
     unnamed = [f"{' '.join(p for p in k if p)} -> {v}" for k, v in odd.items() if f"mcp__context-engine__{v}" not in text]
     assert unnamed == [], f"{PROCEDURES.name} does not name these MCP tools: {unnamed}"
+
+
+@pytest.mark.criterion("AC-205")
+def test_a_question_is_triaged_before_it_reaches_the_owner():
+    """US-24, DEC-325 (CE-217): FRAMEWORK §5.3 holds the triage, and procedures' Intake step 4
+    and Session start step 3 carry it out, so a derivable question is decided, not asked."""
+    fw = " ".join(_text(FRAMEWORK).split())
+    five3 = fw[fw.index("### 5.3 ") : fw.index("### 5.4 ")]
+    for want in ("**Triage before raising.**", "**derivable:**", "the arbiter (§6.6)",
+                 "**cheap to undo and leaving the direction unchanged**", "`## Second opinion`"):
+        assert want in five3, f"FRAMEWORK §5.3 lost {want!r}"
+    assert "The agent never answers its own question" not in five3
+    have = procedures()
+    intake = {r[0]: r for r in table_rows(have["Intake"][1])}["4"][1]
+    for want in ("**Derivable**", "arbiter", "`## Second opinion`",
+                 "**Cheap to undo and leaving the direction unchanged**", "**The rest**"):
+        assert want in intake, f"procedures § Intake step 4 lost {want!r}"
+    start = {r[0]: r for r in table_rows(have["Session start"][1])}["3"][1]
+    assert start.startswith("Triage each question"), start

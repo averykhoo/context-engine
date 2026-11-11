@@ -136,6 +136,12 @@ component, procedure, guard and operation.
   §7.4, §2, §6.3; DEC-50, DEC-311 to DEC-315, CE-29. **Upgrade:** nothing required; a hazard kept
   in a banner or HANDOFF moves to such a row; copying the `Unverified hazards` route from
   `context.toml.template` is optional.
+- **A question is triaged before it reaches the owner.** Derivable from the goals, stories or the
+  owner's decisions: one arbiter opinion, then a PROVISIONAL agent decision citing its sources
+  with the opinion quoted under `## Second opinion`. Cheap to undo and leaving the direction
+  unchanged: decided anyway. The rest is asked, with the arbiter's opinion where no
+  recommendation is clear. FRAMEWORK §5.3, §6.2 item 4, §6.5, §6.6, P8; DEC-325, CE-217. The
+  contract's Who-decides line waits for the next contract version bump.
 
 ## 0.5, from 2026-10-30: changes since the cut
 
