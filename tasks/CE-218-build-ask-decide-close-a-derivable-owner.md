@@ -3,13 +3,15 @@ type: Task
 id: CE-218
 title: 'Build ask decide: close a derivable owner question by an agent decision (US-24)'
 pri: NOW
-state: open
+state: closed
 deps: [CE-217]
 goals: [G-7]
 source: session 2026-11-10a
 created: 2026-11-10
 moved: 2026-11-11a
 updated: 2026-11-11a
+status: deprecated
+closed: 2026-11-11a
 ---
 
 Build `ask decide` (US-24, DEC-325): close an owner question as decided by an agent decision when US-24's triage step finds it derivable from the goals or earlier decisions.
@@ -26,3 +28,5 @@ Build `ask decide` (US-24, DEC-325): close an owner question as decided by an ag
 ## Log
 
 - 2026-11-11a (claude-code/claude-haiku-5-5): Not built (verifier FAIL, escalated): no commits, no working.py::Engine.ask_decide, no RECEIPTS entry. Blocked by CE-217 (dep, unbuilt) and CE-219 holding NOW; re-dispatch after CE-217 is committed and NOW is moved.
+- 2026-11-11a (claude-code/claude-haiku-5-5): closed: CE-218: ask decide closes a derivable owner question by an agent decision (US-24); verifier PASS round 2
+  residual risk: INV-258, INV-259

@@ -1812,3 +1812,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** recording is the recorder's own step and this verdict exists only now
 - **control:** reduce: the recorder's step, to be run by the next session
 - **from:** CE-217, session 2026-11-11a
+
+## INV-258: a lone CR in why or opinion passed through MCP is not caught by the ^## refusal or the amendments check (pre-existing, affects every op using G.amendments_in_new_text)
+
+- **affects:** owner reading MCP-written record text in a renderer
+- **why not eliminated:** the CLI --file path reads with universal newlines so the checks see a lone CR, and records are parsed as bytes so engine integrity holds; only a CommonMark renderer may show the text as a separate line
+- **control:** reduce: CLI --file universal-newline read
+- **from:** CE-218, session 2026-11-11a
+
+## INV-259: ask later and ask raised accept a closed question, and ask later reports it as still open (pre-existing, not CE-218's)
+
+- **affects:** owner reading the open-question list
+- **why not eliminated:** pre-existing and outside CE-218's scope
+- **control:** reduce: none yet; the question list stays wrong until a follow-up fixes ask later and ask raised
+- **from:** CE-218, session 2026-11-11a
