@@ -99,6 +99,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | task set, promote, dep, comment, touch, close, reopen, section | `set`, `promote`, `dep`, `comment`, `touch`, `close`, `reopen`, `section` | the item | the changed keys, then `updated`, then `body` if the body changed |
 | ask raised | `ask.raised` | one line per question, then one with id = session key, path = the ledger | `["last_asked", "updated"]`; the ledger line `["asked"]` |
 | ask later, ask answer | `ask.later`, `ask.answer` (answer also writes a `new` line for its `DEC-n`; `ask new --answered` writes the question's `new` line first; with `--grant`, no `DEC-n`, and a second `ask.answer` line with id = session key, path = the ledger) | the question | the changed keys, `updated`, `body`; the `--grant` ledger line `["granted"]` |
+| ask decide | a `new` line for its `DEC-n`, then `ask.decide` | the question; then a second `ask.decide` line with id = session key, path = the ledger | the changed keys, `updated`, `body` (`state`, `status`, `closed`, `last_asked`, `agent_decided`); the ledger line `["decided"]` |
 | baton done, pause resume | `baton.done`, `pause.resume` | the record | the changed keys |
 | baton expire | `new` then `hk.expire_batons`, both mechanical | the task, then the baton or pause | as above |
 | hk close | `close`, mechanical (the task close's line) | the item | as task close |
@@ -254,6 +255,11 @@ The engine makes them one commit; by hand, commit them together at the end.
    the `granted:` receipt, and your summary, its lines joined with runs of whitespace read as one
    space, must contain each named question's `## Grant` words read the same way; stop otherwise,
    and add a line like `ASK-n granted: "<words>"` yourself.
+   Then the stub's `- **decided:**` line (written by `ask decide`), if any: it becomes the
+   `decided:` receipt. Each id on it must carry `agent_decided: {decision: DEC-n}` (stop otherwise:
+   restore it from git), and your summary must have, for each, some one line that names both ids
+   (a line may name several pairs): stop otherwise, and add a line like `ASK-n decided by the
+   agent as DEC-n (overturn: ask answer ASK-n)` yourself, one per question.
    Then check the stub's `- **tasks:**` line (written by `session tasks`): your `rows` must
    name every id on it, closed or not, with how it ended.
    Then `pushed`, if given (a push orient flagged as made while no session was open): before its
@@ -286,6 +292,7 @@ The engine makes them one commit; by hand, commit them together at the end.
      - read: ...
      - asked: none open
      - granted: ASK-9
+     - decided: ASK-10
      - housekeeping: hk run close: 0 writes, 0 op log lines
      - banner: kept 2026-10-08d
      - pushed: 5c61449: main to origin, gate green first
@@ -295,7 +302,7 @@ The engine makes them one commit; by hand, commit them together at the end.
      - nothing
    - **start head:** <the stub's start head, unchanged>
    ```
-   Leave out the `asked:` line if it is empty, the `granted:` line unless the stub has one, the `pushed:` line unless a push is recorded, the
+   Leave out the `asked:` line if it is empty, the `granted:` and `decided:` lines unless the stub has one, the `pushed:` line unless a push is recorded, the
    `housekeeping:` line if step 4 was skipped
    on request, and the `start head` line if the stub has none.
    A follow-up session's stub carries `- **follows:** <key>` (a continuation's, `- **continues:**
@@ -976,7 +983,7 @@ because a session-key field holds only a key, and converting one would invent hi
 
 Change any key except the ones operations own. `state`, `status` and `closed` change by
 `close`/`reopen`. `moved` changes by `touch`/`promote`. `pri` by `promote`. `deps` by `dep`.
-`last_asked` by `ask raised`/`ask later`. `answered` by `ask answer` only. `updated` changes on
+`last_asked` by `ask raised`/`ask later`. `answered` by `ask answer` only, and `agent_decided` by `ask decide` only. `updated` changes on
 every write. `type`, `id` and `body_sha` never change. The brief stays at most 120 characters. Values take the kind's declared
 type: an empty value, `null` or `~` means null (so `brief=` clears the brief); a list is
 comma-separated, with or without `[...]`; a date is `YYYY-MM-DD`; a key must look like
@@ -1202,13 +1209,17 @@ carries `answered:`**, and never delete its `answered:`: its answer is a decisio
 `decision supersede DEC-n <new>`, where DEC-n is the decision that stands now (follow its
 `superseded_by`); for a follow-up, `ask new` citing ASK-n and DEC-n. A question
 closed without `answered:` (by a `task close` run before `close` began refusing questions) may be
-reopened: that is its repair. Set `state: open`, set `closed:` to null, delete `status`, and set `moved` and `updated`.
+reopened: that is its repair. **Never reopen an owner question that carries `agent_decided:`**
+either (and no `answered:`): an agent closed it with a PROVISIONAL decision, and a reopened
+question beside that live decision is a limbo. Overturn it with § context-engine ask answer, or
+confirm the decision with § context-engine decision accept. Set `state: open`, set `closed:` to null, delete `status`, and set `moved` and `updated`.
 Append `- <key> (<actor>): reopened: <message>`.
 
 **Why:** the mirror of close, keeping G-W4 true. Reopening an answered question would leave it
 open while claiming an answer; clearing `answered:` instead would orphan the decision whose
 `answers:` names it, and a second `ask answer` would make two decisions answer one question
-(FRAMEWORK §5.3).
+(FRAMEWORK §5.3). A question an agent decided has no owner answer to protect, but the decision
+that closed it is live, so only the owner's answer or acceptance moves it on.
 
 ### context-engine task section
 
@@ -1401,6 +1412,20 @@ above, then, in place of steps 2 and 3:
 Never edit the `## Grant` words afterwards, nor write the section with `task section`: lint
 (G-W4) fails a question whose section is missing or whose text no longer hashes to its `grant`.
 
+**Overturning an agent decision.** A question closed by § context-engine ask decide (closed, with
+`agent_decided: {decision: DEC-a}` and no `answered:`) takes the owner's answer, which overturns
+the agent's call. The inputs are the owner's words and a title, as above; stop before writing
+anything if `--grant` is given (a grant mints no decision, so it cannot overturn one), if the
+title is empty, or if `DEC-a` is not a decision. Then, in place of step 1's open check: write the
+owner's decision `DEC-n` as steps 2 does (`answers: ASK-n`, or the delegated form); on the
+question set `answered: {on: <today>, session: <key>, decision: DEC-n}` (with `ruled_by` added
+for a delegated ruling) and `last_asked: <key>`, leave `state`, `status` and `closed` as they are,
+set `updated`, and append `- <key> (<actor>): overturned by the owner: DEC-n supersedes DEC-a`
+(delegated: `overturned on the owner's delegation, ruled by <who ruled>: DEC-n supersedes DEC-a`);
+then § context-engine decision supersede `DEC-a` `DEC-n`. The question stays closed and unblocks
+nothing new. A closed question carrying both `answered:` and `agent_decided:` takes no second
+answer. To confirm the agent's call instead, § context-engine decision accept `DEC-a`.
+
 **Why:** an answer is a decision in the owner's own words. It is stamped so the words cannot
 drift, and closing the question points to the decision rather than burying the answer in a log
 line (FRAMEWORK §6.2). A ruling made on the owner's delegation is not the owner's words: inside the
@@ -1408,6 +1433,76 @@ owner's quote, or under `actor: owner`, it would be frozen as owner intent (FRAM
 one-off permission makes no choice for later work to keep, so a decision would only pad the
 log; its words still stay where they cannot drift, hashed on the question, and reach
 the owner digest through the summary quote.
+
+### context-engine ask decide
+
+Closes an open owner question with the agent's own decision, when the question follows from what
+the owner already said (FRAMEWORK §5.3). You need the reasoning (`why`), a title, the ids it is
+derived from (`sources`), one second opinion from the arbiter (FRAMEWORK §6.6) verbatim
+(`opinion`), and who gave it (`opinion_by`, a model id). Any session with an open stub may do it.
+
+1. The question must be an owner question (`ASK-n`). Your actor must be an agent's
+   (`<harness>/<model-id>`, not `human:` or `process:`): the decision's actor is `agent
+   (<model-id>)`, the text after the first `/`, and never `owner` or `owner asked`.
+2. Stop if the title or the why is empty, if the opinion or `opinion_by` is empty, or if
+   `opinion_by` is `owner` or `human:<id>` (the owner's words are never a second opinion).
+3. Stop if a line of the why or of the opinion starts `## ` (it would split the decision's
+   sections; this also keeps a `## Amendments` line, whose text would fall outside `body_sha`, out).
+4. Stop if there are no sources, if one names no record (resolve an alias as elsewhere) and no
+   charter goal, if the question itself is listed, or if none is owner-authored: a story with
+   `story_status: live`, a decision whose `actor` is `owner` or `human:<id>` (any case, no
+   `ruled_by`) that is not SUPERSEDED or REJECTED, or a charter goal id.
+5. Stop if the question is not `state: open` (already closed), carries `answered:` (open and
+   answered is a by-hand reopen, G-W4: restore it from git), or carries `agent_decided:` (the same).
+6. Stop if `[working] ledger` is unset or your session has no `kind: open` stub, if the body of
+   step 7 cites an id no record has (as § context-engine record new step 2), or if closing the
+   question would leave an ACTIVE-PLAN doc that names it as its last open item unfrozen (as
+   § context-engine ask answer does).
+   Nothing is written until every stop has passed.
+7. New decision `DEC-n`: `title`, `actor: agent (<model-id>)`, `decided: <today>`, `session:
+   <key>`, `decision_status: PROVISIONAL`, `refs: [ASK-n, <each source>]` (no id twice), and **no**
+   `answers`. Body, with CRLF read as LF and the why, the opinion trimmed of outer whitespace
+   (the opinion otherwise as given):
+
+   ```
+   Agent decision closing ASK-n, PROVISIONAL until the owner confirms it (`decision accept` on this decision) or overturns it (`ask answer ASK-n`).
+
+   <why>
+
+   Derived from: <the sources, comma-space joined>.
+
+   ## Second opinion
+
+   <opinion_by>, <today>, verbatim:
+
+   <opinion>
+   ```
+
+   Stamp its `body_sha` at once.
+8. On the question set `state: closed`, `status: deprecated`, `closed: <key>`, `last_asked:
+   <key>`, `agent_decided: {on: <today>, session: <key>, decision: DEC-n}` and `updated`. Append
+   `- <key> (<actor>): decided by the agent, PROVISIONAL until the owner confirms or overturns it: DEC-n`.
+9. In your stub, delete any `- **decided:**` line and add one at the end, as § ask raised does for
+   `asked:`: `- **decided:** <every question id decided so far this session>`, comma-space
+   joined. Op log: `ask.decide`, id your key, the ledger's path, fields `["decided"]`.
+10. Steps 4 and 5 of § ask answer: report what it unblocks (a decided question counts as closed
+    exactly as an answered one), and check NOW. At your close, name each question with its
+    decision in the summary (`ASK-n decided by the agent as DEC-n (overturn: ask answer ASK-n)`,
+    § session close step 3).
+
+Not checked: whether the question really follows from its sources, and whether the opinion agrees
+with the decision. Both are judgement, and the opinion sits verbatim in the body for the owner's
+review. The owner confirms the decision with § context-engine decision accept, or overturns it
+with § context-engine ask answer; § context-engine task reopen refuses a decided question. Lint
+(G-W4) fails a question carrying `agent_decided:` that is open, that names no decision, whose
+decision is the owner's, or whose `refs` do not name the question.
+
+**Why:** a question the owner's own records already settle should not cost the owner's attention,
+but a decision an agent made must never pass for the owner's words (FRAMEWORK §6.5). So it is a
+PROVISIONAL decision under the agent's own actor, grounded in an owner-authored record, checked by
+a second opinion kept verbatim where the owner can read it, and named in the digest, so the owner
+can overturn it. Closing the question points to that decision, as an answer does, so nothing it
+blocks waits.
 
 ## Batons and pauses
 

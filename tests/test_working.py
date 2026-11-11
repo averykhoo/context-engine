@@ -34,7 +34,7 @@ CONFIG = {
     "kinds": {
         "task": {"type": "Task", "prefix": "CE", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
         "question": {"type": "Question", "prefix": "ASK", "dir": "tasks", "mode": "replaced", "required": ["title", "pri", "state", "created"], "enums": STATES, "types": BOARD_TYPES},
-        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT", "ACCEPTED"]}, "types": {"decided": "date", "session": "key"}},
+        "decision": {"type": "Decision", "prefix": "DEC", "dir": "decisions", "mode": "append-only", "required": ["title", "actor", "decided", "session", "decision_status"], "enums": {"decision_status": ["PROVISIONAL", "BUILT", "ACCEPTED", "SUPERSEDED"]}, "types": {"decided": "date", "session": "key"}},
         "baton": {"type": "Baton", "prefix": "BTN", "dir": "working", "mode": "stamped", "required": ["title", "session", "state"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key"}},
         "pause": {"type": "Pause", "prefix": "PAU", "dir": "working", "mode": "stamped", "required": ["title", "session", "state", "branch", "resume_step"], "enums": {"state": ["open", "done", "expired"]}, "types": {"session": "key", "uncommitted": "list"}},
     },
@@ -3181,3 +3181,213 @@ def test_the_mcp_mark_never_fails_a_call(eng, monkeypatch):
     monkeypatch.undo()
     assert not (eng.root / ".context" / "mcp-seen").exists()
     assert MCP_PART in eng.orient(None)
+
+
+# -- ask decide: an agent closes a derivable question (CE-218, US-24, DEC-325, AC-206) ---------------
+
+OPINION = "I agree: the owner's decision settles it.\nOption A follows."
+WHY = "Blue follows from the owner's choice."
+
+
+def _owner(eng, key, text="the owner chose blue"):
+    return eng.record_new("decision", "Owner choice", text, {"actor": "owner"}, **kw(key))
+
+
+def _decide(eng, key, qid, sources, why=WHY, **over):
+    args = {"title": "Blue it is", "sources": sources, "opinion": OPINION, "opinion_by": "claude-code/claude-fable-5-5", "session": key, "actor": ACTOR, **over}
+    return eng.ask_decide(qid, why, **args)
+
+
+def _decided(eng, qid):
+    return eng.store.get(qid).doc.get("agent_decided")["decision"]
+
+
+def _snap(eng, q):
+    return (q.path.read_bytes(), _decisions(eng), (eng.root / "ledger.md").read_bytes(), (eng.root / "ops.jsonl").read_bytes())
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_decide_closes_the_question_with_a_provisional_agent_decision_never_the_owners(eng):
+    key = started(eng)
+    src = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    out = _decide(eng, key, q.id, [src.id])
+    dec = eng.store.get(_decided(eng, q.id))
+    assert dec.id != src.id
+    assert out.startswith(f"{q.id}: decided by the agent as {dec.id} (PROVISIONAL), closed; unblocked")
+    assert f"{q.id} decided by the agent as {dec.id} (overturn: ask answer {q.id})" in out
+    assert dec.doc.get("actor") == "agent (test)" and dec.doc.get("decision_status") == "PROVISIONAL"
+    assert dec.doc.get("refs") == [q.id, src.id] and dec.doc.get("answers") is None
+    assert f"Derived from: {src.id}." in dec.doc.body
+    assert f"## Second opinion\n\nclaude-code/claude-fable-5-5, 2026-10-08, verbatim:\n\n{OPINION}\n" in dec.doc.body
+    qq = eng.store.get(q.id)
+    assert qq.doc.get("state") == "closed" and qq.doc.get("status") == "deprecated" and qq.doc.get("answered") is None
+    assert qq.doc.get("agent_decided") == {"on": TODAY, "session": key, "decision": dec.id}
+    assert f"decided by the agent, PROVISIONAL until the owner confirms or overturns it: {dec.id}" in qq.doc.body
+    assert eng.read_ledger().get(key).field("decided") == q.id
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+@pytest.mark.criterion("AC-206")
+@pytest.mark.parametrize("over, says", [
+    ({"actor": "human:avery"}, "is not an agent actor"),
+    ({"actor": "process:cron"}, "is not an agent actor"),
+    ({"title": "  "}, "with no title"),
+    ({"why": " "}, "with no reasoning"),
+    ({"opinion": " "}, "without the second opinion"),
+    ({"opinion_by": ""}, "without the second opinion"),
+    ({"opinion_by": "owner"}, "reads as the owner"),
+    ({"opinion": "ok\n## Amendments\nmore"}, "`## ` heading line"),
+    ({"why": "x\n## Second opinion\ny"}, "`## ` heading line"),
+    ({"sources": []}, "derived from nothing"),
+    ({"sources": ["DEC-99"]}, "names no record or charter goal"),
+    ({"sources": ["ASK-1"]}, "is listed as its own source"),
+    ({"sources": ["CE-1"]}, "is the owner's"),
+    ({"why": "see DEC-98 for it"}, "decision deciding ASK-1"),
+])
+def test_ask_decide_refuses_before_anything_is_written(eng, over, says):
+    key = started(eng)
+    _owner(eng, key)
+    task(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    assert q.id == "ASK-1" and eng.store.get("DEC-1").doc.get("actor") == "owner"
+    before = _snap(eng, q)
+    over = {"sources": ["DEC-1"], "actor": ACTOR, "why": WHY, **over}
+    why = over.pop("why")
+    with pytest.raises(Refusal, match=re.escape(says)):
+        _decide(eng, key, q.id, over.pop("sources"), why, **over)
+    assert _snap(eng, q) == before
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_decide_wants_an_owner_source_an_open_question_and_a_stub(eng, tmp_path):
+    key = started(eng)
+    agent = eng.record_new("decision", "Agent call", "my call", {"actor": "agent (x)", "decision_status": "PROVISIONAL"}, **kw(key))
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    with pytest.raises(Refusal, match="none of the sources .* is the owner's"):
+        _decide(eng, key, q.id, [agent.id])
+    with pytest.raises(Refusal, match="has no open ledger stub"):
+        _decide(eng, "2026-10-08z", q.id, [owner.id], session="2026-10-08z")
+    with pytest.raises(Refusal, match="is not an owner question"):
+        _decide(eng, key, owner.id, [owner.id])
+    newer = _owner(eng, key, "the owner changed it")
+    eng.supersede(owner.id, newer.id, **kw(key))
+    with pytest.raises(Refusal, match="is the owner's"):  # a superseded owner decision no longer stands
+        _decide(eng, key, q.id, [owner.id])
+    _decide(eng, key, q.id, [newer.id, agent.id])  # one owner source among others is enough
+    with pytest.raises(Refusal, match="is already closed"):
+        _decide(eng, key, q.id, [newer.id])
+    cfg = copy.deepcopy(CONFIG)
+    del cfg["working"]["ledger"]
+    bare = _engine(tmp_path / "bare", cfg)
+    o2 = bare.record_new("decision", "Owner", "words", {"actor": "owner"}, **kw("2026-10-08a"))
+    q3 = bare.ask_new("Which?", body=ASK_BODY, **kw("2026-10-08a"))
+    with pytest.raises(Refusal, match=r"\[working\] ledger names no ledger"):
+        bare.ask_decide(q3.id, "why", title="T", sources=[o2.id], opinion="o", opinion_by="fable", **kw("2026-10-08a"))
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_decide_refuses_an_answered_question_and_an_open_one_carrying_agent_decided(eng):
+    key = started(eng)
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    eng.ask_answer(q.id, "blue", title="Blue", **kw(key))
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    with pytest.raises(Refusal, match=rf"{q.id} was already answered by the owner"):
+        _decide(eng, key, q.id, [owner.id])
+    q2 = eng.ask_new("Which size?", body=ASK_BODY, **kw(key))
+    _decide(eng, key, q2.id, [owner.id])
+    eng.store.set(q2.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    with pytest.raises(Refusal, match="is open but carries `agent_decided:`"):
+        _decide(eng, key, q2.id, [owner.id])
+
+
+@pytest.mark.criterion("AC-206")
+def test_the_close_names_every_decided_question_with_its_decision(eng):
+    key = started(eng)
+    owner = _owner(eng, key)
+    q1 = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    q2 = eng.ask_new("Which size?", body=ASK_BODY, **kw(key))
+    _decide(eng, key, q1.id, [owner.id])
+    _decide(eng, key, q2.id, [owner.id])
+    assert eng.read_ledger().get(key).field("decided") == f"{q1.id}, {q2.id}"
+    d1, d2 = _decided(eng, q1.id), _decided(eng, q2.id)
+    before = (eng.root / "ledger.md").read_bytes()
+    with pytest.raises(Refusal, match="does not name 2 questions an agent decided") as exc:
+        eng.session_close(key, actor=ACTOR, rows="x", summary=["did it"], receipts=receipts())
+    assert f"`{q1.id} decided by the agent as {d1} (overturn: ask answer {q1.id})`" in exc.value.remedy and f"{q2.id} decided by the agent as {d2}" in exc.value.remedy
+    with pytest.raises(Refusal, match="does not name a question an agent decided") as exc:  # a line naming the question but not its decision does not count
+        eng.session_close(key, actor=ACTOR, rows="x", summary=[f"{q1.id} decided by the agent as {d1}", f"{q2.id} was decided"], receipts=receipts())
+    assert q2.id in exc.value.remedy and q1.id not in exc.value.remedy
+    assert (eng.root / "ledger.md").read_bytes() == before
+    eng.session_close(key, actor=ACTOR, rows="x", summary=[f"{q1.id}  decided by the agent as {d1}; {q2.id} as {d2}", "more"], receipts=receipts())  # one line may name several pairs
+    assert eng.read_ledger().get(key).receipt("decided") == f"{q1.id}, {q2.id}"
+
+
+@pytest.mark.criterion("AC-206")
+def test_ask_answer_overturns_an_agent_decision_and_task_reopen_refuses_it(eng):
+    key = started(eng)
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    _decide(eng, key, q.id, [owner.id])
+    agent_dec = _decided(eng, q.id)
+    with pytest.raises(Refusal, match=f"was decided by the agent as {agent_dec}, and a decided question never reopens") as exc:
+        eng.reopen(q.id, "again", **kw(key))
+    assert f"ask answer {q.id}" in exc.value.remedy and f"decision accept {agent_dec}" in exc.value.remedy
+    with pytest.raises(Refusal, match="cannot overturn one"):
+        eng.ask_answer(q.id, "no, red", grant=True, **kw(key))
+    with pytest.raises(Refusal, match="no decision title"):
+        eng.ask_answer(q.id, "no, red", **kw(key))
+    out = eng.ask_answer(q.id, "no, red", title="Red", **kw(key))
+    new = out.split(" as ")[1].split(",")[0]
+    assert out == f"{q.id}: overturned by the owner as {new}, which supersedes {agent_dec}; still closed"
+    qq = eng.store.get(q.id)
+    assert qq.doc.get("state") == "closed" and qq.doc.get("answered")["decision"] == new and _decided(eng, q.id) == agent_dec
+    old, nd = eng.store.get(agent_dec).doc, eng.store.get(new).doc
+    assert old.get("decision_status") == "SUPERSEDED" and old.get("superseded_by") == [new] and nd.get("supersedes") == [agent_dec]
+    assert nd.get("actor") == "owner" and nd.get("answers") == q.id
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    with pytest.raises(Refusal, match="is already closed"):  # answered and decided: no second answer
+        eng.ask_answer(q.id, "no, green", title="Green", **kw(key))
+
+
+@pytest.mark.criterion("AC-206")
+def test_lint_fails_an_agent_decided_question_that_is_open_or_names_an_owner_decision(eng):
+    key = started(eng)
+    owner = _owner(eng, key)
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    _decide(eng, key, q.id, [owner.id])
+    agent_dec = _decided(eng, q.id)
+    assert [f for f in eng.lint() if f.guard == "G-W4"] == []
+    with pytest.raises(Refusal, match="`agent_decided` is changed by an operation"):
+        eng.set(q.id, {"agent_decided": "x"}, **kw(key))
+    eng.store.set(q.id, {"state": "open", "closed": None}, unset=("status",), **kw(key))  # a hand reopen
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert len(found) == 1 and f"{q.id} is open but carries `agent_decided:` ({agent_dec})" in found[0].message, found
+    eng.store.set(q.id, {"state": "closed", "closed": key, "status": "deprecated", "agent_decided": {"on": TODAY, "session": key, "decision": owner.id}}, **kw(key))
+    found = [f for f in eng.lint() if f.guard == "G-W4"]
+    assert any("an agent's decision is never the owner's" in f.message for f in found) and any("`refs` do not name the question" in f.message for f in found), found
+    eng.store.set(q.id, {"agent_decided": {"on": TODAY, "session": key}}, **kw(key))
+    assert any("names no decision" in f.message for f in eng.lint() if f.guard == "G-W4")
+
+
+@pytest.mark.criterion("AC-206")
+def test_the_cli_decides_through_ask_decide_with_from_and_opinion_files(eng, capsys, tmp_path):
+    key = started(eng)
+    owner = _owner(eng, key)
+    base = ["--root", str(eng.root), "--actor", ACTOR, "--session", key]
+    why, opinion = tmp_path / "why.md", tmp_path / "opinion.md"
+    why.write_text("Blue follows.\r\n", encoding="utf-8", newline="")
+    opinion.write_text("Agreed.\n", encoding="utf-8")
+    q = eng.ask_new("Which colour?", body=ASK_BODY, **kw(key))
+    argv = [*base, "ask", "decide", q.id, "--file", str(why), "--title", "Blue", "--opinion-file", str(opinion), "--opinion-by", "claude-code/fable"]
+    assert main([*argv, "--from", f"{owner.id}, DEC-99"]) == 2
+    assert "DEC-99 names no record or charter goal" in capsys.readouterr().err  # `--from` is a list: the second source is read
+    assert main([*argv, "--from", owner.id]) == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.startswith(f"{q.id}: decided by the agent as ")
+    dec = eng.store.get(_decided(eng, q.id))
+    assert "Blue follows." in dec.doc.body and "\r" not in dec.doc.body and "Agreed." in dec.doc.body
+    q2 = eng.ask_new("Which size?", body=ASK_BODY, **kw(key))
+    assert main([*base, "ask", "decide", q2.id, "--title", "T", "--from", owner.id, "--opinion", "o", "--opinion-by", "x"]) == 2  # neither the why nor --file
+    assert "neither as an argument nor with --file" in capsys.readouterr().err

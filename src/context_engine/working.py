@@ -84,6 +84,7 @@ BOARD_OWNED = {
     "deps": "dep",
     "last_asked": "ask raised or ask later",
     "answered": "ask answer; an answer changes only through its decision (`record amend`, `decision supersede`), and a one-off grant (`ask answer --grant`) never changes",
+    "agent_decided": "ask decide; it changes only through its decision (`decision accept` confirms it, `ask answer` overturns it)",
 }
 # A decision's keys that `decision set` refuses (CE-32), each with the remedy. The engine-owned
 # `type`, `id` and `body_sha` are refused by Store.set itself.
@@ -198,11 +199,21 @@ def _answered_by(answered: Any) -> str:
     return str(answered.get("decision") or "<DEC>") if isinstance(answered, dict) else "<DEC>"
 
 
+def _decided_by(decided: Any) -> str:
+    """The decision id in a question's `agent_decided:` mapping (CE-218), or a placeholder."""
+    return str(decided.get("decision") or "<DEC>") if isinstance(decided, dict) else "<DEC>"
+
+
+def _decided_line(rid: str, dec: str) -> str:
+    """The line a close summary holds for a question an agent decided (CE-218)."""
+    return f"{rid} decided by the agent as {dec} (overturn: ask answer {rid})"
+
+
 def _milestone(fn):
     """The operation is a milestone (FRAMEWORK §5.5 rule 4, DEC-36): under the `milestones`
     policy its end commits its writes, with every op log line HEAD lacks and the files they
     name. Milestones are what must reach HEAD at once: a task's close, owner words (a story or
-    decision recorded, amended, retired or superseded; a story confirmed; a question answered), a hand-off to the
+    decision recorded, amended, retired or superseded; a story confirmed; a question answered, or decided by an agent), a hand-off to the
     next session (a baton, a pause), the session's own close or pause, another session's stub
     abandoned, and the banner, which a
     clean close writes after the session's close. Every other write stays uncommitted and goes
@@ -469,6 +480,10 @@ class Engine:
         as a `granted:` receipt, and the close is refused unless the summary, joined and
         whitespace-collapsed, holds each grant's words (whitespace-collapsed) as its `## Grant`
         section quotes them; the remedy names the line to add. The engine writes no summary line.
+        A question an agent decided this session (CE-218: the stub's `decided:` line) is carried as a
+        `decided:` receipt the same way, and the close is refused unless some one summary line names
+        the question and its decision; the remedy gives the line `ASK-n decided by the agent as DEC-n
+        (overturn: ask answer ASK-n)`.
 
         Not checked: whether the banner kept still holds only true lines (judgement: a durable
         line that went false is the closer's to rewrite); the grants' quotes once the entry is
@@ -524,6 +539,19 @@ class Engine:
                 if lines:
                     raise Refusal(f"the summary does not quote the owner's words of {'a one-off grant' if len(lines) == 1 else f'{len(lines)} one-off grants'} made this session (DEC-162: the words go in the ledger summary)",
                                   f"add {'the line' if len(lines) == 1 else 'the lines'} {'; '.join(lines)} to the summary (`--summary`), or put the quoted words in a line of your own; the engine writes no summary line itself")
+            if decided := [x for x in re.split(r"[,\s]+", stub.field("decided") or "") if x]:  # CE-218: the owner's digest names every question an agent closed
+                receipts["decided"] = ", ".join(decided)
+                lines = []
+                for rid in decided:
+                    ad = self.store.get(rid).doc.get("agent_decided")
+                    if not isinstance(ad, dict) or not ad.get("decision"):
+                        raise Refusal(f"{rid} is in the stub's `decided:` line, but carries no `agent_decided:` naming its decision (G-W4)", "restore it from git; an agent decision is never edited out")
+                    pair = {rid, str(ad["decision"])}
+                    if not any(pair <= set(ID_RE.findall(" ".join(line.split()))) for line in summary):
+                        lines.append(f"`{_decided_line(rid, str(ad['decision']))}`")
+                if lines:
+                    raise Refusal(f"the summary does not name {'a question' if len(lines) == 1 else f'{len(lines)} questions'} an agent decided this session with {'its decision' if len(lines) == 1 else 'their decisions'} (the owner can only overturn what the digest tells them)",
+                                  f"add {'the line' if len(lines) == 1 else 'the lines'} {'; '.join(lines)} to the summary (`--summary`), or name the question and its decision in a line of your own; the engine writes no summary line itself")
 
         check(self.read_ledger(), self._open_entry(self.read_ledger(), key))  # before any write: housekeeping's, the entry's or the banner's
         banner = banner.strip()
@@ -1552,6 +1580,10 @@ class Engine:
                 # `answers:` names this question). A question closed without an answer (a
                 # pre-CE-20 `task close`, audit A20) carries no `answered:` and may reopen.
                 raise Refusal(f"{rid} was answered by the owner, and an answered question never reopens (FRAMEWORK §5.3)", self._answered_remedy(rid, answered))
+            if self.w.question and rec.kind.name == self.w.question and rec.doc.get("agent_decided"):
+                # CE-218: reopening would leave an open question beside the live PROVISIONAL decision that closed it
+                raise Refusal(f"{rid} was decided by the agent as {_decided_by(rec.doc.get('agent_decided'))}, and a decided question never reopens (FRAMEWORK §5.3)",
+                              f"overturn it with `ask answer {rid} --file <words.md> --title \"<title>\"`, or confirm it with `decision accept {_decided_by(rec.doc.get('agent_decided'))}`")
             try:  # CE-103: a closed task is not read by G-I1, so it may lack goals; open, it is read
                 self._task_goal_check(rec.kind.name, D.as_list(rec.doc.get("goals")))
             except Refusal as r:
@@ -2191,6 +2223,10 @@ class Engine:
         self._check(session, actor)
         self._is_question(rid)
         ruled_by = ruled_by.strip()
+        overturn = self._overturned(rid)
+        if overturn and grant:
+            raise Refusal(f"a grant on {rid}, which an agent decided: a grant mints no decision, so it cannot overturn one",
+                          "drop `--grant`, and overturn it with `--title` naming the decision the owner's words make")
         if grant:
             text = self._grant_check(words, title, ruling, ruled_by, session)
         elif not title.strip():
@@ -2199,6 +2235,8 @@ class Engine:
         else:
             fields, body = self._answer_decision(rid, words, title, ruling, ruled_by, session, actor)
         q = self.store.get(rid)
+        if overturn:  # CE-218: the owner's answer to a question an agent decided
+            return self._overturn(rid, fields, body, ruled_by, session, actor)
         if q.doc.get("state") != "open":
             raise Refusal(f"{rid} is already closed", "record a new decision instead")
         if q.doc.get("answered"):
@@ -2229,6 +2267,31 @@ class Engine:
         whose = f" (ruled by {ruled_by} on the owner's delegation; actor: {G.DELEGATED_ACTOR})" if ruled_by else ""
         return f"{rid}: answered as {dec.id}{whose}, closed; {self._unblocked(rid, q, was)}"
 
+    def _overturned(self, rid: str) -> str:
+        """The agent decision ``rid`` stands closed on when it carries `agent_decided:` and no
+        `answered:` (CE-218), which `ask answer` overturns; "" for any other question. Refuses a
+        question whose `agent_decided:` names no decision, before any write."""
+        doc = self.store.get(rid).doc
+        if doc.get("state") != "closed" or doc.get("answered") or not doc.get("agent_decided"):
+            return ""
+        dec = _decided_by(doc.get("agent_decided"))
+        try:
+            return self._decision(dec)[0]
+        except Refusal:
+            raise Refusal(f"{rid}'s `agent_decided:` names {dec}, which is not a decision (G-W4)", "restore it from git; an agent decision is never edited out") from None
+
+    def _overturn(self, rid: str, fields: dict[str, Any], body: str, ruled_by: str, session: str, actor: str) -> str:
+        """The owner's answer to a question an agent decided (CE-218): the owner's decision as
+        ``ask_answer`` writes it, `answered:` on the question (it stays closed), and the agent's
+        decision superseded by the owner's, all in the caller's one milestone."""
+        agent_dec = self._overturned(rid)
+        dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
+        answered = {"on": self.today(), "session": session, "decision": dec.id, **({G.RULED_BY: ruled_by} if ruled_by else {})}
+        how = f"overturned on the owner's delegation, ruled by {ruled_by}" if ruled_by else "overturned by the owner"
+        self._board_set(rid, {"answered": answered, "last_asked": session}, session=session, actor=actor, body=self._log_line(session, actor, f"{how}: {dec.id} supersedes {agent_dec}"), op="ask.answer")
+        self.supersede(agent_dec, dec.id, session=session, actor=actor)
+        return f"{rid}: overturned by the owner as {dec.id}, which supersedes {agent_dec}; still closed"
+
     def _unblocked(self, rid: str, q: Record, was: list[str]) -> str:
         """`unblocked <ids>` for a question just closed, and ``_now_left``'s warning: open items
         whose deps include it and are now all closed, plus everything in its `blocks`."""
@@ -2236,6 +2299,132 @@ class Engine:
         freed = [r.id for r in self._open_board() if rid in (r.doc.get("deps") or []) and all(str(d) in closed for d in r.doc.get("deps"))]
         freed += [str(b) for b in (q.doc.get("blocks") or []) if str(b) not in freed]
         return f"unblocked {_one(freed)}{self._now_left(was)}"
+
+    @_milestone
+    def ask_decide(self, rid: str, why: str, *, title: str, sources: list[str], opinion: str, opinion_by: str, session: str, actor: str) -> str:
+        """Close the open owner question ``rid`` with the agent's own PROVISIONAL decision, derived
+        from owner-authored ``sources`` and checked by one second opinion (CE-218, US-24,
+        DEC-325, FRAMEWORK §5.3). ``why`` is the agent's reasoning; ``opinion`` is the arbiter's
+        reply (FRAMEWORK §6.6) verbatim, and ``opinion_by`` who gave it.
+
+        The decision is `actor: agent (<model-id>)`, derived from the caller's ``actor``, never the
+        owner's or `owner asked`; it is PROVISIONAL, its `refs` name the question and every
+        source, and it carries no `answers:` (that key is the owner's). Its body holds ``why``, a
+        `Derived from:` line and the opinion under `## Second opinion`. The question closes (`state:
+        closed`, `status: deprecated`) with `agent_decided: {on, session, decision}`, which `ask
+        answer` overturns (the owner's decision supersedes the agent's) and `decision accept`
+        confirms; `task reopen` refuses it. The session's stub gets a `decided:` line, which
+        `session close` carries as a receipt and checks its summary against, so the owner's digest
+        names every question closed this way.
+
+        Any session holding an open stub may decide; it need not be the one that raised the
+        question. Every refusal is met before the first write.
+
+        Not checked: whether the question really is derivable from the sources, and whether the
+        opinion agrees with the decision (judgement: the opinion sits verbatim in the body for the
+        owner's review); a decide followed by a session pause or abandon (the question and the
+        decision still hold the record, but the close's summary line is then the next closer's to
+        write)."""
+        self._check(session, actor)
+        self._is_question(rid)
+        if actor_model(actor) is None:
+            raise Refusal(f"{actor!r} is not an agent actor, so its call cannot be recorded as an agent decision",
+                          f"an owner's answer is `ask answer {rid}`; an agent passes its own actor, `<harness>/<model-id>`")
+        by = f"agent ({actor.split('/', 1)[1]})"  # never owner-shaped: `agent (...)` is neither `owner`, `human:<id>` nor `owner asked`
+        title, why, opinion, opinion_by = title.strip(), why.replace("\r\n", "\n").strip(), opinion.replace("\r\n", "\n").strip(), opinion_by.strip()
+        if not title:
+            raise Refusal(f"a decision closing {rid} with no title", "name the decision with `--title`")
+        if not why:
+            raise Refusal(f"a decision closing {rid} with no reasoning", "pass the why (as the argument, or with `--file`): the call, the options and what it follows from")
+        if not opinion or not opinion_by:
+            raise Refusal(f"a decision closing {rid} without the second opinion, or without who gave it",
+                          "ask the arbiter (FRAMEWORK §6.6) for one opinion and pass it verbatim with `--opinion` or `--opinion-file`, and its model id with `--opinion-by`; a question not worth an opinion is not decided here")
+        if self._owner_shaped(opinion_by):
+            raise Refusal(f"the opinion is by {opinion_by!r}, which reads as the owner: the owner's words are never a second opinion", f"for the owner's answer, use `ask answer {rid}`")
+        for name, text in (("reasoning", why), ("opinion", opinion)):
+            if re.search(r"^## ", text, re.MULTILINE):
+                raise Refusal(f"the {name} holds a `## ` heading line, which would split the decision's sections", f"remove it from the {name}; the decision's own sections are written for it")
+        sources = list(dict.fromkeys(s.strip() for s in sources if s.strip()))
+        if not sources:
+            raise Refusal(f"a decision closing {rid} derived from nothing", "name the records it follows from with `--from`, at least one owner story, owner decision or charter goal")
+        goals = G.known_goals(self)[0]
+        owner_sourced = False
+        for src in sources:
+            if goals is not None and src in goals:
+                owner_sourced = True
+                continue
+            try:
+                sid, _ = self.store.resolve(src)
+                srec = self.store.get(sid)
+            except Refusal:
+                raise Refusal(f"the source {src} names no record or charter goal", "name each source by its id") from None
+            if sid == rid:
+                raise Refusal(f"{rid} is listed as its own source", "a question is not what it was derived from")
+            d = srec.doc
+            if str(d.get("story_status")) == "live":  # a story: the kind is the repo's own name for it, `story_status` is FRAMEWORK §3.2's
+                owner_sourced = True
+            elif srec.kind.name == self._role("decision") and D.owners_own(d) and str(d.get(D.STATUS_KEY)) not in ("SUPERSEDED", "REJECTED"):
+                owner_sourced = True
+        if not owner_sourced:
+            raise Refusal(f"none of the sources {', '.join(sources)} is the owner's (a live story, an owner decision that stands, or a charter goal)",
+                          "an agent's own earlier call is not what a question is derived from; ask the owner, or add the owner's record it follows from")
+        q = self.store.get(rid)
+        if q.doc.get("state") != "open":
+            raise Refusal(f"{rid} is already closed", "record a new decision instead")
+        if q.doc.get("answered"):
+            raise Refusal(f"{rid} was already answered by the owner ({_answered_by(q.doc.get('answered'))}), so it takes no decision of an agent (FRAMEWORK §5.3)",
+                          f"restore `state: closed` and `status: deprecated` from git; {self._answered_remedy(rid, q.doc.get('answered'))}")
+        if q.doc.get("agent_decided"):
+            raise Refusal(f"{rid} is open but carries `agent_decided:` ({_decided_by(q.doc.get('agent_decided'))}) (G-W4)",
+                          f"restore `state: closed` and `status: deprecated` from git; overturn it with `ask answer {rid}`")
+        if not self.w.ledger:
+            raise Refusal("an agent decision, but [working] ledger names no ledger, and the decision is named in its session's close summary",
+                          f"set [working] ledger in {CONFIG_NAME}, or ask the owner")
+        stub = self.read_ledger().get(session)
+        if stub is None or stub.kind != "open":
+            raise Refusal(f"session {session} has no open ledger stub, where a decision writes its `decided:` line for the close to check", "run `session start` first and pass its key")
+        today = self.today().isoformat()
+        body = (f"Agent decision closing {rid}, PROVISIONAL until the owner confirms it (`decision accept` on this decision) or overturns it (`ask answer {rid}`).\n\n"
+                f"{why}\n\nDerived from: {', '.join(sources)}.\n\n## Second opinion\n\n{opinion_by}, {today}, verbatim:\n\n{opinion}\n")
+        # no `## Amendments` check: the `## ` heading refusal above already stops that line
+        self._cites_known(body, f"decision deciding {rid}", session)
+        self._plans_frozen(rid)  # the decision closes the question, so a plan naming it freezes first
+        was: list[str] = []
+
+        def check(rec: Record) -> None:
+            was.append(str(rec.doc.get("pri")))
+
+        fields: dict[str, Any] = {"title": title, "actor": by, "decided": self.today(), "session": session, D.STATUS_KEY: D.PROVISIONAL, "refs": list(dict.fromkeys([rid, *sources]))}
+        dec = self.store.new(self._role("decision"), fields, body, session=session, actor=actor)
+        decided = {"on": self.today(), "session": session, "decision": dec.id}
+        self._board_set(rid, {"state": "closed", "status": "deprecated", "closed": session, "last_asked": session, "agent_decided": decided}, session=session, actor=actor, check=check,
+                        body=self._log_line(session, actor, f"decided by the agent, PROVISIONAL until the owner confirms or overturns it: {dec.id}"), op="ask.decide")
+        self._stub_decided(rid, session=session, actor=actor)
+        return (f"{rid}: decided by the agent as {dec.id} (PROVISIONAL), closed; {self._unblocked(rid, q, was)}; "
+                f"put `{_decided_line(rid, dec.id)}` in this session's close summary")
+
+    @staticmethod
+    def _owner_shaped(who: str) -> bool:
+        """``who`` reads as the owner's own or the owner's delegation, never an agent's (CE-218)."""
+        return D.owners_own({"actor": who}) or who.strip().lower() == G.DELEGATED_ACTOR
+
+    def _stub_decided(self, rid: str, *, session: str, actor: str) -> None:
+        """Add ``rid`` to the `decided:` line of the session's stub (CE-218), as ``_stub_granted``
+        writes `granted:`: `session close` carries it as a receipt and refuses a summary that does
+        not name the question with its decision."""
+        path = self._path("ledger")
+        with self.store.lock():
+            led = self.read_ledger()
+            stub = led.get(session)
+            if stub is None or stub.kind != "open":
+                raise Refusal(f"session {session} closed while {rid} was being decided, so its stub has no `decided:` line",
+                              f"{rid} is closed with `agent_decided:`: name it with its decision in the session's close summary by hand")
+            already = [x for x in re.split(r"[,\s]+", stub.field("decided") or "") if x]
+            named = already + ([rid] if rid not in already else [])
+            text = re.sub(r"^- \*\*decided:\*\*.*(?:\n  .*)*\n?", "", stub.text, flags=re.MULTILINE)
+            stub.text = text.rstrip("\n") + "\n" + L.bullet("decided", ", ".join(named))
+            self.store.write_text(path, led.render())
+            self.store.log("ask.decide", session, path, session, actor, ["decided"])
 
     def _stub_granted(self, rid: str, *, session: str, actor: str) -> None:
         """Add ``rid`` to the `granted:` line of the session's stub (CE-190), as `ask raised`
@@ -4363,6 +4552,8 @@ class Engine:
                         why = f"has no `## {GRANT}` section" if sec is None else f"has a `## {GRANT}` section that is not the words its hash was taken of"
                         out.append(Failure("G-W4", rel, f"{r.id}'s `answered:` holds a one-off grant, but it {why}",
                                            f"restore it from git; owner words are never edited; a note goes in `task comment {r.id}`"))
+                if r.kind.name == self.w.question and r.doc.get("agent_decided") is not None:
+                    out += self._agent_decided_failures(r, rel, state)
                 if state == "open" and r.kind.name == self.w.question and (bad := G.ask_problems(self.store.read(r.path).body)):
                     # CE-44: an open question states context, options and a recommendation; `ask new` refuses one that does not
                     more = f" (and {len(bad) - 1} more: {'; '.join(bad[1:])})" if len(bad) > 1 else ""
@@ -4401,6 +4592,29 @@ class Engine:
                         f"{k} never closed or paused; last active {at}, {n} closes or pauses since (window {ABANDON_AFTER}, DEC-29/DEC-69)",
                         f"ask the owner whether {k} is live: if it is, `session touch` from its own conversation; otherwise `session abandon --stale` (`hk run start`)")
                 for k, n, at in self.stale_stubs(None)]
+
+    def _agent_decided_failures(self, r: Record, rel: str, state: Any) -> list[Failure]:
+        """G-W4 on a question carrying `agent_decided:` (CE-218): it is closed, names a decision,
+        that decision is not the owner's or `owner asked`, and its `refs` name the question. Not
+        checked: that an `answered:` decision on an overturned question supersedes the agent's (the
+        op writes both together)."""
+        remedy = f"restore it from git; overturn the agent's decision with `ask answer {r.id}`"
+        ad = r.doc.get("agent_decided")
+        dec = ad.get("decision") if isinstance(ad, dict) else None
+        out: list[Failure] = []
+        if state == "open":
+            out.append(Failure("G-W4", rel, f"{r.id} is open but carries `agent_decided:` ({_decided_by(ad)})", f"restore `state: closed` and `status: deprecated` from git; {remedy}"))
+        if not dec:
+            return out + [Failure("G-W4", rel, f"{r.id}'s `agent_decided:` names no decision", remedy)]
+        try:
+            d = self.store.get(self._decision(str(dec))[0]).doc
+        except (Refusal, OSError, UnicodeDecodeError):
+            return out + [Failure("G-W4", rel, f"{r.id}'s `agent_decided:` names {dec}, which is not a decision", remedy)]
+        if D.owners_own(d) or self._owner_shaped(str(d.get("actor") or "")):
+            out.append(Failure("G-W4", rel, f"{r.id}'s `agent_decided:` names {dec}, whose actor is {d.get('actor')!r}: an agent's decision is never the owner's", remedy))
+        if r.id not in D.as_list(d.get("refs")):
+            out.append(Failure("G-W4", rel, f"{r.id}'s `agent_decided:` names {dec}, whose `refs` do not name the question", remedy))
+        return out
 
     def _decision_status_failures(self) -> list[Failure]:
         """G-W4 on decisions (CE-137, DEC-112): a decision is `status: deprecated` exactly when its

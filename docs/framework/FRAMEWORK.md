@@ -880,9 +880,9 @@ into the flat directory once the schema carries `state` (§11.4).
     stay as board rows.
 - **Closed only by an owner answer**, which becomes a decision with `actor: owner` and is
   recorded **immediately** (§6.4 item 0), or, for a question already open that the triage finds
-  derivable, by the agent's own decision: PROVISIONAL, never `actor: owner`, never `answers:`,
-  written and the question closed in one write, named in the close digest, and superseded by the
-  owner's decision if the owner answers it later. `task close ASK-n` is refused, and its remedy
+  derivable, by the agent's own decision (`ask.decide`, below): PROVISIONAL, never `actor: owner`,
+  never `answers:`, written and the question closed in one write, named in the close digest, and
+  superseded by the owner's decision if the owner answers it later. `task close ASK-n` is refused, and its remedy
   names `ask answer`. **A one-off permission** (the owner says yes to one thing, a push or a release,
   making no choice that later work must keep) is the one answer that mints no decision:
   `ask answer --grant` writes the words verbatim into the question's own `## Grant`
@@ -892,7 +892,9 @@ into the flat directory once the schema carries `state` (§11.4).
   reach the owner digest too.
 - **An answered question never reopens:** `task reopen` refuses a question carrying `answered:`
   and never clears it; the answer changes through its decision (amend or supersede), and a
-  follow-up is a new question citing both. A question closed without an answer may reopen.
+  follow-up is a new question citing both. A question closed without an answer may reopen,
+  except one an agent decided (`agent_decided:`, below): that one reopens only through the owner's
+  answer, which overturns it.
   `ask answer` likewise refuses a question that already carries `answered:`, so no question is
   answered by two decisions; the remedies name the decision that stands now, following `superseded_by`.
 - **Operations:** `ask.new` refuses a body that lacks the context, two options or the
@@ -913,6 +915,25 @@ into the flat directory once the schema carries `state` (§11.4).
   grant)` for one given in chat: it takes no title and no ruling (a ruling is a call, so a
   decision), and refuses words holding a `## ` heading line, which would end the section; a
   granted question never reopens either, and a follow-up is a new question citing it.
+  **An agent's decision** is `ask.decide(id, why, title, sources, opinion, opinion_by)`, for a
+  question the triage (below) finds derivable. It refuses, before anything is written: a caller
+  that is not an agent (its decision's `actor` is `agent (<model-id>)`, derived from the caller's,
+  never `owner` or `owner asked`); an empty title, reasoning or opinion; no `sources`, an id that
+  is no record or charter goal, or none owner-authored (a live story, an owner decision that
+  stands, a charter goal); an opinion by the owner; a `## ` heading line in the reasoning or the
+  opinion; a question that is not open, or carries `answered:`; and a session with no open ledger
+  stub. It mints the decision (PROVISIONAL, `refs` naming the question and the sources, no
+  `answers:`; the body holds the reasoning, `Derived from:` and the arbiter's opinion verbatim
+  under `## Second opinion`, §6.5), closes the question with `agent_decided: {on, session,
+  decision}` and writes a `decided:` line into the session's stub; `session close` carries it as
+  a `decided:` receipt and refuses a summary with no one line naming each question with its
+  decision (`ASK-n decided by the agent as DEC-n (overturn: ask answer ASK-n)`). Not checked:
+  whether the question really is derivable, and whether the opinion agrees (judgement; the
+  opinion is in the body for review). The owner **overturns** it with `ask.answer` on the closed
+  question (their decision supersedes the agent's, the question gains `answered:` and stays
+  closed) or **confirms** the decision with `decision accept`; G-W4 fails a question with
+  `agent_decided:` that is open, names no decision, names an owner's decision, or is not in that
+  decision's `refs`.
 - **Triage before raising.** Before a question is filed, and before an open one is raised again
   at session start, the session sorts it into one of three:
   1. **derivable:** the answer follows from records it can cite (the charter's goals, the owner's
@@ -1077,7 +1098,7 @@ behalf. Each session's chat close-out includes a digest of **at most 7 lines**:
 
 - agent decisions of consequence, by id and one line each;
 - criteria created, rewritten or retired, as counts plus anything surprising;
-- owner questions raised (§5.3);
+- owner questions raised (§5.3), and every question closed by `ask.decide`, with its decision;
 - anything the owner might want to push back on, flagged explicitly, including every PROVISIONAL
   call an agent made where the owner would otherwise have decided (§5.3).
 

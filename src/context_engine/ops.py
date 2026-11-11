@@ -316,6 +316,12 @@ def ask_answer(e: Engine, c: Caller, id: str, words: str, title: str = "", rulin
     return 0, e.ask_answer(id, words, title=title, ruling=ruling, ruled_by=ruled_by, grant=grant, **c.kw)
 
 
+@op(write=True)
+def ask_decide(e: Engine, c: Caller, id: str, why: str, title: str = "", sources: list[str] | None = None, opinion: str = "", opinion_by: str = "") -> tuple[int, str]:
+    """Close an open owner question with the caller's own PROVISIONAL decision (`actor: agent (<model-id>)`, never the owner's), titled `title`, when it follows from owner-authored records. `why` is the reasoning; `sources` the record ids it is derived from (at least one a live story, an owner decision that stands, or a charter goal); `opinion` the arbiter's one second opinion, verbatim, and `opinion_by` its model id. The decision's refs name the question and every source, and its body holds the why, a `Derived from:` line and the opinion under `## Second opinion`. The question closes with `agent_decided:`; the owner overturns it with ask_answer (their decision supersedes the agent's) or confirms the decision with decision_accept, and task_reopen refuses it. The session stub gets a `decided:` line, and `session_close` refuses a summary that does not name the question and its decision."""
+    return 0, e.ask_decide(id, why, title=title, sources=sources or [], opinion=opinion, opinion_by=opinion_by, **c.kw)
+
+
 # -- batons and pauses (FRAMEWORK §5.4) --------------------------------------------------
 
 

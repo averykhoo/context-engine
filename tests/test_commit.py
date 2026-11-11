@@ -557,7 +557,7 @@ MILESTONE_CONFIG["working"] = {**CONFIG["working"], "baton_max_age": 0}  # 0: ex
 # DEC-36's milestones: a task's close, the owner-words writes, a hand-off (baton, pause) and the
 # session's own close or pause; and the banner, which a clean close writes after the session's
 # close (CE-55's call: DEC-36 names it in neither list). Every other write stays uncommitted until the next commit.
-MILESTONES = {"task_close", "ask_answer", "record_new", "record_amend", "record_retire", "record_confirm", "decision_supersede",
+MILESTONES = {"task_close", "ask_answer", "ask_decide", "record_new", "record_amend", "record_retire", "record_confirm", "decision_supersede",
               "baton_add", "pause_open", "session_close", "session_pause", "session_abandon", "banner_set", "hk_close"}
 OWNER = {"actor": "owner", "story_status": "live"}
 
@@ -670,8 +670,11 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("hk_run", phase="close")  # it expires the baton: no milestone among its writes, so they ride along (CE-6)
     sha = run(mrepo, "banner_show", c)[1].split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
+    w("ask_new", title="Derivable?", body=ASK_BODY, pri="LATER")
+    decided = w("ask_decide", id="ASK-2", why="It follows from DEC-2.", title="Follow it", sources=["DEC-2"], opinion="Agreed.", opinion_by="claude-code/fable")  # CE-218: it records a decision and closes the question
+    agent_dec = re.search(r"decided by the agent as (DEC-\d+)", decided).group(1)
     w("ask_new", title="And this?", body=ASK_BODY, pri="LATER")
-    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="gate 3 passed", read="board", asked="ASK-2")  # no `ask raised`
+    w("session_close", rows="CE-1, CE-2", summary=["built it", f"ASK-2 decided by the agent as {agent_dec} (overturn: ask answer ASK-2)"], guards="gate 3 passed", read="board", asked="ASK-3")  # no `ask raised`
     w("session_start")
     w("hk_stamp_asked")  # last_asked from that receipt (CE-6): not a milestone
     w("session_pause", rows="none", deferred="everything")

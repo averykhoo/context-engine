@@ -230,6 +230,24 @@ def test_ask_answer_refuses_the_last_open_item_an_active_plan_names_until_it_is_
 
 
 @pytest.mark.criterion("AC-82")
+def test_ask_decide_refuses_the_last_open_item_an_active_plan_names_until_it_is_frozen(tmp_path):
+    """CE-218: an agent's decision closes its question, so it checks the plans as `ask answer` does."""
+    e = target(tmp_path)
+    assert e.session_start(actor=ACTOR) == KEY
+    src = e.record_new("decision", "Owner choice", "the owner chose this way", {"actor": "owner"}, **W)
+    q = e.ask_new("Which way?", body=ASK_BODY, **W)
+    write(tmp_path, PLAN, f"# Plan\n\nACTIVE-PLAN until {q.id} is answered.\n")
+    before = snapshot(tmp_path)
+    with pytest.raises(Refusal) as r:
+        e.ask_decide(q.id, "It follows.", title="This way", sources=[src.id], opinion="Agreed.", opinion_by="claude-code/fable", **W)
+    assert r.value.message.startswith(f"{q.id} is the last open item that ACTIVE-PLAN doc {PLAN} names") and f"`doc freeze {PLAN}`" in r.value.remedy
+    assert snapshot(tmp_path) == before  # no decision written, the question still open
+    e.doc_freeze(PLAN, **W)
+    assert e.ask_decide(q.id, "It follows.", title="This way", sources=[src.id], opinion="Agreed.", opinion_by="claude-code/fable", **W).startswith(f"{q.id}: decided by the agent as DEC-2 (PROVISIONAL), closed")
+    assert reds(e) == []
+
+
+@pytest.mark.criterion("AC-82")
 def test_close_names_the_config_entry_for_a_plan_whose_liveness_config_gives(tmp_path):
     """CE-95 (3): `doc freeze` refuses a `liveness_given` doc, so the close's remedy names the entry."""
     e = target(tmp_path, {**DOCS, "guards": {**DOCS["guards"], "liveness_given": {"docs/given.md": "ACTIVE-PLAN"}}})

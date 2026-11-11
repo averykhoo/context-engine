@@ -49,6 +49,7 @@ CALLS = {
     "ask_raised": (["ASK-1", "ASK-2,ASK-3"], {"ids": ["ASK-1", "ASK-2", "ASK-3"]}),
     "ask_later": (["ASK-1"], {"id": "ASK-1"}),
     "ask_answer": (["ASK-1", "the words", "--title", "T", "--ruling", "r", "--ruled-by", "claude-code/fable"], {"id": "ASK-1", "words": "the words", "title": "T", "ruling": "r", "ruled_by": "claude-code/fable"}),
+    "ask_decide": (["ASK-1", "the why", "--title", "T", "--from", "US-1, DEC-2", "--opinion", "o", "--opinion-by", "claude-code/fable"], {"id": "ASK-1", "why": "the why", "title": "T", "sources": ["US-1", "DEC-2"], "opinion": "o", "opinion_by": "claude-code/fable"}),
     "baton_list": ([], {}),
     "baton_add": (["step", "--why", "w"], {"step": "step", "why": "w"}),
     "baton_done": (["BTN-1", "e"], {"id": "BTN-1", "evidence": "e"}),
@@ -221,12 +222,14 @@ def test_every_write_in_a_session_returns_one_line(root):
     w("decision_link", id="DEC-2", target="a.py::f")
     w("decision_relink", id="DEC-2", old="a.py::f", new="b.py::f")
     w("decision_set", id="DEC-2", fields={"tags": "a, b"}, unset=["reopen_if"])
+    w("ask_new", title="Which colour?", body=ASK_BODY)
+    w("ask_decide", id="ASK-2", why="It follows from DEC-2.", title="Follow it", sources=["DEC-2"], opinion="Agreed.", opinion_by="claude-code/fable")  # CE-218
     w("baton_add", step="a step", why="no time")
     w("baton_done", id="BTN-1", evidence="did it")
     w("hk_expire_batons")
     sha = text(call(srv, "banner_show")).split()[3]
     w("banner_set", text="- Where things stand.", seen=sha)
-    w("session_close", rows="CE-1, CE-2", summary=["built it"], guards="gate 3 passed", read="board")
+    w("session_close", rows="CE-1, CE-2", summary=["built it", "ASK-2 decided by the agent as DEC-3 (overturn: ask answer ASK-2)"], guards="gate 3 passed", read="board")
     assert key in (root / "ledger.md").read_text(encoding="utf-8")
     untested = {o.name for o in ops.OPS.values() if o.write} - set(writes)
     # one-line by the same code paths; covered in test_working (session_abandon, which needs a stale stub; hk_close, hk_comment and hk_run, which need git: test_housekeeping; init: test_kit; the decision ops: test_decisions; record_retire: test_retire; record_confirm: test_confirm; commit, which needs git: test_commit; the doc ops: test_docs; the criterion ops, which need a criteria file: test_criteria_write; register_retire, which needs a register: test_review)

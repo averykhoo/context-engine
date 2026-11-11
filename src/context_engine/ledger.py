@@ -195,8 +195,9 @@ def render_open(key: str, at: str, actor: str, head: str | None = None, follows:
 # `housekeeping`: what the close's own `hk run close` did; `banner`: `set`, or `kept <key>` when
 # the close left the banner as it was (CE-195, DEC-163), which G-W1 reads; `pushed`: a push made
 # while no session was open, `<hash>[, <hash>...]: <note>`, which clears orient's flag on it (CE-176);
-# `granted`: the questions answered this session by a one-off grant, from the stub's line (CE-190)
-RECEIPTS = ("guards", "read", "asked", "granted", "housekeeping", "banner", "pushed")
+# `granted`: the questions answered this session by a one-off grant, from the stub's line (CE-190);
+# `decided`: the questions closed this session by an agent's decision (`ask decide`), from the stub's line (CE-218)
+RECEIPTS = ("guards", "read", "asked", "granted", "decided", "housekeeping", "banner", "pushed")
 BANNER_SET = "set"
 BANNER_KEPT = "kept"
 

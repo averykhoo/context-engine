@@ -292,7 +292,7 @@ back through the digest (FRAMEWORK §3.3).
 | AC-200 | Which model plans which kind of task is decided only on a trial that plans every arm fresh, builds each with the same builder, scores outcomes (verifier defects, fix rounds, tokens with the planner's), and runs an opus-vs-opus noise arm on every task | US-23 | planned |
 | AC-201 | The fan-out runbook's guidance on how to split work across agents and when to compact gives measured, dated cost per completed task from this repo's transcripts, and names what was not measured | US-23 | planned |
 | AC-205 | Before a question reaches the owner, the procedure decides it as a PROVISIONAL agent decision citing its source (one fable opinion, never a fan-out) when it follows from the goals or earlier decisions, or goes ahead when it is cheap to reverse and leaves the direction unchanged; what reaches the owner carries context and a recommendation, with fable's opinion where the recommendation is not clear | US-24, DEC-325 | tested |
-| AC-206 | `ask decide` closes a question with a PROVISIONAL agent decision that never has actor owner, and the next close digest lists every question closed that way | US-24, DEC-325 | planned |
+| AC-206 | `ask decide` closes a question with a PROVISIONAL agent decision that never has actor owner, and the next close digest lists every question closed that way | US-24, DEC-325 | tested |
 
 ## Criterion write op (CE-42)
 

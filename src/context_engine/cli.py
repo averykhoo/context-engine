@@ -210,6 +210,16 @@ def build() -> argparse.ArgumentParser:
     ru = aa.add_mutually_exclusive_group()
     ru.add_argument("--ruling", default="", help="the ruling made on the owner's delegation (needs --ruled-by); recorded under ## Ruling, apart from the owner's words")
     ru.add_argument("--ruling-file", type=Path, help="read --ruling from a file")
+    ad = _sub(a, "decide", "close an open owner question as a PROVISIONAL agent decision derived from owner sources, with the arbiter's opinion verbatim")
+    ad.add_argument("id", help="the question's id")
+    ad.add_argument("why", nargs="?", help="the reasoning: the call, the options and what it follows from (or --file)")
+    ad.add_argument("--file", type=Path, help="read the reasoning from a file")
+    ad.add_argument("--title", default="", help="the decision's title")
+    ad.add_argument("--from", dest="sources", default="", help="the ids it is derived from, comma- or space-separated; at least one a live story, an owner decision that stands, or a charter goal")
+    ao = ad.add_mutually_exclusive_group()
+    ao.add_argument("--opinion", default="", help="the arbiter's second opinion, verbatim")
+    ao.add_argument("--opinion-file", type=Path, help="read --opinion from a file")
+    ad.add_argument("--opinion-by", default="", help="who gave the opinion: its model id")
 
     b = _sub(groups, "baton", "batons: skipped steps handed to the next session (FRAMEWORK §5.4)").add_subparsers(dest="op", required=True)
     ba = _sub(b, "add", "hand a skipped step to the next session")
@@ -376,7 +386,7 @@ CLI_OPS = {
     ("coverage", None): "coverage",
     ("lint", None): "lint",
     **{("task", v): f"task_{v}" for v in ("new", "import", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
-    **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer")},
+    **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer", "decide")},
     ("id", "reserve"): "id_reserve",
     ("baton", "list"): "baton_list",
     ("baton", "add"): "baton_add",
@@ -430,7 +440,7 @@ def _params(args: argparse.Namespace) -> dict:
         a["fields"] = _fields(a["set"])
     if isinstance(a.get("prefix"), list):
         a["prefix"] = _fields(a["prefix"], "--prefix")
-    for name in ("deps", "add", "remove", "blocks", "goals"):
+    for name in ("deps", "add", "remove", "blocks", "goals", "sources"):
         if isinstance(a.get(name), str):
             a[name] = _ids(a[name])
     if isinstance(a.get("ids"), list):
@@ -443,19 +453,21 @@ def _params(args: argparse.Namespace) -> dict:
         a["banner"] = _read(a["banner_file"])
     if a.get("ruling_file") is not None:
         a["ruling"] = _read(a["ruling_file"])
+    if a.get("opinion_file") is not None:
+        a["opinion"] = _read(a["opinion_file"])
     if a.get("answered_file") is not None:
         a["answered"] = _read(a["answered_file"])
     words = WORDS.get((args.group, a.get("op")))
     if words and (a[words] is None) == (a.get("file") is None):  # CE-73: the words come one way, exactly
         raise Refusal(f"`{args.group} {a['op']}` got its {words} {'both as an argument and with --file' if a[words] is not None else 'neither as an argument nor with --file'}", f"give the {words} one way: as the argument, or written to a file and passed with --file")
     if a.get("file") is not None:
-        into = {("record", "retire"): "why", ("record", "new"): "body", ("ask", "answer"): "words", ("record", "confirm"): "words"}.get((args.group, a.get("op")), "text")
+        into = {("record", "retire"): "why", ("record", "new"): "body", ("ask", "answer"): "words", ("ask", "decide"): "why", ("record", "confirm"): "words"}.get((args.group, a.get("op")), "text")
         a[into] = _read(a["file"])
     return a
 
 
 # (group, verb) -> the optional positional that --file stands in for (CE-73)
-WORDS = {("record", "amend"): "text", ("ask", "answer"): "words", ("record", "confirm"): "words"}
+WORDS = {("record", "amend"): "text", ("ask", "answer"): "words", ("ask", "decide"): "why", ("record", "confirm"): "words"}
 
 
 def _parse(argv: list[str] | None) -> argparse.Namespace:
