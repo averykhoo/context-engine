@@ -87,7 +87,8 @@ def test_an_adopted_repo_that_loses_a_method_runbook_or_outgrows_it_is_red(tmp_p
     grown = {  # each breaks one cap and stays inside the other two
         "lines": "x\n" * (cap + 1),
         "bytes": ("y" * (width - 1) + "\n") * (cap - 1),
-        "wider": text + "z" * (width + 1) + "\n",
+        # the runbook's opening lines, not all of it: a runbook near its byte cap would break that cap too
+        "wider": "".join(text.splitlines(keepends=True)[:10]) + "z" * (width + 1) + "\n",
     }
     assert len(grown["bytes"].encode()) > route["max_bytes"], "the byte case must outgrow the byte cap within the line cap"
     for says, body in grown.items():

@@ -59,7 +59,8 @@ do it: haiku, or sonnet when it must read the logs.
 
 ## Build rounds
 
-The steps are FRAMEWORK §6.6's, in its order and with its numbers.
+The steps are FRAMEWORK §6.6's, in its order and with its numbers. Above its size floor, its build
+ladder says who plans, builds, fixes and verifies, on which model tier.
 
 | # | Step | How | Why |
 |---|---|---|---|

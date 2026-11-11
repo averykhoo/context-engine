@@ -11,6 +11,21 @@ component, procedure, guard and operation.
 
 ## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
 
+- **A size floor and a build ladder for delegated work.** A task whose edits, summed over the
+  whole task, stay within 2 files and 30 changed lines, add no test and change no assertion,
+  touch none of the framework's files, the repo's contract or a CI workflow, and add no refusal,
+  guard or record kind is edited by the coordinator directly, under the gate, lint and one
+  read-only diff review whose FAIL lifts it above the floor. Above it, a planner on the most tier
+  writes the design, a builder works on the reading tier when that design is pinned and the task
+  changes code but not FRAMEWORK or the contract, a verifier on the most tier checks, and every
+  fix after the second FAIL runs on the most tier, each such escalation logged as an
+  `escalated:` comment on its task. The roster gains the planner, and P11 names the floor.
+  FRAMEWORK §6.6; DEC-173, DEC-177, DEC-326, DEC-328..DEC-334, CE-219.
+  **Upgrade:** the contract is unchanged: its coordinator rule names the floor at the next
+  contract version bump (CE-228). Until then, a repo takes the floor up by naming it in its own
+  contract, and names each tier's model there (the reading tier is the one a pinned code build
+  uses).
+
 - **An owner's decision is born ACCEPTED; an agent's call stays PROVISIONAL until reviewed.**
   `record new` and `ask answer` give a decision in the owner's own words (`actor: owner` or
   `human:<id>`, no `ruled_by`) `decision_status: ACCEPTED`; an agent's call, or a ruling on the

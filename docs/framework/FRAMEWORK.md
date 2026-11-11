@@ -250,8 +250,8 @@ recorded only there is already lost.
 **P11. Delegate reading to save context; parallelise building only when file ownership is
 disjoint. Judgement stays with the session.**
 - Reading and auditing go to subagents, which return verdicts, not file dumps (§6.6).
-- The top-level session coordinates: every task, even a lone one, goes to a subagent, checks and
-  verification go to agents, and the top level only reports (§6.6).
+- The top-level session coordinates: every task above the size floor, even a lone one, goes to a
+  subagent, checks and verification go to agents, and the top level only reports (§6.6).
 - Building: parallel builders work under disjoint file ownership, with no fan-out on a
   dependency chain (§6.6).
 - Agents audit, and the session decides.
@@ -1544,21 +1544,53 @@ persist and watch: `docs/runbooks/fan-out.md` (§7.5).
   Never fan out with fable: it wastes tokens.
 - When it really is necessary, do whatever minimizes its cost: one agent, the narrowest prompt,
   a capped output, verdicts back rather than prose. Say why in the session summary.
-- The default for delegated work is the cheapest model that can do it: a watcher needs the
-  least, bulk reading and a census a little more, code and review the most. The repo's
-  contract names the models.
+- The default for delegated work is the cheapest model that can do it, on three tiers: the
+  least for a watcher, the reading tier for bulk reading and a census, and the most for code and
+  review; but a code build whose design a planner pinned takes the reading tier (the build
+  ladder, below). The repo's contract names each tier's model.
 
-**The roster:** every role the session delegates, one row each. *Model* is a tier of the rule
-above (least, reading, most), and the repo's contract names each tier's model. Every role but the
-coordinator is a subagent, and every subagent but an `Explore` scout and the housekeeping agent
-persists to its own file as it goes (the housekeeping agent's `hk_` operations are logged in the
-op log instead); *Writes* is what it may change beyond that file.
+**The size floor and the build ladder.** A task is under the size floor when all of these hold
+for its edits summed over the whole task (a task split into smaller edits is still summed), each
+checkable from `git diff --numstat` and the paths:
+- at most 2 files and 30 changed lines (added plus deleted, as `git diff --numstat` counts them,
+  against the commit before the task's first edit);
+- no test added, and no existing assertion changed;
+- no path in the framework's own files (this spec, the contract, the kit, and every copy of the
+  kit's runbooks), the repo's contract or a CI workflow;
+- no new refusal, guard or record kind.
+
+The floor is the coordinator rule's one exception (above). Under it, the coordinator, or one
+agent on the reading tier, edits directly; the gate, lint and a by-path commit still apply, and
+one read-only agent on the reading tier reviews the diff, with no fix rounds: its FAIL lifts the
+task above the floor. The coordinator judges the checks before it sends the task out, and that
+review judges them again on the final diff. A repo takes the floor up by naming it in its own
+contract, which narrows the coordinator rule there.
+
+Above the floor, every task runs the build ladder:
+1. a planner on the most tier reads the code and writes the design: the behaviour, the rejected
+   options, the edge cases as concrete test inputs, and its design calls, recorded PROVISIONAL
+   (P8);
+2. a builder carries it out: on the reading tier when the task changes code, the planner's
+   design is pinned (it names every file's change and every test, and leaves no open question
+   for the builder or the owner), and neither this spec nor the contract changes; on the most
+   tier otherwise;
+3. a verifier on the most tier, never the builder or a fixer, checks it; each FAIL sends a fix
+   round to a fixer on the builder's tier, and the fix after the second FAIL, and every one
+   after it, runs on the most tier. That move to the most tier is logged once, as a comment on
+   its task that starts `escalated:` and names the FAIL's class.
+
+**The roster:** every role the session delegates, one row each. *Model* is a tier of the Model
+choice rule (least, reading, most), and the repo's contract names each tier's model. Every role
+but the coordinator is a subagent, and every subagent but an `Explore` scout and the housekeeping
+agent persists to its own file as it goes (the housekeeping agent's `hk_` operations are logged in
+the op log instead); *Writes* is what it may change beyond that file.
 
 | Role | Runs as | Model | Writes | Returns |
 |---|---|---|---|---|
 | coordinator | the top-level session itself, for every request (above) | the session's | owner words verbatim (§6.2), trivial bookkeeping, and what a verified report carries | progress, blockers and delays, then the digest (§5.6) |
 | task owner | one agent per task, through a workflow | most | its task's files, under disjoint ownership | its commits, its own calls (PROVISIONAL, P8) and what is left |
-| builder, fixer | an agent a task owner sends, one per set of files | most | the files it owns | what it changed, and each new check seen to fail (P7) |
+| planner | one agent per task above the size floor, before any builder; it reads the code | most | nothing | the design: the behaviour, the rejected options, the edge cases as test inputs, and its calls (PROVISIONAL, P8) |
+| builder, fixer | an agent a task owner sends, one per set of files | reading for a code build whose design a planner pinned (the ladder, above); most otherwise, and for every fix after the second FAIL | the files it owns | what it changed, and each new check seen to fail (P7) |
 | verifier | another agent than the one that did the work; a skeptic by default | most | nothing | a verdict per claim, with `file::symbol` evidence |
 | adversarial reviewer | one agent per lens (build round 6) | most | nothing; probes in scratch | findings, each with its evidence |
 | scout, auditor | `Explore` when its answer is acted on in the same turn, since it cannot persist; otherwise an agent that can write | reading | nothing | verdicts plus `file::symbol` evidence, never dumps |

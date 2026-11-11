@@ -2,7 +2,8 @@
 framework, one table row each, and no row is left without what it runs as, its model, what it
 writes and what it returns. The arbiter is the one role on `fable`, as one agent; a scout that
 must persist is not `Explore`; the housekeeping agent works only through the `hk_` operations.
-The kit ships the roster as this text, not as named agents (DEC-97).
+The kit ships the roster as this text, not as named agents (DEC-97). A planner row precedes the
+builder, and §6.6's build ladder puts only a pinned code build on the reading tier (DEC-326).
 
 Not checked: whether a row's wording is right (the review does that), or that a session follows
 it (prompts are not read)."""
@@ -16,7 +17,7 @@ REPO = Path(__file__).resolve().parents[1]
 FRAMEWORK = REPO / "docs" / "framework" / "FRAMEWORK.md"
 COLUMNS = ["Role", "Runs as", "Model", "Writes", "Returns"]
 ROLES = [
-    "coordinator", "task owner", "builder, fixer", "verifier", "adversarial reviewer", "scout, auditor",
+    "coordinator", "task owner", "planner", "builder, fixer", "verifier", "adversarial reviewer", "scout, auditor",
     "ranking agent", "watcher", "install trial", "`.scratch/` sweep auditor", "housekeeping agent", "arbiter",
 ]
 
@@ -61,6 +62,32 @@ def test_the_roster_keeps_fable_to_the_arbiter_explore_to_a_scout_that_need_not_
     # a push ("nothing but the fix it pushes when a run is red") must fail.
     watcher = rows["watcher"]["Writes"]
     assert re.fullmatch(r"nothing: no (?:[\w-]+, )*[\w-]+ or push", watcher), watcher
+
+
+@pytest.mark.criterion("AC-207")
+def test_the_build_ladder_puts_only_a_pinned_code_build_on_the_reading_tier():
+    """§6.6's size floor and build ladder (DEC-173, DEC-177, DEC-326): the planner and the verifier
+    run on the most tier, the builder on the reading tier only for a pinned code build, and every
+    fix from the second FAIL on the most tier; the floor's checks are summed over the whole task;
+    the floor is the coordinator rule's one exception, and P11 says the same. The kit contract
+    names the floor only at the next contract version bump (CE-228)."""
+    _, rows = roster()
+    assert rows["planner"]["Model"] == "most" and rows["verifier"]["Model"] == "most", (rows["planner"], rows["verifier"])
+    b = rows["builder, fixer"]["Model"]
+    assert b.startswith("reading for a code build whose design a planner pinned") and "most otherwise" in b and "after the second FAIL" in b, b
+    text = FRAMEWORK.read_text(encoding="utf-8").replace("\r\n", "\n")
+    six = text[text.index("### 6.6 ") : text.index("\n### ", text.index("### 6.6 ") + 1)]
+    ladder = " ".join(six[six.index("**The size floor and the build ladder.**") : six.index("**The roster:**")].split())
+    for phrase in (
+        "at most 2 files and 30 changed lines", "summed over the whole task", "no test added, and no existing assertion changed",
+        "no new refusal, guard or record kind", "The floor is the coordinator rule's one exception",
+        "its FAIL lifts the task above the floor", "a planner on the most tier", "on the reading tier when the task changes code",
+        "design is pinned (it names every file's change and every test", "neither this spec nor the contract changes",
+        "a verifier on the most tier, never the builder or a fixer", "the fix after the second FAIL", "starts `escalated:`",
+    ):
+        assert phrase in ladder, phrase
+    p11 = " ".join(text[text.index("**P11.") : text.index("**P12.")].split())
+    assert "The top-level session coordinates: every task above the size floor, even a lone one, goes to a subagent" in p11, p11
 
 
 HOUSEKEEPER = REPO / ".claude" / "agents" / "housekeeper.md"

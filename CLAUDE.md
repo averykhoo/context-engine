@@ -110,10 +110,10 @@ This repo's values for those steps:
 ## Rules
 
 - **Never run `context-engine init` here** (it holds the kit's sources). Close eagerly, without asking (DEC-31).
-- **Coordinator** (DEC-16, DEC-44, DEC-60; contract § Rules): every task, even one, to an ultracode
-  subagent; checks and verification to agents. Cheapest viable model (DEC-45): haiku for watchers,
-  sonnet for bulk reading and census, opus for code and review; DEC-173 adds a sonnet-builder trial
-  (CE-198) and a size floor (in its advice doc).
+- **Coordinator** (DEC-16, DEC-44, DEC-60; contract § Rules): every task above the size floor (FRAMEWORK §6.6,
+  DEC-173; narrows the contract until CE-228) to an ultracode subagent; checks and verification to agents.
+  Tiers (DEC-45, DEC-326): least haiku; reading sonnet (census, a diff review under the floor, code an opus
+  planner pinned); most opus.
 - Commit by path through `context-engine commit <paths> -m ...` (a plain `git commit -o` only for paths no uncommitted op
   line names, and for a `code` path only on a green `gate status --require code`); never `git add -A`, never `git stash`.
 - **Commits** (DEC-22): commit whenever progress is made, on a green gate unless a really huge
