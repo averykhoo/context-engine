@@ -3,13 +3,15 @@ type: Task
 id: CE-217
 title: "Specify US-24 and build its triage step: decide derivable questions with fable's opinion before asking"
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-7]
 source: session 2026-11-10a
 created: 2026-11-10
 moved: 2026-11-11a
 updated: 2026-11-11a
+status: deprecated
+closed: 2026-11-11a
 ---
 
 Specify and build US-24's triage step (owner words: US-24; ruling DEC-325, answering ASK-38 with option A).
@@ -25,3 +27,8 @@ Draft US-24's criteria as `planned` rows of docs/criteria.md (G-T1). Write the s
 
 - US-24, DEC-325, ASK-38
 - audio-workspace's D-413 "How it applies" (C:/Users/user/PycharmProjects/audio-workspace/docs/decisions/D-413-questions-recommend-and-give-context-decide.md). Read it, never edit it.
+
+## Log
+
+- 2026-11-11a (claude-code/claude-haiku-5-5): closed: CE-217: verifier PASS; US-24 triage step specified in FRAMEWORK 5.3 and 6.5 and written into procedures (commits 68d9ca8, 2d46cb4)
+  residual risk: INV-252, INV-253, INV-254, INV-255, INV-256, INV-257

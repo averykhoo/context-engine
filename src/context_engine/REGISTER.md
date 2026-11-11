@@ -1770,3 +1770,45 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** the failures come from the lane variable in the test environment, and no board item owns them yet
 - **control:** reduce: none yet; the verifier asked for a board item, which the closer did not file
 - **from:** CE-219, session 2026-11-11a
+
+## INV-252: Session start step 3 and FRAMEWORK 6.1 item 3 raise NEXT-tier and overdue owner questions without saying triage first, so a derivable question could reach the owner unfiltered
+
+- **affects:** the coordinator and every session that raises owner questions
+- **why not eliminated:** the triage rule is already stated in FRAMEWORK 5.3 and procedures Session start step 3, so the gap is wording only and sat outside the addendum scope
+- **control:** reduce: FRAMEWORK 5.3 and procedures Session start step 3
+- **from:** CE-217, session 2026-11-11a
+
+## INV-253: FRAMEWORK 5.3 says a question closes only on an owner answer and now also describes an agent-decision close in one write, which only CE-218 performs
+
+- **affects:** sessions closing agent-decided questions
+- **why not eliminated:** CE-218 builds that operation; until then the interim keeps the question open rather than closing it by hand
+- **control:** reduce: the interim in procedures keeps the question open until CE-218 lands
+- **from:** CE-217, session 2026-11-11a
+
+## INV-254: AC-205 in docs/criteria.md still says one fable opinion, while the spec now makes it the arbiter's opinion with fable only where the owner asked for that role
+
+- **affects:** whoever reads or tests AC-205
+- **why not eliminated:** the drift is in the criterion row wording only and the spec text is the authority
+- **control:** reduce: the arbiter wording in FRAMEWORK 5.3 and 6.5
+- **from:** CE-217, session 2026-11-11a
+
+## INV-255: Interim session-start step 3 has no skip rule for an open derivable question that already carries the decided-by-agent log line, so each session start may triage it again until the owner answers
+
+- **affects:** every session start while such a question stays open
+- **why not eliminated:** the gap lasts only until CE-218 builds the close operation
+- **control:** reduce: the interim in procedures session-start step 3, resolved by CE-218
+- **from:** CE-217, session 2026-11-11a
+
+## INV-256: One rewrapped line in FRAMEWORK 5.3 is about 101 columns
+
+- **affects:** readers of FRAMEWORK 5.3
+- **why not eliminated:** cosmetic, no behaviour depends on line width
+- **control:** reduce: the spec's existing line-wrap convention
+- **from:** CE-217, session 2026-11-11a
+
+## INV-257: The CE-226 trial recorder rows are still owed: the verifier comparison for CE-217 and a fresh CE-224 row
+
+- **affects:** the trial record of the 2026-11-11a wave
+- **why not eliminated:** recording is the recorder's own step and this verdict exists only now
+- **control:** reduce: the recorder's step, to be run by the next session
+- **from:** CE-217, session 2026-11-11a
