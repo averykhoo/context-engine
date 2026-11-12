@@ -109,10 +109,10 @@ def test_g_d1_remedy_names_where_cut_text_goes_and_to_delete_it_only_once_it_lan
         assert "delete it here only once it has landed there" in f.remedy, f.remedy
 
 
-def _headroom_engine(tmp_path, max_lines: int, max_bytes: int) -> Engine:
+def _headroom_engine(tmp_path, max_lines: int, max_bytes: int, off=()) -> Engine:
     """An engine whose only capped route is HANDOFF.md, so 95% is exact: 19 of 20 lines warns,
     18 does not; 380 of 400 bytes warns, 379 does not (CE-231)."""
-    cfg = config()
+    cfg = config(off=list(off)) if off else config()
     cfg["routes"] = [{"component": "Note", "path": "HANDOFF.md", "mode": "replaced", "max_lines": max_lines, "max_bytes": max_bytes, "max_width": 40}]
     (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
     return Engine(tmp_path)
@@ -147,7 +147,63 @@ def test_g_d1_headroom_warning_is_not_a_failure_and_lint_headroom_prints_it_sepa
     assert "G-D1" not in out and "20 lines, 100% of the Note cap of 20" not in out
     headroom_code, headroom_out = run(["--root", str(tmp_path), "lint", "--headroom"])
     assert headroom_code == code
-    assert headroom_out == out + "\nHANDOFF.md: 20 lines, 100% of the Note cap of 20. Remedy: move text out, never just cut it; raise the cap in [[routes]] 'Note' only with a new provenance note"
+    assert headroom_out == out + "\nHANDOFF.md: 20 lines, 100% of the Note cap of 20. Remedy: " + G.cap_remedy("Note")
+
+
+@pytest.mark.criterion("AC-208")
+def test_g_d1_headroom_warning_gives_the_g_d1_failure_remedy_from_one_definition(tmp_path):
+    """CE-231 follow-up: the warning's remedy was a shortened copy of the failure's, dropping where
+    cut text goes and to delete it only once it has landed (AC-105). Both now come from
+    ``cap_remedy``, one text."""
+    e = _headroom_engine(tmp_path, 20, 400)
+    write(tmp_path, "HANDOFF.md", "\n".join(f"line {i}" for i in range(21)) + "\n")  # 21 of 20 lines, well under 400 bytes
+    assert [w.split(". Remedy: ", 1) for w in G.headroom(e)] == [["HANDOFF.md: 21 lines, 105% of the Note cap of 20", G.cap_remedy("Note")]]
+    failed = [f.remedy for f in e.lint() if f.guard == "G-D1" and f.path == "HANDOFF.md" and "cap of" in f.message]
+    assert failed == [G.cap_remedy("Note")]
+    for part in ("a rule to the contract or a runbook", "delete it here only once it has landed there", "[[routes]] 'Note'"):
+        assert part in G.cap_remedy("Note"), part
+
+
+@pytest.mark.criterion("AC-208")
+def test_g_d1_headroom_is_silent_while_guards_off_names_g_d1(tmp_path):
+    """CE-231 follow-up: `[guards] off` naming G-D1 drops its failures (AC-43), and its headroom
+    warning with them: `lint --headroom` then prints what `lint` prints."""
+    from context_engine.cli import run
+
+    write(tmp_path, "HANDOFF.md", "\n".join(f"line {i}" for i in range(19)) + "\n")  # 19 of 20 lines, 95%
+    on = _headroom_engine(tmp_path, 20, 400)
+    assert len(G.headroom(on)) == 1  # not vacuous: with G-D1 on, it warns
+    off = _headroom_engine(tmp_path, 20, 400, off=["G-D1"])
+    assert G.headroom(off) == []
+    code, out = run(["--root", str(tmp_path), "lint"])
+    headroom_code, headroom_out = run(["--root", str(tmp_path), "lint", "--headroom"])
+    assert (headroom_code, headroom_out) == (code, out)
+    assert "of the Note cap of 20" not in headroom_out
+
+
+@pytest.mark.criterion("AC-208")
+@pytest.mark.parametrize("value,cap,pct", [
+    (9996, 10000, "99.9"),
+    (9999, 10000, "99.9"),
+    (7990, 8000, "99.8"),
+    (19, 20, "95"),
+    (380, 400, "95"),
+    (20, 20, "100"),
+    (10000, 10000, "100"),
+    (21, 20, "105"),
+    (10050, 10000, "100.5"),
+    (10001, 10000, "100"),  # over the cap, floored; the G-D1 failure on that file already says it is over
+])
+def test_g_d1_headroom_percent_rounds_down_so_a_doc_under_its_cap_never_reads_100(value, cap, pct):
+    """CE-231 follow-up: 9996 of 10000 bytes read "100%", as if at the cap when it is under."""
+    assert G._headroom_pct(value, cap) == pct
+
+
+@pytest.mark.criterion("AC-208")
+def test_g_d1_headroom_reads_9996_of_10000_bytes_as_99_9_percent(tmp_path):
+    e = _headroom_engine(tmp_path, 20, 10000)
+    write(tmp_path, "HANDOFF.md", "x" * 9995 + "\n")  # 9996 bytes, one line
+    assert [w.split(". Remedy:")[0] for w in G.headroom(e)] == ["HANDOFF.md: 9996 bytes, 99.9% of the Note cap of 10000"]
 
 
 # -- G-D2 ----------------------------------------------------------------------------------
@@ -808,6 +864,65 @@ def test_g_d12_a_frozen_map_under_the_old_names_still_owns_what_dec_39_renamed(t
     assert reds(e, "G-D12") == []
     write(tmp_path, "maps/coverage-2026-10-12.md", old.replace("| Law / NFRs |", "| Law |"))  # not an earlier name
     assert reds(e, "G-D12") == [unowned("component 'Non-functional requirements (NFRs)' (§2)")]
+
+
+# -- G-D13 record ids in reader-facing docs (CE-233, DEC-338) --------------------------------
+
+
+def _reader_engine(tmp_path, **guards) -> Engine:
+    """A repo keeping CE (a kind), AC (the criteria rows), INV (the register) and, with a charter, G-n goals (CE-233)."""
+    cfg = config(**guards)
+    cfg["working"] = {**cfg["working"], "criteria": "criteria.md", "register": "REGISTER.md"}
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    (tmp_path / "HANDOFF.md").write_text("# Note\n\n## Banner (2026-10-08a)\n\n- true now\n", encoding="utf-8")
+    write(tmp_path, "criteria.md", "# Criteria\n\n| id | criterion | from | status |\n|---|---|---|---|\n| AC-1 | x | US-1 | planned |\n")
+    write(tmp_path, "REGISTER.md", "# Register\n\n## INV-3: a risk\n\n- **affects:** x\n")
+    write(tmp_path, "charter.md", "# Charter\n\n| Goal | What |\n|---|---|\n| G-1 | x |\n")
+    return Engine(tmp_path)
+
+
+READER_FENCE = "```"
+READER_README = "\n".join([
+    "# Thing",
+    "",
+    "Built in CE-6 and CE-12; the rule is AC-1, its risk INV-3, its goal G-2.",
+    "Inline code counts too: `context-engine task show CE-7`.",
+    "Not ids: G-D1, §8.0, UTF-8, DEC-3, US-4, CE-6-slug, xCE-6, ce-6, 2026-11-12b, GOAL3.",  # DEC and US are no series here
+    "See [the board](docs/CE-9.md), <https://example.org/CE-10> and https://example.org/AC-1.",
+    "[site]: docs/records/CE-11.md",  # a path, not a URL: only the reference-definition skip hides it
+    READER_FENCE,
+    "context-engine task show CE-8",
+    READER_FENCE,
+    "Twice on a line: CE-6 and CE-6.",
+]) + "\n"
+
+
+@pytest.mark.criterion("AC-209")
+def test_g_d13_fails_each_record_id_a_reader_sees_with_its_file_line_and_id(tmp_path):
+    """CE-233 (DEC-338): the README is the page a stranger reads first; each id of a series the repo
+    keeps that its reader sees is red, inline code included, once per line. Fenced code, link
+    destinations, reference definitions, URLs, guard ids, sections, glued or lower-case forms and
+    ids of series the repo does not keep are not."""
+    e = _reader_engine(tmp_path, reader_docs=["README.md"], charter="charter.md")
+    write(tmp_path, "README.md", READER_README)
+    want = [(3, "CE-6"), (3, "CE-12"), (3, "AC-1"), (3, "INV-3"), (3, "G-2"), (4, "CE-7"), (11, "CE-6")]
+    assert reds(e, "G-D13") == [f"README.md: line {n}: cites the record id {rid}" for n, rid in want]
+    got = [f for f in e.lint() if f.guard == "G-D13"]
+    assert got and all(f.remedy == G.READER_REMEDY for f in got)
+    assert "the board" in G.READER_REMEDY and "records site" in G.READER_REMEDY
+
+
+@pytest.mark.criterion("AC-209")
+def test_g_d13_is_off_while_empty_or_switched_off_reads_a_listed_directory_and_fails_a_missing_path(tmp_path):
+    write(tmp_path, "README.md", "See CE-6.\n")
+    assert reds(make(tmp_path), "G-D13") == []  # an empty list is off
+    assert reds(_reader_engine(tmp_path, reader_docs=["README.md"]), "G-D13") == ["README.md: line 1: cites the record id CE-6"]
+    assert [f for f in _reader_engine(tmp_path, reader_docs=["README.md"], off=["G-D13"]).lint() if f.guard == "G-D13"] == []
+    write(tmp_path, "docs/guide/a.md", "Read CE-7 first.\n")
+    assert reds(_reader_engine(tmp_path, reader_docs=["docs/guide"]), "G-D13") == ["docs/guide/a.md: line 1: cites the record id CE-7"]
+    assert reds(_reader_engine(tmp_path, reader_docs=["GONE.md"]), "G-D13") == ["context.toml: [guards] reader_docs names GONE.md, which does not exist"]
+    write(tmp_path, "README.md", "Our goal G-2.\n")
+    assert reds(_reader_engine(tmp_path, reader_docs=["README.md"]), "G-D13") == []  # no charter: G-n is no series here
 
 
 # -- G-D4 liveness (CE-33) -----------------------------------------------------------------

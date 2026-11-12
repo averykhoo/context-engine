@@ -7,6 +7,7 @@ check (P7). ``lint`` runs them all; ``Engine.lint`` drops the ids ``[guards] off
 What a doc guard reads is configured, never guessed: G-D1's caps sit on ``[[routes]]``, and G-D3,
 G-T3 and G-D7 read the paths listed in ``[guards]``. A path list that is empty checks nothing.
 G-D12 reads the spec and the coverage maps ``[guards]`` names, and is off while neither is set.
+G-D13 reads ``[guards] reader_docs`` and the repo's id series, and is off while that list is empty.
 G-T3 also reads the `code:` links of the ``[working] decision`` kind's current records. G-D4
 reads ``[guards] liveness`` and ``history`` (with ``liveness_given`` for docs whose opening lines
 the repo may not edit), and G-D5 reads ``[guards] numbers``; each is off while its lists are empty.
@@ -76,7 +77,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + placeholders(e) + links(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + mechanical_closes(e) + coverage(e) + intent(e) + stale(e)
+    return caps(e) + ids(e) + placeholders(e) + links(e) + reader_ids(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + mechanical_closes(e) + coverage(e) + intent(e) + stale(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -316,15 +317,22 @@ def caps(e: Engine) -> list[Failure]:
     return out
 
 
+def cap_remedy(component: str) -> str:
+    """G-D1's remedy for a line or byte cap (AC-105): where text cut to fit goes, and to delete it
+    only once it has landed there. The failure's and the headroom warning's alike (CE-231), one
+    text, so the warning cannot drift from the failure."""
+    return (f"move text out, never just cut it: a rule to the contract or a runbook, a ruling to a decision, owed work to a task, "
+            f"what has gone stale to the archive, the ledger or an evidence doc; delete it here only once it has landed there; "
+            f"raise the cap in [[routes]] {component!r} only with a new provenance note")
+
+
 def cap_failures(r, rel: str, text: str) -> list[Failure]:
     """G-D1 on one doc's text, under route ``r``'s caps: lint's check, and a write's (CE-63)."""
     out: list[Failure] = []
     lines = text.split("\n")
     if text.endswith("\n"):
         lines = lines[:-1]
-    remedy = (f"move text out, never just cut it: a rule to the contract or a runbook, a ruling to a decision, owed work to a task, "
-              f"what has gone stale to the archive, the ledger or an evidence doc; delete it here only once it has landed there; "
-              f"raise the cap in [[routes]] {r.component!r} only with a new provenance note")
+    remedy = cap_remedy(r.component)
     if r.max_lines and len(lines) > r.max_lines:
         out.append(Failure("G-D1", rel, f"{len(lines)} lines, over the {r.component} cap of {r.max_lines}", remedy))
     size = len(text.encode("utf-8"))
@@ -339,8 +347,11 @@ def cap_failures(r, rel: str, text: str) -> list[Failure]:
 
 
 def _headroom_pct(value: int, cap: int) -> str:
-    """``value`` as a percentage of ``cap``, one decimal, trailing zeros dropped (``100`` not ``100.0``)."""
-    return f"{value * 100 / cap:.1f}".rstrip("0").rstrip(".")
+    """``value`` as a percentage of ``cap``, rounded down to one decimal, a trailing ``.0`` dropped
+    (CE-231): integer tenths, so a value under the cap never reads 100 (9996 of 10000 is 99.9),
+    exactly at it reads 100, and over it its floored figure (21 of 20 is 105)."""
+    whole, tenth = divmod(value * 1000 // cap, 10)
+    return f"{whole}.{tenth}" if tenth else str(whole)
 
 
 def _at_headroom(value: int, cap: int) -> bool:
@@ -352,13 +363,12 @@ def cap_warnings(r, rel: str, text: str) -> list[str]:
     """G-D1 headroom on one doc's text, under route ``r``'s caps: a warning, never a failure.
     Warns at or over 95% of ``max_lines`` or ``max_bytes`` (``max_width`` is per-line, not a
     total, so it has no headroom). A warning is not a ``Failure``: lint stays clean and a write
-    is not refused by one (CE-231)."""
+    is not refused by one (CE-231). Its remedy is ``cap_remedy``'s, as the failure's is."""
     out: list[str] = []
     lines = text.split("\n")
     if text.endswith("\n"):
         lines = lines[:-1]
-    remedy = (f"move text out, never just cut it; raise the cap in [[routes]] {r.component!r} "
-              f"only with a new provenance note")
+    remedy = cap_remedy(r.component)
     if r.max_lines and _at_headroom(len(lines), r.max_lines):
         out.append(f"{rel}: {len(lines)} lines, {_headroom_pct(len(lines), r.max_lines)}% of the {r.component} cap of {r.max_lines}. Remedy: {remedy}")
     size = len(text.encode("utf-8"))
@@ -369,7 +379,10 @@ def cap_warnings(r, rel: str, text: str) -> list[str]:
 
 def headroom(e: Engine) -> list[str]:
     """G-D1 headroom warnings for every routed component: the routed file, or each ``.md``
-    under a routed directory. Warnings only — never failures, so this is not part of ``lint()``."""
+    under a routed directory. Warnings only — never failures, so this is not part of ``lint()``.
+    None while `[guards] off` names G-D1."""
+    if "G-D1" in e.store.config.guards.off:
+        return []  # `[guards] off` drops G-D1 (AC-43), and its warning with it
     out: list[str] = []
     for r in e.store.config.routes:
         if not (r.max_lines or r.max_bytes):
@@ -626,6 +639,70 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
                                        "point it at the path that exists (grep it first); if the span is an example or another repo's path, write it without backticks, or drop the doc from [guards] paths"))
                 elif not _is_file(files.case_exact(span, path.parent)) and (p := ambiguous_problem(files, span)):
                     out.append(Failure("G-D3", rel, f"line {n}: {p}", AMBIGUOUS_REMEDY))
+    return out
+
+
+# -- G-D13 record ids in reader-facing docs ----------------------------------------------
+
+
+READER_REMEDY = ("give the reader the words in this doc, or point them where it lives: the board for what is built and what is next "
+                 "(`context-engine task list`), the records site for decisions and stories (`context-engine site build`); "
+                 "a reader-facing doc cites no record id")
+LINK_DEST_RE = re.compile(r"\]\(\s*<?[^)\s>]*>?(?:\s+\"[^\"]*\")?\s*\)")  # a link's `(destination "title")`; the visible `[text]` stays
+URL_RE = re.compile(r"<?[A-Za-z][A-Za-z0-9+.-]*://[^\s<>]*>?")  # a bare URL or an autolink
+
+
+def record_series(e: Engine) -> re.Pattern[str] | None:
+    """G-D13's record ids (CE-233): an id of any series the repo keeps, standing alone: each kind's
+    prefix, the prefixes leading the criteria rows (`[working] criteria`), the register's entry
+    prefixes (`[working] register`), and `GOAL` and `G` while `[guards] charter` is set (a goal id;
+    a guard id such as `G-D1` has a letter after the dash, so it is none). None with no series."""
+    st = e.store
+    prefixes = {k.prefix for k in st.config.kinds.values()} | st._criterion_prefixes()
+    if e.w.register and (p := e.root / e.w.register).is_file():
+        prefixes |= {x.id.rsplit("-", 1)[0] for x in R.entries(_text(p))}
+    if st.config.guards.charter:
+        prefixes |= {"GOAL", "G"}
+    if not prefixes:
+        return None
+    alts = "|".join(re.escape(p) for p in sorted(prefixes, key=lambda p: (-len(p), p)))
+    return re.compile(rf"(?<![\w-])(?:{alts})-[0-9]+(?![\w-])")
+
+
+def reader_failures(rel: str, text: str, series: re.Pattern[str]) -> list[Failure]:
+    """G-D13 on one doc's text: each record id of ``series`` its reader sees, once per line. Read:
+    prose outside fenced code and frontmatter, inline code included. Not read: link destinations,
+    reference definitions and URLs (a reader does not see them)."""
+    out: list[Failure] = []
+    for n, line in prose(text):
+        if REF_DEF_RE.match(line):
+            continue
+        seen = URL_RE.sub(" ", LINK_DEST_RE.sub("]", line))
+        for rid in dict.fromkeys(series.findall(seen)):
+            out.append(Failure("G-D13", rel, f"line {n}: cites the record id {rid}", READER_REMEDY))
+    return out
+
+
+def reader_ids(e: Engine) -> list[Failure]:
+    """G-D13 (CE-233, DEC-338): a reader-facing doc (`[guards] reader_docs`: the README, the page a
+    code host shows a stranger) cites no record id, so it orients the reader in its own words and
+    leaves what is built and what is next to the board. Red too: a listed path that is missing.
+    Off while the list is empty.
+
+    Not checked: progress or status prose that cites no id (a judgement, left to review), ids of
+    series the repo does not keep, fenced code, link destinations and URLs, and text a write is
+    about to store (the engine writes no reader-facing doc)."""
+    g = e.store.config.guards
+    if not g.reader_docs:
+        return []
+    series = record_series(e)
+    out: list[Failure] = []
+    for rel, path in docs(e.root, g.reader_docs):
+        if path is None:
+            out.append(Failure("G-D13", CONFIG_NAME, f"[guards] reader_docs names {rel}, which does not exist", "fix the path, or drop it from [guards] reader_docs"))
+            continue
+        if series is not None:
+            out += reader_failures(rel, _text(path), series)
     return out
 
 

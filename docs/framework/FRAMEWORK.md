@@ -2398,7 +2398,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   ledger or an evidence doc) and says to delete it only once it has landed there, so a full doc
   does not lose rules. Not checked: whether cut text did land anywhere. A headroom warning
   (`context-engine lint --headroom`) names a routed doc at or over 95% of its route's
-  `max_lines` or `max_bytes`; it never fails lint and never refuses a write.
+  `max_lines` or `max_bytes`, with the same remedy and its share rounded down (a doc under its
+  cap never reads 100%); it never fails lint, never refuses a write, and is off with G-D1.
 - **G-D2:** ids are unique within their series and never reused; a new id is allocated after
   scanning open and closed items, above every id the op log shows reserved (`id.reserve`). In the
   stored files, no two files carry one id, and the op log never shows an id created twice.
@@ -2509,6 +2510,18 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   outrank it, since a mention cannot tell work from an aside), open work (an open board item
   owns it), done (only closed ones do), map only, or unowned. It is generated on demand, never stored, so it cannot
   go stale; a closed item is the board's word that the work is done, not proof of it.
+- **G-D13:** a reader-facing doc cites no record id. The README is the page a code host shows a
+  stranger: it orients the reader and gives what they need in its own words, and what is built
+  and what is next lives on the board and the records site; an id there is a pointer the reader
+  cannot follow. In each doc `[guards] reader_docs` lists (each `.md` under a listed directory),
+  outside fenced code and frontmatter, an id of a series the repo keeps is red, inline code
+  included: a kind's prefix, the criteria rows', the register entries', and the charter's goals
+  (`GOAL-n` or `G-n`) while `[guards] charter` is set. Link destinations, reference definitions
+  and URLs are not read, since a reader does not see them; a guard id (`G-D1`), a section
+  (`§8.0`) and a session key are not record ids. Config: `[guards] reader_docs` (empty is off;
+  the kit leaves it empty, since an adopted repo's README may already cite ids). A listed path
+  that is missing is red. Not checked: progress or status prose that cites no id (a judgement,
+  left to review), and ids of series the repo does not keep.
 - **Record schema** (reported as `schema`): every record has its kind's required keys, enum
   values and types (`[kinds.*]` in config), and `status` uses only `draft`, `stable` or
   `deprecated` (§9.3.1).

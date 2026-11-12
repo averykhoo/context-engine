@@ -702,6 +702,9 @@ first bullet's check that every record parses.
   never just cut it (a rule to the contract or a runbook, a ruling to a decision, owed work to a
   task, what has gone stale to the archive, the ledger or an evidence doc), and delete it only
   once it has landed there, or rules are lost in the trimming.*
+  With `--headroom`, `lint` also lists each such file at or over 95% of `max_lines` or
+  `max_bytes`, with the same remedy, as a warning that fails nothing; none while `[guards] off`
+  names G-D1.
 - **G-D2**: in each kind's directories no two files carry the same id, by file name or by `id:`;
   and no id appears in two `new` or `import` lines of the op log. Every alias (`aliases:`, a
   record's earlier ids) is one word of printable ASCII with no quote, comma, bracket, brace, `/`
@@ -847,6 +850,17 @@ first bullet's check that every record parses.
   a map frozen before the rename still owns it. *Why: a spec that gains a procedure or guard
   nothing owns drifts unseen; the map is frozen, so the fix is a new dated map or a `task new`
   naming it, never an edit.*
+- **G-D13** (only when `[guards] reader_docs` lists paths; a listed path that is missing is red):
+  in each file there (each `.md` under a listed directory), outside fenced code and frontmatter,
+  first blank every link destination (`](...)`), every reference definition line (`[x]: ...`) and
+  every URL (`scheme://...`, `<scheme://...>`); then no id of a series the repo keeps stands
+  alone (not glued to a letter, digit or `-` on either side): a kind's `prefix` in
+  `context.toml`, the prefix leading the criteria rows (`[working] criteria`), the register's
+  entry prefix (`[working] register`), and `GOAL-n` and `G-n` while `[guards] charter` is set.
+  Inline code is read too. A guard id (`G-D1`), a section (`§8.0`) and a session key are not
+  ids. *Why: the README is the page a stranger reads first; an id is a pointer they cannot
+  follow, and what is built and what is next belongs on the board, so give the reader the
+  words, or point at the board or the records site.*
 - **G-D7**: in each file `[guards] signals` lists, outside fenced code: at most `warn_max` ⚠, at
   most `bold_caps_max` bold spans with a run of four capitals and no lower case (`**NEVER**`),
   and none of `retired_glyphs`. *Why: a signal stands out only while it is rare.*

@@ -34,3 +34,5 @@ turning it on there is a follow-up), and judging prose for "progress tracking" t
 - `src/context_engine/guards.py::caps` and the G-D3/G-D5 `[guards]` lists in `context.toml`
 
 ## Log
+
+- 2026-11-12b (claude-code/claude-opus-5-5): G-D13 is this task's guard id (FRAMEWORK §8.3), off while [guards] reader_docs is empty

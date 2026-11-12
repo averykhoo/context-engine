@@ -31,7 +31,7 @@ RESERVED_PREFIXES = {"EXP": "experiments and measured runs", "HAZ": "unverified 
 PREFIX_FORM = re.compile(r"[A-Z]+")
 # Every guard id `context-engine lint` can report (FRAMEWORK §8.0 to §8.4); `[guards] off` may name only these.
 LINT_IDS = (
-    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D4", "G-D5", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-R1",
+    "schema", "G-D0", "G-D1", "G-D2", "G-D3", "G-D4", "G-D5", "G-D6", "G-D7", "G-D8", "G-D9", "G-D10", "G-D11", "G-D12", "G-D13", "G-R1",
     "G-I1", "G-I2", "G-I3", "G-I4", "G-T1", "G-T2", "G-T3", "G-T6",
     "G-W1", "G-W2", "G-W3", "G-W4", "G-W5", "G-W6", "G-W7", "G-W9", "G-W11", "G-W12", "G-W13",
 )
@@ -132,6 +132,7 @@ class Guards:
     off: tuple[str, ...] = ()  # guard ids lint does not report (LINT_IDS)
     links: tuple[str, ...] = ()  # G-D3: files and directories whose links and `file::symbol` spans must resolve
     paths: tuple[str, ...] = ()  # G-D3: files and directories whose every backticked file name or repo path is a pointer that must resolve (CE-142); empty is off
+    reader_docs: tuple[str, ...] = ()  # G-D13: reader-facing docs (the README) whose prose cites no record id of a series the repo keeps (CE-233, DEC-338); empty is off
     existence: tuple[str, ...] = ()  # G-T3: normative docs whose named files and `file::symbol` spans must exist
     signals: tuple[str, ...] = ()  # G-D7: files and directories under the signal budgets
     warn_max: int = 3  # G-D7: ⚠ per file

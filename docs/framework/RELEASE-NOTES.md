@@ -11,6 +11,14 @@ component, procedure, guard and operation.
 
 ## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
 
+- **A reader-facing doc cites no record id (G-D13), and lint warns before a G-D1 cap.**
+  `[guards] reader_docs` lists the docs a stranger reads first, the README: an id of a series
+  the repo keeps, there outside fenced code, link destinations and URLs, is red, and the remedy
+  says to give the reader the words, or point at the board or the records site.
+  `context-engine lint --headroom` warns of a routed doc at or over 95% of a line or byte cap,
+  with G-D1's remedy; it fails nothing and is off with G-D1. FRAMEWORK §8.3 G-D1, G-D13;
+  DEC-338, DEC-339, CE-231, CE-233. **Upgrade:** the kit leaves `reader_docs` empty (off); list
+  the README there once it cites no id.
 - **A size floor and a build ladder for delegated work.** A task whose edits, summed over the
   whole task, stay within 2 files and 30 changed lines, add no test and change no assertion,
   touch none of the framework's files, the repo's contract or a CI workflow, and add no refusal,
