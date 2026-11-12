@@ -7,10 +7,35 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-12a · kind: open
+## 2026-11-12a · kind: close
 
-- **opened:** 2026-11-12T09:37:34+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-11a
+- **rows:** DEC-337 (new, owner); CE-225 (NEXT -> NOW); CE-230 (new, LATER); CE-228, CE-229
+  (comments)
+- **receipts:**
+  - guards: 2104 passed
+  - read: orient; the 2026-11-11a close digest; the fable review report
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+  - pushed: 4797ac5: 661a2dd..4797ac5, gate and linux gate green first
+- **summary** (the owner digest):
+  - Owner said yes to the recommendations: CE-225 is NOW (DEC-337); .scratch/wave-2026-11-11a and
+    plan-217-218 went to the Recycle Bin
+  - Fable design review of DEC-328..DEC-336, in place of the owner's review: all nine ENDORSE;
+    transcribed to docs/evidence/fable-review-dec-328-336-2026-11-12.md; recommends accepting all
+    nine as is
+  - Its note 1, confirmed first-hand: CE-218's work commit 801cb17 was a sonnet build that edited
+    FRAMEWORK.md and kit runbooks, against DEC-330's ladder (the coordinator's dispatch; the
+    verifier passed it); CE-230 filed for a mechanical check
+  - Notes 2-3 commented on CE-228 (CLAUDE.md 140/140 lines and fan-out.md 7990/8000 bytes: the cap
+    raise rides the bump) and CE-229 (5.3 derivation sources, DEFERRED decisions)
+  - Pushed 661a2dd..4797ac5 after the gate (2104 passed, 32 min on a loaded laptop; the first try
+    hit the 30-min background limit) and linux_gate (2104 passed); CI green: gate 43143997416, pages
+    43143997484
+- **Still owed:**
+  - owner: decision accept DEC-328..336 (fable endorses all nine)
+  - owner: say go to build CE-225 (NOW)
+  - CE-29 and CE-40 owner parts
 - **start head:** 8332786315a7b8e0b84069ec2a17bfc374715782
 
 ---
