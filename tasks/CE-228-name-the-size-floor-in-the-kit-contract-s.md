@@ -10,7 +10,7 @@ goals: [G-3, G-7]
 source: session 2026-11-11a
 created: 2026-11-11
 moved: 2026-11-11a
-updated: 2026-11-11a
+updated: 2026-11-12a
 ---
 
 Name the size floor in the kit contract's coordinator rule at the next contract version bump (CE-219).
@@ -38,3 +38,5 @@ Then FRAMEWORK §6.6's sentence that a repo takes the floor up in its own contra
 - src/context_engine/kit/contract.md (§ Rules, the coordinator)
 
 ## Log
+
+- 2026-11-12a (claude-code/claude-opus-5-5): fable design review (2026-11-12, docs/evidence/fable-review-dec-328-336-2026-11-12.md note 2): measured 2026-11-12, CLAUDE.md is at 140/140 lines and 9996/10000 bytes and fan-out.md at 7990/8000 bytes; the next edit to either is a red G-D1, so plan the cap raise with this bump (and CE-207).

@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-11-11a
 created: 2026-11-11
 moved: 2026-11-11a
-updated: 2026-11-11a
+updated: 2026-11-12a
 ---
 
 Add the question triage line to the kit contract's Who decides rule at the next contract version bump (CE-217).
@@ -31,3 +31,5 @@ Add it in both `src/context_engine/kit/contract.md` and `docs/framework/contract
 - src/context_engine/kit/contract.md (§ Rules, Who decides)
 
 ## Log
+
+- 2026-11-12a (claude-code/claude-opus-5-5): fable design review (2026-11-12, docs/evidence/fable-review-dec-328-336-2026-11-12.md note 3 and DEC-336): FRAMEWORK 5.3 item 1 admits 'this document's principles' as a derivation source, while ask decide requires at least one owner record; the op is right, so fold a clarifying clause into this bump. Also decide whether a DEFERRED owner decision may count as a source (the code counts it today).
