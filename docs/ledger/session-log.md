@@ -16,9 +16,40 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-12b · kind: open
+## 2026-11-12b · kind: close
 
-- **opened:** 2026-11-12T23:20:51+08:00 by claude-code/claude-opus-5-5
+- **rows:** CE-231 (closed); CE-232 (closed); CE-233 (new, closed); CE-234 (new, LATER); DEC-338
+  (new, owner); DEC-339 (new, PROVISIONAL); AC-208 (text amended); AC-209 (new, tested); INV-260
+  (new); ledger 2026-11-12c (kind: foreign)
+- **receipts:**
+  - guards: 2127 passed
+  - read: orient; git show bc9f1c3 63db00b; procedures § Reconciling foreign commits; the workflow's
+    plan, build and verify reports
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+  - pushed: 8730734: 63db00b..8730734, gate and linux gate green first
+- **summary** (the owner digest):
+  - Reviewed muse's bc9f1c3 (CE-232) and 63db00b (CE-231): the work was sound, the records were
+    hand-made (no op lines, tasks left open under 'closed' logs, no Session: trailer); reconciled as
+    foreign entry 2026-11-12c, no rollback
+  - DEC-338 (owner): the README is for readers, no record ids or progress tracking; README status
+    rewritten (d231eb6) and G-D13 built to enforce it, README listed in [guards] reader_docs
+    (cdc50a4)
+  - CE-231 follow-ups: the headroom warning gives G-D1's full remedy from one definition, is silent
+    while [guards] off names G-D1, and rounds down (9996/10000 reads 99.9%); CE-231 and CE-232
+    closed through the engine
+  - Built as one plan/build/verify workflow (opus); verifier PASS; its unpinned reference-definition
+    exemption was then pinned and sabotaged; DEC-339 holds the planner's design calls, PROVISIONAL
+  - CE-234 filed (LATER): lint passes a record the op log never created, which is how muse's
+    hand-made records went unseen
+  - Pushed 63db00b..8730734 after the gate (2127 passed) and linux_gate (2127 passed); CI green:
+    gate 43281501782, pages 43281501440
+- **Still owed:**
+  - owner: decision accept DEC-339 (the G-D13/headroom design calls) and DEC-328..336 (fable
+    endorses all nine)
+  - owner: say go to build CE-225 (NOW)
+  - owner: whether adopted repos should list their README under reader_docs (INV-260; the kit leaves
+    it off)
 - **start head:** 3a2afbcc9b71d08568b7b685f8b545eddfff42d3
 
 ---
