@@ -3,7 +3,7 @@ type: Decision
 id: DEC-336
 title: 'ask decide: what an owner-authored source is, no dead actor check, SUPERSEDED in the test fixture'
 actor: agent (claude-sonnet-5-5)
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 refs: [CE-218, US-24, DEC-325]
 decided: 2026-11-11
 session: 2026-11-11a

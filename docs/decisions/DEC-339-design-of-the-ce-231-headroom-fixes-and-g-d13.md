@@ -5,7 +5,7 @@ title: Design of the CE-231 headroom fixes and G-D13, the guard that keeps recor
 actor: claude-code/claude-opus-5-5
 decided: 2026-11-12
 session: 2026-11-12b
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 body_sha: sha256:623a9c5fce0d56bb7193c246c1463133d5f78067501f460e7563ef07f4320fcb
 ---
 

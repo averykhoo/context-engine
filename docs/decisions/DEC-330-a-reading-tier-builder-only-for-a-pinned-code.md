@@ -6,7 +6,7 @@ tasks: [CE-219]
 actor: claude-code/claude-opus-5-5
 decided: 2026-11-11
 session: 2026-11-11a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 body_sha: sha256:d56d81bd38468c5e289f48b4e52575f5d7b0b3e9c5a3b51cf164b4a36a67fb1c
 ---
 

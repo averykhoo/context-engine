@@ -3,7 +3,7 @@ type: Decision
 id: DEC-335
 title: 'Question triage written into the spec and procedures: decision shape, arbiter as second opinion, interim for open questions'
 actor: claude-code/claude-opus-5-5
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 tasks: [CE-217]
 refs: [US-24, DEC-325, DEC-18, DEC-310]
 decided: 2026-11-11
