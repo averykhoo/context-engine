@@ -2,14 +2,14 @@
 type: Task
 id: CE-225
 title: 'Build a plan-citation check: every path and file::symbol a plan cites exists before the build'
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-1]
 source: session 2026-11-10c
 created: 2026-11-10
-moved: 2026-11-10c
-updated: 2026-11-10c
+moved: 2026-11-12a
+updated: 2026-11-12a
 ---
 
 Build a plan-citation check (DEC-327, idea 2): before a builder starts, every `file::symbol` and path a plan cites is checked to exist. Elephant-goldfish's codebase_details reviewer does this with an agent; here it should be mechanical.
