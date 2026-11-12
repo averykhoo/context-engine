@@ -1826,3 +1826,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** pre-existing and outside CE-218's scope
 - **control:** reduce: none yet; the question list stays wrong until a follow-up fixes ask later and ask raised
 - **from:** CE-218, session 2026-11-11a
+
+## INV-260: adopted repos' READMEs are not checked: the kit leaves reader_docs empty
+
+- **affects:** adopted repos
+- **why not eliminated:** an adopted README may already cite ids, so turning it on is each repo's upgrade step
+- **control:** individual: RELEASE-NOTES 0.6 upgrade line says to list the README
+- **from:** CE-233, session 2026-11-12b

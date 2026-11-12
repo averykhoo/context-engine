@@ -4,13 +4,15 @@ id: CE-233
 title: Fail lint on a record id in a reader-facing doc such as README.md (DEC-338)
 brief: 'README orients a stranger: no record ids; kit default untouched'
 pri: LATER
-state: open
+state: closed
 deps: []
 goals: [G-6]
 source: session 2026-11-12b
 created: 2026-11-12
 moved: 2026-11-12b
 updated: 2026-11-12b
+status: deprecated
+closed: 2026-11-12b
 ---
 
 Fail lint on a record id in a reader-facing doc (DEC-338): the README is the page GitHub shows a
@@ -36,3 +38,5 @@ turning it on there is a follow-up), and judging prose for "progress tracking" t
 ## Log
 
 - 2026-11-12b (claude-code/claude-opus-5-5): G-D13 is this task's guard id (FRAMEWORK §8.3), off while [guards] reader_docs is empty
+- 2026-11-12b (claude-code/claude-opus-5-5): closed: G-D13 built and README.md listed (cdc50a4); planned, built and independently verified (PASS), gate 2126 passed
+  residual risk: INV-260
