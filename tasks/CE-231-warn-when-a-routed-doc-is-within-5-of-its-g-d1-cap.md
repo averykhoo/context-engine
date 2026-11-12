@@ -3,10 +3,14 @@ type: Task
 id: CE-231
 title: Warn when a routed doc is within 5% of its G-D1 cap, before the next edit forces a cap raise
 pri: NEXT
-state: open
+state: closed
 deps: []
 goals: [G-7]
 created: 2026-11-12
+status: deprecated
+closed: 2026-11-12b
+moved: 2026-11-12b
+updated: 2026-11-12b
 ---
 
 **Why:** `CLAUDE.md` is at 140/140 lines and 9,996/10,000 bytes, and `docs/runbooks/fan-out.md` is at 107/110 lines and 7,990/8,000 bytes (measured 2026-11-12 at HEAD `4797ac5`). G-D1 only fails when a cap is already crossed, so the next edit to either file forces a cap raise with no earlier warning.
@@ -25,3 +29,5 @@ created: 2026-11-12
 ## Log
 
 - 2026-11-12: closed: `cap_warnings` + `headroom` in guards.py, `--headroom` on `lint` (ops.py/cli.py), FRAMEWORK §8.3 sentence, AC-208 row, two AC-208 tests in tests/test_guards.py. Verification: `python -m pytest -q` 2107 passed, 1 failed (pre-existing: test_merge_settings_refuses_a_hard_linked_or_read_only_file, fails on clean HEAD as root); `lint` clean; `lint --headroom` warns for CLAUDE.md and docs/runbooks/fan-out.md only; sabotage (threshold to 100%) made the 95% boundary test go red, restored and green again.
+- 2026-11-12b (claude-code/claude-opus-5-5): closed: muse's 63db00b plus the follow-ups (one remedy definition, [guards] off, rounding down) in cdc50a4 and af52097; independently verified (PASS), gate 2126 passed
+  residual risk: none
