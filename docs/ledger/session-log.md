@@ -7,6 +7,22 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-12c · kind: foreign
+
+- **commits:** bc9f1c3 Avery Khoo (muse, an agent without the engine): CE-232, README status
+  paragraph rewritten, CE-232 filed by hand; 63db00b Avery Khoo (muse): CE-231, `lint
+  --headroom` G-D1 warnings at 95% of a line or byte cap, AC-208 and CE-231 filed by hand
+- **reconciled by:** 2026-11-12b
+
+---
+
+## 2026-11-12b · kind: open
+
+- **opened:** 2026-11-12T23:20:51+08:00 by claude-code/claude-opus-5-5
+- **start head:** 3a2afbcc9b71d08568b7b685f8b545eddfff42d3
+
+---
+
 ## 2026-11-12a · kind: close
 
 - **continues:** 2026-11-11a
