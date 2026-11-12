@@ -2396,7 +2396,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   remedy for a line or byte cap names where text cut to fit goes (a rule to the contract or a
   runbook, a ruling to a decision, owed work to a task, what has gone stale to the archive, the
   ledger or an evidence doc) and says to delete it only once it has landed there, so a full doc
-  does not lose rules. Not checked: whether cut text did land anywhere.
+  does not lose rules. Not checked: whether cut text did land anywhere. A headroom warning
+  (`context-engine lint --headroom`) names a routed doc at or over 95% of its route's
+  `max_lines` or `max_bytes`; it never fails lint and never refuses a write.
 - **G-D2:** ids are unique within their series and never reused; a new id is allocated after
   scanning open and closed items, above every id the op log shows reserved (`id.reserve`). In the
   stored files, no two files carry one id, and the op log never shows an id created twice.

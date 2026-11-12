@@ -109,6 +109,47 @@ def test_g_d1_remedy_names_where_cut_text_goes_and_to_delete_it_only_once_it_lan
         assert "delete it here only once it has landed there" in f.remedy, f.remedy
 
 
+def _headroom_engine(tmp_path, max_lines: int, max_bytes: int) -> Engine:
+    """An engine whose only capped route is HANDOFF.md, so 95% is exact: 19 of 20 lines warns,
+    18 does not; 380 of 400 bytes warns, 379 does not (CE-231)."""
+    cfg = config()
+    cfg["routes"] = [{"component": "Note", "path": "HANDOFF.md", "mode": "replaced", "max_lines": max_lines, "max_bytes": max_bytes, "max_width": 40}]
+    (tmp_path / "context.toml").write_text(_toml(cfg), encoding="utf-8")
+    return Engine(tmp_path)
+
+
+@pytest.mark.criterion("AC-208")
+def test_g_d1_headroom_warns_at_95_percent_of_lines_and_bytes_but_not_below(tmp_path):
+    e = _headroom_engine(tmp_path, 20, 400)
+    write(tmp_path, "HANDOFF.md", "\n".join(f"line {i}" for i in range(18)) + "\n")
+    assert G.headroom(e) == []
+    write(tmp_path, "HANDOFF.md", "\n".join(f"line {i}" for i in range(19)) + "\n")
+    assert [w.split(". Remedy:")[0] for w in G.headroom(e)] == ["HANDOFF.md: 19 lines, 95% of the Note cap of 20"]
+    write(tmp_path, "HANDOFF.md", "x" * 378 + "\n")  # 379 bytes, one line: under 95% on both
+    assert G.headroom(e) == []
+    write(tmp_path, "HANDOFF.md", "x" * 379 + "\n")  # 380 bytes: 95% of 400
+    assert [w.split(". Remedy:")[0] for w in G.headroom(e)] == ["HANDOFF.md: 380 bytes, 95% of the Note cap of 400"]
+
+
+@pytest.mark.criterion("AC-208")
+def test_g_d1_headroom_warning_is_not_a_failure_and_lint_headroom_prints_it_separately(tmp_path):
+    """CE-231: a file at its cap warns but does not fail lint, and `lint --headroom` prints the
+    warning after the failure list, with the exit code unchanged. (This minimal fixture is red
+    on unrelated guards, G-D0/G-D9, so the check is that `--headroom` changes neither the code
+    nor the failure list, only adds the warning.)"""
+    from context_engine.cli import run
+
+    e = _headroom_engine(tmp_path, 20, 400)
+    write(tmp_path, "HANDOFF.md", "\n".join(f"line {i}" for i in range(20)) + "\n")  # 20 of 20 lines, 100%
+    assert [w.split(". Remedy:")[0] for w in G.headroom(e)] == ["HANDOFF.md: 20 lines, 100% of the Note cap of 20"]
+    assert reds(e, "G-D1") == []
+    code, out = run(["--root", str(tmp_path), "lint"])
+    assert "G-D1" not in out and "20 lines, 100% of the Note cap of 20" not in out
+    headroom_code, headroom_out = run(["--root", str(tmp_path), "lint", "--headroom"])
+    assert headroom_code == code
+    assert headroom_out == out + "\nHANDOFF.md: 20 lines, 100% of the Note cap of 20. Remedy: move text out, never just cut it; raise the cap in [[routes]] 'Note' only with a new provenance note"
+
+
 # -- G-D2 ----------------------------------------------------------------------------------
 
 

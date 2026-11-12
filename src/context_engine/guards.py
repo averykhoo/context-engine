@@ -338,6 +338,49 @@ def cap_failures(r, rel: str, text: str) -> list[Failure]:
     return out
 
 
+def _headroom_pct(value: int, cap: int) -> str:
+    """``value`` as a percentage of ``cap``, one decimal, trailing zeros dropped (``100`` not ``100.0``)."""
+    return f"{value * 100 / cap:.1f}".rstrip("0").rstrip(".")
+
+
+def _at_headroom(value: int, cap: int) -> bool:
+    """``value`` is at or over 95% of ``cap`` (integer arithmetic, so 19 of 20 warns and 18 does not)."""
+    return bool(cap) and value * 20 >= 19 * cap
+
+
+def cap_warnings(r, rel: str, text: str) -> list[str]:
+    """G-D1 headroom on one doc's text, under route ``r``'s caps: a warning, never a failure.
+    Warns at or over 95% of ``max_lines`` or ``max_bytes`` (``max_width`` is per-line, not a
+    total, so it has no headroom). A warning is not a ``Failure``: lint stays clean and a write
+    is not refused by one (CE-231)."""
+    out: list[str] = []
+    lines = text.split("\n")
+    if text.endswith("\n"):
+        lines = lines[:-1]
+    remedy = (f"move text out, never just cut it; raise the cap in [[routes]] {r.component!r} "
+              f"only with a new provenance note")
+    if r.max_lines and _at_headroom(len(lines), r.max_lines):
+        out.append(f"{rel}: {len(lines)} lines, {_headroom_pct(len(lines), r.max_lines)}% of the {r.component} cap of {r.max_lines}. Remedy: {remedy}")
+    size = len(text.encode("utf-8"))
+    if r.max_bytes and _at_headroom(size, r.max_bytes):
+        out.append(f"{rel}: {size} bytes, {_headroom_pct(size, r.max_bytes)}% of the {r.component} cap of {r.max_bytes}. Remedy: {remedy}")
+    return out
+
+
+def headroom(e: Engine) -> list[str]:
+    """G-D1 headroom warnings for every routed component: the routed file, or each ``.md``
+    under a routed directory. Warnings only — never failures, so this is not part of ``lint()``."""
+    out: list[str] = []
+    for r in e.store.config.routes:
+        if not (r.max_lines or r.max_bytes):
+            continue
+        for rel, path in docs(e.root, (r.path,)):
+            if path is None:
+                continue  # G-R1 reports a missing routed path
+            out += cap_warnings(r, rel, _text(path))
+    return out
+
+
 def _listed(rel: str, paths: tuple[str, ...]) -> bool:
     """``rel`` is one of ``paths``, or a ``.md`` under one that is a directory: what ``docs``
     yields for them, for a file not written yet."""

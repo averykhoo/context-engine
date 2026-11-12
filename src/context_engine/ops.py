@@ -194,10 +194,17 @@ def coverage(e: Engine, c: Caller) -> tuple[int, str]:
 
 
 @op(write=False, rest="`context-engine lint` in a shell")
-def lint(e: Engine, c: Caller, working: bool = False) -> tuple[int, str]:
-    """Failures only, each with its remedy; `working` runs the working-state guards alone."""
+def lint(e: Engine, c: Caller, working: bool = False, headroom: bool = False) -> tuple[int, str]:
+    """Failures only, each with its remedy; `working` runs the working-state guards alone.
+    `headroom` also prints the G-D1 headroom warnings (a routed doc at or over 95% of its
+    line or byte cap) after the failures; a warning never fails lint (CE-231)."""
     failures = e.lint(working=working)
-    return (1 if failures else 0), "\n".join(map(str, failures)) or "lint: clean"
+    out = "\n".join(map(str, failures)) or "lint: clean"
+    if headroom:
+        warnings = GD.headroom(e)
+        if warnings:
+            out += "\n" + "\n".join(warnings)
+    return (1 if failures else 0), out
 
 
 # -- the board (FRAMEWORK §5.2) -----------------------------------------------------------

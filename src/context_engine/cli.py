@@ -114,6 +114,7 @@ def build() -> argparse.ArgumentParser:
     _sub(groups, "coverage", "FRAMEWORK's components, procedures, guards and operations with their build status, generated from G-D12's spec and coverage map, the board, lint and the engine's operations")
     lint = _sub(groups, "lint", "run the guards: failures only, each with its remedy; exits 1 when any fails")
     lint.add_argument("--working", action="store_true", help="working-state guards only")
+    lint.add_argument("--headroom", action="store_true", help="also print G-D1 headroom warnings (a routed doc at or over 95 percent of its line or byte cap); a warning never fails lint")
 
     t = _sub(groups, "task", "the board: file, move, comment on, close and read board items (FRAMEWORK §5.2)").add_subparsers(dest="op", required=True)
     n = _sub(t, "new", "file a board item with the next free id (or --id)")
