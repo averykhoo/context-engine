@@ -3,10 +3,14 @@ type: Task
 id: CE-232
 title: Fix the stale status paragraph in README.md (housekeeping built, adopted in three repos, drop the 2026-10-13 gate snapshot)
 pri: NEXT
-state: open
+state: closed
 deps: []
 goals: [G-6]
 created: 2026-11-12
+status: deprecated
+closed: 2026-11-12b
+moved: 2026-11-12b
+updated: 2026-11-12b
 ---
 
 **Why:** `README.md` lines 17-19 say the no-model housekeeping script is not built yet, the engine has not yet been adopted in a second repo, and the gate and CI were green at `8990dd0` (2026-10-13). All three are stale: CE-6 closed 2026-11-01b (Tier-0 housekeeping finished), CE-43 closed 2026-10-22a (audio-workspace), CE-11 closed 2026-11-03a (intervals) and CE-167 closed 2026-11-04a (zanzibar).
@@ -21,3 +25,4 @@ Do not replace the dated gate snapshot with a new dated snapshot — that would 
 ## Log
 
 - 2026-11-12: closed: README.md lines 17-19 replaced with the timeless status paragraph (CI runs the gate on every push; Tier-0 housekeeping built, CE-6; adopted in audio-workspace CE-43, intervals CE-11, zanzibar CE-167). Verification: every cited task checked closed in its task file; `python -m context_engine lint` clean; full gate 2107 passed (see CE-231 log for the one pre-existing failure).
+- 2026-11-12b (claude-code/claude-opus-5-5): closed: README's status paragraph rewritten without record ids or progress tracking (DEC-338), replacing muse's bc9f1c3 text, which cited CE-6/43/11/167; a sonnet review passed it; built and lint-checked by hand in bc9f1c3's case, the task was filed and logged by hand there
