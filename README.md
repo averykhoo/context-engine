@@ -14,7 +14,9 @@ the residual-risk register, each record on its own page. CI builds it from the r
 push to `main` with `context-engine site build` (`.github/workflows/pages.yml`); nothing it shows
 is stored in the repo, so there is no index file to keep current.
 
-**Status: alpha, no release tag yet.** The engine runs this repo's own records, and CI runs the gate on every push to `main`. Tier-0 housekeeping is built (`hk run start|close`, CE-6). It has been adopted in other repos: audio-workspace (CE-43), intervals (CE-11) and zanzibar (CE-167).
+**Status: alpha, no release tag yet.** The engine runs this repo's own records and is in use in a
+few other repos; CI runs the gate on every push to `main`. What is built and what is next is the
+board, on the records site above.
 
 **To use it in a repo:** follow the adoption kit's guide,
 [`src/context_engine/kit/README.md`](src/context_engine/kit/README.md). It covers installing the
