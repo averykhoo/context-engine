@@ -7,6 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-13b · kind: close
+
+- **continues:** 2026-11-13a
+- **rows:** none (push and machine housekeeping only)
+- **receipts:**
+  - guards: 2144 passed
+  - read: the CI watcher's report; the running tail.exe processes and their parents
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Pushed 8730734..b2c20a4 (CE-225, DEC-340/341, CE-235 at NOW, CE-236) after gate and linux_gate,
+    both 2144 passed; CI green: gate 43350012702, pages 43350012790. The ledger-only close commits
+    ride the next push
+  - Killed 37 orphaned follow-mode tail processes across the owner's repos (all with dead parents,
+    oldest 2026-10-21): Git Bash tail.exe outlives its killed Monitor or background shell on Windows
+  - Prevention, outside this repo: a global PreToolUse hook (~/.claude/settings.json,
+    ~/.claude/hooks/no-tail-follow.sh) refuses follow-mode tail in Bash, Monitor and PowerShell and
+    names loops that exit on their own; 11 command shapes tested, seen to fire live
+- **Still owed:**
+  - owner: decision accept DEC-341 (plan check's design calls, call 4 overridden)
+  - CE-29 and CE-40 owner parts
+- **start head:** 0bbbf5ab6446de2e3b07b9617e3259a3cc349e44
+
+---
+
 ## 2026-11-13a · kind: close
 
 - **continues:** 2026-11-12b
