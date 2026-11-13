@@ -3,13 +3,15 @@ type: Task
 id: CE-225
 title: 'Build a plan-citation check: every path and file::symbol a plan cites exists before the build'
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-1]
 source: session 2026-11-10c
 created: 2026-11-10
-moved: 2026-11-12a
-updated: 2026-11-12b
+moved: 2026-11-13a
+updated: 2026-11-13a
+status: deprecated
+closed: 2026-11-13a
 ---
 
 Build a plan-citation check (DEC-327, idea 2): before a builder starts, every `file::symbol` and path a plan cites is checked to exist. Elephant-goldfish's codebase_details reviewer does this with an agent; here it should be mechanical.
@@ -21,3 +23,5 @@ Build a plan-citation check (DEC-327, idea 2): before a builder starts, every `f
 ## Log
 
 - 2026-11-12b (claude-code/claude-opus-5-5): 99801e1: CE-225: promote to NOW (DEC-337)
+- 2026-11-13a (claude-code/claude-opus-5-5): closed: plan check built (32aac7b): G-D3's resolution shared, run after the planner in the ladder; verify-1 PASS, one fix round, verify-2 PASS; gate 2143 passed
+  residual risk: none
