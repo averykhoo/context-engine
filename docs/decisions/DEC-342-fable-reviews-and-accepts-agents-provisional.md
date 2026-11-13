@@ -7,6 +7,7 @@ decided: 2026-11-13
 session: 2026-11-13d
 decision_status: ACCEPTED
 body_sha: sha256:c18592929b16c0fdadc61baa3ce761cf35bd994ae916c1db8816572c3a6e34f8
+tasks: [CE-237]
 ---
 
 "I'm considering a workflow where auto compaction is enabled on the convo agent, so I don't actually need to stop and clear, although that's probably still helpful sometimes - this would also let the agent work more or less nonstop, since it won't go over any token budget and can just keep saying next , or running the sprint prioritization, etc"

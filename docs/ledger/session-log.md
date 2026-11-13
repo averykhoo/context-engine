@@ -7,10 +7,26 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-13d · kind: open
+## 2026-11-13d · kind: close
 
-- **opened:** 2026-11-13T22:49:18+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-13c
+- **rows:** DEC-342 (owner, accepted); CE-237 (filed at NEXT)
+- **receipts:**
+  - guards: not run; lint: clean
+  - read: orient; DEC-340; docs/evidence/reviewer-accepts-fable-2026-11-13.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Owner adopted the reviewer-accepts list (DEC-342): fable reviews and accepts agents' provisional
+    decisions, the owner asked when it is unsure
+  - Owner added a NEEDS CONTEXT outcome: a dilemma asking for a story, or a goal or charter fix,
+    where one is missing, contradictory or a false assumption; it replaces the list's
+    no-covering-record condition and adds three triggers
+  - CE-237 filed at NEXT: the list into FRAMEWORK §6.5 and procedures, accepted_by and
+    --covered-by/--gap in the engine, then the backlog pass
+- **Still owed:**
+  - owner: check CE-237's reading of NEEDS CONTEXT; say whether CE-237 goes ahead of CE-235 at NOW
+  - owner: decision accept DEC-341; CE-29 and CE-40 owner parts
 - **start head:** 46780de6756299c91362f2b0e284a4701b911d01
 
 ---
