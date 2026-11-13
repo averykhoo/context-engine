@@ -7,10 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-13c · kind: open
+## 2026-11-13c · kind: close
 
-- **opened:** 2026-11-13T22:16:06+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-13b
+- **rows:** none (evidence only)
+- **receipts:**
+  - guards: not run; lint: clean
+  - read: orient; .scratch/fable-review census.md and fable.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Owner asked for fable's view on fable accepting most provisional decisions, the owner coming in
+    only when it is unsure, and for a list of when it asks versus not
+  - Sonnet census of all 341 decisions: 180 of 243 agent decisions never reviewed; all 52
+    acceptances were bulk take-fable's-recs; owner changed 4; pushback clusters on process weight,
+    narrow rule reading, naming taste, over-caution
+  - Fable: yes with corrections; 7 ASK, 7 FLAG, 5 silent-ACCEPT conditions; covered = cites a live
+    owner record and quotes the deciding sentence; thin stories get no fable acceptance
+  - Both in docs/evidence/reviewer-accepts-{census,fable}-2026-11-13.md (4bbc831); nothing recorded
+    as a decision yet
+- **Still owed:**
+  - owner: adopt, amend or reject the reviewer-accepts policy; then a task for accepted_by and
+    --covered-by/--gap, and the backlog pass
+  - owner: decision accept DEC-341; CE-29 and CE-40 owner parts
 - **start head:** 9026bf87395b8a98ad0c8c1c870980a1a66d35a3
 
 ---
