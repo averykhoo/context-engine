@@ -7,6 +7,31 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-13e · kind: close
+
+- **continues:** 2026-11-13d
+- **rows:** none changed
+- **receipts:**
+  - guards: not run; read-only session
+  - read: orient, CE-29, CE-40, CE-110, CE-182, DEC-341, DEC-131, the global CLAUDE.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Listed everything owner-held for the owner: 4 yes/no calls, 2 pastes into the global CLAUDE.md,
+    2 closing calls, 1 reboot
+  - CE-40's proposed global text (from 411 lines) is stale: the live file is 450 lines, with Gemini
+    and Hugging Face sections the proposal lacks
+  - CE-29's memory half: this repo's auto-memory is empty (MEMORY.md 0 bytes), so there is nothing
+    to promote or prune
+- **Still owed:**
+  - owner: confirm CE-237's NEEDS CONTEXT reading; CE-237 before CE-235; decision accept DEC-341;
+    push 6 record-only commits
+  - owner: paste CE-110 rules 1+2; CE-40 regenerate or drop; CE-29 memory half close; reboot for
+    CE-182
+- **start head:** 9dd4c6c27248910370e437b4651f227adfe0b43f
+
+---
+
 ## 2026-11-13d · kind: close
 
 - **continues:** 2026-11-13c
