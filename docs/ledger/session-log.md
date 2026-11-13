@@ -7,10 +7,36 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-13a · kind: open
+## 2026-11-13a · kind: close
 
-- **opened:** 2026-11-13T07:16:37+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-12b
+- **rows:** DEC-340 (new, owner); DEC-328..336, DEC-339 (ACCEPTED); DEC-341 (new, PROVISIONAL,
+  amended); CE-225 (closed); AC-210 (new, tested); CE-235 (new, NEXT -> NOW); CE-236 (new, LATER)
+- **receipts:**
+  - guards: 2144 passed
+  - read: orient; DEC-328..336 titles and the fable review's verdicts; CE-225; the workflow's plan
+    and verify reports; fix-1 and verify-2
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Owner said yes to all three (DEC-340): DEC-328..336 and DEC-339 accepted; adopted repos list
+    their README under reader_docs (CE-235, now NOW); build CE-225
+  - CE-225 built (32aac7b): context-engine plan check lists a plan's dead paths and file::symbols
+    through G-D3's own resolution; FRAMEWORK §6.6's ladder runs it after the planner and sends a
+    dead-citation plan back
+  - Planner, opus builder (the plan touched FRAMEWORK, DEC-330), verify-1 PASS; its (new)-mark hole
+    fixed in one opus round (DEC-341 call 4 overridden, amended), verify-2 PASS; 19 sabotage rows
+    all red
+  - CE-236 (LATER): verify-2's two remaining (new)-mark edge cases, a shared basename and a
+    wrong-case path on Windows
+  - CE-235 promoted to NOW by the coordinator when CE-225's close emptied it, per the order agreed
+    in DEC-340 (PROVISIONAL; say if another item should be NOW)
+  - Gate 2144 passed and linux_gate 2144 passed on b2c20a4 (the first linux run caught a backticked
+    example in CE-236 that G-D3 read as a dead citation; fixed); NOT pushed
+- **Still owed:**
+  - owner: say go to push 43163b0..b2c20a4 (8 commits; gate and linux gate green)
+  - owner: decision accept DEC-341 (plan check's design calls, call 4 overridden)
+  - CE-29 and CE-40 owner parts
 - **start head:** 43163b07b1322048c84e38a6684549c02a3675f6
 
 ---
