@@ -2,7 +2,7 @@
 type: Task
 id: CE-235
 title: List the README under reader_docs in each adopted repo (DEC-340)
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-6]
