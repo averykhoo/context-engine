@@ -207,6 +207,12 @@ def lint(e: Engine, c: Caller, working: bool = False, headroom: bool = False) ->
     return (1 if failures else 0), out
 
 
+@op(write=False, rest="`context-engine plan check <path>` in a shell")
+def plan_check(e: Engine, c: Caller, path: str) -> tuple[int, str]:
+    """Before a build (FRAMEWORK §6.6's build ladder): every backticked repo path and `file::symbol` the plan at `path` (from the repo root, or absolute) cites outside fenced code exists, by G-D3's resolution (case-exact; a bare file name anywhere in the repo; each dotted part of a symbol a word in the file; a path from the plan's own directory when the plan is in the repo). Put ` (new)` right after the span of a path or `file::symbol` the plan creates: it, and every other citation of it or of what is under it, is not checked; a marked path that exists is not new, so its mark exempts nothing and fails (mark each new `file::symbol` a plan adds to a file). Lists each citation that names nothing, or names files whose texts differ, by line; exits 1 when any does, or when the plan cites nothing; a plan that fails goes back to its planner. Writes nothing."""
+    return GD.plan_check(e.root, path)
+
+
 # -- the board (FRAMEWORK §5.2) -----------------------------------------------------------
 
 

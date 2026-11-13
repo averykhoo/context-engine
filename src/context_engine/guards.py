@@ -581,12 +581,8 @@ def links(e: Engine) -> list[Failure]:
             code = SPAN_RE.findall(line)
             for span in code:
                 m = CODE_REF_RE.match(span.strip())
-                if m:
-                    p = code_ref_problem(files, m["file"], m["symbol"])
-                    if p:
-                        bad.append(f"line {n}: {p}")
-                    elif p := ambiguous_problem(files, m["file"]):
-                        unsure.append(f"line {n}: {p}")
+                if m and (v := code_ref_verdict(files, m["file"], m["symbol"])):
+                    (bad if v[1] else unsure).append(f"line {n}: {v[0]}")
             bare = SPAN_RE.sub("", line)
             targets = [m.group(1) for m in LINK_RE.finditer(bare)]
             rd = REF_DEF_RE.match(bare)
@@ -604,6 +600,46 @@ def links(e: Engine) -> list[Failure]:
         out += [Failure("G-D3", rel, b, "point it at the path, heading or symbol that exists (grep it first), or drop it") for b in bad]
         out += [Failure("G-D3", rel, u, AMBIGUOUS_REMEDY) for u in unsure]
     return out + path_pointers(e, files)
+
+
+POINTER_REMEDY = ("point it at the path that exists (grep it first); if the span is an example or another repo's path, "
+                  "write it without backticks, or drop the doc from [guards] paths")
+
+
+def code_ref_verdict(files: Files, file: str, symbol: str) -> tuple[str, bool] | None:
+    """G-D3 on one backticked `file::symbol` (``links`` and ``plan_problems`` share it, CE-225):
+    (problem, True) when it names nothing (``code_ref_problem``), (problem, False) when a bare
+    file name matches files whose texts differ (``ambiguous_problem``), else None."""
+    if p := code_ref_problem(files, file, symbol):
+        return p, True
+    if p := ambiguous_problem(files, file):
+        return p, False
+    return None
+
+
+def is_pointer(span: str) -> bool:
+    """A stripped backticked span G-D3 reads as a path pointer (CE-142): ``PATH_SPAN_RE``'s shape,
+    not a `file::symbol`, not starting with `.` or `/`."""
+    return bool(PATH_SPAN_RE.match(span)) and not CODE_REF_RE.match(span) and not span.startswith((".", "/"))
+
+
+def path_exists(files: Files, span: str, here: Path | None) -> bool:
+    """A path pointer names a file or directory of the repo, case-exact, from the repo root (a bare
+    name: any file of that name git does not ignore) or from ``here`` (``path_verdict``'s test)."""
+    return files.find(span) is not None or files.case_exact(span.rstrip("/"), here) is not None
+
+
+def path_verdict(files: Files, span: str, here: Path | None) -> tuple[str, bool] | None:
+    """G-D3 on one path pointer (``path_pointers`` and ``plan_problems`` share it, CE-225): it
+    resolves case-exact from the repo root (a bare name: any file of that name git does not
+    ignore) or from ``here``, the citing doc's directory (None: the root only). (problem, True)
+    when it names nothing; (problem, False) when a bare name matches files whose texts differ and
+    ``here`` holds no file of that name; else None."""
+    if not path_exists(files, span, here):
+        return f"`{span}` names no file or directory of this repo (case-exact)", True
+    if not _is_file(files.case_exact(span, here)) and (p := ambiguous_problem(files, span)):
+        return p, False
+    return None
 
 
 def path_pointers(e: Engine, files: Files) -> list[Failure]:
@@ -632,14 +668,101 @@ def path_pointers(e: Engine, files: Files) -> list[Failure]:
         for n, line in prose(text, history=True):
             for span in SPAN_RE.findall(line):
                 span = span.strip()
-                if CODE_REF_RE.match(span) or not PATH_SPAN_RE.match(span) or span.startswith((".", "/")):
-                    continue
-                if files.find(span) is None and files.case_exact(span.rstrip("/"), path.parent) is None:
-                    out.append(Failure("G-D3", rel, f"line {n}: `{span}` names no file or directory of this repo (case-exact)",
-                                       "point it at the path that exists (grep it first); if the span is an example or another repo's path, write it without backticks, or drop the doc from [guards] paths"))
-                elif not _is_file(files.case_exact(span, path.parent)) and (p := ambiguous_problem(files, span)):
-                    out.append(Failure("G-D3", rel, f"line {n}: {p}", AMBIGUOUS_REMEDY))
+                if is_pointer(span) and (v := path_verdict(files, span, path.parent)):
+                    out.append(Failure("G-D3", rel, f"line {n}: {v[0]}", POINTER_REMEDY if v[1] else AMBIGUOUS_REMEDY))
     return out
+
+
+# -- the plan-citation check (CE-225, DEC-341): G-D3's resolution on a plan, before its build --
+
+
+NEW_MARK_RE = re.compile(r"[ \t]?\(new\)")  # `` `path` (new) ``: a path or `file::symbol` the plan creates
+PLAN_REMEDY = ("send the plan back to its planner: cite only what exists (grep it first), put ` (new)` after the span of each "
+               "path or `file::symbol` the plan creates, and write an example or another repo's path without backticks")
+PLAN_EMPTY_REMEDY = "a plan names each file it changes: backtick each path (`path/to/file.py`) and symbol (`path/to/file.py::Name`) it cites"
+
+
+def _covered(declared: str, path: str) -> bool:
+    """Whether a path a plan marked `(new)` covers ``path``: the same path, a path under it, or
+    one of the two the bare file name of the other (CE-225)."""
+    d, p = declared.rstrip("/"), path.rstrip("/")
+    return p == d or p.startswith(d + "/") or d.endswith("/" + p) or p.endswith("/" + d)
+
+
+def plan_problems(files: Files, text: str, here: Path | None = None) -> tuple[int, int, list[str]]:
+    """The plan-citation check (CE-225, FRAMEWORK §6.6's build ladder): every backticked
+    `file::symbol` and path pointer a plan cites outside fenced code and frontmatter, read by
+    G-D3's rules (``code_ref_verdict``, ``is_pointer``, ``path_verdict``; ``here`` is the plan's
+    directory when it lies in the repo). A span followed by ``(new)`` (``NEW_MARK_RE``) is one the
+    plan creates: it is not checked, and nor is any citation of that path, of a path under it, of
+    its bare name, or of that `file::symbol` or a dotted name under it, wherever in the plan. A
+    path so marked that exists (``path_exists``; a bare name: any repo file of that name) is not
+    new: its mark exempts nothing, and is itself a problem (`marked (new) but exists`), since a
+    plan that adds to a file marks each new `file::symbol`, and one that believes an existing
+    file is new may have the builder overwrite it (CE-225 verify-1, DEC-341's amendment).
+    Returns (citations checked, citations exempt as new, ``line <n>: <problem>`` for each that
+    names nothing, names files whose texts differ, or is a path marked new that exists, in order).
+
+    Not checked: spans that are no citation by G-D3's shapes (globs, placeholders, spaces, URLs,
+    a leading `.` or `/`), anything outside backticks, a `file::symbol` marked new that already
+    exists, and which definition a symbol word is (a grep, as G-D3's)."""
+    lines = list(prose(text))
+    paths: set[str] = set()
+    refs: set[tuple[str, str]] = set()
+    for _, line in lines:
+        for m in SPAN_RE.finditer(line):
+            if NEW_MARK_RE.match(line, m.end()):
+                span = m.group(1).strip()
+                if r := CODE_REF_RE.match(span):
+                    refs.add((r["file"], r["symbol"]))
+                elif is_pointer(span) and not path_exists(files, span, here):
+                    paths.add(span)
+    cited, new, problems = 0, 0, []
+    for n, line in lines:
+        for m in SPAN_RE.finditer(line):
+            span = m.group(1).strip()
+            if r := CODE_REF_RE.match(span):
+                if any(_covered(d, r["file"]) for d in paths) or any(
+                        _covered(f, r["file"]) and (r["symbol"] == s or r["symbol"].startswith(s + ".")) for f, s in refs):
+                    new += 1
+                    continue
+                v = code_ref_verdict(files, r["file"], r["symbol"])
+            elif is_pointer(span):
+                if any(_covered(d, span) for d in paths):
+                    new += 1
+                    continue
+                v = path_verdict(files, span, here)
+                if not v and NEW_MARK_RE.match(line, m.end()):
+                    v = (f"`{span}` is marked (new) but exists: mark the new symbols (or files) in it instead", True)
+            else:
+                continue
+            cited += 1
+            if v:
+                problems.append(f"line {n}: {v[0]}")
+    return cited, new, problems
+
+
+def plan_check(root: Path, path: str) -> tuple[int, str]:
+    """`plan check` (CE-225): ``plan_problems`` on the plan file at ``path`` (from ``root``, or
+    absolute), as (exit code, text): 0 when every citation resolves; 1 when any does not, or when
+    the plan cites nothing and marks nothing new (a check that read nothing must not pass).
+    Refused when ``path`` names no file."""
+    raw = str(path).strip().replace("\\", "/")
+    q = Path(raw)
+    p = q if q.is_absolute() else root / q
+    if not raw or not p.is_file():
+        raise Refusal(f"there is no plan file at {path}", "give the plan's path from the repo root, or an absolute one")
+    try:
+        rel = p.resolve().relative_to(Path(root).resolve()).as_posix()
+        here = p.parent
+    except ValueError:
+        rel, here = p.as_posix(), None
+    cited, new, problems = plan_problems(Files(Path(root)), _text(p), here)
+    if problems:
+        return 1, "\n".join([f"plan check: {rel}: {len(problems)} of {cited} cited fail", *problems, f"remedy: {PLAN_REMEDY}"])
+    if not cited and not new:
+        return 1, f"plan check: {rel}: cites no path or file::symbol in backticks outside fenced code, so nothing was checked\nremedy: {PLAN_EMPTY_REMEDY}"
+    return 0, f"plan check: {rel}: {cited} cited, all resolve; {new} marked (new), not checked"
 
 
 # -- G-D13 record ids in reader-facing docs ----------------------------------------------

@@ -902,6 +902,30 @@ itself a failure.
 **Why:** lint is the check on the stored files. It catches what a write-time refusal cannot: hand edits, and
 records that were valid when written but stale now. A non-empty result is a failure (exit 1).
 
+### context-engine plan check
+
+Before a builder starts on a plan (FRAMEWORK §6.6, the build ladder), check every citation in
+the plan file, given from the repo root or as an absolute path (refused, exit 2, when it names
+no file). Outside fenced code and frontmatter, read each backticked span as § lint's **G-D3**
+reads one: a `path::Name.attr` names a file that exists case-exact (a bare file name may be
+anywhere in the repo) whose text has each dotted part as a word; any other span shaped as a
+file name or a path with a `/` (no spaces, globs or `<placeholders>`, not starting with `.` or
+`/`) names a file or directory that exists case-exact, from the repo root or, for a plan inside
+the repo, from the plan's own directory. A bare name not at the repo root that matches files
+whose texts differ fails too. A span followed by ` (new)`, with at most one space between, is
+one the plan creates: skip it, and every other citation of that path, of a path under it, of
+its bare name, or of that `path::Name` and the names under it (`Name.attr`), wherever it stands
+in the plan. That holds only while the path does not exist: a marked path that exists (a bare
+name: any file of that name) is not new, so its mark skips nothing and fails as `marked (new) but
+exists`; a plan that adds to a file marks each new `path::Name`, not the file. Write each failing
+span as `line <n>: <problem>`. Any failure, or a plan with no
+citation at all (none checked and none marked new), fails the check (exit 1), and the plan goes
+back to its planner.
+
+**Why:** a builder handed a plan that cites a file or symbol that is not there guesses, or builds
+on a misreading; a mechanical check before the build catches it at no model cost, by the rules
+G-D3 already holds the docs to. A plan that cites nothing would pass a check that read nothing.
+
 ## Reserved ids
 
 ### context-engine id reserve

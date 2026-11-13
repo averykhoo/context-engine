@@ -115,6 +115,9 @@ def build() -> argparse.ArgumentParser:
     lint = _sub(groups, "lint", "run the guards: failures only, each with its remedy; exits 1 when any fails")
     lint.add_argument("--working", action="store_true", help="working-state guards only")
     lint.add_argument("--headroom", action="store_true", help="also print G-D1 headroom warnings (a routed doc at or over 95 percent of its line or byte cap); none while [guards] off names G-D1; a warning never fails lint")
+    pl = _sub(groups, "plan", "check a planner's design before its build (FRAMEWORK §6.6, the build ladder)").add_subparsers(dest="op", required=True)
+    pc = _sub(pl, "check", "every backticked repo path and file::symbol the plan cites outside fenced code exists (G-D3's resolution); exits 1 when any does not, or when it cites none")
+    pc.add_argument("path", help="the plan file, from the repo root or absolute; put ` (new)` after the span of each path or file::symbol the plan creates")
 
     t = _sub(groups, "task", "the board: file, move, comment on, close and read board items (FRAMEWORK §5.2)").add_subparsers(dest="op", required=True)
     n = _sub(t, "new", "file a board item with the next free id (or --id)")
@@ -386,6 +389,7 @@ CLI_OPS = {
     ("routes", None): "routes",
     ("coverage", None): "coverage",
     ("lint", None): "lint",
+    ("plan", "check"): "plan_check",
     **{("task", v): f"task_{v}" for v in ("new", "import", "set", "promote", "dep", "comment", "touch", "close", "reopen", "section", "list", "show")},
     **{("ask", v): f"ask_{v}" for v in ("new", "raised", "later", "answer", "decide")},
     ("id", "reserve"): "id_reserve",

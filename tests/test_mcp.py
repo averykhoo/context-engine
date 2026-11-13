@@ -33,6 +33,7 @@ CALLS = {
     "routes": ([], {}),
     "coverage": ([], {}),
     "lint": (["--working"], {"working": True}),
+    "plan_check": (["plans/plan.md"], {"path": "plans/plan.md"}),
     "task_new": (["T", "--kind", "question", "--pri", "NEXT", "--brief", "b", "--deps", "CE-1, CE-2", "--body", "x", "--id", "ASK-9"], {"title": "T", "kind": "question", "pri": "NEXT", "brief": "b", "deps": ["CE-1", "CE-2"], "body": "x", "id": "ASK-9"}),
     "task_set": (["CE-1", "--set", "brief=b", "--set", "labels=[x]", "--unset", "y", "--mechanical"], {"id": "CE-1", "fields": {"brief": "b", "labels": "[x]"}, "unset": ["y"], "mechanical": True}),
     "task_promote": (["CE-1", "NOW"], {"id": "CE-1", "pri": "NOW"}),

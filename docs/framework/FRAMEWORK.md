@@ -1618,7 +1618,10 @@ contract, which narrows the coordinator rule there.
 Above the floor, every task runs the build ladder:
 1. a planner on the most tier reads the code and writes the design: the behaviour, the rejected
    options, the edge cases as concrete test inputs, and its design calls, recorded PROVISIONAL
-   (P8);
+   (P8); then `plan.check` (CLI `plan check <plan>`) lists each path and `file::symbol` the plan
+   cites that does not resolve, by G-D3's rules, and a plan it fails goes back to the planner
+   before any builder starts (a path the plan creates is marked ` (new)` after its span; a path
+   that exists is not new, so a plan that adds to a file marks each new `file::symbol`);
 2. a builder carries it out: on the reading tier when the task changes code, the planner's
    design is pinned (it names every file's change and every test, and leaves no open question
    for the builder or the owner), and neither this spec nor the contract changes; on the most
@@ -2295,7 +2298,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
 | Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
-| Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`) |
+| Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`); `plan.check(path)`: each path and `file::symbol` a plan cites that does not resolve, by G-D3's rules, read before its build (§6.6, the build ladder; CLI `plan check <path>`, exit 1 when any fails or the plan cites nothing) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own; `register.retire(id, why, into)`: an entry retired in place, or merged into a live one, never deleted (§7.4) |
 | Docs | `doc.freeze(path, note)`: a FROZEN line above a doc's liveness line, or, in a doc that declares none, after its title, else first after its frontmatter, else as its first line (§6.7, §7.2); `doc.archive(path, to, why, lines)`: a whole doc or file into an archive directory with its redirect row, or the lines named pruned into it (§7.3) |
 | Adoption | `init(prefix, dry_run, merge_settings, skip_settings)`: writes the kit into the repo (§6.9) |
