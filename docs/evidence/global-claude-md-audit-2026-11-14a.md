@@ -1,3 +1,5 @@
+FROZEN 2026-11-14 (session 2026-11-14b): CE-40 closed; below, the plan as it stood
+
 ACTIVE-PLAN: until CE-40 closes. Refreshes docs/evidence/global-claude-md-audit-2026-11-07e.md against the live file (456 lines, sha256 9798980e...01bf).
 
 # Global CLAUDE.md audit, refreshed (CE-40)

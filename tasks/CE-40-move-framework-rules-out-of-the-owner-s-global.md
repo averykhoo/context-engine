@@ -4,13 +4,15 @@ id: CE-40
 title: Move framework rules out of the owner's global CLAUDE.md
 brief: "Audit each global rule: where it lives in the framework or move it; machine facts stay; trimming is the owner's call"
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-10-13a
 created: 2026-10-13
-moved: 2026-11-07e
-updated: 2026-11-10a
+moved: 2026-11-14b
+updated: 2026-11-14b
 goals: [G-6, G-7]
+status: deprecated
+closed: 2026-11-14b
 ---
 
 Owner, 2026-10-13a: framework rules belong in the framework, not the owner's global `~/.claude/CLAUDE.md`. That file mixes machine facts (two shells, broken bare `python`, conda paths, Docker in WSL, token recipes) with rules that are framework-shaped: the CI babysitter on every push, the fresh-user install trial after a release, the `.scratch/` sweep and its four classes, delegation and persistence, commit by path, gate before push, HANDOFF read and write-back, assurance traps.
@@ -23,3 +25,5 @@ Audit the global file section by section; for each rule, name where it already l
 - 2026-11-06c (claude-code/claude-opus-5-5): DEC-162: the owner accepts the gap (no wait on CE-11). An agent drafts the trimmed global CLAUDE.md text to a tracked doc, and the owner pastes it.
 - 2026-11-07e (claude-code/claude-haiku-5-5): Done: audit of the global CLAUDE.md against the framework, with the Workflow agent() model-inheritance harness fact fix (commit 2efe546, independently verified). Left for the owner: trimming the global CLAUDE.md (owner's call, DEC-162) by pasting the proposed trimmed text; CE-40 stays open until then.
 - 2026-11-10a (claude-code/claude-opus-5-5): 5cf44d0: CE-40: audit the global CLAUDE.md against the framework; propose the trimmed text
+- 2026-11-14b (claude-code/claude-opus-5-5): closed: Applied docs/evidence/global-claude-md-audit-2026-11-14a.md section 4 to ~/.claude/CLAUDE.md on the owner's yes (DEC-345): 456 -> 333 lines, sha256 9798980e...01bf -> acd7c3cf...bb50; machine sections checked verbatim after the write; backup at ~/.claude/CLAUDE.md.2026-11-14-pre-trim.bak.
+  residual risk: INV-261

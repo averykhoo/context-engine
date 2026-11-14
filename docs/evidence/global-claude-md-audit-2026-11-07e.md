@@ -1,5 +1,7 @@
 # Global CLAUDE.md audit: which rules the framework already holds (CE-40)
 
+FROZEN 2026-11-14 (session 2026-11-14b): CE-40 closed; below, the plan as it stood
+
 ACTIVE-PLAN while CE-40 is open; freeze it when CE-40 closes.
 
 Session 2026-11-07e, claude-code/claude-opus-5-5, 2026-11-08. Audited: the owner's global

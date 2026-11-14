@@ -1833,3 +1833,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** an adopted README may already cite ids, so turning it on is each repo's upgrade step
 - **control:** individual: RELEASE-NOTES 0.6 upgrade line says to list the README
 - **from:** CE-233, session 2026-11-12b
+
+## INV-261: a repo without the framework now reads a compressed baseline of the removed rules, not their full text
+
+- **affects:** sessions in repos without the framework
+- **why not eliminated:** DEC-162 accepts the gap; fable kept the dated owner instructions and the standing approvals in the baseline (DEC-344)
+- **control:** reduce: the backup ~/.claude/CLAUDE.md.2026-11-14-pre-trim.bak restores the full text
+- **from:** CE-40, session 2026-11-14b
