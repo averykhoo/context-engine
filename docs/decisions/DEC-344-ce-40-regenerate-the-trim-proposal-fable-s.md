@@ -8,6 +8,7 @@ decided: 2026-11-14
 session: 2026-11-14a
 decision_status: PROVISIONAL
 body_sha: sha256:e62ffe402997dcd61b44699f3f77c91dad2c6d84980bc5ccef84737636d0ff6e
+tasks: [CE-40]
 ---
 
 Owner, 2026-11-14a (DEC-343 item 6), on CE-40's stale trim proposal (regenerate it, or drop the trim): *"6 - I'll leave it to you or fable"*
