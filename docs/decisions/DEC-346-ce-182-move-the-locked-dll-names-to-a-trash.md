@@ -8,6 +8,7 @@ decided: 2026-11-14
 session: 2026-11-14c
 decision_status: PROVISIONAL
 body_sha: sha256:9a1ad6e3288e9981e9c8872ad2d06d7238977d4cb221f2754142a70f31419890
+tasks: [CE-182]
 ---
 
 Owner, 2026-11-14c, after the coordinator offered two ways to clear CE-182's 35 locked DLL names (queue a delete at next boot with an admin prompt, or move the names into a trash folder now and empty it once no conda Python runs): *"Okay I'll let you decide how to clean up"*

@@ -7,10 +7,21 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-14c · kind: open
+## 2026-11-14c · kind: close
 
-- **opened:** 2026-11-14T22:01:02+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-14b
+- **rows:** DEC-346 (delegated, provisional); CE-182 commented
+- **receipts:**
+  - guards: not run (no code); lint not needed: engine writes only
+  - read: CE-182
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - CE-182's DLL half done (DEC-346): 35 locked names moved to C:/Users/user/.dll-trash, both
+    rehearsal folders deleted
+  - A one-time HKCU RunOnce entry deletes C:/Users/user/.dll-trash at the next logon
+- **Still owed:**
+  - owner: nothing new; 8 local record-only commits ride the next push
 - **start head:** 0bcdaa9c6bf0074c4252da7b8c7d647a09f78991
 
 ---
