@@ -2,14 +2,14 @@
 type: Task
 id: CE-235
 title: List the README under reader_docs in each adopted repo (DEC-340)
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-6]
 source: session 2026-11-13a
 created: 2026-11-13
-moved: 2026-11-13a
-updated: 2026-11-13a
+moved: 2026-11-14a
+updated: 2026-11-14a
 ---
 
 List the README under `[guards] reader_docs` in each adopted repo (DEC-340, after DEC-338).

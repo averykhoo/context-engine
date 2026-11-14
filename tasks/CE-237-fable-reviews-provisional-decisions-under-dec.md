@@ -2,14 +2,14 @@
 type: Task
 id: CE-237
 title: Fable reviews provisional decisions under DEC-342's list, with a NEEDS CONTEXT outcome
-pri: NEXT
+pri: NOW
 state: open
 deps: []
 goals: [G-7, G-3]
 source: session 2026-11-13d
 created: 2026-11-13
-moved: 2026-11-13d
-updated: 2026-11-13d
+moved: 2026-11-14a
+updated: 2026-11-14a
 ---
 
 Build DEC-342: fable reviews and accepts agents' provisional decisions under the three-tier list, with a fourth outcome, NEEDS CONTEXT
@@ -28,7 +28,9 @@ Each one goes to the owner as an ASK whose part one is the dilemma, the options 
 3. Then the backlog pass: one fable pass over the PROVISIONAL decisions, batched by task. The silent-accept and flag tiers are accepted with `accepted_by`; the ask and NEEDS CONTEXT ones go to the owner as a handful of grouped ASKs. The owner spot-checks 10 of the silent accepts. Decide first, and ask the owner, whether a built and verified task's decisions become BUILT rather than ACCEPTED.
 
 ## Traps
-- The list itself, and the rules that decide who decides, are ask-the-owner under the list (its condition 4): wording changes beyond what DEC-342 adopted go to the owner.
+
+- The list itself, and the rules that decide who decides, are ask-the-owner under the list (its condition 4): wording changes beyond what DEC-342 and DEC-343 adopted go to the owner.
+- NEEDS CONTEXT carries no options and no recommendation (DEC-343): the body's paragraph above predates that and is wrong on this point; write §6.5 and the runbooks from DEC-343.
 - A fable acceptance must never read as owner agreement: that is what `accepted_by` is for.
 - Fable shares the maker's priors (evidence doc §1): do not widen silent acceptance beyond implementation detail under a criterion.
 
@@ -37,3 +39,5 @@ Each one goes to the owner as an ASK whose part one is the dilemma, the options 
 - US-24, DEC-48, DEC-34, DEC-18; FRAMEWORK P8 and §6.5
 
 ## Log
+
+- 2026-11-14a (claude-code/claude-opus-5-5): DEC-343 (owner, 2026-11-14a) corrects the body's NEEDS CONTEXT paragraph: it is an open-ended question with NO options and NO recommendation (DEC-34's shape does not apply), because what is missing is the owner's story or goal, which an agent cannot supply. The ASK says what is missing, contradictory or shown false, quotes the records involved, and asks for the story, goal or charter text. Promoted to NOW ahead of CE-235 (DEC-343 item 2).

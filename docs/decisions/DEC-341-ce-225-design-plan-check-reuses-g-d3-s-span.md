@@ -5,7 +5,7 @@ title: "CE-225 design: plan check reuses G-D3's span verdicts, and a (new) mark 
 actor: claude-code/claude-opus-5-5
 decided: 2026-11-13
 session: 2026-11-13a
-decision_status: PROVISIONAL
+decision_status: ACCEPTED
 body_sha: sha256:bbefbc20158193b7231703819f4c6bb8a8e7505795ad8706e01e976d7dcabaed
 ---
 

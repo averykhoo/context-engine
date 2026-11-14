@@ -7,6 +7,8 @@ decided: 2026-11-14
 session: 2026-11-14a
 decision_status: ACCEPTED
 body_sha: sha256:6c7ec32a18dc8341618ec65c989765e24edafedef136e1fc645c30d9768a8315
+tasks: [CE-237, CE-110, CE-40, CE-29, CE-182]
+amends: [DEC-342]
 ---
 
 Owner, 2026-11-14a, answering the 8-item owner list of session 2026-11-13e: *"1 - I think this would be a more open ended question, one where there can't really be a recommendation since what's missing is a story or goal
