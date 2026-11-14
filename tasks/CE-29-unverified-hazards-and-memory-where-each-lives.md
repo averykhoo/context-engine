@@ -4,13 +4,15 @@ id: CE-29
 title: 'Unverified hazards and memory: where each lives, how it is promoted (to an invariant or the contract) or pruned'
 brief: 'Hazards are volatile, invariants durable: keep them apart (FRAMEWORK §2.1); memory is promoted or pruned, never a rule'
 pri: LATER
-state: open
+state: closed
 deps: []
 source: session 2026-10-12b
 created: 2026-10-12
-moved: 2026-11-07e
-updated: 2026-11-07e
+moved: 2026-11-14a
+updated: 2026-11-14a
 goals: [G-7]
+status: deprecated
+closed: 2026-11-14a
 ---
 
 Filed by CE-16 from the coverage map (docs/evidence/framework-coverage-2026-10-12.md): components 13 (unverified hazards) and 23 (memory), FRAMEWORK §2, §2.1, §6.7 and §7.4. Today hazards have no declared home (no route in context.toml, no record kind) and memory lives only in Claude Code's per-project auto-memory, outside the repo. Decide each one's home and route, and a housekeeping or close step that turns a confirmed hazard into a CE-23 register entry and a general memory lesson into a contract rule.
@@ -21,3 +23,5 @@ Filed by CE-16 from the coverage map (docs/evidence/framework-coverage-2026-10-1
 - 2026-10-15e (claude-code/claude-opus-5-5): DEC-50 (owner, 2026-10-15e): the 2026-10-15c trap-home recommendation is accepted as given. A trap lives where its lifetime matches: task ## Traps, a hazard board row, or a register INV-n; never the banner. Writing it into FRAMEWORK stays under the CE-7 hold.
 - 2026-10-30a (claude-code/claude-opus-5-5): rerank: Exit criterion 1 (coverage components 13 and 23): DEC-72 lifted the CE-7 freeze and DEC-50 rules the trap home, so the FRAMEWORK write-up is unblocked. The memory half stays the owner's.
 - 2026-11-07e (claude-code/claude-haiku-5-5): Hazards half done and independently verified for the part this session could do, via commits ["fe33a2f engine: new DEC-311 (also carried the CE-29 promote to NOW)","77543a3 engine: new DEC-312","baeff93 engine: new DEC-313","6b784e7 engine: new DEC-314","64bf888 engine: new DEC-315","cb362ca CE-29: an unverified hazard is a board row labelled `hazard`; its close resolves it"]; left for the owner: the memory half (promote or prune general lessons into contract rules, which stays the owner call per the 2026-10-30a log), so the task stays open.
+- 2026-11-14a (claude-code/claude-opus-5-5): closed: Hazards half built and verified 2026-11-07e (cb362ca); memory half closed with no change on the owner's word (DEC-343 item 7): this repo's auto-memory is empty, so nothing to promote or prune; session lessons stay in the ledger summary.
+  residual risk: none
