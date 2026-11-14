@@ -7,10 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-14b · kind: open
+## 2026-11-14b · kind: close
 
-- **opened:** 2026-11-14T15:56:56+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-14a
+- **rows:** DEC-345 (owner); CE-40 closed; INV-261 filed; two audit docs frozen
+- **receipts:**
+  - guards: not run (no code); lint: clean
+  - read: the audit doc's section 4, ~/.claude/CLAUDE.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Owner said yes to CE-40 (DEC-345): the global CLAUDE.md is trimmed 456 -> 333 lines from the
+    refreshed proposal with fable's four changes
+  - Backup: ~/.claude/CLAUDE.md.2026-11-14-pre-trim.bak (sha256 9798980e...01bf); machine sections
+    checked verbatim after the write
+  - CE-40 closed; the residual (repos without the framework read a compressed baseline) is INV-261
+- **Still owed:**
+  - owner: say whether CE-182's 35 locked DLL names are ignored (close its DLL half) or deleted with
+    no conda Python running
 - **start head:** c31af07dab0614df277598afc6a7cc378397a61e
 
 ---
