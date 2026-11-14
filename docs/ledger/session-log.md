@@ -7,10 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-14a · kind: open
+## 2026-11-14a · kind: close
 
-- **opened:** 2026-11-14T13:17:42+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-13e
+- **rows:** DEC-343 (owner); DEC-344 (fable ruling, provisional); DEC-341 accepted; CE-237 to NOW,
+  CE-235 to NEXT; CE-110, CE-29 closed; CE-182, CE-40 commented
+- **receipts:**
+  - guards: gate PASSED 2147 on 989982a; linux_gate green on 989982a; lint clean after the doc edit
+  - read: CE-237, CE-182, CE-40 audit docs, ~/.claude/CLAUDE.md
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - Owner answered the 8-item list (DEC-343): NEEDS CONTEXT is an open question with no options or
+    recommendation; CE-237 to NOW; DEC-341 accepted
+  - CE-110's two shell rules added to ~/.claude/CLAUDE.md Assurance traps at the owner's request;
+    CE-110 and CE-29 closed
+  - CE-182: still locked after the reboot; each DLL is one hardlinked file shared by every conda
+    env, so any running conda Python holds it; 0 bytes to free
+  - CE-40: proposal refreshed against the live 456-line file; fable ruled APPLY WITH CHANGES
+    (DEC-344), four changes made; the paste waits on the owner
+  - Pushed b2c20a4..989982a; CI gate and pages green
+- **Still owed:**
+  - owner: yes or no to applying CE-40's section 4 to ~/.claude/CLAUDE.md (backup first), then CE-40
+    closes
 - **start head:** e19615a4347e2723b62b3d05a58d1e7e6c255763
 
 ---
