@@ -7,10 +7,29 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-16a · kind: open
+## 2026-11-16a · kind: close
 
-- **opened:** 2026-11-16T02:04:08+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-14c
+- **rows:** CE-237 steps 1-2 built (e9eab4b), task open for step 3; CE-182 commented; CE-235 in
+  progress in intervals and zanzibar (agent, no push)
+- **receipts:**
+  - guards: gate PASSED in 707.9s (2160 passed) on g1/code:1cca9795c1e94ff8
+  - read: CE-237, DEC-342, DEC-343, CE-224/226/227/235, CE-203/212/213/236
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - CE-237 steps 1-2 are committed in e9eab4b: decision accept writes accepted_by, and an agent's
+    accept needs --covered-by or --gap and is refused on an open question
+  - FRAMEWORK §6.5, procedures and manual-mode carry DEC-342's list with NEEDS CONTEXT (no options,
+    no recommendation)
+  - Took 3 rounds, with sonnet escalated to opus after 2 FAILs; the gate passed 2160 tests
+  - 8 questions for the owner before step 3 are in CE-237's log, including A4: P8 and the contract
+    still say a bare decision accept
+  - CE-235: an agent is upgrading and gating zanzibar and intervals locally with no push;
+    audio-workspace is skipped (another session's uncommitted work)
+- **Still owed:**
+  - owner: CE-237's 8 questions (task log); push of 9+ local commits (gate green; linux_gate not yet
+    run)
 - **start head:** 303f42b40c115aeb2ff2186d565049e405061ceb
 
 ---
