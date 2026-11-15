@@ -7,6 +7,24 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-16b · kind: close
+
+- **continues:** 2026-11-16a
+- **rows:** CE-235 commented (2 of 3 repos done locally)
+- **receipts:**
+  - guards: gate not run: record-only session, no code changed
+  - read: CE-235 agent report
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-11a
+- **summary** (the owner digest):
+  - CE-235: intervals and zanzibar are upgraded to 0.6 with README in reader_docs and their gates
+    green, all local; audio-workspace remains
+- **Still owed:**
+  - owner: pushes of intervals and zanzibar (each its own gate + CI watcher)
+- **start head:** 9707c975b135bf3de577f8f2b2d9fe5011126bf7
+
+---
+
 ## 2026-11-16a · kind: close
 
 - **continues:** 2026-11-14c
