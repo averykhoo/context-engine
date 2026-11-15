@@ -68,7 +68,7 @@ CALLS = {
     "record_confirm": (["US-1", "--by", "human:avery", "--status", "unspecified", "the words"], {"id": "US-1", "by": "human:avery", "status": "unspecified", "words": "the words"}),
     "decision_supersede": (["DEC-1", "DEC-2"], {"old": "DEC-1", "new": "DEC-2"}),
     "decision_set": (["DEC-1", "--set", "tags=a", "--unset", "reopen_if"], {"id": "DEC-1", "fields": {"tags": "a"}, "unset": ["reopen_if"]}),
-    "decision_accept": (["DEC-1..3,", "DEC-5", "--owners"], {"ids": ["DEC-1..3", "DEC-5"], "owners": True}),
+    "decision_accept": (["DEC-1..3,", "DEC-5", "--owners", "--covered-by", "DEC-9"], {"ids": ["DEC-1..3", "DEC-5"], "owners": True, "covered_by": "DEC-9"}),
     "decision_link": (["DEC-1", "CE-1", "--rel", "tasks"], {"id": "DEC-1", "target": "CE-1", "rel": "tasks"}),
     "decision_relink": (["DEC-1", "a.py::f", "b.py::f"], {"id": "DEC-1", "old": "a.py::f", "new": "b.py::f"}),
     "decision_find": (["--text", "t", "--tag", "g", "--status", "BUILT", "--links-to", "CE-1"], {"text": "t", "tag": "g", "status": "BUILT", "links_to": "CE-1"}),
@@ -151,7 +151,8 @@ def _same(params: dict) -> dict:
 MORE_CALLS = [("session_start", ["--continues", "2026-10-07b"], {"continues": "2026-10-07b"}),
               ("commit", ["-m", "CE-1: t", "--model", "claude-opus-5-5"], {"message": "CE-1: t", "model": "claude-opus-5-5"}),
               ("gate_run", ["--part", "a", "--part", "b"], {"parts": ["a", "b"]}),
-              ("gate_run", ["--stale"], {"stale": True})]
+              ("gate_run", ["--stale"], {"stale": True}),
+              ("decision_accept", ["DEC-1", "--gap"], {"ids": ["DEC-1"], "gap": True})]
 
 
 @pytest.mark.criterion("AC-18")

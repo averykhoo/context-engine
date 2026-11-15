@@ -288,6 +288,8 @@ def build() -> argparse.ArgumentParser:
     dac = _sub(dc, "accept", "mark PROVISIONAL decisions reviewed (ACCEPTED): ids and ranges like DEC-86..90, in one write and one op line")
     dac.add_argument("ids", nargs="*", help="the decision ids, aliases or ranges, comma- or space-separated")
     dac.add_argument("--owners", action="store_true", help="also every owner's own decision still PROVISIONAL (recorded before owner decisions were born ACCEPTED)")
+    dac.add_argument("--covered-by", default="", metavar="ID", help="the owner record the acceptance rests on: a live story, a charter goal, or an owner's decision that stands (needed, or --gap, when a caller that is not the owner accepts an agent's call)")
+    dac.add_argument("--gap", action="store_true", help="no owner record covers the calls, and they are cheap to undo (FRAMEWORK §6.5)")
     dl = _sub(dc, "link", "link a decision to a task, story, criterion, decision or file::symbol")
     dl.add_argument("id", help="the decision's id")
     dl.add_argument("target", help="a task, story, criterion or decision id, or file::symbol")

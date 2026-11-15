@@ -11,6 +11,15 @@ component, procedure, guard and operation.
 
 ## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
 
+- **The arbiter reviews agents' calls, and an acceptance names who made it.** At each task's close its
+  calls still PROVISIONAL go to the arbiter in one batch, sorted by a list into ask the owner, accept
+  and flag, accept, and NEEDS CONTEXT: an open question with no options and no recommendation, asking
+  for the story, goal or charter text that is missing, contradictory or shown false. `decision accept`
+  writes `accepted_by` (the caller's actor) and `covered_by`; a caller that is not the owner gives
+  `--covered-by <owner record>` or `--gap`, and is refused while the call's `refs` name an open
+  question; lint (G-W4) fails an agent's call ACCEPTED without `accepted_by` unless the engine that
+  accepted it predates the key. FRAMEWORK §6.5, §6.3 item 4a, §8.4 G-W4; DEC-342, DEC-343,
+  CE-237. **Upgrade:** an agent's `decision accept` now needs `--covered-by` or `--gap`.
 - **A reader-facing doc cites no record id (G-D13), and lint warns before a G-D1 cap.**
   `[guards] reader_docs` lists the docs a stranger reads first, the README: an id of a series
   the repo keeps, there outside fenced code, link destinations and URLs, is red, and the remedy

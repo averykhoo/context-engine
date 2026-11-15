@@ -92,6 +92,8 @@ _FIXED = "it is fixed when the record is created (provenance of the decision); n
 DECISION_OWNED = {
     "status": "use `decision supersede <id> <new>`: OKF status is derived from SUPERSEDED",
     "answers": "it is written by `ask answer` and never changes",
+    D.ACCEPTED_BY: "it is written by `decision accept`, from the caller's actor: who accepted the decision, the owner or a reviewer (FRAMEWORK §6.5)",
+    D.COVERED_BY: "it is written by `decision accept --covered-by <owner record>` or `--gap`: what the acceptance rests on (FRAMEWORK §6.5)",
     **{k: _FIXED for k in ("actor", "decided", "session", "attribution", "imported_from", "generated", "ruled_by")},
     "verified": "an owner's endorsement must be the owner's own words, which no operation can supply: record them with `record amend <id> \"<the owner's words>\"`",
     **{k: "use `decision supersede <old> <new>`: it writes both directions" for k in ("supersedes", "superseded_by")},
@@ -2300,6 +2302,39 @@ class Engine:
         freed += [str(b) for b in (q.doc.get("blocks") or []) if str(b) not in freed]
         return f"unblocked {_one(freed)}{self._now_left(was)}"
 
+    def _owner_record(self, ref: str, goals: set[str] | None) -> tuple[str | None, bool]:
+        """(the id ``ref`` names, whether it is the owner's): a charter goal (in ``goals``), a live
+        story, or the owner's own decision that stands (``decisions.owners_own``, not SUPERSEDED or
+        REJECTED). (None, False) when it names no record or goal. The test `ask decide` applies to its
+        sources and `decision accept --covered-by` to its record (CE-218, CE-237)."""
+        if goals is not None and ref in goals:
+            return ref, True
+        try:
+            sid, _ = self.store.resolve(ref)
+            srec = self.store.get(sid)
+        except Refusal:
+            return None, False
+        d = srec.doc
+        if str(d.get("story_status")) == "live":  # a story: the kind is the repo's own name for it, `story_status` is FRAMEWORK §3.2's
+            return sid, True
+        return sid, srec.kind.name == self._role("decision") and D.owners_own(d) and str(d.get(D.STATUS_KEY)) not in ("SUPERSEDED", "REJECTED")
+
+    def _open_questions(self, refs: list[Any]) -> list[str]:
+        """The ids in ``refs`` that name an open owner question (`[working] question`, `state: open`); none when no question kind is set (CE-237)."""
+        if not self.w.question:
+            return []
+        out: list[str] = []
+        for ref in refs:
+            try:
+                if self.store.config.kind_for_id(str(ref)).name != self.w.question:
+                    continue
+                rid, _ = self.store.resolve(str(ref))
+                if self.store.get(rid).doc.get("state") == "open":
+                    out.append(rid)
+            except Refusal:
+                continue
+        return out
+
     @_milestone
     def ask_decide(self, rid: str, why: str, *, title: str, sources: list[str], opinion: str, opinion_by: str, session: str, actor: str) -> str:
         """Close the open owner question ``rid`` with the agent's own PROVISIONAL decision, derived
@@ -2352,21 +2387,12 @@ class Engine:
         goals = G.known_goals(self)[0]
         owner_sourced = False
         for src in sources:
-            if goals is not None and src in goals:
-                owner_sourced = True
-                continue
-            try:
-                sid, _ = self.store.resolve(src)
-                srec = self.store.get(sid)
-            except Refusal:
-                raise Refusal(f"the source {src} names no record or charter goal", "name each source by its id") from None
+            sid, own = self._owner_record(src, goals)
+            if sid is None:
+                raise Refusal(f"the source {src} names no record or charter goal", "name each source by its id")
             if sid == rid:
                 raise Refusal(f"{rid} is listed as its own source", "a question is not what it was derived from")
-            d = srec.doc
-            if str(d.get("story_status")) == "live":  # a story: the kind is the repo's own name for it, `story_status` is FRAMEWORK §3.2's
-                owner_sourced = True
-            elif srec.kind.name == self._role("decision") and D.owners_own(d) and str(d.get(D.STATUS_KEY)) not in ("SUPERSEDED", "REJECTED"):
-                owner_sourced = True
+            owner_sourced = owner_sourced or own
         if not owner_sourced:
             raise Refusal(f"none of the sources {', '.join(sources)} is the owner's (a live story, an owner decision that stands, or a charter goal)",
                           "an agent's own earlier call is not what a question is derived from; ask the owner, or add the owner's record it follows from")
@@ -3045,19 +3071,31 @@ class Engine:
         self.store.set(rid, changes, session=session, actor=actor, unset=unset, check=check)
         return f"{rid}: set {_one([*raw, *unset])}"
 
-    def decision_accept(self, ids: list[str], *, owners: bool = False, session: str, actor: str) -> str:
+    def decision_accept(self, ids: list[str], *, owners: bool = False, covered_by: str = "", gap: bool = False, session: str, actor: str) -> str:
         """Mark PROVISIONAL decisions reviewed: each becomes ACCEPTED (`decision.accept`, CE-187,
         DEC-162). ``ids`` are ids, aliases or ranges (`DEC-86..90`); ``owners`` adds every
         PROVISIONAL decision that is the owner's own (``decisions.owners_own``): the born-ACCEPTED
         rule applied to decisions recorded before it. All are checked before any is written, and
         the write logs ONE op line (`accept`, every id in ``ids`` and every file in ``paths``).
 
+        It writes `accepted_by` (the caller's ``actor``) on each decision, so an acceptance names
+        who made it and a reviewer's never reads as the owner's agreement, and `covered_by` (the
+        owner record ``covered_by`` names, or `gap`) when either is given (CE-237, DEC-342,
+        FRAMEWORK §6.5). A caller that is not the owner (its actor is not `human:<id>`) accepting
+        an agent's call gives ``covered_by`` (a live story, a charter goal, or an owner's decision
+        that stands, the test `ask decide` applies to its sources) or ``gap`` (no record covers
+        the call and it is cheap to undo).
+
         Refused, writing nothing: no id and no ``owners``; an id that names no decision; a
         decision that is not PROVISIONAL (named with its status: SUPERSEDED is history, BUILT a
         task carried out, ACCEPTED already reviewed); a decision kind whose enum lacks ACCEPTED;
-        ``owners`` alone finding nothing. Not checked: that a human reviewed the calls (only the
-        caller knows; the op line records who said so). Not a milestone (DEC-36 names none like
-        it, and `decision set`, which it replaces for this, is none): its line rides along."""
+        ``owners`` alone finding nothing; both ``covered_by`` and ``gap``; a ``covered_by`` that
+        names no record or is not the owner's; a caller that is not the owner accepting an
+        agent's call with neither; such a caller when the call's `refs` name an open question.
+        Not checked: that a human reviewed the calls (only the caller knows; the op line and
+        `accepted_by` record who said so), that the reviewer is not the maker, and that a `human:`
+        caller really is the owner. Not a milestone (DEC-36 names none like it, and `decision
+        set`, which it replaces for this, is none): its line rides along."""
         self._check(session, actor)
         if not ids and not owners:
             raise Refusal("no decisions to accept", "name the PROVISIONAL decisions reviewed, as ids or ranges (`DEC-86..90`), or pass `--owners` for every owner's decision still PROVISIONAL")
@@ -3083,6 +3121,29 @@ class Engine:
             if not swept and not named:
                 raise Refusal("no owner's decision is PROVISIONAL", "nothing to accept: an owner's decision recorded since CE-187 is born ACCEPTED")
         todo = named + swept
+        docs = {r.id: r.doc for r in heads}
+        covered_by = covered_by.strip()
+        if covered_by and gap:
+            raise Refusal("both `--covered-by` and `--gap`",
+                          "give one: `--covered-by <owner record>` when a live story, a charter goal or an owner's decision that stands covers the calls, `--gap` when none does and they are cheap to undo (FRAMEWORK §6.5)")
+        basis = D.GAP if gap else ""
+        if covered_by:
+            sid, own = self._owner_record(covered_by, G.known_goals(self)[0])
+            if sid is None:
+                raise Refusal(f"`--covered-by {covered_by}` names no record or charter goal", "name the owner record the acceptance rests on by its id")
+            if not own:
+                raise Refusal(f"`--covered-by {covered_by}` is not an owner record (a live story, a charter goal, or an owner's decision that stands)",
+                              "an agent's call covers nothing: cite the owner's record the calls follow from, or `--gap` when there is none and they are cheap to undo; otherwise ask the owner (FRAMEWORK §6.5)")
+            basis = sid
+        calls = [i for i in todo if not D.owners_own(docs[i])]
+        if calls and not D.owners_own({"actor": actor}):
+            if not basis:
+                raise Refusal(f"accepting the agent's call{'s' if len(calls) > 1 else ''} {D.compact_ids(calls)} as {actor}, who is not the owner, needs `--covered-by` or `--gap`",
+                              "name the owner record that covers them with `--covered-by <id>` (an acceptance the owner gave in chat: record their words first, then cite that decision), or `--gap` for a cheap-to-undo call no record covers (FRAMEWORK §6.5)")
+            waiting = [(i, q) for i in calls for q in self._open_questions(D.as_list(docs[i].get("refs")))]
+            if waiting:
+                raise Refusal("; ".join(f"{i} refs the open question {q}" for i, q in waiting) + ", so it waits for the owner's answer",
+                              f"answer it first (`ask answer {waiting[0][1]}`); `decision accept` takes the call once the question is closed")
 
         def mutate(recs: dict[str, Record]) -> dict[str, list[str]]:
             wrong = [(i, str(recs[i].doc.get(D.STATUS_KEY))) for i in todo if str(recs[i].doc.get(D.STATUS_KEY)) != D.PROVISIONAL]
@@ -3090,9 +3151,13 @@ class Engine:
                 said = "; ".join(f"{i} is {st}" + (f" (by {', '.join(D.as_list(recs[i].doc.get('superseded_by')))})" if st == "SUPERSEDED" else "") for i, st in wrong)
                 raise Refusal(f"only a PROVISIONAL decision is accepted: {said}",
                               "drop those ids and run it again: a SUPERSEDED decision is history, a BUILT one a task carried out, an ACCEPTED one already reviewed")
+            keys = [D.STATUS_KEY, D.ACCEPTED_BY, *([D.COVERED_BY] if basis else [])]
             for i in todo:
                 recs[i].doc.set(D.STATUS_KEY, D.ACCEPTED)
-            return {i: [D.STATUS_KEY] for i in todo}
+                recs[i].doc.set(D.ACCEPTED_BY, actor)
+                if basis:
+                    recs[i].doc.set(D.COVERED_BY, basis)
+            return {i: list(keys) for i in todo}
 
         self.store.update(todo, mutate, session=session, actor=actor, op=D.ACCEPT_OP, one_line=D.compact_ids(todo))
         return f"accepted {len(todo)}: {D.compact_ids(todo)} (one `{D.ACCEPT_OP}` op line)"
@@ -4631,16 +4696,22 @@ class Engine:
         logged `decision accept` (CE-187): its id is in an `accept` op line's ``ids``. `decision
         set` refuses ACCEPTED and `record new` refuses it on an agent's call, so one without the
         line is a hand edit that skipped the review's record. The owner's own decision is born
-        ACCEPTED and needs no line.
+        ACCEPTED and needs no line. It also carries `accepted_by` (CE-237, DEC-342): who accepted
+        it, so a reviewer's acceptance never reads as the owner's agreement; `decision set`
+        refuses the key, so one without it is a hand edit. Exempt: a decision named by an `accept`
+        line whose `fields` lack `accepted_by`, written by an engine before the key existed.
 
         Not checked: an unreadable record (the schema check reports it); that whoever ran
-        `decision accept` reviewed the calls."""
+        `decision accept` reviewed the calls; `covered_by` (checked at the write, because an owner
+        record may later be retired); an accept line hand-edited to drop `accepted_by` from its
+        `fields`, which exempts its ids."""
         if not self.w.decision:
             return []
         st = self.store
         kind = st.config.kind(self.w.decision)
         out: list[Failure] = []
         accepted: set[str] | None = None  # read from the op log the first time it is needed
+        legacy: set[str] = set()  # the ids of an `accept` line written before `accepted_by` existed
         for path in st._files(kind):
             try:
                 doc = st.read(path)
@@ -4650,11 +4721,19 @@ class Engine:
             rel = st._rel(path)
             if ds == D.ACCEPTED and not D.owners_own(doc):
                 if accepted is None:
-                    accepted = {str(i) for _, op in G._ops(self) if isinstance(op, dict) and op.get("op") == D.ACCEPT_OP
-                                for i in (op.get("ids") if isinstance(op.get("ids"), list) else [op.get("id")])}
+                    accepted = set()
+                    for _, op in G._ops(self):
+                        if isinstance(op, dict) and op.get("op") == D.ACCEPT_OP:
+                            named = {str(i) for i in (op.get("ids") if isinstance(op.get("ids"), list) else [op.get("id")])}
+                            accepted |= named
+                            if D.ACCEPTED_BY not in (op.get("fields") or []):
+                                legacy |= named  # written by an engine before CE-237, which wrote no `accepted_by`
                 if rid not in accepted:
                     out.append(Failure("G-W4", rel, f"{rid} is an agent's call (`actor: {doc.get('actor')}`) and {D.ACCEPTED}, but no `decision accept` of it is logged, so nothing records that it was reviewed",
                                        f"if it was reviewed, set `{D.STATUS_KEY}` back to {D.PROVISIONAL} (`git checkout` the file if a hand edit changed it) and run `decision accept {rid}`; if not, set it back to {D.PROVISIONAL}"))
+                elif not doc.get(D.ACCEPTED_BY) and rid not in legacy:
+                    out.append(Failure("G-W4", rel, f"{rid} is an agent's call (`actor: {doc.get('actor')}`) and {D.ACCEPTED}, but carries no `{D.ACCEPTED_BY}`, so nothing on it says who accepted it: the owner, or a reviewer",
+                                       f"restore `{D.ACCEPTED_BY}` from git (`git checkout` the file): `decision accept` writes it from the caller's actor, and `decision set` refuses it"))
             if ds != "SUPERSEDED" and status == "deprecated":
                 out.append(Failure("G-W4", rel, f"{rid} is `status: deprecated` but `{D.STATUS_KEY}: {ds}`, so a decision not superseded reads as history and the doc guards and G-I3 skip it",
                                    f"drop the `status` key (`git checkout` the file if a hand edit added it; a decision not superseded has none); a decision becomes history only through `decision supersede {rid} <new>`, which sets both keys"))

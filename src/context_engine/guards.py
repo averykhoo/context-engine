@@ -2705,7 +2705,8 @@ ASK_OPTION_RE = re.compile(
 )
 ASK_PLACEHOLDER_RE = re.compile(r"<[^<>\n]*>")  # a template's `<the option, and why>`, which says nothing
 ASK_NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
-ASK_EXEMPT_RE = re.compile(r"cost|judge?ment", re.IGNORECASE)  # which exemption a `none` takes: too costly, or human judgement
+ASK_EXEMPT_RE = re.compile(r"cost|judge?ment|needs context", re.IGNORECASE)  # which exemption a `none` takes: too costly, human judgement, or (CE-237, DEC-343) needs context
+ASK_NEEDS_CONTEXT_RE = re.compile(r"needs context", re.IGNORECASE)  # the open-ended question: no options, and no recommendation (FRAMEWORK §6.5)
 # Provenance: JUDGEMENT (CE-44, DEC-103; the check lives in G-W4, DEC-102): the fewest words that can hold an option and a reason ("B: it
 # needs no migration"); wrong if a real recommendation with its why is refused, or a bare option passes.
 RECOMMENDATION_MIN_WORDS = 5
@@ -2806,7 +2807,9 @@ def ask_problems(body: str) -> list[str]:
     one list item or `###` heading each, under `Options`, or one bold-led line each where it has
     neither (``ask_options``: a sub-bullet or a note is no option); and a recommendation with its reasoning (at least
     ``RECOMMENDATION_MIN_WORDS`` words), or `none` saying which exemption applies (too costly to
-    reach, or it needs human judgement) and why. `ask new` refuses a body that lacks one; G-W4
+    reach, or it needs human judgement) and why. A NEEDS CONTEXT question (CE-237, DEC-343,
+    FRAMEWORK §6.5) recommends `none (needs context): <what is missing>` and lists no options: the
+    options part is not required of it. `ask new` refuses a body that lacks one; G-W4
     fails an open question that does. A part is a heading, a bold label or a plain label
     (``ask_parts``); a template's `<...>` placeholder counts as nothing.
 
@@ -2822,9 +2825,10 @@ def ask_problems(body: str) -> list[str]:
     if not _said(parts.get("context", "") + parts.get("background", "")):
         out.append("states no context: a `**Context:**` part saying what led to the question")
     options = ask_options(parts.get("options", ""))
-    if len(options) < 2:
-        out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item or `###` heading each, or one bold-led line each where it has neither)")
     rec = _said(parts.get("recommendation", ""))
+    open_ended = bool(ASK_NONE_RE.match(rec) and ASK_NEEDS_CONTEXT_RE.search(rec))  # NEEDS CONTEXT: what is missing is the owner's story or goal, so no options
+    if not open_ended and len(options) < 2:
+        out.append(f"lists {len(options)} option{'' if len(options) == 1 else 's'} under `**Options:**`, not two or more (one list item or `###` heading each, or one bold-led line each where it has neither)")
     words = len(rec.split())
     if not rec:
         out.append("has no recommendation: a `**Recommendation:**` part with the option and why")
@@ -2836,7 +2840,7 @@ def ask_problems(body: str) -> list[str]:
 
 
 ASK_REMEDY = ("give the question a `**Context:**` part, two or more `**Options:**` (one list item or `###` heading each, or one bold-led line each where it has neither) and a `**Recommendation:**` "
-              "with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>` (FRAMEWORK §5.3; "
+              "with its why, or `none (too costly): <why>` or `none (needs human judgement): <why>`; a NEEDS CONTEXT question, `none (needs context): <what is missing>` and no options (FRAMEWORK §5.3, §6.5; "
               "manual-mode.md § context-engine ask new has the template)")
 
 

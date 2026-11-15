@@ -2,7 +2,10 @@
 and stays so until `decision accept <ids>` marks it reviewed, in one write and ONE op line; the
 born-ACCEPTED rule applied at rest (`--owners`); `decision set` and `record new` refuse what only
 the op may write; lint (G-W4) fails an agent's call ACCEPTED with no logged accept, and G-D0 a
-kit-block repo whose enum lacks ACCEPTED."""
+kit-block repo whose enum lacks ACCEPTED. CE-237 (DEC-342): `decision accept` writes `accepted_by` from the
+caller's actor and `covered_by` (an owner record, or `gap`); a caller that is not the owner needs one of them
+for an agent's call, and is refused while the call's refs name an open question; lint (G-W4) fails an agent's
+call ACCEPTED without `accepted_by` unless the accept line that named it predates the key."""
 
 import datetime as dt
 import json
@@ -21,7 +24,9 @@ from context_engine.working import Engine
 from conftest import ASK_BODY, _toml
 
 S, ACTOR = "2026-11-07d", "claude-code/test"
+OWNER = "human:owner"
 W = {"session": S, "actor": ACTOR}
+WO = {"session": S, "actor": OWNER}
 STATUSES = ["BUILT", "ACCEPTED", "PROVISIONAL", "DEFERRED", "SUPERSEDED", "REJECTED"]
 LISTS = {k: "list" for k in ("tags", "supersedes", "superseded_by", "relaxes", "narrowed_by", "creates", "amends", "retires", "tasks", "code", "refs")}
 BOARD = {"enums": {"state": ["open", "closed"], "pri": ["NOW", "NEXT", "LATER", "SOMEDAY"]}, "types": {"created": "date", "moved": "key", "updated": "key", "closed": "key", "deps": "list", "last_asked": "key"}}
@@ -141,7 +146,7 @@ def test_accept_takes_ids_and_ranges_in_one_write_and_one_op_line(eng):
     calls = [new(eng, actor=ACTOR, title=f"Call {n}") for n in range(1, 6)]
     assert calls == ["DEC-1", "DEC-2", "DEC-3", "DEC-4", "DEC-5"]
     before = len(lines(eng))
-    out = eng.decision_accept(["DEC-1..3", "DEC-5", "DEC-2"], **W)
+    out = eng.decision_accept(["DEC-1..3", "DEC-5", "DEC-2"], gap=True, **W)
     assert out == "accepted 4: DEC-1..3, DEC-5 (one `accept` op line)"
     assert [status(eng, i) for i in calls] == ["ACCEPTED", "ACCEPTED", "ACCEPTED", "PROVISIONAL", "ACCEPTED"]
     added = lines(eng)[before:]
@@ -149,7 +154,7 @@ def test_accept_takes_ids_and_ranges_in_one_write_and_one_op_line(eng):
     (line,) = added
     paths = [eng.store._rel(eng.store.get(i).path) for i in ("DEC-1", "DEC-2", "DEC-3", "DEC-5")]
     assert (line["op"], line["id"], line["ids"], line["paths"], line["path"], line["fields"], line["session"], line["actor"]) == (
-        "accept", "DEC-1..3, DEC-5", ["DEC-1", "DEC-2", "DEC-3", "DEC-5"], paths, paths[0], ["decision_status"], S, ACTOR)
+        "accept", "DEC-1..3, DEC-5", ["DEC-1", "DEC-2", "DEC-3", "DEC-5"], paths, paths[0], ["decision_status", "accepted_by", "covered_by"], S, ACTOR)
     assert C.op_paths(line) == paths
     assert eng.lint_working() == [] or all(f.guard != "G-W4" for f in eng.lint_working())
     assert [f for f in eng._decision_status_failures()] == []
@@ -177,7 +182,7 @@ def test_accept_refuses_an_unknown_id_a_decision_not_provisional_and_a_supersede
     ]
     for ids, says in cases:
         with pytest.raises(Refusal, match=says):
-            eng.decision_accept(ids, **W)
+            eng.decision_accept(ids, gap=True, **W)  # the flags are given, so the refusal that fires is the status or the id
         assert snapshot(eng) == keep, ids  # all or nothing: no file and no op line
     assert status(eng, a) == status(eng, b) == "PROVISIONAL"
 
@@ -195,7 +200,7 @@ def test_owners_applies_the_born_accepted_rule_to_decisions_recorded_before_it(t
     assert len(lines(e)) == before + 1
     with pytest.raises(Refusal, match="no owner's decision is PROVISIONAL"):
         e.decision_accept([], owners=True, **W)
-    assert e.decision_accept([call], owners=True, **W) == f"accepted 1: {call} (one `accept` op line)"  # the ids, with nothing to sweep
+    assert e.decision_accept([call], owners=True, gap=True, **W) == f"accepted 1: {call} (one `accept` op line)"  # the ids, with nothing to sweep
 
 
 def test_decision_set_refuses_accepted_and_names_the_op(eng):
@@ -212,7 +217,7 @@ def test_g_w4_fails_an_agents_call_accepted_by_hand_and_passes_one_the_op_accept
     hand, op, owner = new(eng, actor=ACTOR, title="By hand"), new(eng, actor=ACTOR, title="By the op"), new(eng)
     path = eng.store.get(hand).path
     path.write_bytes(path.read_bytes().replace(b"decision_status: PROVISIONAL\n", b"decision_status: ACCEPTED\n"))
-    eng.decision_accept([op], **W)
+    eng.decision_accept([op], gap=True, **W)
     got = [(f.guard, f.path, f.message) for f in eng.lint() if f.guard == "G-W4"]
     assert got == [("G-W4", eng.store._rel(path), f"{hand} is an agent's call (`actor: {ACTOR}`) and ACCEPTED, but no `decision accept` of it is logged, so nothing records that it was reviewed")], got
     assert status(eng, owner) == "ACCEPTED"  # born so: no line needed
@@ -232,7 +237,7 @@ def test_a_line_for_many_records_is_carried_with_every_file_it_names():
 
 def test_g_w7_names_every_file_a_line_for_many_records_names_that_is_not_in_the_tree(eng):
     a, b = new(eng, actor=ACTOR), new(eng, actor=ACTOR)
-    eng.decision_accept([a, b], **W)
+    eng.decision_accept([a, b], gap=True, **W)
     gone = eng.store.get(b).path
     rel = eng.store._rel(gone)
     gone.unlink()
@@ -257,7 +262,7 @@ def test_commit_carries_every_decision_an_accept_line_names(tmp_path):
     ids = [new(e, actor=ACTOR, title=f"Call {n}") for n in range(1, 4)]
     git(tmp_path, "add", "-A")
     git(tmp_path, "commit", "-q", "-m", "three calls")
-    e.decision_accept(["DEC-1..3"], **W)
+    e.decision_accept(["DEC-1..3"], gap=True, **W)
     e.commit([], "the review", **W)
     shown = set(git(tmp_path, "show", "--name-only", "--format=", "HEAD").split())
     assert shown == {"ops.jsonl", *(e.store._rel(e.store.get(i).path) for i in ids)}, shown
@@ -271,8 +276,8 @@ def test_the_cli_and_the_tool_accept_ids_and_ranges(eng):
     for n in range(1, 5):
         new(eng, actor=ACTOR, title=f"Call {n}")
     base = ["--root", str(eng.root), "--session", S, "--actor", ACTOR]
-    assert main([*base, "decision", "accept", "DEC-1..2,", "DEC-4"]) == 0
-    code, out = engine_ops.OPS["decision_accept"].call(Engine(eng.root), engine_ops.Caller(S, ACTOR), ids=["DEC-3"])
+    assert main([*base, "decision", "accept", "DEC-1..2,", "DEC-4", "--gap"]) == 0
+    code, out = engine_ops.OPS["decision_accept"].call(Engine(eng.root), engine_ops.Caller(S, ACTOR), ids=["DEC-3"], gap=True)
     assert (code, out) == (0, "accepted 1: DEC-3 (one `accept` op line)")
     assert [status(eng, f"DEC-{n}") for n in range(1, 5)] == ["ACCEPTED"] * 4
     assert main([*base, "decision", "accept"]) == 2  # neither ids nor --owners: refused
@@ -304,3 +309,99 @@ def test_g_d0_fails_a_kit_repo_whose_decision_enum_lacks_accepted(tmp_path):
     assert text.count('"ACCEPTED", ') == 1
     cfg.write_text(text.replace('"ACCEPTED", ', ""), encoding="utf-8")
     assert d0() == ["G-D0 context.toml: the decision kind's `decision_status` enum has no ACCEPTED, the status the kit's contract gives an owner's decision at birth (CE-187)"], d0()
+
+
+# -- CE-237 (DEC-342): who accepted, and what the acceptance rests on ------------------------------------
+
+
+def _accepted(e, rid):
+    return e.store.get(rid).doc
+
+
+def test_accept_writes_accepted_by_and_covered_by_from_the_caller_and_the_flags(eng):
+    owner_rec = new(eng, title="Owner words")  # DEC-1, the owner's own decision: born ACCEPTED
+    a, b, c = (new(eng, actor=ACTOR, title=f"Call {n}") for n in (1, 2, 3))
+    before = len(lines(eng))
+    eng.decision_accept([a], covered_by=owner_rec, **W)  # a reviewer, covered
+    eng.decision_accept([b], gap=True, **W)  # a reviewer, a gap
+    eng.decision_accept([c], **WO)  # the owner: no flag needed
+    assert [(_accepted(eng, i).get("accepted_by"), _accepted(eng, i).get("covered_by")) for i in (a, b, c)] == [(ACTOR, owner_rec), (ACTOR, "gap"), (OWNER, None)]
+    assert [ln["fields"] for ln in lines(eng)[before:]] == [["decision_status", "accepted_by", "covered_by"]] * 2 + [["decision_status", "accepted_by"]]
+    assert [f.message for f in eng.lint() if f.guard == "G-W4"] == []
+
+
+def test_a_caller_that_is_not_the_owner_needs_covered_by_or_gap_for_an_agents_call(eng):
+    call, owner_rec = new(eng, actor=ACTOR), new(eng, title="Owner words")
+    keep = snapshot(eng)
+    with pytest.raises(Refusal, match=rf"accepting the agent's call {call} as {ACTOR}, who is not the owner, needs `--covered-by` or `--gap`") as r:
+        eng.decision_accept([call], **W)
+    assert "--covered-by <id>" in r.value.remedy and "--gap" in r.value.remedy
+    with pytest.raises(Refusal, match="both `--covered-by` and `--gap`"):
+        eng.decision_accept([call], covered_by=owner_rec, gap=True, **W)
+    with pytest.raises(Refusal, match="both `--covered-by` and `--gap`"):
+        eng.decision_accept([call], covered_by=owner_rec, gap=True, **WO)  # the owner is held to it too
+    assert snapshot(eng) == keep
+    assert status(eng, call) == "PROVISIONAL"
+    eng.decision_accept([call], **WO)  # the owner needs neither
+    assert (status(eng, call), _accepted(eng, call).get("accepted_by")) == ("ACCEPTED", OWNER)
+
+
+def test_covered_by_must_name_an_owner_record(eng):
+    owner_rec, owner_old, owner_new = new(eng, title="Owner words"), new(eng, title="Owner, old"), new(eng, title="Owner, new")
+    eng.supersede(owner_old, owner_new, **W)
+    agent_rec, a = new(eng, actor=ACTOR, title="An agent's call"), new(eng, actor=ACTOR, title="The call")
+    keep = snapshot(eng)
+    for ref, says in (("DEC-99", r"`--covered-by DEC-99` names no record or charter goal"),
+                      (agent_rec, rf"`--covered-by {agent_rec}` is not an owner record"),
+                      (owner_old, rf"`--covered-by {owner_old}` is not an owner record")):
+        with pytest.raises(Refusal, match=says):
+            eng.decision_accept([a], covered_by=ref, **W)
+        assert snapshot(eng) == keep, ref
+    eng.decision_accept([a], covered_by=owner_rec, **W)  # a standing owner decision covers it
+    assert _accepted(eng, a).get("covered_by") == owner_rec
+
+
+def test_a_call_whose_refs_name_an_open_question_waits_for_the_owner_unless_the_owner_accepts(eng):
+    ask = _ask(eng)
+    call = new(eng, actor=ACTOR, title="Waiting call", refs=ask)
+    keep = snapshot(eng)
+    with pytest.raises(Refusal, match=rf"{call} refs the open question {ask}, so it waits for the owner's answer") as r:
+        eng.decision_accept([call], gap=True, **W)
+    assert f"ask answer {ask}" in r.value.remedy
+    assert snapshot(eng) == keep and status(eng, call) == "PROVISIONAL"
+    other = new(eng, actor=ACTOR, title="Not waiting")
+    keep = snapshot(eng)
+    with pytest.raises(Refusal, match=rf"{call} refs the open question {ask}"):
+        eng.decision_accept([other, call], gap=True, **W)  # one waiting call holds the whole batch
+    assert snapshot(eng) == keep
+    eng.decision_accept([call], **WO)  # the owner's own acceptance is not held (the owner has the question's answer to give)
+    assert status(eng, call) == "ACCEPTED"
+    ask2 = _ask(eng)
+    call2 = new(eng, actor=ACTOR, title="Later call", refs=ask2)
+    eng.ask_answer(ask2, "this way", title="This way", **W)  # the question closes
+    eng.decision_accept([call2], gap=True, **W)
+    assert status(eng, call2) == "ACCEPTED"
+
+
+def test_g_w4_fails_an_accepted_agents_call_that_lost_accepted_by_unless_a_pre_key_line_named_it(eng):
+    stripped, legacy, owner = new(eng, actor=ACTOR, title="Stripped"), new(eng, actor=ACTOR, title="Legacy"), new(eng)
+    eng.decision_accept([stripped], gap=True, **W)
+    path = eng.store.get(stripped).path
+    path.write_bytes(path.read_bytes().replace(f"accepted_by: {ACTOR}\n".encode(), b""))
+    lpath = eng.store.get(legacy).path  # accepted by hand, then named by a line an engine before CE-237 wrote
+    lpath.write_bytes(lpath.read_bytes().replace(b"decision_status: PROVISIONAL\n", b"decision_status: ACCEPTED\n"))
+    rel = eng.store._rel(lpath)
+    with (eng.root / "ops.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"session": S, "actor": ACTOR, "op": "accept", "id": legacy, "path": rel, "ids": [legacy], "paths": [rel], "fields": ["decision_status"]}) + "\n")
+    got = [(f.path, f.message) for f in eng.lint() if f.guard == "G-W4"]
+    assert got == [(eng.store._rel(path), f"{stripped} is an agent's call (`actor: {ACTOR}`) and ACCEPTED, but carries no `accepted_by`, so nothing on it says who accepted it: the owner, or a reviewer")], got
+    assert status(eng, owner) == "ACCEPTED"  # born so: needs neither a line nor the key
+
+
+def test_decision_set_refuses_accepted_by_and_covered_by(eng):
+    rid = new(eng, actor=ACTOR)
+    for key in ("accepted_by", "covered_by"):
+        with pytest.raises(Refusal, match=f"`decision set` does not change a decision's `{key}`") as r:
+            eng.decision_set(rid, {key: "DEC-1"}, **W)
+        assert "decision accept" in r.value.remedy
+    assert eng.store.get(rid).doc.get("accepted_by") is None

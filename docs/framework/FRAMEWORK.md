@@ -860,7 +860,9 @@ into the flat directory once the schema carries `state` (§11.4).
     reaching it: reading, a quick probe, a short subagent. Not a long `fable` session (the
     triage's one arbiter call, below, is the most a question gets), and not building and testing
     a feature to find out. Where a recommendation would cost too much to reach, or genuinely
-    needs human judgement, the question says which, and why, in place of one;
+    needs human judgement, the question says which, and why, in place of one. A NEEDS CONTEXT question
+    (§6.5) states no options and no recommendation: its recommendation reads `none (needs context)`,
+    then what is missing;
   - what it blocks: the blocked tasks declare `deps: [ASK-n]`, and closing the question
     unblocks them.
 - **Rationing:**
@@ -1309,6 +1311,8 @@ numbered for citation (the order is below):
    close, freeze each ACTIVE-PLAN doc whose items all close with it (`doc.freeze`, §6.7);
    `task.close` refuses until then.
    Hand-rewrite the summary / Traps / Read first of every NOW and NEXT item you touched.
+   - **4a. Review the task's agent calls** before its close (§6.5, reviewing an agent's calls): one batch to the
+     arbiter, in one call; the calls it clears are accepted, and what goes to the owner goes as a question.
 5. Promotion (§6.7):
    - **5a. Rules and lessons:** promote durable rules into the contract; file method lessons
      into runbooks; change this document in place (§6.12); place each trap where its lifetime
@@ -1449,11 +1453,16 @@ append-only kind. `record.new` of any append-only kind, and `ask.answer`, refuse
   `status`, provenance (`actor`, `decided`, `ruled_by`, ...) and `verified` (an endorsement is
   owner words), so it never writes half a link or re-attributes a decision; it never sets
   SUPERSEDED (`decision.supersede`) or ACCEPTED (`decision.accept`);
-- `decision.accept(ids, owners)` marks PROVISIONAL decisions reviewed, ACCEPTED, all in one write
-  logged as ONE op line (`ids` and `paths` list every record): ids, aliases and ranges (`D-86..90`)
-  in one call, and with `owners` every owner's own decision still PROVISIONAL (recorded before
-  owner decisions were born ACCEPTED). It refuses an id that names no decision and a decision
-  that is not PROVISIONAL, naming its status;
+- `decision.accept(ids, owners, covered_by, gap)` marks PROVISIONAL decisions reviewed, ACCEPTED, all in
+  one write logged as ONE op line (`ids` and `paths` list every record): ids, aliases and ranges
+  (`D-86..90`) in one call, and with `owners` every owner's own decision still PROVISIONAL (recorded
+  before owner decisions were born ACCEPTED). It writes `accepted_by:`, the caller's actor, on each, so
+  an acceptance names who made it and a reviewer's never reads as the owner's agreement, and
+  `covered_by:`, the owner record it rests on, or `gap`. A caller that is not the owner (its actor is
+  not `human:<id>`) accepting an agent's call gives `covered_by` (a live story, a charter goal, or an
+  owner's decision that stands, as `ask.decide` reads its sources) or `gap` (no record covers the call,
+  and it is cheap to undo), never both, and is refused while that call's `refs` name an open question.
+  It refuses an id that names no decision and a decision that is not PROVISIONAL, naming its status;
 - `decision.link(id, target, rel)` links a task, story, criterion, decision or `file::symbol`,
   checked to exist when linked (`relaxes` writes its backlink too); `decision.relink(id, old,
   new)` moves one `code:` link of a current decision when the code moves, checked the same way;
@@ -1485,7 +1494,7 @@ turn out to matter.
 **Status:** BUILT · ACCEPTED · PROVISIONAL · DEFERRED · SUPERSEDED · REJECTED. Rejected approaches are
 decisions with `reopen_if:`, so "what was rejected that touches X" is a query. PROVISIONAL means
 one thing: an agent's call (its own actor, or a ruling on the owner's delegation, `ruled_by`)
-awaiting the owner's review. A decision in the owner's own words (`actor: owner` or
+awaiting review: the owner's, or the arbiter's under the list below. A decision in the owner's own words (`actor: owner` or
 `human:<id>`, no `ruled_by`) is born **ACCEPTED**, by `record.new` and `ask.answer` alike: an
 owner's word awaits nothing, and `record.new` refuses it PROVISIONAL. An agent's call becomes
 ACCEPTED only through `decision.accept`, once reviewed; `record.new` refuses it ACCEPTED,
@@ -1494,6 +1503,67 @@ logged `accept` line naming it. **BUILT** is for a decision a task carried out. 
 `context.toml` enum lacks ACCEPTED (from before it) records the owner's decisions PROVISIONAL, as
 before, and G-D0 names the missing value; once it is added, `decision.accept(owners=True)`
 applies the born-ACCEPTED rule to those recorded before, in one line.
+
+**Reviewing an agent's calls.** The arbiter (§6.6) reviews most agent calls, and the owner is asked
+only when it is unsure or context is missing. At each task's close (§6.3 item 4a), the task's calls still
+PROVISIONAL go to the arbiter as one batch, in one call, never fanned out (§6.6); it gets each decision's text,
+the records it cites and the task's diff. It sorts each call by this list. Conditions read record fields and diff
+paths; an *owner record* is a live story, a charter goal, or an owner's decision that stands. First match from the
+top wins.
+
+- **Ask the owner** (blocks that item and its dependents; work continues elsewhere). The call stays PROVISIONAL
+  and goes to the owner as a question (§5.3) with its context, options and the arbiter's recommendation; the
+  decision's `refs` name the question, so `decision.accept` refuses it while the question is open.
+  - A1. The decision links (`supersedes`, `relaxes`, `narrowed_by`, `amends`) to an owner record, or its text
+    contradicts a sentence it quotes.
+  - A2. The diff touches `docs/charter.md`, a story's status, or sets a task to NOW outside the rerank.
+  - A3. Not cheap to undo per P8: push, tag, release, deleting untracked files, any path outside this repo
+    (another repo, global `CLAUDE.md`, `~/.claude.json`).
+  - A4. The diff touches the framework contract (`contract.md`), the repo's contract (`CLAUDE.md`) § Gate or
+    § Rules, FRAMEWORK §1 principles or §6.5, `[gate]` in `context.toml`, or this list.
+  - A5. After one review round-trip the arbiter and the maker still differ, or the arbiter's verdict is anything
+    but ENDORSE.
+  - A6. NEEDS CONTEXT (below).
+  - A7. Adds a recurring per-session or per-commit cost: an orient part, a hook, a commit milestone, a gate step.
+- **Accept and flag** (one digest line: id, title, why flagged).
+  - F1. Adds a new guard id, operation, record kind or field, CLI flag, config key, or procedure step. A clause
+    added to an existing guard is C3, not this.
+  - F2. A user-visible name: id prefix, flag, config key, FRAMEWORK term.
+  - F3. Any path under `src/context_engine/kit/` or a default an adopting repo inherits.
+  - F4. `refs` names an owner record but no criterion: it interprets rather than implements.
+  - F5. Drops, splits or defers part of a task whose body holds owner words.
+  - F6. The arbiter accepted after a change the maker made on request.
+  - F7. `refs` names a decision the arbiter accepted in the same session.
+- **Accept** (silent; `accepted_by` set, a random sample surfaces in the digest).
+  - C1. Implementation detail in `src/` or `tests/` with a criterion in `refs`/`tasks`, gate green, no new
+    surface.
+  - C2. Refusal wording, remedy text, error placement, fixtures, internal symbol names.
+  - C3. Which existing guard or section a clause belongs to; a sabotage row's script; a dated evidence doc's name.
+  - C4. A decision that applies verbatim a criterion, procedure step or owner sentence it quotes.
+  - C5. Agent self-supersession that fixes the agent's own earlier call.
+
+**Covered:** a decision is covered when its `refs` (or `Derived from:`) names a record that is an owner record,
+**and** the review quotes one sentence of it that decides the call: the test `ask.decide` imposes on its
+`sources`. No quotable sentence means GAP, whatever the refs say: citing is not covering. A cheap-to-undo GAP
+(P8) is accepted and flagged, with `gap`; the rest are NEEDS CONTEXT.
+
+*NEEDS CONTEXT* asks the owner "what do you want here?", where the ask tier asks "approve this call?". It is
+raised when no owner record covers a call that is not cheap to undo, or the covering story is thin; when two owner
+records contradict each other on the point; when a story, goal or charter line rests on an assumption the work
+showed false; or when a goal is too vague to settle the call. It is an open-ended question with no options and no
+recommendation, since what is missing is the owner's story or goal, which an agent cannot supply: it says what is
+missing, contradictory or shown false, quotes the records involved, and asks for the story, goal or charter text.
+Its answer lands as a new or amended story, or a charter amendment, not as a decision acceptance.
+
+**Thin areas:** under an unspecified story, one that says only that something should "just be a task", or one whose
+fit with an existing tool is unknown, no decision is accepted by the arbiter at all: the first task there
+opens with one batched question whose answer is an amendment, then decisions can be covered by it. Under a story
+of one or two sentences, the first decision is NEEDS CONTEXT, later ones F4 against the amendment. A goal with few
+stories is not thin by itself; a goal row's "Measured by" sentence counts as covering text.
+
+**Over time:** every owner answer lands as a story amendment or an owner decision, so the covered set grows
+without changing the list. A condition moves up a tier, by amendment, when the owner overturns an acceptance made
+under it; there are no counted thresholds.
 
 **Links:**
 - `supersedes` / `superseded by`;
@@ -2546,9 +2616,12 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   SUPERSEDED, so a current decision is never hidden as history from the guards that skip
   deprecated records (`record.new` refuses a decision given `status`,
   `decision_status: SUPERSEDED`, `supersedes` or `superseded_by`, whatever `[guards] off` names:
-  only `decision.supersede` writes them, with both links); an agent's call that is ACCEPTED is named by a logged `accept` line (`decision.accept`,
-  §6.5). Not checked: whether a question's parts are any good, a closed question, and whether
-  whoever ran `decision.accept` reviewed the calls.
+  only `decision.supersede` writes them, with both links); an agent's call that is ACCEPTED is named by a logged
+  `accept` line (`decision.accept`, §6.5) and carries `accepted_by`, unless that line predates the key (its
+  `fields` lack `accepted_by`); a question is open with no options only when its recommendation is
+  `none (needs context)` (§6.5). Not checked: whether a question's parts are any good, a closed question,
+  whether whoever ran `decision.accept` reviewed the calls, and whether `covered_by` names an owner record
+  (checked at the write).
 - **G-W5:** tier caps: NOW = 1 while any item not at HOLD is open, NEXT ≤ 5.
 - **G-W6:** ledger receipts are present and well-formed, including `asked:` when a NOW or NEXT
   question exists, and a `guards:` receipt matching `[working] gate_receipt` (by default a gate

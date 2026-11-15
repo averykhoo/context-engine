@@ -449,14 +449,14 @@ def decision_supersede(e: Engine, c: Caller, old: str, new: str) -> tuple[int, s
 
 @op(write=True)
 def decision_set(e: Engine, c: Caller, id: str, fields: dict[str, str] | None = None, unset: list[str] | None = None) -> tuple[int, str]:
-    """Set or unset a decision's own frontmatter: decision_status (not SUPERSEDED: decision_supersede), reopen_if (REJECTED only), tags, title, description. Links, provenance (actor, decided, session, attribution, imported_from, generated, ruled_by, verified) and answers are refused."""
+    """Set or unset a decision's own frontmatter: decision_status (not SUPERSEDED: decision_supersede), reopen_if (REJECTED only), tags, title, description. Links, provenance (actor, decided, session, attribution, imported_from, generated, ruled_by, verified), accepted_by, covered_by and answers are refused."""
     return 0, e.decision_set(id, fields or {}, unset=tuple(unset or ()), **c.kw)
 
 
 @op(write=True)
-def decision_accept(e: Engine, c: Caller, ids: list[str] | None = None, owners: bool = False) -> tuple[int, str]:
-    """Mark PROVISIONAL decisions reviewed: each becomes ACCEPTED, in one write and ONE op line. `ids`: ids, aliases or ranges (`DEC-86..90`); `owners`: also every owner's own decision still PROVISIONAL (recorded before owner decisions were born ACCEPTED). Refused: an id that names no decision, or a decision that is not PROVISIONAL (SUPERSEDED, BUILT, ACCEPTED: each named)."""
-    return 0, e.decision_accept(list(ids or []), owners=owners, **c.kw)
+def decision_accept(e: Engine, c: Caller, ids: list[str] | None = None, owners: bool = False, covered_by: str = "", gap: bool = False) -> tuple[int, str]:
+    """Mark PROVISIONAL decisions reviewed: each becomes ACCEPTED with `accepted_by` the caller's actor, in one write and ONE op line. `ids`: ids, aliases or ranges (`DEC-86..90`); `owners`: also every owner's own decision still PROVISIONAL (recorded before owner decisions were born ACCEPTED). A caller that is not the owner accepting an agent's call gives `covered_by` (the owner record it rests on: a live story, a charter goal, or an owner's decision that stands) or `gap` (no record covers it and it is cheap to undo), written as `covered_by`. Refused: an id that names no decision, a decision that is not PROVISIONAL (SUPERSEDED, BUILT, ACCEPTED: each named), both covered_by and gap, neither where one is needed, a covered_by that is not an owner record, and an agent's call whose refs name an open question."""
+    return 0, e.decision_accept(list(ids or []), owners=owners, covered_by=covered_by, gap=gap, **c.kw)
 
 
 @op(write=True)

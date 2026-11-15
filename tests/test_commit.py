@@ -639,7 +639,7 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     w("decision_relink", id="DEC-2", old="a.py::f", new="b.py::f")
     w("decision_set", id="DEC-2", fields={"tags": "a, b"})
     w("record_new", kind="decision", title="A call", body="The agent's own call.", fields={"actor": ACTOR})  # born PROVISIONAL (CE-187)
-    w("decision_accept", ids=["DEC-3"])  # a review, as `decision set` is a status change: not a milestone (CE-187)
+    w("decision_accept", ids=["DEC-3"], gap=True)  # a review, as `decision set` is a status change: not a milestone (CE-187)
     w("decision_supersede", old="DEC-1", new="DEC-2")
     w("record_new", kind="story", title="A story", body="the owner's words", fields=OWNER)
     w("record_new", kind="story", title="Again", body="the owner's words", fields=OWNER)

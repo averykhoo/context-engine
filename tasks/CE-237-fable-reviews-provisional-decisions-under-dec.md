@@ -9,7 +9,7 @@ goals: [G-7, G-3]
 source: session 2026-11-13d
 created: 2026-11-13
 moved: 2026-11-14a
-updated: 2026-11-14a
+updated: 2026-11-16a
 ---
 
 Build DEC-342: fable reviews and accepts agents' provisional decisions under the three-tier list, with a fourth outcome, NEEDS CONTEXT
@@ -41,3 +41,4 @@ Each one goes to the owner as an ASK whose part one is the dilemma, the options 
 ## Log
 
 - 2026-11-14a (claude-code/claude-opus-5-5): DEC-343 (owner, 2026-11-14a) corrects the body's NEEDS CONTEXT paragraph: it is an open-ended question with NO options and NO recommendation (DEC-34's shape does not apply), because what is missing is the owner's story or goal, which an agent cannot supply. The ASK says what is missing, contradictory or shown false, quotes the records involved, and asks for the story, goal or charter text. Promoted to NOW ahead of CE-235 (DEC-343 item 2).
+- 2026-11-16a (claude-code/claude-opus-5-5): escalated: steps 1-2 builder went sonnet -> opus in round 3 after two verifier FAILs (DEC-326); verifier-r3 PASS. Workflow wf_f18bca2f-f88, reports in .scratch/ce-237/.

@@ -545,6 +545,7 @@ ASK_MISREAD = [
 @pytest.mark.parametrize("body", [ASK_BODY, ASK_HEADINGS, ASK_PLAIN, _ask(rec="none (too costly): telling them apart needs a week-long trial run"),
                                   _ask(options=("1) Normalise on read.", "2) Normalise on write.", "3) Leave it.")),
                                   _ask(options=("  - A. Normalise on read.", "  - B. Normalise on write.")),  # an indented list is still a list
+                                  _ask(options=(), rec="none (needs context): no story says which parsers must agree on CRLF"),  # CE-237 (DEC-343): NEEDS CONTEXT lists no options
                                   *ASK_MISREAD])
 def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommendation(eng, body):
     """CE-44 (DEC-34 and its amendment): every ask records its context, several options and a
@@ -574,6 +575,8 @@ def test_ask_new_files_a_question_with_context_options_and_a_reasoned_recommenda
     (_ask(options=("**A:** Normalise on read.", "  **Why:** every parser then does it.")), "lists 1 option under"),  # a bold note under a bold option is its text
     (_ask(options=("- A. Normalise on read.", "  **Why:** every parser then does it.", "  - and the writer too")), "lists 1 option under"),  # and leaves the item's sub-bullets its own
     (_ask(options=("**A:** Normalise on read.", "**B:** Normalise on write.", "- Note: both are rough.")), "lists 1 option under"),  # CE-201: a list item beside bold options makes the list the options
+    (_ask(options=(), rec="none (too costly): telling them apart needs a week-long trial run"), "lists 0 options under"),  # CE-237: only NEEDS CONTEXT may list none
+    (_ask(options=(), rec="A, since every reader then sees one form."), "lists 0 options under"),
     (_ask(rec=""), "has no recommendation"),
     (_ask(rec="<the option, and why in a line>"), "has no recommendation"),
     (_ask(rec="A."), "without reasoning (1 word;"),
@@ -587,6 +590,7 @@ def test_ask_new_refuses_a_question_lacking_a_part_and_writes_nothing(eng, body,
     with pytest.raises(Refusal, match=re.escape(says)) as exc:
         eng.ask_new("Which way?", body=body, **kw(key))
     assert "**Context:**" in exc.value.remedy and "none (needs human judgement)" in exc.value.remedy and "--body-file" in exc.value.remedy
+    assert "none (needs context)" in exc.value.remedy  # CE-237 (DEC-343)
     assert "`###` heading each" in exc.value.remedy  # CE-201: the remedy says what counts as an option
     assert list(eng.store.heads("question")) == []
 

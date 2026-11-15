@@ -55,6 +55,7 @@ STATUS_KEY = "decision_status"
 # PROVISIONAL and stays so until `decision accept` marks it reviewed. BUILT: a task carried it out.
 ACCEPTED, PROVISIONAL = "ACCEPTED", "PROVISIONAL"
 ACCEPT_OP = "accept"  # the op log line `decision accept` writes, one for every decision it accepts
+ACCEPTED_BY, COVERED_BY, GAP = "accepted_by", "covered_by", "gap"  # CE-237 (DEC-342): who accepted, and the owner record it rests on (or `gap`)
 OWNERS_OWN_RE = re.compile(r"owner|human:\S+", re.IGNORECASE)  # guards.py::LONE_HUMAN_RE: one human's own words and call
 RANGE_RE = re.compile(r"(?P<prefix>[A-Za-z]+)-(?P<lo>\d+)\.\.(?:(?P<prefix2>[A-Za-z]+)-)?(?P<hi>\d+)")
 INDEX_TITLE = "# Decisions"

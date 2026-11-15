@@ -114,7 +114,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
 | decision relink | `relink` | the decision | `["code"]` |
 | decision set | `set` | the decision | the changed keys (no `updated`: decisions do not carry it) |
-| decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status"]` |
+| decision accept | `accept`: ONE line for every decision accepted | id = the ids folded into ranges, path = the first file, `ids` and `paths` = every one | `["decision_status", "accepted_by"]`, then `"covered_by"` when it was written |
 | decision import | `import`, one line per record | the record | every frontmatter key |
 | task import | `import`, one line per record, with `as` when it holds a session-keyed value | the record | every frontmatter key |
 | task close of an item with residuals | `register.append`, before the `close` line | the task, path = the register | the new register ids |
@@ -1307,7 +1307,8 @@ that lacks any (with `--body` or `--body-file`; with neither it refuses too): **
 ...`) or `###` heading each, under `Options`, or, where it has neither, one line led by a bold
 label (`**A:** ...`) each; and a **recommendation with its reasoning**, at least five words,
 or `none` saying which exemption applies (too costly to reach, or it needs human judgement) and
-why. A part is a heading (`##
+why. A NEEDS CONTEXT question (FRAMEWORK §6.5) recommends `none (needs context): <what is missing>`
+and lists no options: the options part is not required of it. A part is a heading (`##
 Options`), a bold label naming one of the parts (`**Options:**`) or, in a body that writes none
 of its parts as a heading or a bold label, a plain one (`Options:`); any other such line is text
 of the part it is in, and only the heading `## Log` ends the body (a `Log:` line is prose). A
@@ -1329,7 +1330,7 @@ The template:
 - A. <option>
 - B. <option>
 
-**Recommendation:** <the option, and why in a line; or "none (too costly): <why>" or "none (needs human judgement): <why>" (FRAMEWORK §5.3)>
+**Recommendation:** <the option, and why in a line; or "none (too costly): <why>" or "none (needs human judgement): <why>", or, for NEEDS CONTEXT, "none (needs context): <what is missing>" with no Options part (FRAMEWORK §5.3, §6.5)>
 
 **Blocks:** <ids or none>
 
@@ -2201,6 +2202,8 @@ operation owns. Values take the kind's declared types, as in § context-engine t
   ids are fixed when the record is created; note a correction with `record amend`);
 - the key is `verified` (the owner endorsed it): an endorsement is the owner's words, so record
   them with `record amend <id> "<the owner's words>"`;
+- the key is `accepted_by` or `covered_by`: § context-engine decision accept writes them when it accepts a
+  decision (who accepted it, and what the acceptance rests on);
 - the key is `reopen_if` and the decision would not be REJECTED after the change, or the change
   moves a decision off REJECTED and keeps its `reopen_if` (unset it in the same call);
 - the new `decision_status` is `SUPERSEDED`: use `decision supersede <id> <new>`;
@@ -2224,34 +2227,50 @@ kept current without touching the words; but the keys other operations own carry
 ### context-engine decision accept
 
 `decision accept <ids>` marks PROVISIONAL decisions reviewed: each becomes `ACCEPTED`. Run it once
-the owner has reviewed the agent's calls named (the close digest flags each one), never before.
+the calls named are reviewed, never before: by the owner (the close digest flags each one), or on the
+arbiter's verdict under FRAMEWORK §6.5's review list.
 `<ids>` are ids, aliases or ranges (`DEC-n..m`, or `DEC-n..DEC-m`: one prefix, low to high, at most 500),
 comma- or space-separated, in any number. `--owners` adds every decision still PROVISIONAL that is
 the owner's own (`actor` is `owner` or `human:<id>`, in any case, and no `ruled_by`): the born-ACCEPTED
 rule of § context-engine record new applied to decisions recorded before it, once, after the
-upgrade that added `ACCEPTED`. Spell out the ranges, then refuse, and write nothing, when:
+upgrade that added `ACCEPTED`. `--covered-by <id>` names the owner record the acceptance rests on: a
+live story, a charter goal, or an owner's own decision that stands, as § context-engine ask decide reads
+its sources. An acceptance the owner gave in chat is first recorded as the owner's words (§ context-engine
+record new, or § context-engine ask answer), then accepted `--covered-by` that decision. `--gap` says no
+record covers the calls, for calls cheap to undo. Spell out the ranges, then refuse, and write nothing, when:
 - no id is given and no `--owners`;
 - the decision kind's `decision_status` enum in `context.toml` has no `ACCEPTED`: add it, as the
   kit's `context.toml.template` has it;
 - an id names no decision (a range must not span a number no decision has), or a record that is
   not a decision;
+- `--covered-by` and `--gap` are both given;
+- `--covered-by` names no record or charter goal, or one that is not the owner's;
+- your actor is not the owner's (`human:<id>`), a decision named is an agent's call (not the owner's
+  own), and neither `--covered-by` nor `--gap` is given;
+- your actor is not the owner's and an agent's call named has `refs` naming an open question: say
+  which; it waits for the owner's answer;
 - a decision named is not PROVISIONAL: say which, with its status (a SUPERSEDED one is history,
   with the decision that replaced it; a BUILT one a task carried out; an ACCEPTED one already
   reviewed);
 - `--owners` alone finds no owner's decision still PROVISIONAL.
 
 Check every decision first; then, on each, replace `decision_status: PROVISIONAL` with
-`decision_status: ACCEPTED` in place. The body and `body_sha` do not change. Log ONE `accept` line
-for all of them, not one per decision: `id` the ids folded into ranges, `path` the first file,
-`ids` and `paths` every id and file in order, `fields` `["decision_status"]`. It is not a milestone:
-the line rides along to the next commit, which carries every file in `paths`.
+`decision_status: ACCEPTED` in place, set `accepted_by: <your actor>` (replacing one already there,
+else as a new key, last), and, when given, `covered_by: <the record's id>` or `covered_by: gap`. The
+body and `body_sha` do not change. Log ONE `accept` line for all of them, not one per decision: `id`
+the ids folded into ranges, `path` the first file, `ids` and `paths` every id and file in order,
+`fields` `["decision_status", "accepted_by"]`, then `"covered_by"` when it was written. It is not a
+milestone: the line rides along to the next commit, which carries every file in `paths`.
 
-**Why:** PROVISIONAL means one thing, an agent's call awaiting the owner's review:
-an owner's own word is born ACCEPTED, so the review queue holds only calls someone
-must still look at. One op for a whole review, in one line, keeps a review of sixty calls from
-being sixty `decision set` lines. `decision set` refuses ACCEPTED so that every acceptance is in
-the op log; lint (G-W4) fails an agent's call that is ACCEPTED with no `accept` line naming it.
-Whether the owner really reviewed the calls is the caller's word: the line records who said so.
+**Why:** PROVISIONAL means one thing, an agent's call awaiting review: an owner's own word is born
+ACCEPTED, so the review queue holds only calls someone must still look at. One op for a whole review,
+in one line, keeps a review of sixty calls from being sixty `decision set` lines. `decision set`
+refuses `ACCEPTED`, `accepted_by` and `covered_by` so that every acceptance is in the op log; lint
+(G-W4) fails an agent's call that is ACCEPTED with no `accept` line naming it, and one without
+`accepted_by` unless the line that accepted it predates the key (its `fields` lack `accepted_by`).
+`accepted_by` keeps an agent's acceptance from reading as the owner's agreement; `covered_by` says
+what it rests on; a call whose question is still open waits for the owner's answer. Whether the calls
+were really reviewed is the caller's word: the line and `accepted_by` record who said so.
 
 ### context-engine decision link
 

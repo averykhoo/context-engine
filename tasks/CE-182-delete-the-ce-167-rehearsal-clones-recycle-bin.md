@@ -9,7 +9,7 @@ goals: [G-6]
 source: session 2026-11-04a
 created: 2026-11-04
 moved: 2026-11-04a
-updated: 2026-11-14c
+updated: 2026-11-16a
 ---
 
 Delete the CE-167 rehearsal clones (Recycle Bin over its cap) and, later, the zanzibar backup.
@@ -31,3 +31,4 @@ Delete the CE-167 rehearsal clones (Recycle Bin over its cap) and, later, the za
 - 2026-11-10c (claude-code/claude-opus-5-5): .scratch sweep 2026-11-10c: tools/ce167_import.py (77K, cited by sha a11f78be... in docs/evidence/ce167-zanzibar-cutover-2026-11-03.md) is tracked nowhere; its copies are C:/Users/user/zanzibar-backup-2026-11-03/ce-167-tools/ and .scratch/ce-167/ (kept). Do not delete that backup without keeping one copy. .scratch/2026-11-06b/probes/bin.ps1 is kept for this item's rerun after the reboot.
 - 2026-11-14a (claude-code/claude-opus-5-5): 2026-11-14a, retry after the owner's reboot (DEC-343 item 8): still locked. 35 DLL names left (ce11-rehearsal 14, ce167-rehearsal 21; intervals-ce-cutover is gone). fsutil hardlink list on ffi.dll shows ONE file with 27 names: every conda env, the pkgs cache, and each repo's .context-engine/env. Any running conda Python maps it, so a reboot cannot free it while an MCP server or hawker-bot runs (4 were: adhoc-microphone-array and audio-workspace .context-engine/env, hawker-bot, context-engine). Deleting a name frees 0 bytes. Also: bin.ps1 printed 'left: 0' while all 35 remained (DeleteDirectory to the Recycle Bin returned without throwing): a false green, so check Test-Path after it. Left: the DLL names (harmless; delete only from a moment no conda Python runs) and the zanzibar backup half.
 - 2026-11-14c (claude-code/claude-opus-5-5): 2026-11-14c (DEC-346): the DLL half is done. The 35 locked names were moved (renaming a loaded DLL is allowed) into C:/Users/user/.dll-trash, 35 files in numbered subfolders; ce11-rehearsal and ce167-rehearsal are deleted. HKCU RunOnce value 'ce182-dll-trash' runs 'rd /s /q C:\Users\user\.dll-trash' at the next logon; if a conda Python has a DLL loaded by then, the folder stays (harmless: 0 bytes of its own). Left on this item: the zanzibar backup (keep one copy of tools/ce167_import.py; transcribe its salvage first).
+- 2026-11-16a (claude-code/claude-opus-5-5): 303f42b: linked DEC-346 (the DLL cleanup call) and logged the move to .dll-trash
