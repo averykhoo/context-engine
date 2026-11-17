@@ -200,6 +200,7 @@ HAND = [
     ("count", lambda e: _hand(e, lambda ln: ln.replace(" x1 ", " x2 ")), f"waives {FORMULA!r} for G-D3 x2, but the body above it holds it 1 times"),
     ("text", lambda e: _hand(e, lambda ln: ln.replace(f'"{FORMULA}"', '"(S-3)"').replace("(+15)", "(+5)")), f"no `waive` op line of session {S} logs this waiver of '(S-3)' for G-D3"),
     ("guard", lambda e: (_hand(e, lambda ln: ln.replace("G-D3", "G-D4")), _log(e, guard="G-D4", text=FORMULA)), "waives G-D4, which cannot be waived (only G-D3)"),
+    ("session key", lambda e: _hand(e, lambda ln: ln.replace(f"**{S} ", "**2026-11-17z ")), f"no `waive` op line of session 2026-11-17z logs this waiver of {FORMULA!r} for G-D3"),  # the key is part of what a waiver covers
     ("copied verbatim", lambda e: _copy(e, 1), f"waives {FORMULA!r} for G-D3 x1, but the body above it holds it 2 times"),  # the first entry's echo counts above the copy
     ("copied with its count fixed", lambda e: _copy(e, 2), f"no `waive` op line of session {S} logs this waiver of {FORMULA!r} for G-D3"),  # one op line backs one entry
 ]
