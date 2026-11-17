@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-17b
 ---
 
 `ask answer` over several questions: one quote, one commit, and each decision names what the owner's words accepted (audio-workspace feedback items 5 and 10).
@@ -36,3 +36,5 @@ updated: 2026-11-07e
 - C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md entries 5 and 10
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F5, F6 (adhoc AD-112 items 5-6, audio-workspace entries 5, 10): owner words and ruling share one field, and every ask answer is its own commit; still open; evidence docs/evidence/engine-feedback-2026-11-17.md

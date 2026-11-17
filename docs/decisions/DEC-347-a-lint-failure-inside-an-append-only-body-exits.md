@@ -7,6 +7,7 @@ decided: 2026-11-17
 session: 2026-11-17b
 decision_status: PROVISIONAL
 body_sha: sha256:0344f919a2e80feb6114dbfcda1126b13c845e55028b51ce17199658779b37da
+tasks: [CE-239, CE-238, CE-240, CE-241]
 ---
 
 An agent's call under P8 (cheap to undo: a record write), ruled by the coordinator of session 2026-11-17b after the engine-feedback collation, its independent verification and fable's second opinion. Not owner words; PROVISIONAL until the owner reviews it.

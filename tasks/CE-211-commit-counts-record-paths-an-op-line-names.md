@@ -10,7 +10,7 @@ goals: [G-6]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-17b
 ---
 
 `commit` counts record paths that an op line names against the gate scope, unlike gate.py::check_commit's docstring, so a records-only commit waits on a green run under a scope that covers records (audio-workspace feedback item 11).
@@ -36,3 +36,5 @@ updated: 2026-11-07e
 - C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md entry 11
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F11 (adhoc AD-112 item 11, audio-workspace entry 11): a records-only commit waits ~90 min on a gate over others' dirty code (aw's [gate] require = all); evidence docs/evidence/engine-feedback-2026-11-17.md

@@ -10,7 +10,7 @@ goals: [G-7]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-17b
 ---
 
 fan-out.md: say the harness can refuse a write-capable agent's Write, and make the on-return check a step of every delegation (audio-workspace feedback item 9).
@@ -32,3 +32,5 @@ fan-out.md: say the harness can refuse a write-capable agent's Write, and make t
 - C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md entry 9
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F10 (adhoc AD-112 item 10, audio-workspace entry 9): the harness can refuse a write-capable agent's Write; still open; evidence docs/evidence/engine-feedback-2026-11-17.md

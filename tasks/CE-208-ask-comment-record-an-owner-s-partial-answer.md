@@ -10,7 +10,7 @@ goals: [G-2]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-17b
 ---
 
 `ask comment`: record an owner's partial answer to a question verbatim, as a milestone, leaving the question open (audio-workspace feedback item 4).
@@ -36,3 +36,5 @@ updated: 2026-11-07e
 - C:/Users/user/PycharmProjects/audio-workspace/docs/context-engine-feedback.md entry 4
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F4 (adhoc AD-112 item 4, audio-workspace entry 4): no way to record an owner's partial answer; still open, unchanged at 5d806f7; evidence docs/evidence/engine-feedback-2026-11-17.md

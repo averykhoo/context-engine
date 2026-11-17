@@ -10,7 +10,7 @@ goals: [G-6]
 source: session 2026-11-07e
 created: 2026-11-08
 moved: 2026-11-07e
-updated: 2026-11-07e
+updated: 2026-11-17b
 ---
 
 `task new`, `task comment` and `task section` write a citation lint G-D3 fails, and the next milestone commits it, so HEAD goes lint-red (found picking up audio-workspace feedback, CE-193).
@@ -39,3 +39,5 @@ updated: 2026-11-07e
 - tasks/CE-183-record-new-auto-commits-a-record-that-lint-g-d3.md
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F14 (adhoc AD-112 item 14, audio-workspace entry 13 residual): _refuse_prose compares failure multisets, so an over-cap file accepts more over-cap text (INV-60); evidence docs/evidence/engine-feedback-2026-11-17.md

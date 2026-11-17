@@ -9,7 +9,7 @@ goals: [G-6]
 source: session 2026-11-10b
 created: 2026-11-10
 moved: 2026-11-10b
-updated: 2026-11-10b
+updated: 2026-11-17b
 ---
 
 Make the gate runbook name the tests a clean checkout skips (adhoc's layer-2 note, 2026-11-10; audit item 11). In adhoc, a fresh-clone gate skips about 180 tests that need local data, so a green clean-checkout or CI gate never runs them.
@@ -18,3 +18,7 @@ Make the gate runbook name the tests a clean checkout skips (adhoc's layer-2 not
 - Before a push, the tests that need local data run in the main tree as a separate step.
 
 Changes: kit/docs/runbooks/gate.md § Running it (the docs/runbooks copy stays byte-equal, LF). Check whether tools/linux_gate.py and CI here skip anything for that reason, and say so in the item's close.
+
+## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): 2026-11-17 feedback F22 (adhoc AD-112 item 22, adhoc ledger 2026-11-17a 'no CI on this repo'): push assumes CI; recording no CI once so push skips the watcher is new, unfiled; evidence docs/evidence/engine-feedback-2026-11-17.md
