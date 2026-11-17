@@ -2713,7 +2713,9 @@ engine repo at the pinned ref (or `context_engine/kit/` in the installed package
    settings question and a task prefix not yet chosen), and,
    when you wrote `context.toml` or the kit block, the next steps: fill `docs/charter.md` with the owner, replace the Gate stub's
    placeholder in `CLAUDE.md` with the repo's test command (or, with no stub, check the repo's own
-   Gate ends with `&& context-engine lint`), run lint, commit the kit's files by path, register
+   Gate ends with `&& context-engine lint`), set `[gate] command` in `context.toml` to that command
+   with a code scope (kit README § 5) so the code gate runs only when the code changed, run lint,
+   commit the kit's files by path, register
    the MCP server with `claude mcp add --scope local context-engine -- "<interpreter>" -m
    context_engine.mcp` and ask the owner to restart Claude Code (kit README § 1), then
    `session start`. Never overwrite an existing file, and

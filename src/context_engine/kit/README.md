@@ -143,7 +143,9 @@ Then:
 1. Fill `docs/charter.md` with the owner (goals get `GOAL-n` ids).
 2. Replace `<this repo's own test command>` in `CLAUDE.md` § Gate (below the kit block) with the
    real one (a `CLAUDE.md` with its own Gate got no stub: check that gate ends with
-   `&& context-engine lint`), and read every `provenance:` note in `context.toml`. Every number
+   `&& context-engine lint`), set `[gate] command` in `context.toml` to that command with a code
+   scope (§ 5), so the code gate runs only when the code changed, and read every `provenance:`
+   note in `context.toml`. Every number
    you add there (a cap, a budget, a window) needs one as a comment on the number's own line, in
    the form lint (G-D9) checks:
    `# provenance: MEASURED <date, method>` or `# provenance: JUDGEMENT <why>`, then the literal
@@ -331,8 +333,11 @@ commit messages and code comments keep the old ids.
 
 1. Rebuild the engine's environment, `.context-engine/env/` (§ 1), at the new ref: with no
    session or MCP server running the engine from it (on Windows a running interpreter holds its
-   files open), delete the directory and run § 1's two lines with the new ref; the hook and the
-   MCP registration name the same interpreter path, so neither changes. A repo still on an
+   files open), rename it to `.context-engine/env-<oldref>/` (the old pin's short ref) and run
+   § 1's two lines with the new ref; the hook and the MCP registration name the same interpreter
+   path, so neither changes. Delete the renamed one once lint and the gate are green at the new
+   ref (step 3): until then it is the way back, and deleting it is the owner's call (untracked
+   files). A repo still on an
    environment elsewhere (from before this convention) moves it here now: build the new one, point
    the hook in `.claude/settings.local.json` (by hand, § Hook) and the MCP registration (§ 1) at
    its interpreter, and check `.gitignore` ignores `.context-engine/` (`init` adds the line).
@@ -355,15 +360,64 @@ commit messages and code comments keep the old ids.
    Add `ACCEPTED` to the decision kind's `decision_status` enum, after `BUILT`, as the new
    `context.toml.template` has it (framework 0.6: an owner's decision is born ACCEPTED; G-D0 names
    it while it is missing), then run `context-engine decision accept --owners` once: it marks
-   every owner's decision still PROVISIONAL ACCEPTED, in one op line. An agent's calls stay
-   PROVISIONAL until the owner reviews them and `decision accept <ids>` takes them.
+   every owner's decision still PROVISIONAL ACCEPTED, in one op line; a refusal saying `no owner's
+   decision is PROVISIONAL` means none was left: a pass. An agent's calls stay PROVISIONAL until
+   the owner reviews them and `decision accept <ids>` takes them. G-D0 names the missing
+   `ACCEPTED` only once the kit block is the new one, so a lint run before this step understates
+   what it finds.
    Optionally, add `HOLD` to the task kind's `pri` enum, after SOMEDAY, as the new template has
    it: a held tier that is never ready and that the re-rank skips (FRAMEWORK §5.2).
 3. `context-engine lint`; fix every failure (the config refuses keys it does not know, so a renamed
    key shows up here; G-D0 names a `framework:` line, kit block or contract the new engine does
-   not match).
+   not match). A G-D3 red in a decision's or story's body (text the repo may not edit) is signed
+   off with `context-engine record waive` (Steps by pin).
 4. Write a ledger line naming the new ref (in the session's close summary): it is the ref a
    clone rebuilds `.context-engine/env/` at.
+
+**Steps by pin.** Each item names the engine commit it applies from and that commit's date. Your
+pin is the ref your install line names (and the latest upgrade's ledger line, § 1). An item
+applies when your pin lacks the commit (`git merge-base --is-ancestor <commit> <pin>` exits 1, in
+a clone of the engine); the date only helps you scan. The engine's
+`docs/framework/RELEASE-NOTES.md` marks each step `**Upgrade (at <commit>):**`, and every one is
+listed here. A lint failure not listed names its own remedy (step 3).
+- Whatever the pin, `[gate]`. The scoped gate is from `a687954` (2026-10-15) and its parts from
+  `cb56879` (2026-11-08). If `[gate] command` in `context.toml` is empty, every close runs the
+  whole suite. Give it the repo's own test interpreter and command, `require = "code"`, and a
+  `[gate.scopes.code]` whose `exclude` lists the records and prose no test reads (§ 5); then
+  `gate run` records the result against the scope's content id, and a close after a records-only
+  change runs no code gate. A pin from that commit on has the capability, and a repo that never set
+  it is still on the whole suite: hence "whatever the pin".
+- Whatever the pin, keep the old environment renamed until lint and the gate are green (step 1).
+- From `20b9c03` (2026-10-23), G-D3 reads record citations. From `fa4ba48` (2026-11-17) a bold
+  numbered paragraph lead or a top-level ordered item is a section, so lint again first. From
+  `319971a` (2026-11-17), `context-engine record waive <id> G-D3 "<exact text>" --reason "<why>"`
+  signs off what stays red in a body the repo may not edit; fix it in place in an editable record.
+- From `10f8717` (2026-10-30), each open question's body states its context, two or more options
+  and a recommendation with its reason (or `none` naming its exemption) before the first lint;
+  raise the Fan-out route's `max_lines = 90` to 110.
+- From `7a19c83` (2026-11-06), delete `[working] decision_index` and `git rm` the stored index
+  (orient names both; lint is silent).
+- From `2165e3d` (2026-11-06), the first close after the re-pin passes a banner cut to its durable
+  lines (`session close ... --banner-file <banner.md> --seen <hash>`, or `banner set` first); the
+  close refuses otherwise, and G-D8's "a stacked banner" in the orientation note clears with it.
+  Every machine on the repo needs this engine or later.
+- From `a54e7e4` (2026-11-07), `ACCEPTED` in the decision kind's enum, then `decision accept
+  --owners` once (step 2; its "none left" refusal is a pass; G-D0 shows the enum only after the kit
+  block is replaced).
+- From `60c0434` (2026-11-07), framework 0.6: the new contract and kit block (step 2).
+- From `bd25ca2` (2026-11-08), G-I4 fails two current decisions with one title: `decision
+  supersede <old> <new>`, or retitle one.
+- From `261e538` (2026-11-08), a gate whose result line has no `N passed` sets `[working]
+  gate_receipt` to a pattern it matches, or `''`; otherwise the newest close fails G-W6 and every
+  close is refused.
+- From `baf3912` (2026-11-08), register the MCP server once per machine (§ 1).
+- From `e9eab4b` (2026-11-16), an agent's `decision accept` needs `--covered-by <owner record>` or
+  `--gap`; repo instructions that accept as an agent add one.
+- Optional, or no step: `5f38ddd` (2026-11-11, name the size floor in the repo's contract),
+  `a7cd350` (2026-11-08, with G-D12 on and under 30 operations in §8.0.2, switch G-D12 off),
+  `3787b49` (2026-11-08, `HOLD` in the `pri` enum), `cb56879` (2026-11-08, gate parts: none),
+  `cb362ca` (2026-11-08, the `Unverified hazards` route), `cdc50a4` (2026-11-13, `reader_docs`
+  once the README cites no id).
 
 ## 5. The gate
 
@@ -372,6 +426,15 @@ commit that touches code, tests or records (the engine's own commits of its writ
 your own `context-engine commit` does not run the gate, so run the gate before it),
 and before every push. Guards the engine does not
 run yet are checked by hand (FRAMEWORK §11.1).
+
+**The scoped gate.** `[gate] command` in `context.toml` is a list of words naming the repo's own
+test interpreter and command (`{python}` is the engine's, not the repo's), with `require = "code"`
+and a `[gate.scopes.code]` whose `exclude` lists the records and prose no test reads, and
+`readers` the tests that do read them. `context-engine gate run` records the result against the
+scope's content id; `context-engine gate status --require code` says whether the code gate is
+left, and `commit` refuses a code path until it is green. The details are in
+`context.toml.template`'s comments and `docs/runbooks/gate.md` § The scoped gate (FRAMEWORK §8.5
+G-V1).
 
 **A CI that skips prose changes** (a `paths-ignore` of `**.md`, or a gate that treats `README`
 files as code) misreads the engine's writes, which are all prose but not all `.md`: the op log

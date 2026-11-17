@@ -103,6 +103,7 @@ readers = [
     "tests/test_kit.py::test_no_living_framework_text_says_ritual",
     "tests/test_plugin.py::test_the_launcher_keeps_lf_line_endings_on_every_checkout",  # git check-attr in the repo (CE-77)
     "tests/test_coverage_status.py::test_every_enforced_home_resolves_names_no_lint_id_and_a_tested_criterion",  # reads docs/criteria.md (CE-164)
+    "tests/test_release_notes.py::test_every_upgrade_stamp_names_a_commit_of_its_own_task",  # git history in the repo: no scope id hashes it (CE-240)
 ]
 
 [gate.scopes.all]   # every file: a green run here is the whole gate on exactly this tree
@@ -117,7 +118,7 @@ mode = "replaced in place; no change log, the why is in decisions and stories (D
 [[routes]]
 component = "Release notes"
 path = "docs/framework/RELEASE-NOTES.md"
-mode = "a version's notes are added on top, by decision or task id; earlier notes are never rewritten (FRAMEWORK §6.12, CE-93)"
+mode = "a version's notes are added on top, by decision or task id; earlier notes are never rewritten, but for their upgrade stamps (FRAMEWORK §6.12, CE-93, CE-240)"
 
 [[routes]]
 component = "Engine internals"

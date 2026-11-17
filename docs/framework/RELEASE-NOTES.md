@@ -5,11 +5,47 @@ the notes from your pinned version on before moving the engine's pin (FRAMEWORK 
 procedure). Each line says what changed, the FRAMEWORK section that now holds the rule, and the
 decision (`DEC-n`) or, where no decision was recorded, the engine task (`CE-n`) that says why;
 both are in this repo (`context-engine why <id>`, `context-engine task show <id>`). Newest
-first. A version's notes are added on top; an earlier version's notes are not rewritten. Build
-status is not here: it is on the board, and `context-engine coverage` prints it for each
+first. A version's notes are added on top; an earlier version's notes are not rewritten, but for
+their upgrade stamps. Each upgrade step opens `**Upgrade (at <sha>):**`: `<sha>` is the engine
+commit the step is needed from (the newest, where it answers several). A pin that contains it
+(`git merge-base --is-ancestor <sha> <pin>` exits 0, in a clone of the engine) is past the step.
+Select steps by that, never by a section's date: a section's date is when it opened, and lines
+landed in it later. Build status is not here: it is on the board, and `context-engine coverage` prints it for each
 component, procedure, guard and operation.
 
 ## 0.6, from 2026-11-07: PROVISIONAL is split; the contract changes
+
+- **Every upgrade step names the commit it is needed from.** Each step opens
+  `**Upgrade (at <sha>):**`; a pin that contains the commit is past it, so a repo moving its pin
+  reads the steps its pin lacks, whatever the section's date. The kit README § 4 lists the steps by pin, with the
+  ones the notes never held (a `[gate]` section, keeping the old environment until green); init's
+  next steps name `[gate]`. FRAMEWORK §6.12, §8.0; CE-240. No upgrade step.
+- **`record waive` signs off one exact text G-D3 fails in one stamped record.** A G-D3 red in a
+  decision's or story's body, text above `## Amendments` that the repo may not edit, can be a
+  formula under a one-letter prefix that is no citation, or a cited section its target really
+  lacks; `record waive` writes one waiver naming that exact text, that record and the session
+  that gave it, and G-D3 then skips that text in that record. It covers the text up to its
+  entry, never text appended later. FRAMEWORK §6.5, §8.3 G-D3; DEC-347, CE-239.
+  **Upgrade (at 319971a):** a G-D3 red on text a decision's or story's body holds above `##
+  Amendments`, which the repo may not edit, and which is no citation (a formula under a
+  one-letter prefix) or cites a section its target really lacks: `context-engine record waive <id>
+  G-D3 "<exact text>" --reason "<why>"`. An agent may write it, and the close digest flags it. A
+  red in an editable record (a task) is fixed in place.
+- **G-D3 counts numbered bold paragraph leads and top-level ordered items as sections.** A `<id>
+  § <n>` may name a paragraph led at column 0 by a bold span opening with a number (`**5.
+  Title.** ...`) or a top-level ordered item (`5. Title`), by number or text; nothing indented
+  and nothing inside a prose line. FRAMEWORK §8.3 G-D3; CE-238. **Upgrade (at fa4ba48):** none; a
+  citation G-D3 failed under an older engine may now pass, so run lint again before waiving
+  anything.
+- **An upgrade step the 0.5 notes left out: G-D3 reads record citations** (from a pin before
+  2026-10-23). A current record's `<id>` must name a record and its `<id> § <section>` a section
+  the target has. FRAMEWORK §8.3 G-D3; CE-105. **Upgrade (at 20b9c03):** fix each red in an
+  editable record; in an append-only body, see `record waive` above.
+- **An upgrade step the 0.5 notes left out: remove the stored decision index.** Nothing fails
+  while `[working] decision_index` is set; orient names the key and the file, and the file goes
+  stale (an adopter's index listed owner decisions as PROVISIONAL once they were ACCEPTED).
+  FRAMEWORK §6.5, §9.3; DEC-160, CE-185. **Upgrade (at 7a19c83):** delete `[working]
+  decision_index` from `context.toml` and `git rm` the stored index.
 
 - **The arbiter reviews agents' calls, and an acceptance names who made it.** At each task's close its
   calls still PROVISIONAL go to the arbiter in one batch, sorted by a list into ask the owner, accept
@@ -19,14 +55,14 @@ component, procedure, guard and operation.
   `--covered-by <owner record>` or `--gap`, and is refused while the call's `refs` name an open
   question; lint (G-W4) fails an agent's call ACCEPTED without `accepted_by` unless the engine that
   accepted it predates the key. FRAMEWORK §6.5, §6.3 item 4a, §8.4 G-W4; DEC-342, DEC-343,
-  CE-237. **Upgrade:** an agent's `decision accept` now needs `--covered-by` or `--gap`.
+  CE-237. **Upgrade (at e9eab4b):** an agent's `decision accept` now needs `--covered-by` or `--gap`.
 - **A reader-facing doc cites no record id (G-D13), and lint warns before a G-D1 cap.**
   `[guards] reader_docs` lists the docs a stranger reads first, the README: an id of a series
   the repo keeps, there outside fenced code, link destinations and URLs, is red, and the remedy
   says to give the reader the words, or point at the board or the records site.
   `context-engine lint --headroom` warns of a routed doc at or over 95% of a line or byte cap,
   with G-D1's remedy; it fails nothing and is off with G-D1. FRAMEWORK §8.3 G-D1, G-D13;
-  DEC-338, DEC-339, CE-231, CE-233. **Upgrade:** the kit leaves `reader_docs` empty (off); list
+  DEC-338, DEC-339, CE-231, CE-233. **Upgrade (at cdc50a4):** the kit leaves `reader_docs` empty (off); list
   the README there once it cites no id.
 - **A size floor and a build ladder for delegated work.** A task whose edits, summed over the
   whole task, stay within 2 files and 30 changed lines, add no test and change no assertion,
@@ -38,7 +74,7 @@ component, procedure, guard and operation.
   fix after the second FAIL runs on the most tier, each such escalation logged as an
   `escalated:` comment on its task. The roster gains the planner, and P11 names the floor.
   FRAMEWORK §6.6; DEC-173, DEC-177, DEC-326, DEC-328..DEC-334, CE-219.
-  **Upgrade:** the contract is unchanged: its coordinator rule names the floor at the next
+  **Upgrade (at 5f38ddd):** the contract is unchanged: its coordinator rule names the floor at the next
   contract version bump (CE-228). Until then, a repo takes the floor up by naming it in its own
   contract, and names each tier's model there (the reading tier is the one a pinned code build
   uses).
@@ -52,24 +88,26 @@ component, procedure, guard and operation.
   `paths` too). `record new` refuses PROVISIONAL on the owner's own decision and ACCEPTED on an
   agent's call; `decision set` refuses ACCEPTED; lint (G-W4) fails an agent's call ACCEPTED with
   no `accept` line naming it. FRAMEWORK §6.5; DEC-162, CE-187.
-  **Upgrade:** add `ACCEPTED` to the decision kind's `decision_status` enum in `context.toml`
+  **Upgrade (at a54e7e4):** add `ACCEPTED` to the decision kind's `decision_status` enum in `context.toml`
   (after `BUILT`, as `context.toml.template` has it; G-D0 names it while it is missing), then run
   `context-engine decision accept --owners` once: the owner's decisions recorded PROVISIONAL
-  before become ACCEPTED in one op line (DEC-174). Instructions that record owner words with
+  before become ACCEPTED in one op line (DEC-174); a `no owner's decision is PROVISIONAL` refusal
+  means none was left: a pass. Instructions that record owner words with
   `--set decision_status=PROVISIONAL` drop it. Until the enum has ACCEPTED, the engine records
   owner decisions PROVISIONAL as before.
 - **The contract** (`src/context_engine/kit/contract.md`): "Who decides" says a delegated ruling is PROVISIONAL like
   any agent's call, and a new "Decision status" rule says when a decision is ACCEPTED; `context-engine
   commit` is described as it works since CE-125 (this session's lines, and another's only where
   they name a file the commit carries); a close's follow-up session starts with `session start
-  --follows <key>` (CE-132). Copy the new contract and bootloader block in (kit README § 4).
+  --follows <key>` (CE-132). **Upgrade (at 60c0434):** copy the new contract and bootloader block in (kit README § 4);
+  CE-187 moved the framework to 0.6.
 - **Two upgrade steps the 0.5 notes left out** (from a pin before 2026-10-30). An open
   question's body is checked for its three parts: its context, two or more options, and a
   recommendation with its reason, or `none` naming which exemption applies (too costly to reach,
   or it needs human judgement). The old `ask new` template's `none cheap: <why>` names neither,
   so G-W4 fails a question that kept it, and any open question recorded without the three parts.
   The Fan-out runbook (`docs/runbooks/fan-out.md`) is past 90 lines, and the template's Fan-out
-  route caps it at `max_lines = 110`. **Upgrade:** add what each open question lacks to its body
+  route caps it at `max_lines = 110`. **Upgrade (at 10f8717):** add what each open question lacks to its body
   before the first lint under this engine (kit README § 3 step 4); and in the `[[routes]]` entry
   whose `path` is `docs/runbooks/fan-out.md`, raise a `max_lines = 90` copied from an older
   `context.toml.template` to 110, as the template has it: G-D1 fails the replaced runbook until
@@ -84,7 +122,7 @@ component, procedure, guard and operation.
   one (`hk.ratchet`) needs a map row (an `Operation` column) or a board item. G-W8 and G-W10,
   which `session close` and `hk run` enforce, read built whatever an older map says; an open board
   item still does not outrank a map's DEFERRED or PROSE-ONLY row. FRAMEWORK §8.3 G-D12; DEC-283 to
-  DEC-287, CE-164. **Upgrade:** a repo with G-D12 on whose spec's §8.0.2 names under 30
+  DEC-287, CE-164. **Upgrade (at a7cd350):** a repo with G-D12 on whose spec's §8.0.2 names under 30
   operations switches G-D12 off, as for the other floors.
 - **Lint G-I4 fails two current decisions with one title.** Each decision that is not `status:
   deprecated` and whose title, case and runs of whitespace aside, equals an earlier one's (in id
@@ -94,7 +132,7 @@ component, procedure, guard and operation.
   off without `[working] decision`. `decision link` to a decision without `--rel` now names `--rel
   refs` (a decision it only relates to) beside `--rel relaxes` (one it narrows): those are the
   relates and narrows links. FRAMEWORK §6.5, §8.1 G-I4; DEC-162, DEC-214 to DEC-217, CE-189.
-  **Upgrade:** a repo with two current decisions of one title supersedes one (`decision supersede
+  **Upgrade (at bd25ca2):** a repo with two current decisions of one title supersedes one (`decision supersede
   <old> <new>`) or retitles one before the first lint under this engine.
 - **A close's `guards:` receipt needs the gate's result by default.** `[working] gate_receipt` now
   defaults, in the engine and not only in `context.toml.template`, to the kit's pattern
@@ -103,7 +141,7 @@ component, procedure, guard and operation.
   (G-W6) fails the newest close already in the ledger whose `guards:` line has neither. A "not
   run" counts only where it opens the receipt or is said of the gate in the same clause, so "lint
   not run" is no gate result (CE-165, DEC-288). FRAMEWORK §6.3, §8.4 G-W6; DEC-162, DEC-223,
-  CE-192. **Upgrade:** if your gate prints no `N passed` (e.g. `go test` prints `ok
+  CE-192. **Upgrade (at 261e538):** if your gate prints no `N passed` (e.g. `go test` prints `ok
   <pkg> 0.1s`), set `gate_receipt` under `[working]` to a pattern its result line matches, or to
   `''` to turn the check off; this is the ruling's intent (a check is on where nobody opted in).
   Otherwise the next close that quotes the gate's count (or says it was not run, and why) clears G-W6.
@@ -115,7 +153,7 @@ component, procedure, guard and operation.
   re-rank never reads or moves a held item; it has no cap, and `task list` sorts it last. An item
   enters HOLD with a `task comment` naming what releases it. `task promote <id> HOLD` where the
   enum lacks HOLD is refused as before, with a remedy saying how to enable it. FRAMEWORK §5.2,
-  §6.14, §8.4 G-W5; DEC-162, CE-188. **Upgrade:** optional: add `HOLD` to the task kind's `pri`
+  §6.14, §8.4 G-W5; DEC-162, CE-188. **Upgrade (at 3787b49):** optional: add `HOLD` to the task kind's `pri`
   enum in `context.toml`, after SOMEDAY, as `context.toml.template` has it; without it nothing
   changes.
 - **Setup registers the MCP server, and orient says when it has not.** init's `next:` line names
@@ -124,7 +162,7 @@ component, procedure, guard and operation.
   start`; it no longer calls the server optional. The server's first tool call writes `mcp-seen`
   in the lockfile's directory (`.context/`, never tracked), and until it exists orient shows a
   `MCP server not seen: register it` part. The contract and §11.1 are unchanged: the CLI carries
-  every operation. FRAMEWORK §6.9, §8.0.2; DEC-155, DEC-258 to DEC-263, CE-177. **Upgrade:**
+  every operation. FRAMEWORK §6.9, §8.0.2; DEC-155, DEC-258 to DEC-263, CE-177. **Upgrade (at baf3912):**
   register the server once per machine (kit README § 1); a repo whose lockfile sits at its root
   gets no notice.
 - **A gate too long for one command is split into parts.** `[gate.parts.<name>]` gives each part
@@ -135,7 +173,7 @@ component, procedure, guard and operation.
   `gate status --require <scope>+parts` is the scope covered and every part fresh, which the
   close (after `gate run --stale`) and the push require. A close's record writes so re-run only
   the parts keyed on a scope holding them. `gate status`, not orient, reports stale parts.
-  FRAMEWORK §8.5 G-V1, §6.3 item 7; DEC-296 to DEC-300, CE-181. **Upgrade:** none; a
+  FRAMEWORK §8.5 G-V1, §6.3 item 7; DEC-296 to DEC-300, CE-181. **Upgrade (at cb56879):** none; a
   single-command `[gate]` works as before.
 - **A new principle, P19: a green gate is the whole release decision.** A check only a human
   runs (a `manual` criterion's hand-run driver, a smoke script run by hand, a playtest) is filed
@@ -150,7 +188,7 @@ component, procedure, guard and operation.
   `--residual <risk line>` (confirmed, filed in the register), `--residual none` (fixed or
   dismissed, the message saying which) or a design review that lists a residual; `hk close --scan`
   lists such a row as not closed. The kit's routes gain an `Unverified hazards` entry. FRAMEWORK
-  §7.4, §2, §6.3; DEC-50, DEC-311 to DEC-315, CE-29. **Upgrade:** nothing required; a hazard kept
+  §7.4, §2, §6.3; DEC-50, DEC-311 to DEC-315, CE-29. **Upgrade (at cb362ca):** nothing required; a hazard kept
   in a banner or HANDOFF moves to such a row; copying the `Unverified hazards` route from
   `context.toml.template` is optional.
 - **A question is triaged before it reaches the owner.** Derivable from the goals, stories or the
@@ -176,7 +214,7 @@ component, procedure, guard and operation.
   60 bytes) is served before it. A banner is kept only once a close has written it (`banner:
   set`): until then a close without `--banner-file` is refused, and G-W1 fails a `kept` receipt,
   so a banner from before this change cannot be kept with the lines orient now generates.
-  **Upgrade:** the repo's first close under this engine cuts the banner to its durable lines
+  **Upgrade (at 2165e3d):** the repo's first close under this engine cuts the banner to its durable lines
   (the repo's purpose, owner rules, lessons, standing facts) and passes it, `session close ...
   --banner-file <banner.md> --seen <hash>` (or `banner set`, then the close): the close refuses
   otherwise. A banner that filled orient to its cap loses its last item to the push line until it

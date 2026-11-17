@@ -765,14 +765,18 @@ def mcp_add_command() -> str:
 def next_steps(claude: str) -> str:
     """The bootstrap steps after init, in the kit README's order (§ 2a). The gate step replaces the
     stub's placeholder while ``claude`` (CLAUDE.md as init left it) holds it, and otherwise asks for
-    a check of the gate the repo had; registering the MCP server is a step (DEC-155, CE-177), with
+    a check of the gate the repo had; naming that command in ``[gate]`` with a code scope is a step
+    (CE-240), after it and before lint; registering the MCP server is a step (DEC-155, CE-177), with
     its exact command, after the kit commit and before ``session start``."""
     if GATE_PLACEHOLDER in claude:
         gate = f"replace `{GATE_PLACEHOLDER}` in {CONTRACT_TARGET} § Gate with the repo's test command, "
     else:
         gate = f"check {CONTRACT_TARGET} § Gate runs the repo's tests and ends with `&& context-engine lint`, "
     return (
-        f"fill docs/charter.md with the owner, {gate}run lint, commit the kit's files by path, "
+        f"fill docs/charter.md with the owner, {gate}"
+        "set `[gate] command` in context.toml to that command with a code scope (kit README § 5), "
+        "so the code gate runs only when the code changed, "
+        "run lint, commit the kit's files by path, "
         f"register the MCP server with `{mcp_add_command()}` and ask the owner to restart Claude Code (kit README § 1), "
         "then `session start`"
     )

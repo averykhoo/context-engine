@@ -135,7 +135,9 @@ def test_a_claude_md_with_its_own_gate_gets_the_kit_block_without_a_second_gate(
     assert B.kit_block(new)[1] == B.bootloader_body() and new.rstrip().endswith(B.END), "the whole kit block, and nothing after it"
     assert B.GATE_PLACEHOLDER not in new and B.GATE_PLACEHOLDER not in out, out
     assert f'{NO_STUB}"{heading}"' + (NUDGE if lint else ")") in out, out
-    assert "check CLAUDE.md § Gate runs the repo's tests and ends with `&& context-engine lint`" in out.split("; next: ")[1], out
+    nxt = out.split("; next: ")[1]
+    assert "check CLAUDE.md § Gate runs the repo's tests and ends with `&& context-engine lint`" in nxt, out
+    assert nxt.index("check CLAUDE.md § Gate") < nxt.index("set `[gate] command` in context.toml") < nxt.index("run lint"), "CE-240: the [gate] step follows the gate step and precedes lint"
     assert ("\n" not in new.replace("\r\n", "")) if "\r\n" in old else ("\r" not in new), "the file's line endings are kept"
     assert B.init(tmp_path, TASK).startswith("init: created 0"), "a re-run finds the kit block"
 
@@ -163,11 +165,11 @@ def test_a_gate_heading_that_is_not_the_repos_gate_leaves_the_stub_in(tmp_path, 
 
 @pytest.mark.criterion("AC-31")
 def test_inits_next_line_names_the_bootstrap_steps_in_order_with_the_mcp_registration(tmp_path):
-    """CE-70, CE-177: the steps of kit README § 2a, in its order; registering the MCP server is one
+    """CE-70, CE-177, CE-240: the steps of kit README § 2a, in its order (naming `[gate]` is one); registering the MCP server is one
     of them (DEC-155), with this machine's command, after the kit commit and before `session start`."""
     out = B.init(tmp_path, TASK)
     nxt = out.split("; next: ")[1]
-    steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "run lint", "commit the kit's files by path", "register the MCP server with", "then `session start`"]
+    steps = ["fill docs/charter.md", f"replace `{B.GATE_PLACEHOLDER}` in CLAUDE.md § Gate", "set `[gate] command` in context.toml", "run lint", "commit the kit's files by path", "register the MCP server with", "then `session start`"]
     assert [nxt.index(s) for s in steps] == sorted(nxt.index(s) for s in steps), nxt
     assert f"`{B.mcp_add_command()}`" in nxt and "optional" not in nxt, nxt
     assert B.mcp_add_command().startswith("claude mcp add --scope local context-engine -- ") and B.mcp_add_command().endswith(" -m context_engine.mcp")
@@ -175,6 +177,8 @@ def test_inits_next_line_names_the_bootstrap_steps_in_order_with_the_mcp_registr
     readme = (B.KIT / "README.md").read_text(encoding="utf-8")
     one = readme[readme.index("## 1. ") : readme.index("## 2a. ")]
     assert B.GATE_PLACEHOLDER in readme and "claude mcp add --scope local context-engine --" in one, "the line's pointers name what is there"
+    two = readme[readme.index("## 2a. ") : readme.index("## 2b. ")]
+    assert "set `[gate] command` in `context.toml`" in two, "CE-240: kit README § 2a names the [gate] step too"
     assert "The MCP server is optional" not in one, "kit README § 1 makes registration a setup step (DEC-155)"
     assert "; next: " not in B.init(tmp_path, TASK), "a re-run that creates nothing has no next steps"
     (tmp_path / "docs" / "charter.md").unlink()

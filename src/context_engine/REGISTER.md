@@ -1848,9 +1848,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **control:** reduce: filed as a task; the first ref per line is still checked
 - **from:** CE-238, session 2026-11-17b
 
-## INV-263: FRAMEWORK's G-D3 ordered-item clause omits 'or an indented line', which LIST_LINE_RE and manual-mode carry (verifier O2)
+## INV-263: (retired 2026-11-17b: FRAMEWORK §8.3 G-D3 now names the indented line as guards.py and manual-mode do, CE-240) FRAMEWORK's G-D3 ordered-item clause omits 'or an indented line', which LIST_LINE_RE and manual-mode carry (verifier O2)
 
 - **affects:** a reader of FRAMEWORK alone
 - **why not eliminated:** the plan pinned that wording
 - **control:** reduce: code and manual-mode are right; FRAMEWORK is fixed with CE-240's docs pass
 - **from:** CE-238, session 2026-11-17b
+- **retired:** session 2026-11-17b (claude-code/claude-sonnet-5-5): FRAMEWORK §8.3 G-D3 now names the indented line as guards.py and manual-mode do, CE-240; kept so its id is never reused

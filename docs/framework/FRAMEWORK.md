@@ -1961,8 +1961,10 @@ script and MCP prove insufficient.
   the engine carries out a rule goes to the engine's docs; build status stays on the board.
 - **Release notes:** a change to a rule that an adopting repo must follow gets a line in
   `RELEASE-NOTES.md` beside this file, under the framework version that carries it: what
-  changed, and the decision or story that says why. A repo moving its engine pin reads them
-  (the upgrade procedure, §8.0).
+  changed, and the decision or story that says why. Each upgrade step opens `**Upgrade (at
+  <sha>):**`, naming the engine commit it is needed from (the newest, where it answers several),
+  so a repo moving its engine pin selects its steps by ancestry, not by a section's date (the
+  upgrade procedure, §8.0).
 
 **After-action review (AAR): a first note, not a design.**
 - Intent: each session leaves a short record of **what worked well** and **what could be
@@ -2278,9 +2280,11 @@ that does not trigger fails silently (P7), and the contract must hold in every s
   version, the decision kind's `decision_status` enum must hold ACCEPTED (§6.5; `init` never edits
   an existing `context.toml`). `orient` opens with these failures,
   so a session whose contract did not load is told at once.
-- **Upgrade procedure:** read the release notes (`RELEASE-NOTES.md` beside this document) from
-  the pinned version on; bump the engine's pinned ref (rebuild its environment,
-  `.context-engine/env/`, at the new ref, §6.9 step 2) and the contract's `framework:` line, run
+- **Upgrade procedure:** read every release-note step (`RELEASE-NOTES.md` beside this document)
+  whose `**Upgrade (at <sha>):**` commit the pin lacks (`git merge-base --is-ancestor <sha> <pin>`
+  exits 1, in a clone of the engine), and the kit README's steps by pin; bump the engine's pinned
+  ref (rebuild its environment, `.context-engine/env/`, at the new ref, §6.9 step 2, keeping the
+  old one renamed until the lint and the gate are green) and the contract's `framework:` line, run
   the lint, fix the failures, and write a ledger line naming the new ref. The kit's contract
   replaces `docs/framework/contract.md` whole, and the new kit block replaces the old one between
   its markers.
@@ -2501,8 +2505,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   A current record's prose cites only ids of the configured series that name a record (or an
   alias of one), and a `<id> § <heading>` names a section its target has: a `#` heading, a
   paragraph led at column 0 by a bold span opening with a number (`**5. Title.** ...`), or a
-  top-level ordered item (`5. Title`, where it starts a list or follows a blank line, a heading
-  or another item), by its text or its number; nothing indented, and no number or bold span
+  top-level ordered item (`5. Title`, where it starts a list or follows a blank line, a heading,
+  another item or an indented line), by its text or its number; nothing indented, and no number or bold span
   inside a prose line, is a section; inline code, fences,
   blockquotes, history notes and a task's `## Log` are not read. A stamped text is never edited,
   so every operation that writes append-only text refuses such a citation before writing it,
