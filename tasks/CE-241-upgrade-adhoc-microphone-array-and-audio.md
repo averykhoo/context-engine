@@ -3,7 +3,7 @@ type: Task
 id: CE-241
 title: Upgrade adhoc-microphone-array and audio-workspace to 0.6
 brief: adhoc first as the rehearsal; each repo through its own session; the owner pushes
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-238, CE-239, CE-240]
 goals: [G-6]
