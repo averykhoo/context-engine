@@ -407,9 +407,11 @@ listed here. A lint failure not listed names its own remedy (step 3).
 - From `60c0434` (2026-11-07), framework 0.6: the new contract and kit block (step 2).
 - From `bd25ca2` (2026-11-08), G-I4 fails two current decisions with one title: `decision
   supersede <old> <new>`, or retitle one.
-- From `261e538` (2026-11-08), a gate whose result line has no `N passed` sets `[working]
-  gate_receipt` to a pattern it matches, or `''`; otherwise the newest close fails G-W6 and every
-  close is refused.
+- From `261e538` (2026-11-08), a gate whose result line has no `N passed`, or a repo whose
+  recorded closes say the gate was not run without the word `gate` (for example `pytest not run
+  (no code change)`), sets `[working] gate_receipt` to a pattern its receipts match, or `''`;
+  otherwise the newest close fails G-W6 and every later close of that form is refused. Check the
+  newest close's `guards:` line in the ledger against the default pattern before the re-pin.
 - From `baf3912` (2026-11-08), register the MCP server once per machine (§ 1).
 - From `e9eab4b` (2026-11-16), an agent's `decision accept` needs `--covered-by <owner record>` or
   `--gap`; repo instructions that accept as an agent add one.

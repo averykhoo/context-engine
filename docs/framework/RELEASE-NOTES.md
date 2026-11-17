@@ -142,9 +142,11 @@ component, procedure, guard and operation.
   run" counts only where it opens the receipt or is said of the gate in the same clause, so "lint
   not run" is no gate result (CE-165, DEC-288). FRAMEWORK §6.3, §8.4 G-W6; DEC-162, DEC-223,
   CE-192. **Upgrade (at 261e538):** if your gate prints no `N passed` (e.g. `go test` prints `ok
-  <pkg> 0.1s`), set `gate_receipt` under `[working]` to a pattern its result line matches, or to
-  `''` to turn the check off; this is the ruling's intent (a check is on where nobody opted in).
-  Otherwise the next close that quotes the gate's count (or says it was not run, and why) clears G-W6.
+  <pkg> 0.1s`), or your recorded closes say the gate was not run without the word `gate` (e.g.
+  `pytest not run (no code change)`, which the default pattern does not match), set `gate_receipt`
+  under `[working]` to a pattern those receipts match, or to `''` to turn the check off; this is the
+  ruling's intent (a check is on where nobody opted in). Otherwise the next close that quotes the
+  gate's count (or says the gate was not run, in those words, and why) clears G-W6.
 - **A HOLD tier: held items are never ready.** HOLD is an optional fifth `pri` tier of the task
   kind, last after SOMEDAY, for an item parked until something outside the board releases it. An
   open item at HOLD does not count for G-W5's NOW rule (a board of held items only may leave NOW

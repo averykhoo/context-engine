@@ -58,7 +58,7 @@ def test_every_upgrade_stamp_names_a_commit_of_its_own_task():
             assert git("merge-base", "--is-ancestor", sha, "HEAD").returncode == 0, f"{sha} is not in this history"
             subject = git("show", "-s", "--format=%s", sha).stdout.strip()
             lead = re.match(r"(CE-\d+):", subject)
-            assert lead and lead[1] in b, f"stamp {sha} ({subject[:60]!r}) leads with no task id its bullet cites"
+            assert lead and re.search(rf"\b{lead[1]}\b", b), f"stamp {sha} ({subject[:60]!r}) leads with no task id its bullet cites"
     section = readme_section_4()
     assert sorted(HEX_REF.findall(section)) == sorted(r for r, _ in DATED_REF.findall(section)), "a ref in kit README § 4 prints no date as `<sha>` (<date>"
     for sha, date in DATED_REF.findall(section):
