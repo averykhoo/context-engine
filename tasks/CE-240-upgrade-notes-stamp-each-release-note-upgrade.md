@@ -3,7 +3,7 @@ type: Task
 id: CE-240
 title: 'Upgrade notes: stamp each release-note Upgrade line with its landing ref; a from-pin checklist in kit README § 4'
 brief: stamps in one parseable form a later upgrade command can read; no rule change
-pri: NEXT
+pri: NOW
 state: open
 deps: [CE-238, CE-239]
 goals: [G-6]

@@ -42,3 +42,4 @@ Carry out DEC-347. Lint runs G-D3 at rest over decision and story text above `##
 ## Log
 
 - 2026-11-17b (claude-code/claude-opus-5-5): closed: Built in 319971a, key test 2080df9; independent opus verifiers PASS (.scratch/ce-239/verify-1.md, verify-2.md): on a temp clone of adhoc, 3 waives clear DEC-17/DEC-93's (M-4)(S-3) reds and the same text appended later stays red
+  residual risk: none
