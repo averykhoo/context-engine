@@ -427,6 +427,12 @@ def record_correct(e: Engine, c: Caller, id: str, after: str, text: str) -> tupl
 
 
 @op(write=True)
+def record_waive(e: Engine, c: Caller, id: str, guard: str, text: str, reason: str) -> tuple[int, str]:
+    """Sign off one exact text that one guard (G-D3) fails in one stamped append-only record, with the reason: a `waived:` entry under ## Amendments and its op line. Lint then skips that text, for that guard, in that record, on the lines above the entry only; never a whole guard, never text added later. Copy the text from the record, not from lint's line. An agent may waive; the close digest names it."""
+    return 0, e.waive(id, guard, text, reason, **c.kw)
+
+
+@op(write=True)
 def record_retire(e: Engine, c: Caller, id: str, why: str, by: str, superseded_by: str = "") -> tuple[int, str]:
     """Retire a story: story_status retired, status deprecated, `why` as an amendment. `by` is `owner` or `human:<id>` (then `why` is their words, verbatim) or `agent` (only with `superseded_by`, the replacement story, a new record with the same words; it gets `supersedes`). A retirement is final: it is never undone."""
     return 0, e.retire(id, why, by=by, superseded_by=superseded_by, **c.kw)

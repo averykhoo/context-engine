@@ -51,6 +51,7 @@ SESSION_OWNED = ("moved", "updated", "closed", "last_asked")
 # A caller's check of an append-only body a write is about to leave, (id, body now, body as it
 # would be written), which may refuse before anything is written (CE-183: G-D3's write-time twin)
 BodyCheck = Callable[[str, str, str], None]
+WAIVE_COPY_REMEDY = "copy the exact text from the record (`decision show <id>`), not from lint's line: lint prints `<id> § <n>` with one space, whatever the record has"
 # A record's earlier ids, kept when an import renames it to the framework's form (FRAMEWORK §8.0.1,
 # §11.4): `D-27` on DEC-27, `1h` on a board item. Lookups resolve them (`Store.resolve`); every
 # write and G-D2 refuse one that is not one word, is the record's own id, has the form of a
@@ -819,13 +820,14 @@ class Store:
             log(r)
 
     def _log(self, op: str, rec_id: str, path: Path | None, session: str, actor: str, fields: list[str], mechanical: bool, as_: dict[str, str] | None = None,
-             many: list[Record] | None = None) -> None:
+             many: list[Record] | None = None, extra: dict[str, Any] | None = None) -> None:
         """One op log line. ``many``: the line stands for every record listed (CE-187: `decision
         accept` writes one line for all it accepts); it carries them in ``ids`` and ``paths``,
         the first of them in ``id``'s place is ``rec_id`` (a label) and in ``path`` the first
         record's, so a reader of ``path`` alone still finds a file (``commit.op_paths`` reads
         every one). With a lane set (``self.lane``, CE-126) the line carries ``lane`` right after
-        ``session``, so a line cut short still names both; with none it has no ``lane`` key."""
+        ``session``, so a line cut short still names both; with none it has no ``lane`` key. ``extra``: keys
+        only this op's line carries (a `waive` line's ``guard`` and ``text``, CE-239), put after ``mechanical``."""
         entry: dict[str, Any] = {
             "at": _now(),
             "session": session,
@@ -837,6 +839,8 @@ class Store:
             "fields": fields,
             "mechanical": mechanical,
         }
+        if extra:
+            entry.update(extra)
         if as_:
             entry["as"] = dict(as_)
         if many:
@@ -1000,6 +1004,41 @@ class Store:
             self._write(rec.path, rec.doc)
             self._log("correct", record_id, rec.path, session, actor, ["body"], False)
         return rec, inserted
+
+    def waive(self, record_id: str, guard: str, text: str, reason: str, *, session: str, actor: str, check: BodyCheck | None = None) -> tuple[Record, int]:
+        """Sign off one exact ``text`` that ``guard`` fails in a stamped append-only record (DEC-347, CE-239): append a
+        ``waived:`` amendment (``okf.waiver_entry``: the guard, how often the body above the entry holds ``text``,
+        its length, the text, the reason) and log a ``waive`` op line carrying ``guard`` and ``text``. No byte
+        above the entry changes, so the stamp holds. Lint (guards.py::record_waivers) honours the entry only
+        when that op line backs it. ``check`` (before, after) is called on the body as the write would leave it,
+        before anything is written; it may refuse. Returns the record and the count."""
+        self._check_caller(session, actor)
+        if not text.strip():
+            raise Refusal("an empty waived text", "give the exact text the guard fails, copied from the record")
+        if not reason.strip():
+            raise Refusal("no reason", "say why the text stands (`--reason`): it is kept in the entry")
+        if any(c in text + reason for c in "\r\n"):
+            raise Refusal("a waived text and its reason are each one line", "waive one text at a time; copy it from one line of the record")
+        with self._lock():
+            rec = self.get(record_id)
+            if rec.kind.mode != "append-only":
+                raise Refusal(f"{record_id} is a {rec.kind.mode} record", "edit its body directly; `record waive` is for append-only records")
+            if not rec.doc.get("body_sha"):
+                raise Refusal(f"{record_id} is not stamped yet", "its text is not final, so edit it directly, then `context-engine record stamp`")
+            bp = self.body_problem(rec.kind, rec.doc)
+            if bp:
+                raise Refusal(f"{record_id} {bp[0]}", bp[1])
+            before = rec.doc.body
+            count = before.replace("\r\n", "\n").count(text)
+            if not count:
+                raise Refusal(f"{text!r} is not in {record_id}'s body", WAIVE_COPY_REMEDY)
+            rec.doc.set_body(amended(before, okf.waiver_entry(guard, count, text, reason), session, actor))
+            if check:
+                check(record_id, before, rec.doc.body)
+            self._validate(rec.kind, rec.doc, rec.path)
+            self._write(rec.path, rec.doc)
+            self._log("waive", record_id, rec.path, session, actor, ["body"], False, extra={"guard": guard, "text": text})
+        return rec, count
 
     def update(
         self,

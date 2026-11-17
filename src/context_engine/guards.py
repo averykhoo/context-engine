@@ -31,13 +31,14 @@ G-V3 (the run ledger).
 
 from __future__ import annotations
 
+import collections
 import datetime as dt
 import json
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import TYPE_CHECKING, Iterable, Iterator, Sequence
 
 from . import decisions as D
 from . import gate as GATE
@@ -77,7 +78,7 @@ SKIP_DIRS = {".git", ".scratch", ".context", ENGINE_DIR, "__pycache__", "node_mo
 
 
 def lint(e: Engine) -> list[Failure]:
-    return caps(e) + ids(e) + placeholders(e) + links(e) + reader_ids(e) + supersede_links(e) + record_refs(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + mechanical_closes(e) + coverage(e) + intent(e) + stale(e)
+    return caps(e) + ids(e) + placeholders(e) + links(e) + reader_ids(e) + supersede_links(e) + record_refs(e) + waiver_entries(e) + liveness(e) + numbers(e) + signals(e) + note_layers(e) + provenance(e) + existence(e) + tool_owned(e) + op_records(e) + mechanical_closes(e) + coverage(e) + intent(e) + stale(e)
 
 
 # -- shared reading ----------------------------------------------------------------------
@@ -975,7 +976,9 @@ def record_refs(e: Engine) -> list[Failure]:
     configured series names a record (or an alias of one), so an id cited before it was allocated, or
     mistyped, is red; and a `<id> § <heading>` citation names a section that record has (a `#`
     heading, a numbered bold paragraph lead or a top-level ordered item, ``_headings``; a quoted
-    name exactly; an unquoted one by the section it starts with, or by its number).
+    name exactly; an unquoted one by the section it starts with, or by its number). A text a valid
+    `waived:` entry of that same append-only record signs off (``record_waivers``, DEC-347) is dropped from each
+    line up to the entry's own, and from no line below it.
 
     Not checked: records no longer current (`status: deprecated`: history), a task's `## Log`
     (dated comments that quote other repos' ids), inline code, fenced code, blockquotes and
@@ -983,21 +986,109 @@ def record_refs(e: Engine) -> list[Failure]:
     this repo does not configure, and whether a cited id is the record the writer meant (an id
     that exists passes: entry 31's misnumbered batch is prevented by reserving its ids first,
     store.py::Store.reserve, not caught here). An id reserved but not yet written is no record, so
-    a batch citing it is red until the batch is written."""
+    a batch citing it is red until the batch is written. A waived text on the lines up to its
+    waiver's entry (`record waive`, DEC-347). A `waived:` line in a record that is not append-only is
+    never honoured, and nothing reports it."""
     st = e.store
     known = record_ids(e)
     if not known:
         return []
-    aliases = st.alias_map()
-    series = id_series(e)
-    heads: dict[str, list[str]] = {}
+    ctx = (known, st.alias_map(), id_series(e), {}, _append_only_paths(e))
+    ops = waiver_ops(e)
     out: list[Failure] = []
     for rid, path in sorted(known.items()):
         text = _text(path)
         if _deprecated(text):
             continue
-        bad = cite_problems(prose(text, history=True), known, aliases, series, heads)
+        bad = _record_cites(rid, path, text, ops, ctx)
         out += [Failure("G-D3", st._rel(path), b, "cite the id and heading that exist (`task show` / `decision show` the record first), or drop the citation") for b in bad]
+    return out
+
+
+def _append_only_paths(e: Engine) -> set[Path]:
+    """Every file of every append-only kind: the records a waiver may be read in."""
+    st = e.store
+    return {path for kind in st.config.kinds.values() if kind.mode == "append-only" for path in st._files(kind)}
+
+
+def _record_cites(rid: str, path: Path, text: str, ops, ctx) -> list[str]:
+    known, aliases, series, heads, appendonly = ctx
+    waived = record_waivers(rid, text, ops)[0].get("G-D3", []) if path in appendonly else []
+    return cite_problems(prose(text, history=True), known, aliases, series, heads, waived=waived)
+
+
+def one_record_cites(e: Engine, rid: str, text: str, ops) -> list[str]:
+    """What G-D3 fails in one record's file ``text`` (frontmatter included), as ``record_refs`` reads it: nothing
+    for a record no longer current, and with the record's own valid G-D3 waivers honoured (``ops``: ``waiver_ops``).
+    The one code path lint and `record waive`'s check share."""
+    st = e.store
+    known = record_ids(e)
+    path = known.get(rid)
+    if path is None or _deprecated(text):
+        return []
+    return _record_cites(rid, path, text, ops, (known, st.alias_map(), id_series(e), {}, _append_only_paths(e)))
+
+
+# -- waivers (DEC-347, CE-239) --------------------------------------------------------------
+
+WAIVABLE = frozenset({"G-D3"})  # the guards `record waive` may sign off text for (DEC-347): those that read append-only bodies at rest
+WAIVER_REMEDY = ("restore the file from git (`git log -p` on it); a waiver is written only by `context-engine record waive`, whose op line logs it "
+                 "(manual-mode.md § context-engine record waive); to withdraw one, delete its entry line: the text is red again")
+
+
+def waiver_ops(e: Engine) -> collections.Counter:
+    """(id, session, guard, text) of every `waive` op line (``_ops``), counted."""
+    out: collections.Counter = collections.Counter()
+    for _, o in _ops(e):
+        if isinstance(o, dict) and o.get("op") == "waive":
+            out[(str(o.get("id")), str(o.get("session")), str(o.get("guard")), str(o.get("text")))] += 1
+    return out
+
+
+def record_waivers(rid: str, text: str, ops) -> tuple[dict[str, list[tuple[str, int]]], list[tuple[int, str]]]:
+    """The waivers of one append-only record's file ``text`` (``okf.waivers``): guard -> [(waived text, entry line)] of
+    those lint honours, and (line, problem) for each it does not. Honoured: in the op's shape (W1), of a guard in
+    WAIVABLE (W2), ``found == count`` (W3: the body above holds the text as many times as the entry says, so a
+    text the body lacks, or one added above it by hand since, is red), and logged (W4: an op line `waive` with this
+    id, the entry's session key, guard and text; each op line backs one entry, oldest first, so a copied entry
+    lacks one). Each problem starts with `line <n>: `."""
+    honoured: dict[str, list[tuple[str, int]]] = {}
+    problems: list[tuple[int, str]] = []
+    used: collections.Counter = collections.Counter()
+    for w in okf.waivers(text):
+        if w.problem:
+            problems.append((w.line, f"line {w.line}: a `waived:` entry not in the op's shape"))
+        elif w.guard not in WAIVABLE:
+            problems.append((w.line, f"line {w.line}: waives {w.guard}, which cannot be waived (only {', '.join(sorted(WAIVABLE))})"))
+        elif w.found != w.count:
+            problems.append((w.line, f"line {w.line}: waives {w.text!r} for {w.guard} x{w.count}, but the body above it holds it {w.found} times"))
+        else:
+            key = (rid, w.key, w.guard, w.text)
+            if ops[key] <= used[key]:
+                problems.append((w.line, f"line {w.line}: no `waive` op line of session {w.key} logs this waiver of {w.text!r} for {w.guard} (written or edited by hand)"))
+            else:
+                used[key] += 1
+                honoured.setdefault(w.guard, []).append((w.text, w.line))
+    return honoured, problems
+
+
+def waiver_entries(e: Engine) -> list[Failure]:
+    """G-D10: each `waived:` entry under `## Amendments` of an append-only record (every kind of that mode, the
+    deprecated ones too: an entry's shape holds for history) is in the op's shape, waives a guard that can be waived,
+    holds a count the body above it has, and has its `waive` op line (``record_waivers``). One failing any of these
+    is red and waives nothing: its text stays red under G-D3."""
+    st = e.store
+    ops = waiver_ops(e)
+    out: list[Failure] = []
+    for kind in st.config.kinds.values():
+        if kind.mode != "append-only":
+            continue
+        for path in st._files(kind):
+            rid = st._id_of(kind, path)
+            if not rid:
+                continue
+            for _, problem in record_waivers(rid, _text(path), ops)[1]:
+                out.append(Failure("G-D10", st._rel(path), problem, WAIVER_REMEDY))
     return out
 
 
@@ -1020,11 +1111,13 @@ def id_series(e: Engine) -> re.Pattern[str]:
 
 
 def cite_problems(lines: Iterable[tuple[int, str]], known: dict[str, Path], aliases, series: re.Pattern[str],
-                  heads: dict[str, list[str]], allow: frozenset[str] = frozenset()) -> list[str]:
+                  heads: dict[str, list[str]], allow: frozenset[str] = frozenset(), waived: Sequence[tuple[str, int]] = ()) -> list[str]:
     """G-D3's record citations in ``lines`` (``prose(text, history=True)``'s (number, line)
     pairs): each id of ``series`` that is neither in ``known``, nor an alias, nor in ``allow``,
     and each `<id> § <heading>` whose target in ``known`` has no such heading (``heads`` caches
-    the targets' sections). A task's `## Log` is skipped, and so is inline code."""
+    the targets' sections). A task's `## Log` is skipped, and so is inline code. ``waived``: (text, line) of the
+    waivers of this record (DEC-347): a text one signs off is dropped from each line up to the waiver's own
+    (which echoes it), and from no line below it."""
     bad: list[str] = []
     log = False
     for n, line in lines:
@@ -1032,6 +1125,9 @@ def cite_problems(lines: Iterable[tuple[int, str]], known: dict[str, Path], alia
             log = bool(LOG_HEAD_RE.match(line))
         if log:
             continue
+        for t, upto in waived:
+            if n <= upto:
+                line = line.replace(t, " ")  # a space, not "": the text either side cannot join into a new id
         bare = SPAN_RE.sub("", line)
         for cited in dict.fromkeys(series.findall(bare)):
             if cited not in known and cited not in aliases and cited not in allow:

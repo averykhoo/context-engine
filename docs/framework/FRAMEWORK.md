@@ -1443,8 +1443,8 @@ body_sha: <hash>                  # covers everything above "## Amendments"
 
 **Operations:** `record.new` (CLI `record new decision`), `record.amend` (appends an entry under
 `## Amendments`, keyed by session and actor; the only allowed body change), `record.stamp`
-(freezes `body_sha` once; nothing ever replaces it) and `record.correct` (below) work on every
-append-only kind. `record.new` of any append-only kind, and `ask.answer`, refuse a text holding a
+(freezes `body_sha` once; nothing ever replaces it), `record.correct` and `record.waive` (below) work on
+every append-only kind. `record.new` of any append-only kind, and `ask.answer`, refuse a text holding a
 `## Amendments` line, whatever `[guards] off` names: the text below it would fall outside
 `body_sha` and read as a later amendment, and at rest no guard can tell it from a real one. Then:
 - `decision.supersede(old, new)` sets both directions under one lock and derives OKF `status`;
@@ -1485,6 +1485,15 @@ match fails, and so does a bracket whose `corrected:` line was deleted.
 The aim is what was meant, not an exact copy of every slip in what was typed; verbatim quotes keep the
 flavour and let a later reader check whether they were misread. A change of meaning is an
 `amend`, never a correction. Applies to every append-only kind.
+
+**Waivers sign off a lint failure in frozen text.** `waive(id, guard, text, reason)` appends a
+`waived:` amendment naming the guard, the exact text, how often the body above it holds that
+text, and why, and logs `guard` and `text` on its op line. Lint skips that text for that guard in
+that record, on the lines up to the entry only. It never waives a whole guard, and it never
+covers text added after it, so a later amendment repeating the text is red. G-D3 is the only
+guard it takes. An entry the op did not write, or one edited by hand, fails G-D10 and waives
+nothing. Grandfathering by `body_sha` or date, and a repo-wide id allowlist, were rejected
+(owner ruling, 2026-11-17). A waiver is a record write: the agent's call (P8), named in the close digest.
 
 **Organisation:** records are stored by id; topic is a tag, and the decision listing groups by
 tag. Topic narratives ("why is it like this at all") stay as prose docs that link decisions.
@@ -2366,7 +2375,7 @@ are the library operations. The CLI spells them `context-engine <noun> <verb>` (
 | Tasks | `list(state, pri, label)`, `show(id, section, head)`, `new`, `import(path, kind)`, `set`, `promote`, `dep`, `comment`, `touch`, `close(msg, body)`, `reopen`, `section(id, name, text)` |
 | Owner questions | `ask.new`, `ask.raised`, `ask.later`, `ask.answer` (§5.3) |
 | Ids | `id.reserve(kind, count)`: holds the next ids of a board or append-only kind's series for the session, before a batch of records that cite each other is written; each is then written with `task.new`, `ask.new` or `record.new` `id` (P3, G-D2) |
-| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
+| Intent and record | `record.new(kind, ...)`, `record.amend`, `record.stamp`, `record.correct`, `record.waive` (for every append-only kind); `record.retire`, `record.confirm` (stories, §3.2); `decision.supersede`, `.set`, `.link`, `.relink`, `.find`, `.show`, `.index` (the listing, a read), `.import`; `why(target)` (§6.5) |
 | Criteria | `criterion.new(text, source, status, under, id)`: one row appended to the criteria table under the heading `under`; `criterion.set(id, status, text, source)`: cells of one row rewritten in place. Every other byte of the doc is unchanged; `tested` or `manual` is refused unless G-T2 finds a claim, and a source G-T6 would fail is refused (§3.3, §6.2 step 3) |
 | Checks | `lint(working)`: failures only, each with its remedy; `working` runs only the working-state guards (CLI `lint [--working]`); `plan.check(path)`: each path and `file::symbol` a plan cites that does not resolve, by G-D3's rules, read before its build (§6.6, the build ladder; CLI `plan check <path>`, exit 1 when any fails or the plan cites nothing) |
 | Register | `register.show(engine)`: the residual-risk register, or with `engine` the installed engine's own; `register.retire(id, why, into)`: an entry retired in place, or merged into a live one, never deleted (§7.4) |
@@ -2499,7 +2508,8 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   so every operation that writes append-only text refuses such a citation before writing it,
   read as it will stand in the record (an amendment below its entry's prefix, a correction in
   place and in the `corrected:` entry that repeats its anchor), allowing the id being written
-  and ids the session reserved; an id of another repo goes in backticks.
+  and ids the session reserved; an id of another repo goes in backticks. A text a `record.waive`
+  entry of that record signs off is skipped on the lines up to the entry (§6.5).
 - **G-D4:** every doc declares its liveness (P2) near the top, within a window of lines
   (`liveness_lines`, 10 by default): a frontmatter `liveness:` key (a value that is not a liveness
   word is red), or a line that opens a block (the first, or one after a blank line, a heading or
@@ -2560,7 +2570,9 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   its logged `corrected:` insertions undone. This turns "append-only" and "owner words are
   verbatim" into refusals. Line endings are normalised before hashing, because a Windows
   checkout may rewrite LF as CRLF. Undoing a logged insertion must find it where its line says,
-  and a bracket whose `corrected:` line is gone fails the hash.
+  and a bracket whose `corrected:` line is gone fails the hash. Each `waived:` entry is in the
+  op's shape, waives a guard that can be waived, holds a count the body above it has, and has its
+  op line; one failing any of these is red and waives nothing.
 - **G-D11:** each configured OKF bundle directory is conformant: every non-reserved `.md` has
   frontmatter with a `type`; every `index.md` has no frontmatter (except an `okf_version` key at
   the bundle root) and the list shape. That `status` agrees with the record's own state key is

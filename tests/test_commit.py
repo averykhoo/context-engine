@@ -690,6 +690,10 @@ def test_the_milestones_are_dec_36s_and_every_other_write_rides_along(mrepo):
     hand = "---\ntype: Decision\nid: DEC-90\ntitle: By hand\nactor: owner\ndecided: 2026-10-08\nsession: 2026-10-08a\ndecision_status: BUILT\n---\n\nwords\n"
     (mrepo / "decisions" / "DEC-90-by-hand.md").write_text(hand, encoding="utf-8")
     w("record_stamp", ids=["DEC-90"])
+    red = hand.replace("DEC-90", "DEC-89").replace("words\n", "words, citing DEC-77, which no record has.\n")
+    (mrepo / "decisions" / "DEC-89-by-hand.md").write_text(red, encoding="utf-8")
+    w("record_stamp", ids=["DEC-89"])
+    w("record_waive", id="DEC-89", guard="G-D3", text="DEC-77", reason="another repo's id")  # CE-239: not a milestone, it rides along
     assert committed == MILESTONES
     writes = {o.name for o in ops.OPS.values() if o.write}
     assert writes - set(walked) == {"init", "commit"}  # init commits nothing; commit is the session's own (below)

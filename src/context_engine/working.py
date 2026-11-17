@@ -38,7 +38,7 @@ from . import gate as GATE
 from .bootstrap import ANY_BEGIN  # the kit block's begin marker, any version
 from .config import CONFIG_NAME, Config
 from .errors import Refusal
-from .store import ACTOR_RE, ALIASES, SESSION_OWNED, BodyCheck, Failure, Record, Store, _now, amended, coerce, key_order
+from .store import ACTOR_RE, ALIASES, SESSION_OWNED, WAIVE_COPY_REMEDY, BodyCheck, Failure, Record, Store, _now, amended, coerce, key_order
 
 ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
 KILL_BAR = "Kill bar"  # the board-item section holding a bar written before a run (CE-108)
@@ -2868,6 +2868,38 @@ class Engine:
         check = self._entry_cites_known(f"correction to {rid}, as its body would read with it", session, actor, entry=False)  # G-D3's twin (CE-183)
         _, inserted = self.store.correct(rid, after, text, session=session, actor=actor, check=check)
         return f"{rid}: inserted {inserted!r} after {after[-40:]!r}; `corrected:` logged under ## Amendments; body_sha unchanged (the words as typed)"
+
+    def waive(self, rid: str, guard: str, text: str, reason: str, *, session: str, actor: str) -> str:
+        """Sign off one exact text that one guard fails in one stamped append-only record (DEC-347, CE-239): a
+        `waived:` amendment and a `waive` op line, after which lint skips that text for that guard in that
+        record, on the lines up to the entry only (guards.py::record_waivers). Refused, writing nothing, when the
+        guard cannot be waived, is off here, or fails nothing that the text holds, or when the entry's own line
+        would add a red. Not owner words, so not a milestone: like `correct`, it goes into the next commit. The
+        write-time twin of G-D3 (``_entry_cites_known``) is not run: the entry echoes the red text and would
+        refuse itself."""
+        self._check(session, actor)
+        if guard not in G.WAIVABLE:
+            raise Refusal(f"{guard} cannot be waived", f"only {', '.join(sorted(G.WAIVABLE))} reads append-only bodies at rest; fix what the guard names")
+        if guard in self.store.config.guards.off:
+            raise Refusal(f"{guard} is off here ([guards] off), so lint fails nothing to waive", "turn it on first, or leave the record as it is")
+        pending = G.waiver_ops(self)
+        pending[(rid, session, guard, text)] += 1
+        left: list[str] = []
+
+        def check(rid_: str, before: str, after: str) -> None:
+            # G-D3 is the only member of G.WAIVABLE; a later guard adds a branch here
+            old = set(G.one_record_cites(self, rid_, G.CITE_STUB + before, G.waiver_ops(self)))
+            new = G.one_record_cites(self, rid_, G.CITE_STUB + after, pending)
+            if not old - set(new):
+                raise Refusal(f"{guard} fails nothing in {rid_} that {text!r} holds", WAIVE_COPY_REMEDY + "; a waiver signs off only a text the guard fails")
+            entry_line = (G.CITE_STUB + after).count("\n")  # the entry is the last line: `after` ends in a newline
+            mine = [p for p in new if p not in old and p.startswith(f"line {entry_line}:")]
+            if mine:
+                raise Refusal(f"the waiver's own line would add {mine[0]}", CITES_REMEDY)
+            left[:] = new
+
+        rec, count = self.store.waive(rid, guard, text, reason, session=session, actor=actor, check=check)
+        return f"{rid}: waived {guard} on {text!r} ({count} in the body above it); `waived:` logged under ## Amendments; {guard} left in {rid}: {len(left)}"
 
     @_milestone
     def retire(self, rid: str, why: str, *, by: str, superseded_by: str = "", session: str, actor: str) -> str:

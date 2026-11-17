@@ -299,6 +299,75 @@ def insert_correction(body: str, after: str, text: str) -> tuple[str, int, str]:
     return head[: lead + pos] + inserted + head[lead + pos :] + tail, pos, inserted
 
 
+# -- waivers: one text one guard fails, signed off in one record (DEC-347, CE-239) ---------
+
+# An amendment line `- **<key> (<actor>):** waived: <guard> x<count> (+<len>) "<text>" because: <reason>`, written
+# only by `record waive`. ``count`` is how often the body above the line holds ``text`` (non-overlapping), ``len``
+# its length in characters, which makes the parse exact whatever the text holds (quotes, `)`, `§`).
+WAIVED_LEAD_RE = re.compile(r"^- \*\*\S+ \([^\n]*?\):\*\* waived:")  # any line led like this must parse in full
+WAIVED_RE = re.compile(r'^- \*\*(?P<key>\S+) \((?P<actor>[^\n]*?)\):\*\* waived: (?P<guard>G-[A-Z]+[0-9]+) x(?P<count>[1-9][0-9]*) \(\+(?P<len>[1-9][0-9]*)\) "')
+WAIVED_TAIL = '" because: '
+
+
+@dataclass(frozen=True)
+class Waiver:
+    line: int  # the entry's line number in the text given (guards.py::prose's numbering: 1-based, frontmatter counted)
+    key: str = ""
+    actor: str = ""
+    guard: str = ""
+    count: int = 0  # occurrences the entry claims
+    text: str = ""
+    reason: str = ""
+    found: int = 0  # non-overlapping occurrences of `text` in the body lines above `line`
+    problem: str = ""  # '' when the line is in the op's shape
+
+
+def waiver_entry(guard: str, count: int, text: str, reason: str) -> str:
+    return f'waived: {guard} x{count} (+{len(text)}) "{text}{WAIVED_TAIL}{reason}'
+
+
+def _body_first_line(lines: list[str]) -> int:
+    """The 0-based index of the first body line of a record file: below the frontmatter (a `---` first line,
+    closed by the next `---`), the same rule as guards.py::frontmatter_end for a stored record."""
+    if lines and lines[0] == "---":
+        end = next((j for j in range(1, len(lines)) if lines[j] == "---"), None)
+        if end is not None:
+            return end + 1
+    return 0
+
+
+def waivers(text: str) -> list[Waiver]:
+    """Every `waived:` line under ``## Amendments`` of ``text``, a whole record file (frontmatter included, LF or
+    CRLF), oldest first. A line led like one (``WAIVED_LEAD_RE``) that does not parse in full (``WAIVED_RE``, then
+    exactly ``len`` characters of text, then ``WAIVED_TAIL`` and a non-empty reason, all on that line) comes back
+    with ``problem`` set. ``found`` counts ``text`` (``str.count``, non-overlapping) in the body (below the
+    frontmatter) up to the entry line, that line excluded."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    first = _body_first_line(lines)
+    head = next((i for i in range(first, len(lines)) if AMENDMENTS_HEADING.match(lines[i])), None)
+    if head is None:
+        return []
+    out: list[Waiver] = []
+    for i in range(head + 1, len(lines)):
+        line = lines[i]
+        if not WAIVED_LEAD_RE.match(line):
+            continue
+        n = i + 1
+        m = WAIVED_RE.match(line)
+        if not m:
+            out.append(Waiver(n, problem="a `waived:` entry not in the op's shape"))
+            continue
+        cut = m.end() + int(m["len"])
+        wtext, rest = line[m.end() : cut], line[cut:]
+        reason = rest[len(WAIVED_TAIL) :] if rest.startswith(WAIVED_TAIL) else ""
+        if len(wtext) != int(m["len"]) or not rest.startswith(WAIVED_TAIL) or not reason.strip():
+            out.append(Waiver(n, m["key"], m["actor"], m["guard"], int(m["count"]), problem="a `waived:` entry not in the op's shape"))
+            continue
+        found = "\n".join(lines[first:i]).count(wtext)
+        out.append(Waiver(n, m["key"], m["actor"], m["guard"], int(m["count"]), wtext, reason, found))
+    return out
+
+
 # -- body sections (replaced-mode records) ------------------------------------------------
 
 

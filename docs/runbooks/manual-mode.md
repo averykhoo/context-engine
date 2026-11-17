@@ -92,6 +92,7 @@ the record holds to its kept legacy value.
 record's id and file, in the same order; `id` is then the list folded into ranges (`DEC-n..m, DEC-k`)
 and `path` the first file. Every file in `paths` goes into the commit that carries the line, as
 `path` does.
+`guard` and `text`, only on a `waive` line, name the guard and the exact text it signs off.
 
 | Operation | `op` | `id`, `path` | `fields` |
 |---|---|---|---|
@@ -109,6 +110,7 @@ and `path` the first file. Every file in `paths` goes into the commit that carri
 | banner set | `banner.set` | id = session key, path = `HANDOFF.md` | `["banner"]` |
 | record stamp, record amend | `stamp` (one line per id), `amend` | the record | `["body_sha"]`; `[]` |
 | record correct | `correct` | the record | `["body"]` (the stamp is untouched) |
+| record waive | `waive` | the record | `["body"]` (the stamp is untouched), plus `guard` and `text` |
 | record retire | `retire`: one line for the successor, then one for the story | the record | the successor: `["supersedes"]`; the story: `["story_status", "status", "superseded_by", "body"]` (no `superseded_by` without a successor) |
 | record confirm | `confirm` | the story | `["story_status", "body"]` |
 | decision supersede, decision link | `supersede`, `link`: one line per record changed | the record | the changed keys |
@@ -630,7 +632,10 @@ first bullet's check that every record parses.
 - **G-D10**: every append-only record (decision, story) has `body_sha`; its `corrected:` lines
   each match the body; and with them undone, the body hash above matches `body_sha`. *Why:
   owner words are verbatim, so a rewrite must show up, and so must a bracket whose `corrected:`
-  line was dropped.*
+  line was dropped.* Each `waived:` line under `## Amendments` (§ context-engine record waive) is in
+  that shape, waives G-D3, holds a count the body above it has (non-overlapping occurrences of the
+  text), and is logged by a `waive` op line of its session with that guard and text, one line per
+  entry. Any entry failing one of these is red and waives nothing.
 - **G-D11**: every `.md` in a bundle directory (`docs/decisions`, `docs/stories`, `tasks`, and
   each kind's directory), subdirectories included, parses and has frontmatter with a `type`. The exceptions are `log.md` and
   `index.md`, and `index.md` may carry no frontmatter key but `okf_version`. *Why: a typeless file is invisible to
@@ -731,6 +736,8 @@ first bullet's check that every record parses.
   after a blank line, a heading, another item or an indented line); quoted, its text exactly
   (markup dropped, case ignored); unquoted, the section it starts with, or its number (`§ 5` for
   `5. ...`). Nothing indented, and no number or bold span inside a prose line, is a section.
+  A text a valid `waived:` entry of that record names (§ context-engine record waive) is skipped
+  for G-D3 on every line up to the entry's own, and on no line below it.
   *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
@@ -2089,6 +2096,40 @@ deleted fails too.
 **Why:** a strict body hash would forbid fixing a typo, and a free edit would let anything
 change. An insertion that can always be undone keeps the words as typed readable under the fix
 (FRAMEWORK §6.5); a change of meaning is an amendment, never a correction.
+
+### context-engine record waive
+
+Sign off one exact text that lint G-D3 fails in a stamped decision or story (any append-only
+record), with the reason. It writes no byte above its entry.
+1. Only when G-D3 fails text inside a stamped record (above `## Amendments`, or in an earlier
+   amendment) that cannot be fixed by an edit and is not a real mis-citation that an amendment
+   could correct. A waiver signs a red off; it does not fix it.
+2. The record must be stamped and its hash must match (as `context-engine record amend`). Copy
+   the exact text from the record, one line, **not** from lint's line: lint prints `<id> § <n>`
+   with one space, whatever the record has.
+3. Stop if the text is not in the body, if the guard is not G-D3, if G-D3 is off, or if removing
+   the text from those lines would not clear a G-D3 line (compare lint's G-D3 lines for the
+   record, before and with the waiver), or if the entry's own line (it repeats the text, and
+   carries the reason) would add a red: the reason cites no id that is no record.
+4. Count the text's non-overlapping occurrences in the body (below the frontmatter; the new
+   entry goes at the end, so the whole body is above it).
+5. Append an amendment as in § context-engine record amend, with the text
+   `waived: G-D3 x<count> (+<length of the text in characters>) "<text>" because: <reason>`, one
+   line.
+6. Append the op line (§ What every write does) with `"guard": "G-D3", "text": "<text>"`.
+7. Name it in the close digest (procedures § Clean close, step 2). To withdraw it, delete the
+   entry line (or revert the commit before a push): the text is red again.
+
+Lint then skips the text for G-D3 in that record only, on every line up to the entry's own and on
+none below it: the same text in a later amendment, or in another record, is red. An entry with no
+`waive` op line behind it, or one edited by hand, fails G-D10 and waives nothing. An amendment
+opening with the word `waived:` is read as an entry, just as one opening `corrected: at` is read
+as a correction. Not checked: that a waiver still hides anything (a text's target id may exist now),
+and an edit to the reason.
+
+**Why:** lint checks at rest bodies that may not be edited. Superseding to silence lint, or
+turning G-D3 off, misstates the record. A waiver keeps every citation either resolvable or visibly
+signed off, one text in one record, and never covers text written after it.
 
 ### context-engine record retire
 

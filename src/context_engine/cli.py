@@ -263,6 +263,11 @@ def build() -> argparse.ArgumentParser:
     rc.add_argument("id", help="the record's id")
     rc.add_argument("--after", required=True, help="the words the insertion goes right after; must occur once")
     rc.add_argument("--text", required=True, help="the text to insert; it is written as [text]")
+    rw = _sub(r, "waive", "sign off one exact text a guard fails in one stamped record: lint skips it there only (DEC-347)")
+    rw.add_argument("id", help="the record's id")
+    rw.add_argument("guard", help="the guard that fails it: G-D3")
+    rw.add_argument("text", help="the exact text, one line, copied from the record (lint prints `<id> § <n>` with a space; the record may have none)")
+    rw.add_argument("--reason", required=True, help="why it stands: one line, kept in the entry")
     rr = _sub(r, "retire", "retire a story: who retired it and why, recorded with it; never undone")
     rr.add_argument("id", help="the story's id")
     rr.add_argument("--by", required=True, help="owner or human:<id> (then --why holds their words verbatim), or agent (only with --superseded-by)")
@@ -409,6 +414,7 @@ CLI_OPS = {
     ("record", "stamp"): "record_stamp",
     ("record", "amend"): "record_amend",
     ("record", "correct"): "record_correct",
+    ("record", "waive"): "record_waive",
     ("record", "retire"): "record_retire",
     ("record", "confirm"): "record_confirm",
     ("decision", "supersede"): "decision_supersede",
