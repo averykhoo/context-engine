@@ -1840,3 +1840,17 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **why not eliminated:** DEC-162 accepts the gap; fable kept the dated owner instructions and the standing approvals in the baseline (DEC-344)
 - **control:** reduce: the backup ~/.claude/CLAUDE.md.2026-11-14-pre-trim.bak restores the full text
 - **from:** CE-40, session 2026-11-14b
+
+## INV-262: SECTION_REF_RE reads only the first id-section ref on a line, so later refs on that line go unchecked (verifier O3; predates CE-238)
+
+- **affects:** readers following a later section citation on a line
+- **why not eliminated:** out of CE-238's scope; widening it may surface new reds in adopters
+- **control:** reduce: filed as a task; the first ref per line is still checked
+- **from:** CE-238, session 2026-11-17b
+
+## INV-263: FRAMEWORK's G-D3 ordered-item clause omits 'or an indented line', which LIST_LINE_RE and manual-mode carry (verifier O2)
+
+- **affects:** a reader of FRAMEWORK alone
+- **why not eliminated:** the plan pinned that wording
+- **control:** reduce: code and manual-mode are right; FRAMEWORK is fixed with CE-240's docs pass
+- **from:** CE-238, session 2026-11-17b

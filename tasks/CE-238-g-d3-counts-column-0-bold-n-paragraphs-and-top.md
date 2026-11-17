@@ -4,13 +4,15 @@ id: CE-238
 title: G-D3 counts column-0 bold `**N. ...**` paragraphs and top-level ordered items as numbered sections
 brief: nothing indented or inline counts; the 6 true mis-citations in audio-workspace stay red
 pri: NOW
-state: open
+state: closed
 deps: []
 goals: [G-6, G-2]
 source: session 2026-11-17b
 created: 2026-11-17
 moved: 2026-11-17b
 updated: 2026-11-17b
+status: deprecated
+closed: 2026-11-17b
 ---
 
 G-D3 counts column-0 bold `**N. ...**` paragraphs and top-level ordered items as numbered sections.
@@ -38,3 +40,5 @@ G-D3's `<id> § <n>` check (guards.py::cite_problems through guards.py::_heading
 ## Log
 
 - 2026-11-17b (claude-code/claude-opus-5-5): Builder, round 1: the plan's finding (measured 2026-11-17 on audio-workspace): the task text's 'wholly bold line' rule clears only 21 of the 120 bold citations. The real shape is a paragraph whose first line opens with a bold span starting with a number (the span may wrap or be followed by body). Built as a bold paragraph lead, gated on opening a block; the paragraph-opener and ordered-list gates are pinned by tests T3 (the corpus does not discriminate them).
+- 2026-11-17b (claude-code/claude-opus-5-5): closed: Built in fa4ba48; independent opus verifier PASS round 1 (.scratch/ce-238/verify-1.md): audio-workspace's G-D3 lines go from 137 to the 6 real mis-citations (field trial 2026-11-17, read-only)
+  residual risk: INV-262, INV-263
