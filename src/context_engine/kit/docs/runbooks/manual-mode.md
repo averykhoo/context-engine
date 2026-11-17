@@ -723,7 +723,14 @@ first bullet's check that every record parses.
   (a bare name anywhere). A bare name not at the repo root that matches two or more files whose
   texts differ, line endings aside, is red (`git diff --no-index --ignore-cr-at-eol` tells),
   unless it is in a `paths` doc whose own directory holds that name. A file deleted but not
-  staged counts as gone.
+  staged counts as gone. In each current record (not `status: deprecated`), outside inline code,
+  fenced code, blockquotes, `*HISTORY —*` lines and a task's `## Log`: every id of a configured
+  series names a record or an alias of one, and every `<id> § <section>` names a section of that
+  record: a `#` heading, a paragraph led at column 0 by a bold span opening with a number
+  (`**5. Title.** ...`), or a top-level ordered item (`5. Title`: a list's first item, or one
+  after a blank line, a heading, another item or an indented line); quoted, its text exactly
+  (markup dropped, case ignored); unquoted, the section it starts with, or its number (`§ 5` for
+  `5. ...`). Nothing indented, and no number or bold span inside a prose line, is a section.
   *Why: a dead reference sends
   the reader to a file that is not there, and on Windows a link with the wrong case still opens,
   so the mistake goes unseen there.*
@@ -2021,8 +2028,8 @@ keeps its criteria `planned` (FRAMEWORK §3.3).
    § context-engine record amend, once the record exists). Stop too, unless `[guards] off` names
    G-D3, if the text, outside inline code, fenced code, blockquotes and `*HISTORY —*` lines,
    cites an id of a configured series that no record or alias has (other than the id being
-   written, or one this session reserved: § context-engine id reserve), or a `<id> § <heading>`
-   whose target has no such heading: lint G-D3 would fail the stamped text for good. An id of
+   written, or one this session reserved: § context-engine id reserve), or a `<id> § <section>`
+   whose target has no such section (as § lint's G-D3 reads one): lint G-D3 would fail the stamped text for good. An id of
    another repo goes in backticks, with the repo named in the words around it; in an owner's
    quote that is markup, not a change of their words (or quote the words as a blockquote).
 3. Body: the text, verbatim (owner words keep their line breaks), one final newline.

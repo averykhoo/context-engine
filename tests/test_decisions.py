@@ -1565,6 +1565,19 @@ def test_record_new_refuses_a_text_citing_an_id_no_record_has_before_anything_is
     assert g_d3(eng) == []
 
 
+@pytest.mark.criterion("AC-211")
+def test_the_write_time_check_reads_numbered_paragraphs_and_ordered_items_as_sections(eng):
+    """CE-238: `record new` reads a `<id> § <n>` as lint does, so a bold paragraph lead or a top-level
+    ordered item is a section there too, and a number with none is refused before any write."""
+    why = dec(eng, body="**1. The ask.** x\n\n**2. The call.** y\n\n3. a third point\n")
+    dec(eng, body=f"Per {why} § 2.\n\nAnd {why} § 3.\n")
+    assert g_d3(eng) == []
+    n = len(list(eng.store.records("decision")))
+    with pytest.raises(Refusal, match=re.escape(f"the text of the decision, at line 3: `{why} § 4` names no heading of {why}")):
+        dec(eng, body=f"Fine.\n\n{why} § 4\n")
+    assert len(list(eng.store.records("decision"))) == n
+
+
 def test_the_write_time_check_allows_this_sessions_reserved_ids_and_the_records_own_id(eng):
     """CE-183 (DEC-206): the id being written passes, and so do the ids this session reserved, so
     a reserved batch citing each other is written one by one (lint is red on it until the whole

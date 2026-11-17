@@ -512,6 +512,50 @@ def test_g_d3_a_record_cites_only_ids_that_exist_and_headings_its_target_has(tmp
     assert red.remedy.startswith("cite the id and heading that exist")
 
 
+def cite_lines(*cites: str) -> str:
+    """A citer story whose body, from line 6, is ``cites`` one per line."""
+    return "---\nid: US-1\ntitle: s\n---\n\n" + "\n".join(cites) + "\n"
+
+
+NO_RECORD_MSG = "which is no record (cited before it was allocated, or mistyped)"
+
+
+@pytest.mark.criterion("AC-211")
+def test_g_d3_a_bold_paragraph_lead_opening_with_a_number_is_a_section(tmp_path):
+    e = linked(tmp_path)
+    write(tmp_path, "decisions/DEC-1-x.md", "---\nid: DEC-1\ntitle: x\n---\n**1. The ask.** Body.\n\n**5. TWO SILENT-WRONGNESS TRAPS A STREAMING\nDESIGN INTRODUCES.** Body.\n\n"
+          "**7. A wholly bold line**\n\n**10.1 Dotted, no trailing dot.** Body.\n```\nx\n```\n**14. Right after a fence.** Body.\n")
+    write(tmp_path, "stories/US-1-s.md", cite_lines("Per DEC-1 § 1.", "DEC-1 § 5's encoder delay and more.", "DEC-1 § 7", "DEC-1 § 10.1 ruled.", "DEC-1 § 14).",
+                                                      'DEC-1 § "5. two silent-wrongness traps a streaming"'))
+    assert reds(e, "G-D3") == []
+    write(tmp_path, "stories/US-1-s.md", cite_lines("DEC-1 § 6", "DEC-1 § 10.2"))
+    assert reds(e, "G-D3") == ["stories/US-1-s.md: line 6: `DEC-1 § 6` names no heading of DEC-1", "stories/US-1-s.md: line 7: `DEC-1 § 10.2` names no heading of DEC-1"]
+
+
+@pytest.mark.criterion("AC-211")
+def test_g_d3_a_top_level_ordered_item_is_a_section(tmp_path):
+    e = linked(tmp_path)
+    write(tmp_path, "decisions/DEC-1-x.md", "---\nid: DEC-1\ntitle: x\n---\n\n## Rulings\n2. **Second ruling** text\n   continued\n3. Third ruling\n\nRulings, as asked:\n1. first, interrupting the paragraph\n2. second\n")
+    write(tmp_path, "stories/US-1-s.md", cite_lines("DEC-1 § 2's", "DEC-1 § 3", "DEC-1 § 1:", 'DEC-1 § "2. second ruling text"'))
+    assert reds(e, "G-D3") == []
+    write(tmp_path, "stories/US-1-s.md", cite_lines("DEC-1 § 4"))
+    assert reds(e, "G-D3") == ["stories/US-1-s.md: line 6: `DEC-1 § 4` names no heading of DEC-1"]
+
+
+@pytest.mark.criterion("AC-211")
+def test_g_d3_a_number_that_opens_no_block_is_no_section(tmp_path):
+    e = linked(tmp_path)
+    write(tmp_path, "decisions/DEC-2-y.md", "---\nid: DEC-2\ntitle: y\n---\n\nbody\n\n   3. a nested item\n\n  **4. Indented bold.** x\n\nSee point 6. Here.\n\n"
+          "The **8. inline bold** lead.\n\nprose runs on\n**9. A bold lead continuing the paragraph.**\n\nprose runs on\n11. a number continuing the paragraph\n\n"
+          "**5.** Title with only the number bold\n\n- a bullet\n  12. nested under a bullet\n\n```\n**13. Fenced.**\n```\n")
+    nums = [3, 4, 6, 8, 9, 11, 5, 12, 13]
+    write(tmp_path, "stories/US-1-s.md", cite_lines(*[f"DEC-2 § {n}" for n in nums], "DEC-9 § 1"))
+    assert reds(e, "G-D3") == [
+        *[f"stories/US-1-s.md: line {6 + i}: `DEC-2 § {n}` names no heading of DEC-2" for i, n in enumerate(nums)],
+        f"stories/US-1-s.md: line {6 + len(nums)}: names DEC-9, {NO_RECORD_MSG}",  # existence is not widened: no heading check on an id that is no record
+    ]
+
+
 # -- G-T3 ----------------------------------------------------------------------------------
 
 CRITERIA = """# Criteria

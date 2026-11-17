@@ -2490,7 +2490,11 @@ stored files is read as written (P3): `C-05` and `ADR-0007` resolve. A cell may 
   and so does a name in a `paths` doc whose own directory holds a file of that name. A file
   deleted but not staged, which git still lists, counts as gone, as it will once committed.
   A current record's prose cites only ids of the configured series that name a record (or an
-  alias of one), and a `<id> § <heading>` names a heading its target has; inline code, fences,
+  alias of one), and a `<id> § <heading>` names a section its target has: a `#` heading, a
+  paragraph led at column 0 by a bold span opening with a number (`**5. Title.** ...`), or a
+  top-level ordered item (`5. Title`, where it starts a list or follows a blank line, a heading
+  or another item), by its text or its number; nothing indented, and no number or bold span
+  inside a prose line, is a section; inline code, fences,
   blockquotes, history notes and a task's `## Log` are not read. A stamped text is never edited,
   so every operation that writes append-only text refuses such a citation before writing it,
   read as it will stand in the record (an amendment below its entry's prefix, a correction in

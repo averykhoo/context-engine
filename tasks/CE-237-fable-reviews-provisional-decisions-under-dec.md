@@ -2,14 +2,14 @@
 type: Task
 id: CE-237
 title: Fable reviews provisional decisions under DEC-342's list, with a NEEDS CONTEXT outcome
-pri: NOW
+pri: NEXT
 state: open
 deps: []
 goals: [G-7, G-3]
 source: session 2026-11-13d
 created: 2026-11-13
-moved: 2026-11-14a
-updated: 2026-11-16a
+moved: 2026-11-17b
+updated: 2026-11-17b
 ---
 
 Build DEC-342: fable reviews and accepts agents' provisional decisions under the three-tier list, with a fourth outcome, NEEDS CONTEXT

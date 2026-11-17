@@ -3,7 +3,7 @@ type: Task
 id: CE-239
 title: 'record waive: a per-record, per-text lint waiver for append-only bodies'
 brief: one record, one guard, one exact text; never a whole guard, never text appended later (DEC-347)
-pri: LATER
+pri: NEXT
 state: open
 deps: [CE-238]
 goals: [G-6, G-2]

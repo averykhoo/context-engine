@@ -925,6 +925,11 @@ def key_order_id(rid: str) -> tuple[str, int]:
 SECTION_REF_RE = re.compile(r"(?<![\w-])(?P<id>[A-Z]+-[0-9]+)\s*§\s*(?P<rest>.+)")  # `DEC-5 § The method to try`
 QUOTED_HEAD_RE = re.compile(r"""^(?:"([^"\n]+)"|'([^'\n]+)'|“([^”\n]+)”|‘([^’\n]+)’)""")
 LOG_HEAD_RE = re.compile(r"^##\s+Log\s*$")
+# a numbered section that is not a `#` heading (CE-238): a paragraph led at column 0 by a bold span that opens
+# with a number (`**5. Title.** body`, the span may wrap), or a top-level ordered item (`5. Title`)
+BOLD_SECTION_RE = re.compile(r"^\*\*(?P<head>\d+(?:\.\d+)*\.?[ \t]+\S(?:(?!\*\*).)*)")
+ORDERED_SECTION_RE = re.compile(r"^(?P<num>\d+)\.[ \t]+\S")
+LIST_LINE_RE = re.compile(r"^(?:\d+\.[ \t]|[-*+][ \t]|[ \t]+\S)")  # a list item or an indented continuation
 
 
 def _plain(heading: str) -> str:
@@ -932,11 +937,29 @@ def _plain(heading: str) -> str:
 
 
 def _headings(text: str) -> list[str]:
-    return [_plain(m.group(2)) for _, line in prose(text) if (m := HEADING_RE.match(line))]
+    """The sections a `<id> § <n>` may cite in ``text`` (CE-238), outside fenced code and frontmatter: each `#`
+    heading; each paragraph led at column 0 by a bold span opening with a number (`**5. Title.** ...`; its text
+    is the span on that line), where the line opens a block (the line above is blank, a heading, or was not
+    prose: frontmatter, a fence); and each top-level ordered item (`5. Title`), where it opens a block, is a
+    list's first item (`1.`, which may interrupt a paragraph, as in CommonMark) or follows another item or an
+    indented line. Not a section: anything indented (a nested item), a number or bold span inside a prose
+    line, a bold lead or a numbered line that continues a paragraph, `**5.** Title` (only the number bold)."""
+    heads: list[str] = []
+    last_n, last = 0, ""
+    for n, line in prose(text):
+        opens = last_n != n - 1 or not last.strip() or bool(HEADING_RE.match(last))
+        if m := HEADING_RE.match(line):
+            heads.append(_plain(m.group(2)))
+        elif (b := BOLD_SECTION_RE.match(line)) and opens:
+            heads.append(_plain(b["head"]))
+        elif (o := ORDERED_SECTION_RE.match(line)) and (opens or o["num"] == "1" or LIST_LINE_RE.match(last)):
+            heads.append(_plain(line))
+        last_n, last = n, line
+    return heads
 
 
 def _cites_heading(rest: str, heads: list[str]) -> bool:
-    """Whether the text after `§` names one of ``heads``: a quoted name equals one, an unquoted one
+    """Whether the text after `§` names one of ``heads``, the target's sections: a quoted name equals one, an unquoted one
     starts with one (where the heading ends is not marked), or its number opens one (`§ 2` for
     `2. The components`)."""
     q = QUOTED_HEAD_RE.match(rest.strip())
@@ -950,8 +973,9 @@ def _cites_heading(rest: str, heads: list[str]) -> bool:
 def record_refs(e: Engine) -> list[Failure]:
     """G-D3 on what a current record's body cites of other records (CE-105): every id in a
     configured series names a record (or an alias of one), so an id cited before it was allocated, or
-    mistyped, is red; and a `<id> § <heading>` citation names a heading that record has (a quoted
-    heading exactly; an unquoted one by the heading it starts with, or by its number).
+    mistyped, is red; and a `<id> § <heading>` citation names a section that record has (a `#`
+    heading, a numbered bold paragraph lead or a top-level ordered item, ``_headings``; a quoted
+    name exactly; an unquoted one by the section it starts with, or by its number).
 
     Not checked: records no longer current (`status: deprecated`: history), a task's `## Log`
     (dated comments that quote other repos' ids), inline code, fenced code, blockquotes and
@@ -1000,7 +1024,7 @@ def cite_problems(lines: Iterable[tuple[int, str]], known: dict[str, Path], alia
     """G-D3's record citations in ``lines`` (``prose(text, history=True)``'s (number, line)
     pairs): each id of ``series`` that is neither in ``known``, nor an alias, nor in ``allow``,
     and each `<id> § <heading>` whose target in ``known`` has no such heading (``heads`` caches
-    the targets' headings). A task's `## Log` is skipped, and so is inline code."""
+    the targets' sections). A task's `## Log` is skipped, and so is inline code."""
     bad: list[str] = []
     log = False
     for n, line in lines:

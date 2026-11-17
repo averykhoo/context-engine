@@ -2,14 +2,14 @@
 type: Task
 id: CE-224
 title: Trial settled findings (FIX/CONTEST/ESCALATE) and a revert stop signal in fix rounds
-pri: NEXT
+pri: LATER
 state: open
 deps: []
 goals: [G-1]
 source: session 2026-11-10c
 created: 2026-11-10
-moved: 2026-11-10c
-updated: 2026-11-11a
+moved: 2026-11-17b
+updated: 2026-11-17b
 ---
 
 Trial settled findings in fix rounds (DEC-327, idea 1 of docs/evidence/elephant-goldfish-model-vs-our-review-2026-11-10.md).
