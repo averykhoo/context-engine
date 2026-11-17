@@ -4,13 +4,15 @@ id: CE-240
 title: 'Upgrade notes: stamp each release-note Upgrade line with its landing ref; a from-pin checklist in kit README § 4'
 brief: stamps in one parseable form a later upgrade command can read; no rule change
 pri: NOW
-state: open
+state: closed
 deps: [CE-238, CE-239]
 goals: [G-6]
 source: session 2026-11-17b
 created: 2026-11-17
 moved: 2026-11-17b
 updated: 2026-11-17b
+status: deprecated
+closed: 2026-11-17b
 ---
 
 Upgrade notes: stamp each release-note Upgrade line with its landing ref; a from-pin checklist in kit README § 4.
@@ -44,3 +46,6 @@ The upgrade steps an adopter needs are spread over RELEASE-NOTES sections keyed 
 - bootstrap.py::next_steps
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): closed: Built in c517640 and 563814e; independent opus verifier PASS round 2 (.scratch/ce-240/verify-2.md): 19 landing refs resolve, the from-pin walk for adhoc 9f0e8ca and audio-workspace 4f2cef2 gives every step each needs and none it has
+  residual risk: INV-264

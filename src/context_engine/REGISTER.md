@@ -1855,3 +1855,10 @@ risks (FRAMEWORK §10 gives its path, docs/invariants.md by default).
 - **control:** reduce: code and manual-mode are right; FRAMEWORK is fixed with CE-240's docs pass
 - **from:** CE-238, session 2026-11-17b
 - **retired:** session 2026-11-17b (claude-code/claude-sonnet-5-5): FRAMEWORK §8.3 G-D3 now names the indented line as guards.py and manual-mode do, CE-240; kept so its id is never reused
+
+## INV-264: intervals and zanzibar still set [working] decision_index and track docs/decisions/index.md; they re-pinned to 989982a before Steps by pin existed, so the checklist will not show them the step again
+
+- **affects:** readers of those repos' decisions/index.md, whose statuses go stale
+- **why not eliminated:** their upgrade predates the checklist
+- **control:** individual: still owed in the close digest; done in each repo's own session
+- **from:** CE-240, session 2026-11-17b
