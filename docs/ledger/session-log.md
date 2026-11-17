@@ -7,10 +7,38 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
-## 2026-11-17b · kind: open
+## 2026-11-17b · kind: close
 
-- **opened:** 2026-11-17T19:43:03+08:00 by claude-code/claude-opus-5-5
 - **continues:** 2026-11-17a
+- **rows:** CE-193 (commented: pick-up through entry 13 + AD-112); CE-238 (closed, INV-262/263);
+  CE-239 (closed); CE-240 (closed, INV-264); CE-241 (NOW); CE-242..CE-248 (filed); DEC-347
+  (PROVISIONAL); CE-224/226/227 (to LATER); CE-237 (to NEXT)
+- **receipts:**
+  - guards: gate 2204 passed on g1/all:f4f5c98ab5139a9d; linux gate 2204 passed, green on 478b54d;
+    lint clean
+  - read: orient; CE-235, CE-193, AD-112/AD-113 and the adopters' feedback files; agent reports in
+    .scratch/feedback-2026-11-17, ce-238, ce-239, ce-240
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: kept 2026-11-17a
+- **summary** (the owner digest):
+  - Collated 41 feedback items from adhoc, audio-workspace, intervals, zanzibar (demo is a worktree:
+    duplicate); verified, evidence docs/evidence/engine-feedback-2026-11-17.md
+  - Fable (owner-invited) shaped the triage; DEC-347 PROVISIONAL: lint reds in frozen bodies exit
+    via a per-record per-text waiver
+  - CE-238: G-D3 reads numbered bold paragraphs and list items as sections; audio-workspace reds 137
+    -> 6 real ones
+  - CE-239: record waive op (clears adhoc's (M-4)(S-3) on a temp clone); CE-240: release-note steps
+    stamped with landing refs, Steps by pin in kit README
+  - Filed CE-241..CE-248; re-tiered: CE-241 NOW, CE-237 NEXT, trials CE-224/226/227 LATER (agent's
+    call, undo freely)
+  - Engine is 13 commits ahead of origin, gate and Linux gate green on 478b54d; not pushed
+- **Still owed:**
+  - owner: say go to push context-engine (13 commits; CE-241 pins adopters to a pushed ref)
+  - owner: review DEC-347 (decision accept) and the re-tiering
+  - owner: CE-237's 8 questions; restart Claude Code for the MCP server; delete env-309641b in
+    intervals and zanzibar
+  - intervals and zanzibar: drop [working] decision_index and docs/decisions/index.md (INV-264), in
+    each repo's own session
 - **start head:** 5d806f7ea247fbc012d372a09cd345971e62c919
 
 ---
