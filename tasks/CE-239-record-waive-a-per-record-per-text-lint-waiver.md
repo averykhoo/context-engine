@@ -4,13 +4,15 @@ id: CE-239
 title: 'record waive: a per-record, per-text lint waiver for append-only bodies'
 brief: one record, one guard, one exact text; never a whole guard, never text appended later (DEC-347)
 pri: NOW
-state: open
+state: closed
 deps: [CE-238]
 goals: [G-6, G-2]
 source: session 2026-11-17b
 created: 2026-11-17
 moved: 2026-11-17b
 updated: 2026-11-17b
+status: deprecated
+closed: 2026-11-17b
 ---
 
 record waive: a per-record, per-text lint waiver for append-only bodies.
@@ -38,3 +40,5 @@ Carry out DEC-347. Lint runs G-D3 at rest over decision and story text above `##
 - docs/runbooks/manual-mode.md (the record correct steps)
 
 ## Log
+
+- 2026-11-17b (claude-code/claude-opus-5-5): closed: Built in 319971a, key test 2080df9; independent opus verifiers PASS (.scratch/ce-239/verify-1.md, verify-2.md): on a temp clone of adhoc, 3 waives clear DEC-17/DEC-93's (M-4)(S-3) reds and the same text appended later stays red
