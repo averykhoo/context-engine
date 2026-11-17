@@ -3,14 +3,13 @@
 LIVING. Orientation note (FRAMEWORK §5.1). The banner holds durable lines only, replaced when one changes;
 no session history here (that is `docs/ledger/session-log.md`). The banner carries exactly one session key.
 
-## Banner (2026-11-11a)
+## Banner (2026-11-17a)
 
 - **This repo builds the whole framework** (`docs/framework/FRAMEWORK.md`) to deploy across the owner's repos (DEC-10); the
   record engine (§8.0) runs this repo's own records (CE-8), and the repo dogfoods the framework as it is built (DEC-35).
 - **This banner holds durable lines only** (DEC-163, CE-195): orient generates the board, the asks, the open sessions, the
   push state and the last close's digest. A close keeps the banner unless one of these lines changes.
-- **Owner-held:** CE-110 (owner pastes rules 1+2 into the global CLAUDE.md, then close); pushes of intervals' records (audio-workspace's
-  ba31e29d handles itself, owner 2026-11-07b); a reboot frees CE-182's 42 DLL names.
+- **Owner-held:** a reboot frees CE-182's 42 DLL names; audio-workspace's ba31e29d handles itself (owner 2026-11-07b).
 - **Records site:** https://averykhoo.github.io/context-engine/, built by `.github/workflows/pages.yml` (`site build`, DEC-159).
 - **The MCP server runs stale code after an engine change:** use the CLI, and ask the owner to restart Claude Code.
 - **Lesson (2026-11-02a..2026-11-10a):** a task runs as one workflow: an opus planner, a builder, an independent opus

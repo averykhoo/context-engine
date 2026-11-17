@@ -7,6 +7,30 @@ and `abandoned`. Until then (DEC-7) the session key is minted by hand at write-b
 
 ---
 
+## 2026-11-17a · kind: close
+
+- **continues:** 2026-11-16b
+- **rows:** CE-235 commented (intervals and zanzibar pushed, CI green)
+- **receipts:**
+  - guards: gate PASSED 2160 passed on a4f0c77 (g1/all:c08fbc69980c0bbd); linux gate green on
+    a4f0c7700506 (2160 passed)
+  - read: orient; .scratch/ce-235/agent.md; intervals and zanzibar CLAUDE.md push sections
+  - housekeeping: hk run close: 0 writes, 0 op log lines
+  - banner: set
+- **summary** (the owner digest):
+  - Pushed context-engine a4f0c77 (11 commits incl. CE-237's accepted_by): CI gate and pages green
+  - Pushed intervals ed10d54: prepush green (docs only), CI ci green, fuzz skipped by its
+    paths-ignore
+  - Pushed zanzibar fae13a2: ten-phase gate covered; CI gate 10/10 and docs green
+  - Banner: dropped the closed CE-110 and the done intervals push from Owner-held
+- **Still owed:**
+  - owner: CE-237's 8 questions before step 3
+  - owner: restart Claude Code instances so the MCP server picks up e9eab4b; delete the old
+    .context-engine/env-309641b in intervals and zanzibar
+- **start head:** a4f0c77005063c6e144bebd2d7cea7e235cd506f
+
+---
+
 ## 2026-11-16b · kind: close
 
 - **continues:** 2026-11-16a
